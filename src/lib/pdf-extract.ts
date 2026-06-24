@@ -27,7 +27,7 @@ export async function extractPdfText(
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
     const text = content.items
-      .map((it: { str?: string }) => ("str" in it ? it.str ?? "" : ""))
+      .map((it) => ("str" in it ? it.str : ""))
       .join(" ")
       .replace(/\s+/g, " ")
       .trim();
