@@ -69,7 +69,7 @@ function Landing() {
             <a href="#subjects" className="hover:text-foreground transition">Subjects</a>
             <a href="#features" className="hover:text-foreground transition">Features</a>
           </nav>
-          <Button size="sm" className="rounded-full">Get started</Button>
+          <Button asChild size="sm" className="rounded-full"><Link to="/upload">Upload NCERT PDF</Link></Button>
         </div>
       </header>
 
