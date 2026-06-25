@@ -141,14 +141,6 @@ function UploadPage() {
     [onPickFile],
   );
 
-  const submit = useCallback(async () => {
-    if (!file || !klass || !subject) return;
-    setError(null);
-    setStage("uploading");
-    setProgress(0);
-    setStatusMsg("Uploading PDF to Lovable Cloud storage…");
-
-    try {
   const ingestPdf = useCallback(
     async (
       f: File,
