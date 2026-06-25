@@ -569,6 +569,90 @@ function UploadPage() {
           </Card>
         </div>
 
+        {/* Folder batch ingest */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Library className="h-5 w-5 text-primary" /> Bulk folder upload
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Select a whole NCERT folder. Every PDF inside (including subfolders) will be
+              ingested. Class &amp; subject are auto-detected from folder names like{" "}
+              <code className="text-xs bg-muted px-1 rounded">Class10/Science/ch1.pdf</code>.
+              Defaults from the form above are used when detection fails.
+            </p>
+
+            <div className="flex flex-wrap gap-3 items-center">
+              <input
+                ref={folderInputRef}
+                type="file"
+                multiple
+                // @ts-expect-error non-standard but widely supported
+                webkitdirectory=""
+                directory=""
+                className="hidden"
+                onChange={(e) => onPickFolder(e.target.files)}
+              />
+              <Button
+                variant="secondary"
+                onClick={() => folderInputRef.current?.click()}
+                disabled={batchRunning}
+              >
+                <Upload className="h-4 w-4 mr-2" /> Choose folder
+              </Button>
+              <Button
+                onClick={runBatch}
+                disabled={batchFiles.length === 0 || batchRunning}
+              >
+                {batchRunning ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Ingesting {batchIndex + 1} / {batchFiles.length}…
+                  </>
+                ) : (
+                  <>Ingest {batchFiles.length || ""} PDFs</>
+                )}
+              </Button>
+              {batchFiles.length > 0 && !batchRunning && (
+                <span className="text-xs text-muted-foreground">
+                  {batchFiles.length} PDF{batchFiles.length === 1 ? "" : "s"} queued
+                </span>
+              )}
+            </div>
+
+            {batchRunning && (
+              <Progress
+                value={(batchIndex / Math.max(batchFiles.length, 1)) * 100}
+              />
+            )}
+
+            {batchLog.length > 0 && (
+              <ul className="text-sm space-y-1 max-h-72 overflow-auto rounded-lg border border-border p-3 bg-muted/30">
+                {batchLog.map((l, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    {l.status === "ok" ? (
+                      <CheckCircle2 className="h-4 w-4 mt-0.5 text-emerald-600" />
+                    ) : l.status === "skip" ? (
+                      <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 mt-0.5 text-destructive" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{l.name}</p>
+                      {l.msg && (
+                        <p className="text-xs text-muted-foreground">{l.msg}</p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+
         {previewUrl && (
           <Card className="mt-6">
             <CardHeader>
