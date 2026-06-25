@@ -14,7 +14,127 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ncert_books: {
+        Row: {
+          chapter: string
+          class: string
+          created_at: string
+          download_url: string | null
+          file_name: string
+          file_size: number
+          full_text: string | null
+          id: string
+          learner_goal: string | null
+          learner_name: string | null
+          num_chunks: number
+          num_pages: number
+          status: string
+          storage_path: string
+          subject: string
+          summary: string | null
+        }
+        Insert: {
+          chapter: string
+          class: string
+          created_at?: string
+          download_url?: string | null
+          file_name: string
+          file_size: number
+          full_text?: string | null
+          id?: string
+          learner_goal?: string | null
+          learner_name?: string | null
+          num_chunks?: number
+          num_pages?: number
+          status?: string
+          storage_path: string
+          subject: string
+          summary?: string | null
+        }
+        Update: {
+          chapter?: string
+          class?: string
+          created_at?: string
+          download_url?: string | null
+          file_name?: string
+          file_size?: number
+          full_text?: string | null
+          id?: string
+          learner_goal?: string | null
+          learner_name?: string | null
+          num_chunks?: number
+          num_pages?: number
+          status?: string
+          storage_path?: string
+          subject?: string
+          summary?: string | null
+        }
+        Relationships: []
+      }
+      ncert_chunks: {
+        Row: {
+          book_id: string
+          chunk_index: number
+          content: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          book_id: string
+          chunk_index: number
+          content: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          book_id?: string
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ncert_chunks_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "ncert_books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ncert_pages: {
+        Row: {
+          book_id: string
+          created_at: string
+          id: string
+          page_number: number
+          text: string
+        }
+        Insert: {
+          book_id: string
+          created_at?: string
+          id?: string
+          page_number: number
+          text: string
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          id?: string
+          page_number?: number
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ncert_pages_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "ncert_books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
