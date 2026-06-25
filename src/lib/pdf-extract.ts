@@ -1,12 +1,5 @@
 // Client-side PDF text extraction using pdfjs-dist.
-// Reads the entire PDF, returns per-page text plus a flat joined string.
-
-import * as pdfjsLib from "pdfjs-dist";
-// Use the worker bundled with pdfjs-dist via Vite's ?url import.
-// This avoids hosting an external worker file.
-import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+// pdfjs is imported dynamically so SSR (which lacks DOMMatrix) doesn't crash.
 
 export type ExtractedPdf = {
   numPages: number;
@@ -14,13 +7,30 @@ export type ExtractedPdf = {
   fullText: string;
 };
 
+let pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
+async function loadPdfjs() {
+  if (typeof window === "undefined") {
+    throw new Error("PDF extraction must run in the browser.");
+  }
+  if (!pdfjsPromise) {
+    pdfjsPromise = (async () => {
+      const pdfjs = await import("pdfjs-dist");
+      const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url"))
+        .default;
+      pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+      return pdfjs;
+    })();
+  }
+  return pdfjsPromise;
+}
+
 export async function extractPdfText(
-  file: File,
+  file: File | Blob,
   onProgress?: (page: number, total: number) => void,
 ): Promise<ExtractedPdf> {
+  const pdfjs = await loadPdfjs();
   const buffer = await file.arrayBuffer();
-  const loadingTask = pdfjsLib.getDocument({ data: buffer });
-  const doc = await loadingTask.promise;
+  const doc = await pdfjs.getDocument({ data: buffer }).promise;
   const pages: { page: number; text: string }[] = [];
 
   for (let i = 1; i <= doc.numPages; i++) {
@@ -42,7 +52,6 @@ export async function extractPdfText(
   };
 }
 
-// Simple chunker: ~1200 chars with ~150 char overlap. Splits on whitespace.
 export function chunkText(text: string, size = 1200, overlap = 150): string[] {
   const clean = text.replace(/\s+/g, " ").trim();
   if (clean.length <= size) return [clean];

@@ -82,6 +82,15 @@ function UploadPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [library, setLibrary] = useState<LibraryBook[]>([]);
 
+  // Folder batch state
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const [batchFiles, setBatchFiles] = useState<File[]>([]);
+  const [batchIndex, setBatchIndex] = useState(0);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchLog, setBatchLog] = useState<
+    { name: string; status: "ok" | "error" | "skip"; msg?: string }[]
+  >([]);
+
   const refreshLibrary = useCallback(async () => {
     const { data, error: e } = await supabase
       .from("ncert_books")
@@ -132,61 +141,64 @@ function UploadPage() {
     [onPickFile],
   );
 
-  const submit = useCallback(async () => {
-    if (!file || !klass || !subject) return;
-    setError(null);
-    setStage("uploading");
-    setProgress(0);
-    setStatusMsg("Uploading PDF to Lovable Cloud storage…");
+  const ingestPdf = useCallback(
+    async (
+      f: File,
+      meta: {
+        klass: string;
+        subject: string;
+        chapter?: string;
+        learnerName?: string;
+        learnerGoals?: string;
+      },
+    ) => {
+      setStage("uploading");
+      setProgress(0);
+      setStatusMsg(`Uploading ${f.name}…`);
 
-    try {
-      const safeChapter = (chapter || file.name.replace(/\.pdf$/i, "")).trim();
-      const slug = `${klass}__${subject}__${safeChapter}__${Date.now()}`
+      const safeChapter = (meta.chapter || f.name.replace(/\.pdf$/i, "")).trim();
+      const slug = `${meta.klass}__${meta.subject}__${safeChapter}__${Date.now()}`
         .replace(/\s+/g, "_")
         .replace(/[^a-zA-Z0-9_.-]/g, "");
-      const path = `${klass.replace(/\s+/g, "")}/${subject}/${slug}.pdf`;
+      const path = `${meta.klass.replace(/\s+/g, "")}/${meta.subject}/${slug}.pdf`;
 
-      // 1. Upload PDF to Storage
       const { error: upErr } = await supabase.storage
         .from(BUCKET)
-        .upload(path, file, { contentType: "application/pdf", upsert: false });
+        .upload(path, f, { contentType: "application/pdf", upsert: false });
       if (upErr) throw upErr;
       setProgress(100);
 
       const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
       const downloadUrl = pub?.publicUrl ?? null;
 
-      // 2. Extract text from every page
       setStage("reading");
       setProgress(0);
-      setStatusMsg("Reading every page of the PDF…");
-      const extracted = await extractPdfText(file, (p, total) =>
+      setStatusMsg(`Reading every page of ${f.name}…`);
+      const extracted = await extractPdfText(f, (p, total) =>
         setProgress((p / total) * 100),
       );
 
-      // 3. Chunk for memory / RAG
       setStage("chunking");
       setStatusMsg(`Chunking ${extracted.numPages} pages for AI memory…`);
       const chunks = chunkText(extracted.fullText);
 
-      // 4. Insert book row
       setStage("saving");
       setStatusMsg("Saving NCERT memory to the database…");
       const { data: book, error: bErr } = await supabase
         .from("ncert_books")
         .insert({
-          class: klass,
-          subject,
+          class: meta.klass,
+          subject: meta.subject,
           chapter: safeChapter,
-          file_name: file.name,
-          file_size: file.size,
+          file_name: f.name,
+          file_size: f.size,
           storage_path: path,
           download_url: downloadUrl,
           num_pages: extracted.numPages,
           num_chunks: chunks.length,
-          full_text: extracted.fullText.slice(0, 1_000_000), // safety cap
-          learner_name: learnerName || null,
-          learner_goal: learnerGoals || null,
+          full_text: extracted.fullText.slice(0, 1_000_000),
+          learner_name: meta.learnerName || null,
+          learner_goal: meta.learnerGoals || null,
           status: "ready",
         })
         .select("id")
@@ -194,7 +206,6 @@ function UploadPage() {
       if (bErr || !book) throw bErr ?? new Error("Insert failed");
       const bookId = book.id as string;
 
-      // 5. Insert pages in batches
       for (let i = 0; i < extracted.pages.length; i += 200) {
         const slice = extracted.pages.slice(i, i + 200).map((p) => ({
           book_id: bookId,
@@ -206,7 +217,6 @@ function UploadPage() {
         setProgress(((i + slice.length) / extracted.pages.length) * 50);
       }
 
-      // 6. Insert chunks in batches
       for (let i = 0; i < chunks.length; i += 200) {
         const slice = chunks.slice(i, i + 200).map((content, j) => ({
           book_id: bookId,
@@ -218,10 +228,26 @@ function UploadPage() {
         setProgress(50 + ((i + slice.length) / chunks.length) * 50);
       }
 
+      return { numPages: extracted.numPages, numChunks: chunks.length, chapter: safeChapter };
+    },
+    [],
+  );
+
+  const submit = useCallback(async () => {
+    if (!file || !klass || !subject) return;
+    setError(null);
+    try {
+      const r = await ingestPdf(file, {
+        klass,
+        subject,
+        chapter,
+        learnerName,
+        learnerGoals,
+      });
       setStage("done");
       setProgress(100);
       setStatusMsg(
-        `Saved "${safeChapter}" for ${klass} · ${subject} — ${extracted.numPages} pages, ${chunks.length} memory chunks.`,
+        `Saved "${r.chapter}" for ${klass} · ${subject} — ${r.numPages} pages, ${r.numChunks} memory chunks.`,
       );
       refreshLibrary();
     } catch (e) {
@@ -229,7 +255,108 @@ function UploadPage() {
       setStage("error");
       setError(e instanceof Error ? e.message : "Upload failed.");
     }
-  }, [file, klass, subject, chapter, learnerName, learnerGoals, refreshLibrary]);
+  }, [file, klass, subject, chapter, learnerName, learnerGoals, ingestPdf, refreshLibrary]);
+
+  // Folder ingestion: auto-detect class & subject from the folder path.
+  const detectMeta = useCallback(
+    (f: File): { klass: string; subject: string; chapter: string } => {
+      // webkitRelativePath: "Class10/Science/ch1.pdf"
+      const rel =
+        (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name;
+      const parts = rel.split("/");
+      const joined = rel.toLowerCase();
+
+      let detectedClass = klass;
+      const m = joined.match(/class[\s_-]*(9|10|11|12)/);
+      if (m) detectedClass = `Class ${m[1]}`;
+      else {
+        const n = joined.match(/\b(9|10|11|12)\b/);
+        if (n) detectedClass = `Class ${n[1]}`;
+      }
+
+      let detectedSubject = subject;
+      for (const s of SUBJECTS) {
+        if (joined.includes(s.toLowerCase())) {
+          detectedSubject = s;
+          break;
+        }
+      }
+      // common NCERT aliases
+      if (!detectedSubject) {
+        if (/science/.test(joined)) detectedSubject = "Physics";
+        else if (/math/.test(joined)) detectedSubject = "Mathematics";
+      }
+
+      const chap = (parts[parts.length - 1] || f.name).replace(/\.pdf$/i, "");
+      return { klass: detectedClass, subject: detectedSubject, chapter: chap };
+    },
+    [klass, subject],
+  );
+
+  const onPickFolder = useCallback((files: FileList | null) => {
+    setError(null);
+    if (!files) return;
+    const pdfs = Array.from(files).filter(
+      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
+    );
+    setBatchFiles(pdfs);
+    setBatchLog([]);
+    setBatchIndex(0);
+  }, []);
+
+  const runBatch = useCallback(async () => {
+    if (batchFiles.length === 0 || batchRunning) return;
+    setBatchRunning(true);
+    setError(null);
+    setBatchLog([]);
+    for (let i = 0; i < batchFiles.length; i++) {
+      const f = batchFiles[i];
+      setBatchIndex(i);
+      const meta = detectMeta(f);
+      if (!meta.klass || !meta.subject) {
+        setBatchLog((l) => [
+          ...l,
+          {
+            name: f.name,
+            status: "skip",
+            msg: "Could not detect class/subject — pick defaults above.",
+          },
+        ]);
+        continue;
+      }
+      try {
+        const r = await ingestPdf(f, {
+          klass: meta.klass,
+          subject: meta.subject,
+          chapter: meta.chapter,
+          learnerName,
+          learnerGoals,
+        });
+        setBatchLog((l) => [
+          ...l,
+          {
+            name: f.name,
+            status: "ok",
+            msg: `${meta.klass} · ${meta.subject} — ${r.numPages}p / ${r.numChunks} chunks`,
+          },
+        ]);
+      } catch (e) {
+        setBatchLog((l) => [
+          ...l,
+          {
+            name: f.name,
+            status: "error",
+            msg: e instanceof Error ? e.message : "Failed",
+          },
+        ]);
+      }
+    }
+    setBatchIndex(batchFiles.length);
+    setBatchRunning(false);
+    setStage("done");
+    setStatusMsg(`Folder ingest complete — ${batchFiles.length} files processed.`);
+    refreshLibrary();
+  }, [batchFiles, batchRunning, detectMeta, ingestPdf, learnerName, learnerGoals, refreshLibrary]);
 
   const busy =
     stage === "uploading" ||
@@ -441,6 +568,90 @@ function UploadPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Folder batch ingest */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Library className="h-5 w-5 text-primary" /> Bulk folder upload
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Select a whole NCERT folder. Every PDF inside (including subfolders) will be
+              ingested. Class &amp; subject are auto-detected from folder names like{" "}
+              <code className="text-xs bg-muted px-1 rounded">Class10/Science/ch1.pdf</code>.
+              Defaults from the form above are used when detection fails.
+            </p>
+
+            <div className="flex flex-wrap gap-3 items-center">
+              <input
+                ref={folderInputRef}
+                type="file"
+                multiple
+                // @ts-expect-error non-standard but widely supported
+                webkitdirectory=""
+                directory=""
+                className="hidden"
+                onChange={(e) => onPickFolder(e.target.files)}
+              />
+              <Button
+                variant="secondary"
+                onClick={() => folderInputRef.current?.click()}
+                disabled={batchRunning}
+              >
+                <Upload className="h-4 w-4 mr-2" /> Choose folder
+              </Button>
+              <Button
+                onClick={runBatch}
+                disabled={batchFiles.length === 0 || batchRunning}
+              >
+                {batchRunning ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Ingesting {batchIndex + 1} / {batchFiles.length}…
+                  </>
+                ) : (
+                  <>Ingest {batchFiles.length || ""} PDFs</>
+                )}
+              </Button>
+              {batchFiles.length > 0 && !batchRunning && (
+                <span className="text-xs text-muted-foreground">
+                  {batchFiles.length} PDF{batchFiles.length === 1 ? "" : "s"} queued
+                </span>
+              )}
+            </div>
+
+            {batchRunning && (
+              <Progress
+                value={(batchIndex / Math.max(batchFiles.length, 1)) * 100}
+              />
+            )}
+
+            {batchLog.length > 0 && (
+              <ul className="text-sm space-y-1 max-h-72 overflow-auto rounded-lg border border-border p-3 bg-muted/30">
+                {batchLog.map((l, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    {l.status === "ok" ? (
+                      <CheckCircle2 className="h-4 w-4 mt-0.5 text-emerald-600" />
+                    ) : l.status === "skip" ? (
+                      <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 mt-0.5 text-destructive" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{l.name}</p>
+                      {l.msg && (
+                        <p className="text-xs text-muted-foreground">{l.msg}</p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
 
         {previewUrl && (
           <Card className="mt-6">
