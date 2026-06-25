@@ -1,13 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useMemo, useRef, useState } from "react";
-import { doc, setDoc, collection, writeBatch, serverTimestamp } from "firebase/firestore";
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,16 +22,21 @@ import {
   GraduationCap,
   AlertTriangle,
   BookOpen,
+  Library,
 } from "lucide-react";
 
-import { firebaseConfigured, getFirebase } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { extractPdfText, chunkText } from "@/lib/pdf-extract";
 
 export const Route = createFileRoute("/upload")({
   head: () => ({
     meta: [
       { title: "Upload NCERT PDF — EduPlan AI" },
-      { name: "description", content: "Upload an NCERT textbook PDF for any Class 9–12 subject. Our AI reads every page and builds a chapter memory." },
+      {
+        name: "description",
+        content:
+          "Upload an NCERT textbook PDF for any Class 9–12 subject. Our AI reads every page and builds a chapter memory in your Lovable Cloud library.",
+      },
     ],
   }),
   component: UploadPage,
@@ -42,6 +44,7 @@ export const Route = createFileRoute("/upload")({
 
 const CLASSES = ["Class 9", "Class 10", "Class 11", "Class 12"] as const;
 const SUBJECTS = ["Chemistry", "Physics", "Biology", "Mathematics"] as const;
+const BUCKET = "ncert-pdfs";
 
 type Stage =
   | "idle"
@@ -51,6 +54,17 @@ type Stage =
   | "saving"
   | "done"
   | "error";
+
+type LibraryBook = {
+  id: string;
+  class: string;
+  subject: string;
+  chapter: string;
+  file_name: string;
+  num_pages: number;
+  num_chunks: number;
+  created_at: string;
+};
 
 function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -66,6 +80,20 @@ function UploadPage() {
   const [statusMsg, setStatusMsg] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [library, setLibrary] = useState<LibraryBook[]>([]);
+
+  const refreshLibrary = useCallback(async () => {
+    const { data, error: e } = await supabase
+      .from("ncert_books")
+      .select("id, class, subject, chapter, file_name, num_pages, num_chunks, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (!e && data) setLibrary(data as LibraryBook[]);
+  }, []);
+
+  useEffect(() => {
+    refreshLibrary();
+  }, [refreshLibrary]);
 
   const canSubmit =
     !!file &&
@@ -76,61 +104,57 @@ function UploadPage() {
     stage !== "chunking" &&
     stage !== "saving";
 
-  const onPickFile = useCallback((f: File | null) => {
-    setError(null);
-    if (!f) return setFile(null);
-    if (f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf")) {
-      setError("Please upload a PDF file (NCERT textbook chapter).");
-      return;
-    }
-    if (f.size > 50 * 1024 * 1024) {
-      setError("PDF is larger than 50 MB. Please split or compress it.");
-      return;
-    }
-    setFile(f);
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl(URL.createObjectURL(f));
-  }, [previewUrl]);
+  const onPickFile = useCallback(
+    (f: File | null) => {
+      setError(null);
+      if (!f) return setFile(null);
+      if (f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf")) {
+        setError("Please upload a PDF file (NCERT textbook chapter).");
+        return;
+      }
+      if (f.size > 50 * 1024 * 1024) {
+        setError("PDF is larger than 50 MB. Please split or compress it.");
+        return;
+      }
+      setFile(f);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(f));
+    },
+    [previewUrl],
+  );
 
-  const onDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const f = e.dataTransfer.files?.[0] ?? null;
-    onPickFile(f);
-  }, [onPickFile]);
+  const onDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const f = e.dataTransfer.files?.[0] ?? null;
+      onPickFile(f);
+    },
+    [onPickFile],
+  );
 
   const submit = useCallback(async () => {
     if (!file || !klass || !subject) return;
-    if (!firebaseConfigured) {
-      setError(
-        "Firebase isn't configured yet. Add VITE_FIREBASE_* keys in Workspace Settings → Build Secrets, then redeploy.",
-      );
-      return;
-    }
     setError(null);
     setStage("uploading");
     setProgress(0);
-    setStatusMsg("Uploading PDF to Firebase Storage…");
+    setStatusMsg("Uploading PDF to Lovable Cloud storage…");
 
     try {
-      const { db, storage } = getFirebase();
       const safeChapter = (chapter || file.name.replace(/\.pdf$/i, "")).trim();
-      const docId = `${klass}__${subject}__${safeChapter}__${Date.now()}`
+      const slug = `${klass}__${subject}__${safeChapter}__${Date.now()}`
         .replace(/\s+/g, "_")
         .replace(/[^a-zA-Z0-9_.-]/g, "");
+      const path = `${klass.replace(/\s+/g, "")}/${subject}/${slug}.pdf`;
 
-      // 1. Upload PDF
-      const path = `ncert/${klass.replace(/\s+/g, "")}/${subject}/${docId}.pdf`;
-      const ref = storageRef(storage, path);
-      const task = uploadBytesResumable(ref, file, { contentType: "application/pdf" });
-      await new Promise<void>((resolve, reject) => {
-        task.on(
-          "state_changed",
-          (snap) => setProgress((snap.bytesTransferred / snap.totalBytes) * 100),
-          reject,
-          () => resolve(),
-        );
-      });
-      const downloadUrl = await getDownloadURL(ref);
+      // 1. Upload PDF to Storage
+      const { error: upErr } = await supabase.storage
+        .from(BUCKET)
+        .upload(path, file, { contentType: "application/pdf", upsert: false });
+      if (upErr) throw upErr;
+      setProgress(100);
+
+      const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      const downloadUrl = pub?.publicUrl ?? null;
 
       // 2. Extract text from every page
       setStage("reading");
@@ -145,75 +169,102 @@ function UploadPage() {
       setStatusMsg(`Chunking ${extracted.numPages} pages for AI memory…`);
       const chunks = chunkText(extracted.fullText);
 
-      // 4. Save metadata + pages + chunks to Firestore
+      // 4. Insert book row
       setStage("saving");
-      setStatusMsg("Saving NCERT memory to Firestore…");
+      setStatusMsg("Saving NCERT memory to the database…");
+      const { data: book, error: bErr } = await supabase
+        .from("ncert_books")
+        .insert({
+          class: klass,
+          subject,
+          chapter: safeChapter,
+          file_name: file.name,
+          file_size: file.size,
+          storage_path: path,
+          download_url: downloadUrl,
+          num_pages: extracted.numPages,
+          num_chunks: chunks.length,
+          full_text: extracted.fullText.slice(0, 1_000_000), // safety cap
+          learner_name: learnerName || null,
+          learner_goal: learnerGoals || null,
+          status: "ready",
+        })
+        .select("id")
+        .single();
+      if (bErr || !book) throw bErr ?? new Error("Insert failed");
+      const bookId = book.id as string;
 
-      const bookRef = doc(db, "ncert_books", docId);
-      await setDoc(bookRef, {
-        id: docId,
-        class: klass,
-        subject,
-        chapter: safeChapter,
-        fileName: file.name,
-        fileSize: file.size,
-        storagePath: path,
-        downloadUrl,
-        numPages: extracted.numPages,
-        numChunks: chunks.length,
-        learnerProfile: {
-          name: learnerName || null,
-          goals: learnerGoals || null,
-        },
-        status: "pending_summary",
-        createdAt: serverTimestamp(),
-      });
-
-      // Pages: batch writes (max 500 per batch)
-      const pagesCol = collection(db, "ncert_books", docId, "pages");
-      for (let i = 0; i < extracted.pages.length; i += 400) {
-        const batch = writeBatch(db);
-        for (const p of extracted.pages.slice(i, i + 400)) {
-          batch.set(doc(pagesCol, String(p.page)), p);
-        }
-        await batch.commit();
+      // 5. Insert pages in batches
+      for (let i = 0; i < extracted.pages.length; i += 200) {
+        const slice = extracted.pages.slice(i, i + 200).map((p) => ({
+          book_id: bookId,
+          page_number: p.page,
+          text: p.text,
+        }));
+        const { error: pErr } = await supabase.from("ncert_pages").insert(slice);
+        if (pErr) throw pErr;
+        setProgress(((i + slice.length) / extracted.pages.length) * 50);
       }
 
-      // Chunks
-      const chunksCol = collection(db, "ncert_books", docId, "chunks");
-      for (let i = 0; i < chunks.length; i += 400) {
-        const batch = writeBatch(db);
-        chunks.slice(i, i + 400).forEach((text, j) => {
-          const idx = i + j;
-          batch.set(doc(chunksCol, String(idx)), { index: idx, text });
-        });
-        await batch.commit();
+      // 6. Insert chunks in batches
+      for (let i = 0; i < chunks.length; i += 200) {
+        const slice = chunks.slice(i, i + 200).map((content, j) => ({
+          book_id: bookId,
+          chunk_index: i + j,
+          content,
+        }));
+        const { error: cErr } = await supabase.from("ncert_chunks").insert(slice);
+        if (cErr) throw cErr;
+        setProgress(50 + ((i + slice.length) / chunks.length) * 50);
       }
 
       setStage("done");
+      setProgress(100);
       setStatusMsg(
-        `Saved “${safeChapter}” for ${klass} · ${subject} — ${extracted.numPages} pages, ${chunks.length} memory chunks.`,
+        `Saved "${safeChapter}" for ${klass} · ${subject} — ${extracted.numPages} pages, ${chunks.length} memory chunks.`,
       );
+      refreshLibrary();
     } catch (e) {
       console.error(e);
       setStage("error");
       setError(e instanceof Error ? e.message : "Upload failed.");
     }
-  }, [file, klass, subject, chapter, learnerName, learnerGoals]);
+  }, [file, klass, subject, chapter, learnerName, learnerGoals, refreshLibrary]);
 
-  const busy = stage === "uploading" || stage === "reading" || stage === "chunking" || stage === "saving";
+  const busy =
+    stage === "uploading" ||
+    stage === "reading" ||
+    stage === "chunking" ||
+    stage === "saving";
 
   const stageLabel = useMemo(() => {
     switch (stage) {
-      case "uploading": return "Uploading";
-      case "reading": return "Reading PDF";
-      case "chunking": return "Building memory";
-      case "saving": return "Saving to Firestore";
-      case "done": return "Done";
-      case "error": return "Error";
-      default: return "Ready";
+      case "uploading":
+        return "Uploading";
+      case "reading":
+        return "Reading PDF";
+      case "chunking":
+        return "Building memory";
+      case "saving":
+        return "Saving to database";
+      case "done":
+        return "Done";
+      case "error":
+        return "Error";
+      default:
+        return "Ready";
     }
   }, [stage]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, LibraryBook[]>();
+    for (const b of library) {
+      const k = `${b.class} · ${b.subject}`;
+      if (!map.has(k)) map.set(k, []);
+      map.get(k)!.push(b);
+    }
+    return Array.from(map.entries());
+  }, [library]);
 
   return (
     <div className="min-h-screen">
@@ -223,9 +274,13 @@ function UploadPage() {
             <div className="h-9 w-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shadow-soft">
               <GraduationCap className="h-5 w-5" />
             </div>
-            <span className="font-display font-extrabold text-lg tracking-tight">EduPlan AI</span>
+            <span className="font-display font-extrabold text-lg tracking-tight">
+              EduPlan AI
+            </span>
           </Link>
-          <Badge variant="secondary" className="rounded-full">{stageLabel}</Badge>
+          <Badge variant="secondary" className="rounded-full">
+            {stageLabel}
+          </Badge>
         </div>
       </header>
 
@@ -235,33 +290,11 @@ function UploadPage() {
             Upload an NCERT textbook
           </h1>
           <p className="mt-2 text-muted-foreground max-w-2xl">
-            Drop a Class 9–12 NCERT PDF. We read every word, build a chapter memory, and store
-            it in your Firebase database so the AI can reuse it for every future generation.
+            Drop a Class 9–12 NCERT PDF. We read every word, build a chapter memory,
+            and store it in your Lovable Cloud library so the AI can reuse it for every
+            future generation.
           </p>
         </div>
-
-        {!firebaseConfigured && (
-          <Card className="mb-6 border-amber-300 bg-amber-50/60 dark:bg-amber-950/20">
-            <CardContent className="py-4 flex gap-3 items-start">
-              <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-semibold">Firebase not configured</p>
-                <p className="text-muted-foreground mt-1">
-                  Add these as <strong>Build Secrets</strong> in Workspace Settings, then redeploy:
-                  <code className="block mt-2 p-2 rounded bg-background/60 font-mono text-xs leading-6">
-                    VITE_FIREBASE_API_KEY<br />
-                    VITE_FIREBASE_AUTH_DOMAIN<br />
-                    VITE_FIREBASE_PROJECT_ID<br />
-                    VITE_FIREBASE_STORAGE_BUCKET<br />
-                    VITE_FIREBASE_MESSAGING_SENDER_ID<br />
-                    VITE_FIREBASE_APP_ID
-                  </code>
-                  Get these from Firebase Console → Project Settings → Your apps → SDK setup &amp; configuration.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         <div className="grid lg:grid-cols-5 gap-6">
           <Card className="lg:col-span-3">
@@ -273,18 +306,30 @@ function UploadPage() {
                 <div className="space-y-2">
                   <Label>Class</Label>
                   <Select value={klass} onValueChange={setKlass}>
-                    <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select class" />
+                    </SelectTrigger>
                     <SelectContent>
-                      {CLASSES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      {CLASSES.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Subject</Label>
                   <Select value={subject} onValueChange={setSubject}>
-                    <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select subject" />
+                    </SelectTrigger>
                     <SelectContent>
-                      {SUBJECTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      {SUBJECTS.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -341,7 +386,9 @@ function UploadPage() {
                 {file ? (
                   <div className="flex items-center justify-center gap-2 text-sm">
                     <FileText className="h-5 w-5 text-primary" />
-                    <span className="font-medium truncate max-w-[16rem]">{file.name}</span>
+                    <span className="font-medium truncate max-w-[16rem]">
+                      {file.name}
+                    </span>
                     <span className="text-muted-foreground">
                       ({(file.size / 1024 / 1024).toFixed(1)} MB)
                     </span>
@@ -349,17 +396,27 @@ function UploadPage() {
                 ) : (
                   <div className="text-sm text-muted-foreground">
                     <Upload className="h-6 w-6 mx-auto mb-2 text-primary" />
-                    Drag &amp; drop the NCERT PDF, or click to browse.<br />
+                    Drag &amp; drop the NCERT PDF, or click to browse.
+                    <br />
                     PDF only · max 50 MB.
                   </div>
                 )}
               </div>
 
-              <Button className="w-full" size="lg" disabled={!canSubmit} onClick={submit}>
+              <Button
+                className="w-full"
+                size="lg"
+                disabled={!canSubmit}
+                onClick={submit}
+              >
                 {busy ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {stageLabel}…</>
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> {stageLabel}…
+                  </>
                 ) : (
-                  <><Upload className="h-4 w-4 mr-2" /> Start AI reading</>
+                  <>
+                    <Upload className="h-4 w-4 mr-2" /> Start AI reading
+                  </>
                 )}
               </Button>
 
@@ -400,14 +457,67 @@ function UploadPage() {
               >
                 <p className="p-4 text-sm text-muted-foreground">
                   Your browser can't display PDFs inline.{" "}
-                  <a href={previewUrl} target="_blank" rel="noreferrer" className="underline">
+                  <a
+                    href={previewUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline"
+                  >
                     Open the file
-                  </a>.
+                  </a>
+                  .
                 </p>
               </object>
             </CardContent>
           </Card>
         )}
+
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Library className="h-5 w-5 text-primary" /> Your NCERT library
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {library.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No books uploaded yet. Your library will appear here, grouped by
+                class &amp; subject.
+              </p>
+            ) : (
+              <div className="space-y-6">
+                {grouped.map(([group, books]) => (
+                  <div key={group}>
+                    <h3 className="font-display font-bold text-sm uppercase tracking-wide text-muted-foreground mb-2">
+                      {group}
+                    </h3>
+                    <ul className="grid sm:grid-cols-2 gap-3">
+                      {books.map((b) => (
+                        <li
+                          key={b.id}
+                          className="rounded-xl border border-border p-3 bg-card/60"
+                        >
+                          <div className="flex items-start gap-2">
+                            <FileText className="h-4 w-4 mt-0.5 text-primary" />
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">{b.chapter}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {b.file_name}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {b.num_pages} pages · {b.num_chunks} memory chunks
+                              </p>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
