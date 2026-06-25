@@ -82,6 +82,15 @@ function UploadPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [library, setLibrary] = useState<LibraryBook[]>([]);
 
+  // Folder batch state
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const [batchFiles, setBatchFiles] = useState<File[]>([]);
+  const [batchIndex, setBatchIndex] = useState(0);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchLog, setBatchLog] = useState<
+    { name: string; status: "ok" | "error" | "skip"; msg?: string }[]
+  >([]);
+
   const refreshLibrary = useCallback(async () => {
     const { data, error: e } = await supabase
       .from("ncert_books")
