@@ -88,7 +88,13 @@ function UploadPage() {
   const [batchIndex, setBatchIndex] = useState(0);
   const [batchRunning, setBatchRunning] = useState(false);
   const [batchLog, setBatchLog] = useState<
-    { name: string; status: "ok" | "error" | "skip"; msg?: string }[]
+    {
+      name: string;
+      status: "ok" | "error" | "skip";
+      msg?: string;
+      path?: string;
+      url?: string;
+    }[]
   >([]);
 
   const refreshLibrary = useCallback(async () => {
