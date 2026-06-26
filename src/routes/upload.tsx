@@ -234,7 +234,13 @@ function UploadPage() {
         setProgress(50 + ((i + slice.length) / chunks.length) * 50);
       }
 
-      return { numPages: extracted.numPages, numChunks: chunks.length, chapter: safeChapter };
+      return {
+        numPages: extracted.numPages,
+        numChunks: chunks.length,
+        chapter: safeChapter,
+        path,
+        downloadUrl,
+      };
     },
     [],
   );
