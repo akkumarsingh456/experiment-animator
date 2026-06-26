@@ -796,20 +796,41 @@ function UploadPage() {
               </Button>
               <Button
                 onClick={runBatch}
-                disabled={batchFiles.length === 0 || batchRunning}
+                disabled={
+                  batchLog.filter((e) => e.status === "pending").length === 0 ||
+                  batchRunning
+                }
               >
                 {batchRunning ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Ingesting {batchIndex + 1} / {batchFiles.length}…
+                    Ingesting {Math.min(batchIndex + 1, batchFiles.length)} /{" "}
+                    {batchFiles.length}…
                   </>
                 ) : (
-                  <>Ingest {batchFiles.length || ""} PDFs</>
+                  <>Ingest {batchLog.filter((e) => e.status === "pending").length || ""} PDFs</>
                 )}
               </Button>
+              <Button
+                variant="outline"
+                onClick={retryFailed}
+                disabled={failedEntries.length === 0 || batchRunning}
+                title="Re-ingest only the items that previously failed or were skipped"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry failed ({failedEntries.length})
+              </Button>
+              <Link
+                to="/history"
+                className="ml-auto text-sm text-primary underline-offset-4 hover:underline inline-flex items-center gap-1"
+              >
+                <History className="h-4 w-4" /> Ingestion history
+              </Link>
               {batchFiles.length > 0 && !batchRunning && (
-                <span className="text-xs text-muted-foreground">
-                  {batchFiles.length} PDF{batchFiles.length === 1 ? "" : "s"} queued
+                <span className="text-xs text-muted-foreground basis-full">
+                  {batchFiles.length} PDF{batchFiles.length === 1 ? "" : "s"} selected ·{" "}
+                  {batchLog.filter((e) => e.status === "ok").length} done ·{" "}
+                  {failedEntries.length} failed
                 </span>
               )}
             </div>
@@ -821,38 +842,103 @@ function UploadPage() {
             )}
 
             {batchLog.length > 0 && (
-              <ul className="text-sm space-y-1 max-h-72 overflow-auto rounded-lg border border-border p-3 bg-muted/30">
-                {batchLog.map((l, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    {l.status === "ok" ? (
-                      <CheckCircle2 className="h-4 w-4 mt-0.5 text-emerald-600" />
-                    ) : l.status === "skip" ? (
-                      <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600" />
-                    ) : (
-                      <AlertTriangle className="h-4 w-4 mt-0.5 text-destructive" />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{l.name}</p>
-                      {l.msg && (
-                        <p className="text-xs text-muted-foreground break-all">{l.msg}</p>
-                      )}
-                      {l.url && (
-                        <a
-                          href={l.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs text-primary underline break-all"
-                        >
-                          Open saved file
-                        </a>
-                      )}
-                    </div>
-                  </li>
-                ))}
+              <ul className="text-sm space-y-2 max-h-96 overflow-auto rounded-lg border border-border p-3 bg-muted/30">
+                {batchLog.map((l) => {
+                  const isOpen = openSteps[l.id];
+                  const duration =
+                    l.startedAt && l.endedAt
+                      ? `${((l.endedAt - l.startedAt) / 1000).toFixed(1)}s`
+                      : null;
+                  return (
+                    <li
+                      key={l.id}
+                      className="rounded-md border border-border/60 bg-card/60 p-2"
+                    >
+                      <div className="flex items-start gap-2">
+                        {l.status === "ok" ? (
+                          <CheckCircle2 className="h-4 w-4 mt-0.5 text-emerald-600 shrink-0" />
+                        ) : l.status === "running" ? (
+                          <Loader2 className="h-4 w-4 mt-0.5 text-primary animate-spin shrink-0" />
+                        ) : l.status === "pending" ? (
+                          <Circle className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                        ) : l.status === "skip" ? (
+                          <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600 shrink-0" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 mt-0.5 text-destructive shrink-0" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="truncate font-medium">{l.name}</p>
+                            {l.meta && (
+                              <Badge variant="secondary" className="rounded-full text-[10px]">
+                                {l.meta.klass} · {l.meta.subject}
+                              </Badge>
+                            )}
+                            {duration && (
+                              <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                                <Clock className="h-3 w-3" /> {duration}
+                              </span>
+                            )}
+                          </div>
+                          {l.msg && (
+                            <p className="text-xs text-muted-foreground break-all">{l.msg}</p>
+                          )}
+                          <div className="flex gap-3 mt-1">
+                            {l.url && (
+                              <a
+                                href={l.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-primary underline break-all"
+                              >
+                                Open saved file
+                              </a>
+                            )}
+                            {l.steps.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => toggleSteps(l.id)}
+                                className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                              >
+                                {isOpen ? "Hide" : "Show"} audit ({l.steps.length})
+                              </button>
+                            )}
+                          </div>
+                          {isOpen && l.steps.length > 0 && (
+                            <ol className="mt-2 space-y-1 border-l-2 border-border pl-3">
+                              {l.steps.map((s, idx) => (
+                                <li key={idx} className="flex items-start gap-2 text-xs">
+                                  {s.status === "ok" ? (
+                                    <CheckCircle2 className="h-3 w-3 mt-0.5 text-emerald-600 shrink-0" />
+                                  ) : s.status === "error" ? (
+                                    <AlertTriangle className="h-3 w-3 mt-0.5 text-destructive shrink-0" />
+                                  ) : (
+                                    <Loader2 className="h-3 w-3 mt-0.5 text-primary shrink-0" />
+                                  )}
+                                  <span className="font-medium">{s.label}</span>
+                                  <span className="text-muted-foreground">
+                                    {s.status === "start" ? "started" : s.status}
+                                  </span>
+                                  {s.msg && (
+                                    <span className="text-muted-foreground truncate">— {s.msg}</span>
+                                  )}
+                                  <span className="ml-auto text-muted-foreground shrink-0">
+                                    {new Date(s.ts).toLocaleTimeString()}
+                                  </span>
+                                </li>
+                              ))}
+                            </ol>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </CardContent>
         </Card>
+
 
 
         {previewUrl && (
