@@ -269,41 +269,85 @@ function UploadPage() {
     }
   }, [file, klass, subject, chapter, learnerName, learnerGoals, ingestPdf, refreshLibrary]);
 
-  // Folder ingestion: auto-detect class & subject from the folder path.
+  // Folder ingestion: auto-detect class & subject from the folder/file name.
   const detectMeta = useCallback(
     (f: File): { klass: string; subject: string; chapter: string } => {
       // webkitRelativePath: "Class10/Science/ch1.pdf"
       const rel =
         (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name;
-      const parts = rel.split("/");
-      const joined = rel.toLowerCase();
+      const joined = rel.toLowerCase().replace(/[_\-()[\]]+/g, " ");
 
+      // Class detection — handles "CLASS_9", "class 10", "Class-12", "ncert_class_9_..."
       let detectedClass = klass;
-      const m = joined.match(/class[\s_-]*(9|10|11|12)/);
+      const m =
+        joined.match(/class\s*(9|10|11|12)\b/) ||
+        joined.match(/\bstd\s*(9|10|11|12)\b/) ||
+        joined.match(/\b(9|10|11|12)\s*(?:th|standard)\b/);
       if (m) detectedClass = `Class ${m[1]}`;
-      else {
-        const n = joined.match(/\b(9|10|11|12)\b/);
-        if (n) detectedClass = `Class ${n[1]}`;
-      }
 
+      // Subject detection — wide alias map for NCERT books
+      const SUBJECT_ALIASES: Record<string, string> = {
+        physics: "Physics",
+        chemistry: "Chemistry",
+        biology: "Biology",
+        mathematics: "Mathematics",
+        maths: "Mathematics",
+        math: "Mathematics",
+        ganit: "Mathematics",
+        science: "Science",
+        vigyan: "Science",
+        english: "English",
+        beehive: "English",
+        moments: "English",
+        hornbill: "English",
+        snapshots: "English",
+        words: "English",
+        hindi: "Hindi",
+        kshitij: "Hindi",
+        kritika: "Hindi",
+        sparsh: "Hindi",
+        sanchayan: "Hindi",
+        aroh: "Hindi",
+        vitan: "Hindi",
+        antra: "Hindi",
+        antral: "Hindi",
+        sanskrit: "Sanskrit",
+        economics: "Economics",
+        arthashashtra: "Economics",
+        arthashastra: "Economics",
+        history: "History",
+        itihas: "History",
+        geography: "Geography",
+        bhugol: "Geography",
+        civics: "Civics",
+        political: "Political Science",
+        polity: "Political Science",
+        sociology: "Sociology",
+        psychology: "Psychology",
+        accountancy: "Accountancy",
+        business: "Business Studies",
+        computer: "Computer Science",
+        informatics: "Informatics Practices",
+        ip: "Informatics Practices",
+      };
       let detectedSubject = subject;
-      for (const s of SUBJECTS) {
-        if (joined.includes(s.toLowerCase())) {
-          detectedSubject = s;
+      for (const key of Object.keys(SUBJECT_ALIASES)) {
+        if (new RegExp(`\\b${key}\\b`).test(joined)) {
+          detectedSubject = SUBJECT_ALIASES[key];
           break;
         }
       }
-      // common NCERT aliases
-      if (!detectedSubject) {
-        if (/science/.test(joined)) detectedSubject = "Physics";
-        else if (/math/.test(joined)) detectedSubject = "Mathematics";
-      }
 
-      const chap = (parts[parts.length - 1] || f.name).replace(/\.pdf$/i, "");
+      // Always fall back so NO file is skipped.
+      if (!detectedClass) detectedClass = klass || "Unspecified Class";
+      if (!detectedSubject) detectedSubject = subject || "General";
+
+      const chap = f.name.replace(/\.pdf$/i, "").trim();
       return { klass: detectedClass, subject: detectedSubject, chapter: chap };
     },
     [klass, subject],
   );
+
 
   const onPickFolder = useCallback((files: FileList | null) => {
     setError(null);
