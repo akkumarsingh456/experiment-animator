@@ -88,7 +88,13 @@ function UploadPage() {
   const [batchIndex, setBatchIndex] = useState(0);
   const [batchRunning, setBatchRunning] = useState(false);
   const [batchLog, setBatchLog] = useState<
-    { name: string; status: "ok" | "error" | "skip"; msg?: string }[]
+    {
+      name: string;
+      status: "ok" | "error" | "skip";
+      msg?: string;
+      path?: string;
+      url?: string;
+    }[]
   >([]);
 
   const refreshLibrary = useCallback(async () => {
@@ -168,8 +174,10 @@ function UploadPage() {
       if (upErr) throw upErr;
       setProgress(100);
 
-      const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      const downloadUrl = pub?.publicUrl ?? null;
+      const { data: signed } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      const downloadUrl = signed?.signedUrl ?? null;
 
       setStage("reading");
       setProgress(0);
@@ -228,7 +236,13 @@ function UploadPage() {
         setProgress(50 + ((i + slice.length) / chunks.length) * 50);
       }
 
-      return { numPages: extracted.numPages, numChunks: chunks.length, chapter: safeChapter };
+      return {
+        numPages: extracted.numPages,
+        numChunks: chunks.length,
+        chapter: safeChapter,
+        path,
+        downloadUrl,
+      };
     },
     [],
   );
@@ -257,41 +271,85 @@ function UploadPage() {
     }
   }, [file, klass, subject, chapter, learnerName, learnerGoals, ingestPdf, refreshLibrary]);
 
-  // Folder ingestion: auto-detect class & subject from the folder path.
+  // Folder ingestion: auto-detect class & subject from the folder/file name.
   const detectMeta = useCallback(
     (f: File): { klass: string; subject: string; chapter: string } => {
       // webkitRelativePath: "Class10/Science/ch1.pdf"
       const rel =
         (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name;
-      const parts = rel.split("/");
-      const joined = rel.toLowerCase();
+      const joined = rel.toLowerCase().replace(/[_\-()[\]]+/g, " ");
 
+      // Class detection — handles "CLASS_9", "class 10", "Class-12", "ncert_class_9_..."
       let detectedClass = klass;
-      const m = joined.match(/class[\s_-]*(9|10|11|12)/);
+      const m =
+        joined.match(/class\s*(9|10|11|12)\b/) ||
+        joined.match(/\bstd\s*(9|10|11|12)\b/) ||
+        joined.match(/\b(9|10|11|12)\s*(?:th|standard)\b/);
       if (m) detectedClass = `Class ${m[1]}`;
-      else {
-        const n = joined.match(/\b(9|10|11|12)\b/);
-        if (n) detectedClass = `Class ${n[1]}`;
-      }
 
+      // Subject detection — wide alias map for NCERT books
+      const SUBJECT_ALIASES: Record<string, string> = {
+        physics: "Physics",
+        chemistry: "Chemistry",
+        biology: "Biology",
+        mathematics: "Mathematics",
+        maths: "Mathematics",
+        math: "Mathematics",
+        ganit: "Mathematics",
+        science: "Science",
+        vigyan: "Science",
+        english: "English",
+        beehive: "English",
+        moments: "English",
+        hornbill: "English",
+        snapshots: "English",
+        words: "English",
+        hindi: "Hindi",
+        kshitij: "Hindi",
+        kritika: "Hindi",
+        sparsh: "Hindi",
+        sanchayan: "Hindi",
+        aroh: "Hindi",
+        vitan: "Hindi",
+        antra: "Hindi",
+        antral: "Hindi",
+        sanskrit: "Sanskrit",
+        economics: "Economics",
+        arthashashtra: "Economics",
+        arthashastra: "Economics",
+        history: "History",
+        itihas: "History",
+        geography: "Geography",
+        bhugol: "Geography",
+        civics: "Civics",
+        political: "Political Science",
+        polity: "Political Science",
+        sociology: "Sociology",
+        psychology: "Psychology",
+        accountancy: "Accountancy",
+        business: "Business Studies",
+        computer: "Computer Science",
+        informatics: "Informatics Practices",
+        ip: "Informatics Practices",
+      };
       let detectedSubject = subject;
-      for (const s of SUBJECTS) {
-        if (joined.includes(s.toLowerCase())) {
-          detectedSubject = s;
+      for (const key of Object.keys(SUBJECT_ALIASES)) {
+        if (new RegExp(`\\b${key}\\b`).test(joined)) {
+          detectedSubject = SUBJECT_ALIASES[key];
           break;
         }
       }
-      // common NCERT aliases
-      if (!detectedSubject) {
-        if (/science/.test(joined)) detectedSubject = "Physics";
-        else if (/math/.test(joined)) detectedSubject = "Mathematics";
-      }
 
-      const chap = (parts[parts.length - 1] || f.name).replace(/\.pdf$/i, "");
+      // Always fall back so NO file is skipped.
+      if (!detectedClass) detectedClass = klass || "Unspecified Class";
+      if (!detectedSubject) detectedSubject = subject || "General";
+
+      const chap = f.name.replace(/\.pdf$/i, "").trim();
       return { klass: detectedClass, subject: detectedSubject, chapter: chap };
     },
     [klass, subject],
   );
+
 
   const onPickFolder = useCallback((files: FileList | null) => {
     setError(null);
@@ -313,17 +371,6 @@ function UploadPage() {
       const f = batchFiles[i];
       setBatchIndex(i);
       const meta = detectMeta(f);
-      if (!meta.klass || !meta.subject) {
-        setBatchLog((l) => [
-          ...l,
-          {
-            name: f.name,
-            status: "skip",
-            msg: "Could not detect class/subject — pick defaults above.",
-          },
-        ]);
-        continue;
-      }
       try {
         const r = await ingestPdf(f, {
           klass: meta.klass,
@@ -337,7 +384,9 @@ function UploadPage() {
           {
             name: f.name,
             status: "ok",
-            msg: `${meta.klass} · ${meta.subject} — ${r.numPages}p / ${r.numChunks} chunks`,
+            msg: `${meta.klass} · ${meta.subject} — ${r.numPages}p / ${r.numChunks} chunks · saved to ${r.path}`,
+            path: r.path,
+            url: r.downloadUrl ?? undefined,
           },
         ]);
       } catch (e) {
@@ -639,10 +688,20 @@ function UploadPage() {
                     ) : (
                       <AlertTriangle className="h-4 w-4 mt-0.5 text-destructive" />
                     )}
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{l.name}</p>
                       {l.msg && (
-                        <p className="text-xs text-muted-foreground">{l.msg}</p>
+                        <p className="text-xs text-muted-foreground break-all">{l.msg}</p>
+                      )}
+                      {l.url && (
+                        <a
+                          href={l.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-primary underline break-all"
+                        >
+                          Open saved file
+                        </a>
                       )}
                     </div>
                   </li>
