@@ -86,20 +86,42 @@ function UploadPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [library, setLibrary] = useState<LibraryBook[]>([]);
 
+  // Per-step audit log entry for each PDF
+  type StepName =
+    | "upload"
+    | "parse"
+    | "chunk"
+    | "store-book"
+    | "store-pages"
+    | "store-chunks";
+  type StepEvent = {
+    name: StepName;
+    label: string;
+    ts: number;
+    status: "start" | "ok" | "error";
+    msg?: string;
+  };
+  type BatchLogEntry = {
+    id: string;
+    name: string;
+    status: "pending" | "running" | "ok" | "error" | "skip";
+    msg?: string;
+    path?: string;
+    url?: string;
+    steps: StepEvent[];
+    file: File;
+    meta?: { klass: string; subject: string; chapter: string };
+    startedAt?: number;
+    endedAt?: number;
+  };
+
   // Folder batch state
   const folderInputRef = useRef<HTMLInputElement>(null);
   const [batchFiles, setBatchFiles] = useState<File[]>([]);
   const [batchIndex, setBatchIndex] = useState(0);
   const [batchRunning, setBatchRunning] = useState(false);
-  const [batchLog, setBatchLog] = useState<
-    {
-      name: string;
-      status: "ok" | "error" | "skip";
-      msg?: string;
-      path?: string;
-      url?: string;
-    }[]
-  >([]);
+  const [batchLog, setBatchLog] = useState<BatchLogEntry[]>([]);
+  const [openSteps, setOpenSteps] = useState<Record<string, boolean>>({});
 
   const refreshLibrary = useCallback(async () => {
     const { data, error: e } = await supabase
