@@ -183,10 +183,14 @@ function UploadPage() {
         learnerName?: string;
         learnerGoals?: string;
       },
+      onStep?: (s: Omit<StepEvent, "ts">) => void,
     ) => {
+      const step = (s: Omit<StepEvent, "ts">) => onStep?.(s);
+
       setStage("uploading");
       setProgress(0);
       setStatusMsg(`Uploading ${f.name}…`);
+      step({ name: "upload", label: "Upload to storage", status: "start" });
 
       const safeChapter = (meta.chapter || f.name.replace(/\.pdf$/i, "")).trim();
       const slug = `${meta.klass}__${meta.subject}__${safeChapter}__${Date.now()}`
@@ -197,8 +201,12 @@ function UploadPage() {
       const { error: upErr } = await supabase.storage
         .from(BUCKET)
         .upload(path, f, { contentType: "application/pdf", upsert: false });
-      if (upErr) throw upErr;
+      if (upErr) {
+        step({ name: "upload", label: "Upload to storage", status: "error", msg: upErr.message });
+        throw upErr;
+      }
       setProgress(100);
+      step({ name: "upload", label: "Upload to storage", status: "ok", msg: path });
 
       const { data: signed } = await supabase.storage
         .from(BUCKET)
@@ -208,16 +216,27 @@ function UploadPage() {
       setStage("reading");
       setProgress(0);
       setStatusMsg(`Reading every page of ${f.name}…`);
-      const extracted = await extractPdfText(f, (p, total) =>
-        setProgress((p / total) * 100),
-      );
+      step({ name: "parse", label: "Parse PDF pages", status: "start" });
+      let extracted;
+      try {
+        extracted = await extractPdfText(f, (p, total) =>
+          setProgress((p / total) * 100),
+        );
+      } catch (e) {
+        step({ name: "parse", label: "Parse PDF pages", status: "error", msg: e instanceof Error ? e.message : "parse failed" });
+        throw e;
+      }
+      step({ name: "parse", label: "Parse PDF pages", status: "ok", msg: `${extracted.numPages} pages` });
 
       setStage("chunking");
       setStatusMsg(`Chunking ${extracted.numPages} pages for AI memory…`);
+      step({ name: "chunk", label: "Build memory chunks", status: "start" });
       const chunks = chunkText(extracted.fullText);
+      step({ name: "chunk", label: "Build memory chunks", status: "ok", msg: `${chunks.length} chunks` });
 
       setStage("saving");
       setStatusMsg("Saving NCERT memory to the database…");
+      step({ name: "store-book", label: "Insert book record", status: "start" });
       const { data: book, error: bErr } = await supabase
         .from("ncert_books")
         .insert({
@@ -237,9 +256,14 @@ function UploadPage() {
         })
         .select("id")
         .single();
-      if (bErr || !book) throw bErr ?? new Error("Insert failed");
+      if (bErr || !book) {
+        step({ name: "store-book", label: "Insert book record", status: "error", msg: bErr?.message ?? "insert failed" });
+        throw bErr ?? new Error("Insert failed");
+      }
       const bookId = book.id as string;
+      step({ name: "store-book", label: "Insert book record", status: "ok", msg: bookId });
 
+      step({ name: "store-pages", label: "Store page text", status: "start" });
       for (let i = 0; i < extracted.pages.length; i += 200) {
         const slice = extracted.pages.slice(i, i + 200).map((p) => ({
           book_id: bookId,
@@ -247,10 +271,15 @@ function UploadPage() {
           text: p.text,
         }));
         const { error: pErr } = await supabase.from("ncert_pages").insert(slice);
-        if (pErr) throw pErr;
+        if (pErr) {
+          step({ name: "store-pages", label: "Store page text", status: "error", msg: pErr.message });
+          throw pErr;
+        }
         setProgress(((i + slice.length) / extracted.pages.length) * 50);
       }
+      step({ name: "store-pages", label: "Store page text", status: "ok", msg: `${extracted.pages.length} pages` });
 
+      step({ name: "store-chunks", label: "Store memory chunks", status: "start" });
       for (let i = 0; i < chunks.length; i += 200) {
         const slice = chunks.slice(i, i + 200).map((content, j) => ({
           book_id: bookId,
@@ -258,9 +287,13 @@ function UploadPage() {
           content,
         }));
         const { error: cErr } = await supabase.from("ncert_chunks").insert(slice);
-        if (cErr) throw cErr;
+        if (cErr) {
+          step({ name: "store-chunks", label: "Store memory chunks", status: "error", msg: cErr.message });
+          throw cErr;
+        }
         setProgress(50 + ((i + slice.length) / chunks.length) * 50);
       }
+      step({ name: "store-chunks", label: "Store memory chunks", status: "ok", msg: `${chunks.length} chunks` });
 
       return {
         numPages: extracted.numPages,
