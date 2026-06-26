@@ -369,17 +369,6 @@ function UploadPage() {
       const f = batchFiles[i];
       setBatchIndex(i);
       const meta = detectMeta(f);
-      if (!meta.klass || !meta.subject) {
-        setBatchLog((l) => [
-          ...l,
-          {
-            name: f.name,
-            status: "skip",
-            msg: "Could not detect class/subject — pick defaults above.",
-          },
-        ]);
-        continue;
-      }
       try {
         const r = await ingestPdf(f, {
           klass: meta.klass,
@@ -393,7 +382,9 @@ function UploadPage() {
           {
             name: f.name,
             status: "ok",
-            msg: `${meta.klass} · ${meta.subject} — ${r.numPages}p / ${r.numChunks} chunks`,
+            msg: `${meta.klass} · ${meta.subject} — ${r.numPages}p / ${r.numChunks} chunks · saved to ${r.path}`,
+            path: r.path,
+            url: r.downloadUrl ?? undefined,
           },
         ]);
       } catch (e) {
