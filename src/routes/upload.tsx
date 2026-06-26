@@ -174,8 +174,10 @@ function UploadPage() {
       if (upErr) throw upErr;
       setProgress(100);
 
-      const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      const downloadUrl = pub?.publicUrl ?? null;
+      const { data: signed } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      const downloadUrl = signed?.signedUrl ?? null;
 
       setStage("reading");
       setProgress(0);
