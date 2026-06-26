@@ -23,6 +23,10 @@ import {
   AlertTriangle,
   BookOpen,
   Library,
+  RefreshCw,
+  History,
+  Clock,
+  Circle,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -82,20 +86,42 @@ function UploadPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [library, setLibrary] = useState<LibraryBook[]>([]);
 
+  // Per-step audit log entry for each PDF
+  type StepName =
+    | "upload"
+    | "parse"
+    | "chunk"
+    | "store-book"
+    | "store-pages"
+    | "store-chunks";
+  type StepEvent = {
+    name: StepName;
+    label: string;
+    ts: number;
+    status: "start" | "ok" | "error";
+    msg?: string;
+  };
+  type BatchLogEntry = {
+    id: string;
+    name: string;
+    status: "pending" | "running" | "ok" | "error" | "skip";
+    msg?: string;
+    path?: string;
+    url?: string;
+    steps: StepEvent[];
+    file: File;
+    meta?: { klass: string; subject: string; chapter: string };
+    startedAt?: number;
+    endedAt?: number;
+  };
+
   // Folder batch state
   const folderInputRef = useRef<HTMLInputElement>(null);
   const [batchFiles, setBatchFiles] = useState<File[]>([]);
   const [batchIndex, setBatchIndex] = useState(0);
   const [batchRunning, setBatchRunning] = useState(false);
-  const [batchLog, setBatchLog] = useState<
-    {
-      name: string;
-      status: "ok" | "error" | "skip";
-      msg?: string;
-      path?: string;
-      url?: string;
-    }[]
-  >([]);
+  const [batchLog, setBatchLog] = useState<BatchLogEntry[]>([]);
+  const [openSteps, setOpenSteps] = useState<Record<string, boolean>>({});
 
   const refreshLibrary = useCallback(async () => {
     const { data, error: e } = await supabase
@@ -157,10 +183,14 @@ function UploadPage() {
         learnerName?: string;
         learnerGoals?: string;
       },
+      onStep?: (s: Omit<StepEvent, "ts">) => void,
     ) => {
+      const step = (s: Omit<StepEvent, "ts">) => onStep?.(s);
+
       setStage("uploading");
       setProgress(0);
       setStatusMsg(`Uploading ${f.name}…`);
+      step({ name: "upload", label: "Upload to storage", status: "start" });
 
       const safeChapter = (meta.chapter || f.name.replace(/\.pdf$/i, "")).trim();
       const slug = `${meta.klass}__${meta.subject}__${safeChapter}__${Date.now()}`
@@ -171,8 +201,12 @@ function UploadPage() {
       const { error: upErr } = await supabase.storage
         .from(BUCKET)
         .upload(path, f, { contentType: "application/pdf", upsert: false });
-      if (upErr) throw upErr;
+      if (upErr) {
+        step({ name: "upload", label: "Upload to storage", status: "error", msg: upErr.message });
+        throw upErr;
+      }
       setProgress(100);
+      step({ name: "upload", label: "Upload to storage", status: "ok", msg: path });
 
       const { data: signed } = await supabase.storage
         .from(BUCKET)
@@ -182,16 +216,27 @@ function UploadPage() {
       setStage("reading");
       setProgress(0);
       setStatusMsg(`Reading every page of ${f.name}…`);
-      const extracted = await extractPdfText(f, (p, total) =>
-        setProgress((p / total) * 100),
-      );
+      step({ name: "parse", label: "Parse PDF pages", status: "start" });
+      let extracted;
+      try {
+        extracted = await extractPdfText(f, (p, total) =>
+          setProgress((p / total) * 100),
+        );
+      } catch (e) {
+        step({ name: "parse", label: "Parse PDF pages", status: "error", msg: e instanceof Error ? e.message : "parse failed" });
+        throw e;
+      }
+      step({ name: "parse", label: "Parse PDF pages", status: "ok", msg: `${extracted.numPages} pages` });
 
       setStage("chunking");
       setStatusMsg(`Chunking ${extracted.numPages} pages for AI memory…`);
+      step({ name: "chunk", label: "Build memory chunks", status: "start" });
       const chunks = chunkText(extracted.fullText);
+      step({ name: "chunk", label: "Build memory chunks", status: "ok", msg: `${chunks.length} chunks` });
 
       setStage("saving");
       setStatusMsg("Saving NCERT memory to the database…");
+      step({ name: "store-book", label: "Insert book record", status: "start" });
       const { data: book, error: bErr } = await supabase
         .from("ncert_books")
         .insert({
@@ -211,9 +256,14 @@ function UploadPage() {
         })
         .select("id")
         .single();
-      if (bErr || !book) throw bErr ?? new Error("Insert failed");
+      if (bErr || !book) {
+        step({ name: "store-book", label: "Insert book record", status: "error", msg: bErr?.message ?? "insert failed" });
+        throw bErr ?? new Error("Insert failed");
+      }
       const bookId = book.id as string;
+      step({ name: "store-book", label: "Insert book record", status: "ok", msg: bookId });
 
+      step({ name: "store-pages", label: "Store page text", status: "start" });
       for (let i = 0; i < extracted.pages.length; i += 200) {
         const slice = extracted.pages.slice(i, i + 200).map((p) => ({
           book_id: bookId,
@@ -221,10 +271,15 @@ function UploadPage() {
           text: p.text,
         }));
         const { error: pErr } = await supabase.from("ncert_pages").insert(slice);
-        if (pErr) throw pErr;
+        if (pErr) {
+          step({ name: "store-pages", label: "Store page text", status: "error", msg: pErr.message });
+          throw pErr;
+        }
         setProgress(((i + slice.length) / extracted.pages.length) * 50);
       }
+      step({ name: "store-pages", label: "Store page text", status: "ok", msg: `${extracted.pages.length} pages` });
 
+      step({ name: "store-chunks", label: "Store memory chunks", status: "start" });
       for (let i = 0; i < chunks.length; i += 200) {
         const slice = chunks.slice(i, i + 200).map((content, j) => ({
           book_id: bookId,
@@ -232,9 +287,13 @@ function UploadPage() {
           content,
         }));
         const { error: cErr } = await supabase.from("ncert_chunks").insert(slice);
-        if (cErr) throw cErr;
+        if (cErr) {
+          step({ name: "store-chunks", label: "Store memory chunks", status: "error", msg: cErr.message });
+          throw cErr;
+        }
         setProgress(50 + ((i + slice.length) / chunks.length) * 50);
       }
+      step({ name: "store-chunks", label: "Store memory chunks", status: "ok", msg: `${chunks.length} chunks` });
 
       return {
         numPages: extracted.numPages,
@@ -351,61 +410,145 @@ function UploadPage() {
   );
 
 
-  const onPickFolder = useCallback((files: FileList | null) => {
-    setError(null);
-    if (!files) return;
-    const pdfs = Array.from(files).filter(
-      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
-    );
-    setBatchFiles(pdfs);
-    setBatchLog([]);
-    setBatchIndex(0);
-  }, []);
+  const updateEntry = useCallback(
+    (id: string, patch: Partial<BatchLogEntry> | ((e: BatchLogEntry) => BatchLogEntry)) => {
+      setBatchLog((prev) =>
+        prev.map((e) =>
+          e.id === id
+            ? typeof patch === "function"
+              ? patch(e)
+              : { ...e, ...patch }
+            : e,
+        ),
+      );
+    },
+    [],
+  );
 
-  const runBatch = useCallback(async () => {
-    if (batchFiles.length === 0 || batchRunning) return;
-    setBatchRunning(true);
-    setError(null);
-    setBatchLog([]);
-    for (let i = 0; i < batchFiles.length; i++) {
-      const f = batchFiles[i];
-      setBatchIndex(i);
-      const meta = detectMeta(f);
-      try {
-        const r = await ingestPdf(f, {
-          klass: meta.klass,
-          subject: meta.subject,
-          chapter: meta.chapter,
-          learnerName,
-          learnerGoals,
+  const recordStep = useCallback(
+    (id: string, s: Omit<StepEvent, "ts">) => {
+      const event: StepEvent = { ...s, ts: Date.now() };
+      updateEntry(id, (e) => ({ ...e, steps: [...e.steps, event] }));
+    },
+    [updateEntry],
+  );
+
+  const onPickFolder = useCallback(
+    (files: FileList | null) => {
+      setError(null);
+      if (!files) return;
+      const pdfs = Array.from(files).filter(
+        (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
+      );
+      setBatchFiles(pdfs);
+      setBatchIndex(0);
+      // Pre-populate audit log entries so the user sees every queued file.
+      const entries: BatchLogEntry[] = pdfs.map((f) => {
+        const meta = detectMeta(f);
+        return {
+          id:
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `${f.name}-${Math.random()}`,
+          name: f.name,
+          status: "pending",
+          steps: [],
+          file: f,
+          meta,
+        };
+      });
+      setBatchLog(entries);
+    },
+    [detectMeta],
+  );
+
+  // Run a batch of entries through the ingestion pipeline.
+  const runEntries = useCallback(
+    async (entries: BatchLogEntry[]) => {
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        const f = entry.file;
+        const meta = entry.meta ?? detectMeta(f);
+        setBatchIndex(i);
+        updateEntry(entry.id, {
+          status: "running",
+          startedAt: Date.now(),
+          steps: [],
+          meta,
         });
-        setBatchLog((l) => [
-          ...l,
-          {
-            name: f.name,
+        try {
+          const r = await ingestPdf(
+            f,
+            {
+              klass: meta.klass,
+              subject: meta.subject,
+              chapter: meta.chapter,
+              learnerName,
+              learnerGoals,
+            },
+            (s) => recordStep(entry.id, s),
+          );
+          updateEntry(entry.id, {
             status: "ok",
-            msg: `${meta.klass} · ${meta.subject} — ${r.numPages}p / ${r.numChunks} chunks · saved to ${r.path}`,
+            endedAt: Date.now(),
             path: r.path,
             url: r.downloadUrl ?? undefined,
-          },
-        ]);
-      } catch (e) {
-        setBatchLog((l) => [
-          ...l,
-          {
-            name: f.name,
+            msg: `${meta.klass} · ${meta.subject} — ${r.numPages}p / ${r.numChunks} chunks`,
+          });
+        } catch (e) {
+          updateEntry(entry.id, {
             status: "error",
+            endedAt: Date.now(),
             msg: e instanceof Error ? e.message : "Failed",
-          },
-        ]);
+          });
+        }
       }
-    }
-    setBatchIndex(batchFiles.length);
+    },
+    [detectMeta, ingestPdf, learnerName, learnerGoals, recordStep, updateEntry],
+  );
+
+  const runBatch = useCallback(async () => {
+    if (batchRunning) return;
+    const pending = batchLog.filter((e) => e.status === "pending");
+    if (pending.length === 0) return;
+    setBatchRunning(true);
+    setError(null);
+    await runEntries(pending);
+    setBatchIndex(pending.length);
     setBatchRunning(false);
     setStage("done");
-    setStatusMsg(`Folder ingest complete — ${batchFiles.length} files processed.`);
+    setStatusMsg(`Folder ingest complete — ${pending.length} files processed.`);
     refreshLibrary();
-  }, [batchFiles, batchRunning, detectMeta, ingestPdf, learnerName, learnerGoals, refreshLibrary]);
+  }, [batchLog, batchRunning, runEntries, refreshLibrary]);
+
+  const failedEntries = useMemo(
+    () => batchLog.filter((e) => e.status === "error" || e.status === "skip"),
+    [batchLog],
+  );
+
+  const retryFailed = useCallback(async () => {
+    if (batchRunning || failedEntries.length === 0) return;
+    setBatchRunning(true);
+    setError(null);
+    // Reset their state to pending before re-running.
+    setBatchLog((prev) =>
+      prev.map((e) =>
+        e.status === "error" || e.status === "skip"
+          ? { ...e, status: "pending", steps: [], msg: undefined, endedAt: undefined }
+          : e,
+      ),
+    );
+    await runEntries(failedEntries);
+    setBatchRunning(false);
+    setStage("done");
+    setStatusMsg(`Retry complete — ${failedEntries.length} files reprocessed.`);
+    refreshLibrary();
+  }, [batchRunning, failedEntries, runEntries, refreshLibrary]);
+
+  const toggleSteps = useCallback((id: string) => {
+    setOpenSteps((s) => ({ ...s, [id]: !s[id] }));
+  }, []);
+
 
   const busy =
     stage === "uploading" ||
@@ -653,20 +796,41 @@ function UploadPage() {
               </Button>
               <Button
                 onClick={runBatch}
-                disabled={batchFiles.length === 0 || batchRunning}
+                disabled={
+                  batchLog.filter((e) => e.status === "pending").length === 0 ||
+                  batchRunning
+                }
               >
                 {batchRunning ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Ingesting {batchIndex + 1} / {batchFiles.length}…
+                    Ingesting {Math.min(batchIndex + 1, batchFiles.length)} /{" "}
+                    {batchFiles.length}…
                   </>
                 ) : (
-                  <>Ingest {batchFiles.length || ""} PDFs</>
+                  <>Ingest {batchLog.filter((e) => e.status === "pending").length || ""} PDFs</>
                 )}
               </Button>
+              <Button
+                variant="outline"
+                onClick={retryFailed}
+                disabled={failedEntries.length === 0 || batchRunning}
+                title="Re-ingest only the items that previously failed or were skipped"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry failed ({failedEntries.length})
+              </Button>
+              <Link
+                to="/history"
+                className="ml-auto text-sm text-primary underline-offset-4 hover:underline inline-flex items-center gap-1"
+              >
+                <History className="h-4 w-4" /> Ingestion history
+              </Link>
               {batchFiles.length > 0 && !batchRunning && (
-                <span className="text-xs text-muted-foreground">
-                  {batchFiles.length} PDF{batchFiles.length === 1 ? "" : "s"} queued
+                <span className="text-xs text-muted-foreground basis-full">
+                  {batchFiles.length} PDF{batchFiles.length === 1 ? "" : "s"} selected ·{" "}
+                  {batchLog.filter((e) => e.status === "ok").length} done ·{" "}
+                  {failedEntries.length} failed
                 </span>
               )}
             </div>
@@ -678,38 +842,103 @@ function UploadPage() {
             )}
 
             {batchLog.length > 0 && (
-              <ul className="text-sm space-y-1 max-h-72 overflow-auto rounded-lg border border-border p-3 bg-muted/30">
-                {batchLog.map((l, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    {l.status === "ok" ? (
-                      <CheckCircle2 className="h-4 w-4 mt-0.5 text-emerald-600" />
-                    ) : l.status === "skip" ? (
-                      <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600" />
-                    ) : (
-                      <AlertTriangle className="h-4 w-4 mt-0.5 text-destructive" />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{l.name}</p>
-                      {l.msg && (
-                        <p className="text-xs text-muted-foreground break-all">{l.msg}</p>
-                      )}
-                      {l.url && (
-                        <a
-                          href={l.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs text-primary underline break-all"
-                        >
-                          Open saved file
-                        </a>
-                      )}
-                    </div>
-                  </li>
-                ))}
+              <ul className="text-sm space-y-2 max-h-96 overflow-auto rounded-lg border border-border p-3 bg-muted/30">
+                {batchLog.map((l) => {
+                  const isOpen = openSteps[l.id];
+                  const duration =
+                    l.startedAt && l.endedAt
+                      ? `${((l.endedAt - l.startedAt) / 1000).toFixed(1)}s`
+                      : null;
+                  return (
+                    <li
+                      key={l.id}
+                      className="rounded-md border border-border/60 bg-card/60 p-2"
+                    >
+                      <div className="flex items-start gap-2">
+                        {l.status === "ok" ? (
+                          <CheckCircle2 className="h-4 w-4 mt-0.5 text-emerald-600 shrink-0" />
+                        ) : l.status === "running" ? (
+                          <Loader2 className="h-4 w-4 mt-0.5 text-primary animate-spin shrink-0" />
+                        ) : l.status === "pending" ? (
+                          <Circle className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                        ) : l.status === "skip" ? (
+                          <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600 shrink-0" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 mt-0.5 text-destructive shrink-0" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="truncate font-medium">{l.name}</p>
+                            {l.meta && (
+                              <Badge variant="secondary" className="rounded-full text-[10px]">
+                                {l.meta.klass} · {l.meta.subject}
+                              </Badge>
+                            )}
+                            {duration && (
+                              <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                                <Clock className="h-3 w-3" /> {duration}
+                              </span>
+                            )}
+                          </div>
+                          {l.msg && (
+                            <p className="text-xs text-muted-foreground break-all">{l.msg}</p>
+                          )}
+                          <div className="flex gap-3 mt-1">
+                            {l.url && (
+                              <a
+                                href={l.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-primary underline break-all"
+                              >
+                                Open saved file
+                              </a>
+                            )}
+                            {l.steps.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => toggleSteps(l.id)}
+                                className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                              >
+                                {isOpen ? "Hide" : "Show"} audit ({l.steps.length})
+                              </button>
+                            )}
+                          </div>
+                          {isOpen && l.steps.length > 0 && (
+                            <ol className="mt-2 space-y-1 border-l-2 border-border pl-3">
+                              {l.steps.map((s, idx) => (
+                                <li key={idx} className="flex items-start gap-2 text-xs">
+                                  {s.status === "ok" ? (
+                                    <CheckCircle2 className="h-3 w-3 mt-0.5 text-emerald-600 shrink-0" />
+                                  ) : s.status === "error" ? (
+                                    <AlertTriangle className="h-3 w-3 mt-0.5 text-destructive shrink-0" />
+                                  ) : (
+                                    <Loader2 className="h-3 w-3 mt-0.5 text-primary shrink-0" />
+                                  )}
+                                  <span className="font-medium">{s.label}</span>
+                                  <span className="text-muted-foreground">
+                                    {s.status === "start" ? "started" : s.status}
+                                  </span>
+                                  {s.msg && (
+                                    <span className="text-muted-foreground truncate">— {s.msg}</span>
+                                  )}
+                                  <span className="ml-auto text-muted-foreground shrink-0">
+                                    {new Date(s.ts).toLocaleTimeString()}
+                                  </span>
+                                </li>
+                              ))}
+                            </ol>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </CardContent>
         </Card>
+
 
 
         {previewUrl && (
