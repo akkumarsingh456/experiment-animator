@@ -410,61 +410,145 @@ function UploadPage() {
   );
 
 
-  const onPickFolder = useCallback((files: FileList | null) => {
-    setError(null);
-    if (!files) return;
-    const pdfs = Array.from(files).filter(
-      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
-    );
-    setBatchFiles(pdfs);
-    setBatchLog([]);
-    setBatchIndex(0);
-  }, []);
+  const updateEntry = useCallback(
+    (id: string, patch: Partial<BatchLogEntry> | ((e: BatchLogEntry) => BatchLogEntry)) => {
+      setBatchLog((prev) =>
+        prev.map((e) =>
+          e.id === id
+            ? typeof patch === "function"
+              ? patch(e)
+              : { ...e, ...patch }
+            : e,
+        ),
+      );
+    },
+    [],
+  );
 
-  const runBatch = useCallback(async () => {
-    if (batchFiles.length === 0 || batchRunning) return;
-    setBatchRunning(true);
-    setError(null);
-    setBatchLog([]);
-    for (let i = 0; i < batchFiles.length; i++) {
-      const f = batchFiles[i];
-      setBatchIndex(i);
-      const meta = detectMeta(f);
-      try {
-        const r = await ingestPdf(f, {
-          klass: meta.klass,
-          subject: meta.subject,
-          chapter: meta.chapter,
-          learnerName,
-          learnerGoals,
+  const recordStep = useCallback(
+    (id: string, s: Omit<StepEvent, "ts">) => {
+      const event: StepEvent = { ...s, ts: Date.now() };
+      updateEntry(id, (e) => ({ ...e, steps: [...e.steps, event] }));
+    },
+    [updateEntry],
+  );
+
+  const onPickFolder = useCallback(
+    (files: FileList | null) => {
+      setError(null);
+      if (!files) return;
+      const pdfs = Array.from(files).filter(
+        (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
+      );
+      setBatchFiles(pdfs);
+      setBatchIndex(0);
+      // Pre-populate audit log entries so the user sees every queued file.
+      const entries: BatchLogEntry[] = pdfs.map((f) => {
+        const meta = detectMeta(f);
+        return {
+          id:
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `${f.name}-${Math.random()}`,
+          name: f.name,
+          status: "pending",
+          steps: [],
+          file: f,
+          meta,
+        };
+      });
+      setBatchLog(entries);
+    },
+    [detectMeta],
+  );
+
+  // Run a batch of entries through the ingestion pipeline.
+  const runEntries = useCallback(
+    async (entries: BatchLogEntry[]) => {
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        const f = entry.file;
+        const meta = entry.meta ?? detectMeta(f);
+        setBatchIndex(i);
+        updateEntry(entry.id, {
+          status: "running",
+          startedAt: Date.now(),
+          steps: [],
+          meta,
         });
-        setBatchLog((l) => [
-          ...l,
-          {
-            name: f.name,
+        try {
+          const r = await ingestPdf(
+            f,
+            {
+              klass: meta.klass,
+              subject: meta.subject,
+              chapter: meta.chapter,
+              learnerName,
+              learnerGoals,
+            },
+            (s) => recordStep(entry.id, s),
+          );
+          updateEntry(entry.id, {
             status: "ok",
-            msg: `${meta.klass} · ${meta.subject} — ${r.numPages}p / ${r.numChunks} chunks · saved to ${r.path}`,
+            endedAt: Date.now(),
             path: r.path,
             url: r.downloadUrl ?? undefined,
-          },
-        ]);
-      } catch (e) {
-        setBatchLog((l) => [
-          ...l,
-          {
-            name: f.name,
+            msg: `${meta.klass} · ${meta.subject} — ${r.numPages}p / ${r.numChunks} chunks`,
+          });
+        } catch (e) {
+          updateEntry(entry.id, {
             status: "error",
+            endedAt: Date.now(),
             msg: e instanceof Error ? e.message : "Failed",
-          },
-        ]);
+          });
+        }
       }
-    }
-    setBatchIndex(batchFiles.length);
+    },
+    [detectMeta, ingestPdf, learnerName, learnerGoals, recordStep, updateEntry],
+  );
+
+  const runBatch = useCallback(async () => {
+    if (batchRunning) return;
+    const pending = batchLog.filter((e) => e.status === "pending");
+    if (pending.length === 0) return;
+    setBatchRunning(true);
+    setError(null);
+    await runEntries(pending);
+    setBatchIndex(pending.length);
     setBatchRunning(false);
     setStage("done");
-    setStatusMsg(`Folder ingest complete — ${batchFiles.length} files processed.`);
+    setStatusMsg(`Folder ingest complete — ${pending.length} files processed.`);
     refreshLibrary();
-  }, [batchFiles, batchRunning, detectMeta, ingestPdf, learnerName, learnerGoals, refreshLibrary]);
+  }, [batchLog, batchRunning, runEntries, refreshLibrary]);
+
+  const failedEntries = useMemo(
+    () => batchLog.filter((e) => e.status === "error" || e.status === "skip"),
+    [batchLog],
+  );
+
+  const retryFailed = useCallback(async () => {
+    if (batchRunning || failedEntries.length === 0) return;
+    setBatchRunning(true);
+    setError(null);
+    // Reset their state to pending before re-running.
+    setBatchLog((prev) =>
+      prev.map((e) =>
+        e.status === "error" || e.status === "skip"
+          ? { ...e, status: "pending", steps: [], msg: undefined, endedAt: undefined }
+          : e,
+      ),
+    );
+    await runEntries(failedEntries);
+    setBatchRunning(false);
+    setStage("done");
+    setStatusMsg(`Retry complete — ${failedEntries.length} files reprocessed.`);
+    refreshLibrary();
+  }, [batchRunning, failedEntries, runEntries, refreshLibrary]);
+
+  const toggleSteps = useCallback((id: string) => {
+    setOpenSteps((s) => ({ ...s, [id]: !s[id] }));
+  }, []);
+
 
   const busy =
     stage === "uploading" ||
