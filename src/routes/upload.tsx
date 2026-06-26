@@ -686,10 +686,20 @@ function UploadPage() {
                     ) : (
                       <AlertTriangle className="h-4 w-4 mt-0.5 text-destructive" />
                     )}
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{l.name}</p>
                       {l.msg && (
-                        <p className="text-xs text-muted-foreground">{l.msg}</p>
+                        <p className="text-xs text-muted-foreground break-all">{l.msg}</p>
+                      )}
+                      {l.url && (
+                        <a
+                          href={l.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-primary underline break-all"
+                        >
+                          Open saved file
+                        </a>
                       )}
                     </div>
                   </li>
