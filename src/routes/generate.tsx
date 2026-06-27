@@ -58,8 +58,8 @@ export const Route = createFileRoute("/generate")({
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   atom: Atom, beaker: Beaker, leaf: Leaf, magnet: Magnet, microscope: Microscope,
-  flask: FlaskConical, dna: Dna, lightbulb: Lightbulb, function: Function,
-  circuit: Cpu, planet: Orbit, ruler: Ruler, prism: Prism, heart: Heart,
+  flask: FlaskConical, dna: Dna, lightbulb: Lightbulb, function: Sigma,
+  circuit: Cpu, planet: Orbit, ruler: Ruler, prism: Triangle, heart: Heart,
   brain: Brain, bolt: Zap,
 };
 
