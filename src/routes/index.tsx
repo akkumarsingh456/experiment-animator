@@ -1,7 +1,16 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sparkles,
   Upload,
@@ -15,21 +24,23 @@ import {
   PlayCircle,
   CheckCircle2,
   BookOpen,
+  Search,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "EduPlan AI — NCERT Experiments, Animated for Class 9–12" },
-      { name: "description", content: "Upload any NCERT chapter. Get cinematic 3D animated experiment videos with narration, perfectly aligned to NEP and Class 9–12 syllabus." },
+      { name: "description", content: "Search any NCERT topic. Get a 10-slide editable lesson and a 3D animated experiment video for Class 9–12." },
     ],
   }),
   component: Landing,
 });
 
-const classes = ["Class 9", "Class 10", "Class 11", "Class 12"];
+const CLASSES = ["9", "10", "11", "12"];
+const SUBJECTS = ["Physics", "Chemistry", "Biology", "Mathematics", "Science", "Economics", "History", "Geography", "English", "Hindi"];
 
-const subjects = [
+const subjectCards = [
   { name: "Chemistry", icon: FlaskConical, color: "var(--chemistry)", desc: "Reactions, bonds & molecular zoom-ins" },
   { name: "Physics", icon: Atom, color: "var(--physics)", desc: "Light rays, circuits & field lines" },
   { name: "Biology", icon: Leaf, color: "var(--biology)", desc: "Cells, osmosis & enzyme action" },
@@ -43,14 +54,100 @@ const steps = [
   { icon: PlayCircle, title: "Learn & Share", desc: "Stream in class, download MP4, or share a link with classmates." },
 ];
 
-const features = [
-  "Anchored to NCERT 'Activity' numbering",
-  "Aligned with NEP 2020 outcomes",
-  "Safety gear shown in every lab scene",
-  "Vertical & 16:9 aspect ratios",
-  "Hindi & English voiceover support",
-  "Downloadable scene-by-scene JSON",
-];
+function GeneratorBlock() {
+  const nav = useNavigate();
+  const [topic, setTopic] = useState("");
+  const [subtopics, setSubtopics] = useState("");
+  const [klass, setKlass] = useState("10");
+  const [subject, setSubject] = useState("Science");
+  const [chapter, setChapter] = useState("");
+
+  function go() {
+    if (!topic.trim()) return;
+    nav({
+      to: "/generate",
+      search: { topic, subtopics, klass, subject, chapter },
+    });
+  }
+
+  return (
+    <Card className="border-border/60 shadow-soft overflow-hidden">
+      <CardContent className="p-6 sm:p-8">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary grid place-items-center">
+            <Search className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-lg leading-tight">Advanced NCERT Topic Generator</h3>
+            <p className="text-xs text-muted-foreground">RAG-filtered to your exact Class · Subject · Chapter</p>
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2">
+            <label className="text-xs font-medium text-muted-foreground">Topic name</label>
+            <Input
+              placeholder='e.g. "Acids, Bases and Salts" or "Electromagnetic Induction"'
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="text-xs font-medium text-muted-foreground">Subtopics (comma separated)</label>
+            <Input
+              placeholder="pH scale, indicators, neutralisation"
+              value={subtopics}
+              onChange={(e) => setSubtopics(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Class</label>
+            <Select value={klass} onValueChange={setKlass}>
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CLASSES.map((c) => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Subject</label>
+            <Select value={subject} onValueChange={setSubject}>
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {SUBJECTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="text-xs font-medium text-muted-foreground">Chapter name or number (optional)</label>
+            <Input
+              placeholder='e.g. "Chapter 2" or "Acids Bases and Salts"'
+              value={chapter}
+              onChange={(e) => setChapter(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+        </div>
+
+        <Button
+          onClick={go}
+          disabled={!topic.trim()}
+          size="lg"
+          className="w-full mt-5 rounded-xl h-12 shadow-glow"
+        >
+          <Wand2 className="h-4 w-4" />
+          Generate Lesson &amp; 3D Experiment
+        </Button>
+
+        <p className="mt-3 text-xs text-muted-foreground text-center">
+          The AI strictly reads only the matching NCERT PDF you uploaded — every other file is skipped.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
 
 function Landing() {
   return (
@@ -65,9 +162,10 @@ function Landing() {
             <span className="font-display font-extrabold text-lg tracking-tight">EduPlan AI</span>
           </Link>
           <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-muted-foreground">
+            <a href="#generator" className="hover:text-foreground transition">Generate</a>
             <a href="#how" className="hover:text-foreground transition">How it works</a>
-            <a href="#subjects" className="hover:text-foreground transition">Subjects</a>
-            <a href="#features" className="hover:text-foreground transition">Features</a>
+            <Link to="/upload" className="hover:text-foreground transition">Upload</Link>
+            <Link to="/history" className="hover:text-foreground transition">Library</Link>
           </nav>
           <Button asChild size="sm" className="rounded-full"><Link to="/upload">Upload NCERT PDF</Link></Button>
         </div>
@@ -76,80 +174,31 @@ function Landing() {
       {/* HERO */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 grid-paper opacity-60 pointer-events-none" />
-        <div className="max-w-6xl mx-auto px-5 pt-20 pb-24 relative">
+        <div className="max-w-6xl mx-auto px-5 pt-16 pb-10 relative">
           <div className="max-w-3xl mx-auto text-center">
             <Badge variant="secondary" className="rounded-full px-3 py-1 mb-6 gap-1.5">
               <Sparkles className="h-3.5 w-3.5" />
               Built for NCERT • Class 9–12
             </Badge>
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-[1.05] tracking-tight">
-              Every NCERT experiment,{" "}
-              <span className="text-primary">animated to life.</span>
+              Every NCERT topic,{" "}
+              <span className="text-primary">a 10-slide lesson + 3D experiment.</span>
             </h1>
             <p className="mt-6 text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Upload a chapter PDF. EduPlan AI extracts every <span className="font-semibold text-foreground">Activity</span>,
-              writes the storyboard, and renders a cinematic 3D video — complete with narration,
-              labels, and a microscopic zoom-in that explains the <em>why</em>.
+              Search any concept. The AI reads only the matching NCERT chapter you uploaded and
+              builds an editable presentation plus a cinematic 3D animated activity video.
             </p>
-
-            <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-              <Button size="lg" className="rounded-full h-12 px-7 shadow-glow">
-                <Upload className="h-4 w-4" />
-                Upload your NCERT chapter
-              </Button>
-              <Button size="lg" variant="outline" className="rounded-full h-12 px-7">
-                <PlayCircle className="h-4 w-4" />
-                Watch a sample
-              </Button>
-            </div>
-
-            <div className="mt-8 flex flex-wrap gap-2 justify-center">
-              {classes.map((c) => (
-                <Badge key={c} variant="outline" className="rounded-full bg-card/60">
-                  {c}
-                </Badge>
-              ))}
-            </div>
           </div>
 
-          {/* Mock preview card */}
-          <div className="mt-16 max-w-4xl mx-auto">
-            <Card className="overflow-hidden border-border/60 shadow-soft">
-              <CardContent className="p-0">
-                <div className="aspect-video bg-gradient-to-br from-secondary via-card to-accent/30 relative grid place-items-center">
-                  <div className="absolute top-4 left-4 flex gap-1.5">
-                    <div className="h-2.5 w-2.5 rounded-full bg-destructive/60" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-accent" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-chemistry/70" />
-                  </div>
-                  <div className="absolute top-4 right-4">
-                    <Badge className="bg-background/80 text-foreground border border-border">
-                      Activity 1.1 • Class 10 Chemistry
-                    </Badge>
-                  </div>
-                  <div className="text-center px-6">
-                    <div className="h-20 w-20 mx-auto rounded-full bg-primary/90 text-primary-foreground grid place-items-center shadow-glow">
-                      <PlayCircle className="h-10 w-10" />
-                    </div>
-                    <p className="mt-5 text-sm text-muted-foreground max-w-md mx-auto">
-                      Scene 3 of 5 — "Magnesium ribbon burns with a dazzling white flame in air"
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-5 border-t border-border/60 text-xs">
-                  {["Apparatus", "Reaction", "Observation", "Zoom-in", "Conclusion"].map((s, i) => (
-                    <div
-                      key={s}
-                      className={`p-3 text-center font-medium border-r border-border/60 last:border-r-0 ${
-                        i === 2 ? "bg-primary/10 text-primary" : "text-muted-foreground"
-                      }`}
-                    >
-                      {s}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+          {/* GENERATOR */}
+          <div id="generator" className="mt-10 max-w-3xl mx-auto">
+            <GeneratorBlock />
+          </div>
+
+          <div className="mt-8 flex flex-wrap gap-2 justify-center">
+            {CLASSES.map((c) => (
+              <Badge key={c} variant="outline" className="rounded-full bg-card/60">Class {c}</Badge>
+            ))}
           </div>
         </div>
       </section>
@@ -190,7 +239,7 @@ function Landing() {
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {subjects.map((s) => (
+            {subjectCards.map((s) => (
               <Card key={s.name} className="border-border/60 group hover:-translate-y-1 transition-transform">
                 <CardContent className="p-6">
                   <div
@@ -208,72 +257,26 @@ function Landing() {
         </div>
       </section>
 
-      {/* FEATURES */}
-      <section id="features" className="py-20">
-        <div className="max-w-6xl mx-auto px-5 grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <Badge variant="secondary" className="rounded-full mb-4">
-              <BookOpen className="h-3.5 w-3.5" />
-              NEP 2020 ready
-            </Badge>
-            <h2 className="text-3xl sm:text-4xl font-bold leading-tight">
-              Designed for Indian classrooms, not generic AI.
-            </h2>
-            <p className="mt-4 text-muted-foreground leading-relaxed">
-              EduPlan AI anchors on the exact phrasing NCERT uses — every "Activity 1.1" becomes a
-              standalone, syllabus-perfect video. Safety gear, lab settings, and conceptual zoom-ins
-              are non-negotiable defaults.
-            </p>
-            <ul className="mt-6 grid sm:grid-cols-2 gap-3">
-              {features.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-sm">
-                  <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <Card className="border-border/60 shadow-soft overflow-hidden">
-            <CardContent className="p-0">
-              <div className="bg-foreground text-background p-5 font-mono text-xs leading-relaxed overflow-x-auto">
-                <div className="text-accent">// AI Storyboard output</div>
-                <div className="mt-2">{`{`}</div>
-                <div className="pl-4">"activity_id": "Class 10 • Activity 1.1",</div>
-                <div className="pl-4">"objective": "Observe chemical change in burning Mg ribbon",</div>
-                <div className="pl-4">"scenes": [</div>
-                <div className="pl-8">{`{ "title": "Apparatus", "duration": "4s" },`}</div>
-                <div className="pl-8">{`{ "title": "Ignition",  "duration": "5s" },`}</div>
-                <div className="pl-8 text-primary">{`{ "title": "Zoom-in: MgO bond formation" }`}</div>
-                <div className="pl-4">]</div>
-                <div>{`}`}</div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
       {/* CTA */}
-      <section className="py-24">
+      <section className="py-20">
         <div className="max-w-3xl mx-auto px-5 text-center">
           <h2 className="text-3xl sm:text-5xl font-extrabold leading-tight">
             Ready to bring your textbook to life?
           </h2>
           <p className="mt-4 text-muted-foreground text-lg">
-            Free for the first 10 activities. No card required.
+            Upload your chapter once. Generate unlimited lessons and 3D experiments.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Button size="lg" className="rounded-full h-12 px-8 shadow-glow">
-              <Upload className="h-4 w-4" />
-              Upload NCERT PDF
+            <Button asChild size="lg" className="rounded-full h-12 px-8 shadow-glow">
+              <Link to="/upload"><Upload className="h-4 w-4" />Upload NCERT PDF</Link>
             </Button>
-            <Button size="lg" variant="outline" className="rounded-full h-12 px-8">
-              See a live sample
+            <Button asChild size="lg" variant="outline" className="rounded-full h-12 px-8">
+              <a href="#generator"><CheckCircle2 className="h-4 w-4" />Try the Generator</a>
             </Button>
           </div>
         </div>
       </section>
 
-      {/* FOOTER */}
       <footer className="border-t border-border/60 py-8">
         <div className="max-w-6xl mx-auto px-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
@@ -283,6 +286,7 @@ function Landing() {
             <span className="font-semibold text-foreground">EduPlan AI</span>
           </div>
           <p>© 2026 EduPlan AI • Made for Class 9–12 learners in India</p>
+          <Badge variant="secondary" className="rounded-full"><BookOpen className="h-3.5 w-3.5" />NEP 2020 ready</Badge>
         </div>
       </footer>
     </div>
