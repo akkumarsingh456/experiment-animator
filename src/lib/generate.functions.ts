@@ -143,6 +143,56 @@ function fallbackSlides(topic: string, context: string): Slide[] {
   }));
 }
 
+function fallbackActivities(topic: string, context: string): Activity[] {
+  const sentences = context
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 35)
+    .slice(0, 5);
+  return [{
+    name: `${topic} — NCERT working guide`,
+    objective: `Understand the working of ${topic} using the selected NCERT text.`,
+    apparatus: ["NCERT diagram/text", "Notebook", "Teacher-guided classroom demonstration"],
+    steps: (sentences.length ? sentences : [
+      `Read the matching NCERT passage for ${topic}.`,
+      "Identify the main condition, change, observation and result described in the text.",
+      "Connect the observation to the NCERT explanation and conclusion.",
+    ]).map((sentence, index) => ({
+      step: index + 1,
+      title: index === 0 ? "Start from NCERT" : `Working step ${index + 1}`,
+      description: sentence,
+    })),
+    observation: "The observation is taken from the filtered NCERT excerpt shown in the generated lesson.",
+    conclusion: `The concept of ${topic} is explained only from the matching uploaded NCERT memory.`,
+  }];
+}
+
+function normalizeActivities(activities: unknown, topic: string, context: string): Activity[] {
+  if (!Array.isArray(activities) || activities.length === 0) return fallbackActivities(topic, context);
+  return activities.map((activity, index) => {
+    const value = activity as Partial<Activity>;
+    const steps = Array.isArray(value.steps) && value.steps.length > 0
+      ? value.steps.map((step, stepIndex) => {
+          const s = step as Partial<ActivityStep>;
+          return {
+            step: Number(s.step || stepIndex + 1),
+            title: String(s.title || `Step ${stepIndex + 1}`),
+            description: String(s.description || "Follow this NCERT step."),
+          };
+        })
+      : fallbackActivities(topic, context)[0].steps;
+    return {
+      name: String(value.name || `${topic} activity ${index + 1}`),
+      objective: String(value.objective || `Understand ${topic}.`),
+      apparatus: Array.isArray(value.apparatus) ? value.apparatus.map(String) : [],
+      steps,
+      observation: String(value.observation || "Observe the result described in NCERT."),
+      conclusion: String(value.conclusion || `Connect the activity result to ${topic}.`),
+    };
+  });
+}
+
 function normalizeSlides(slides: unknown, topic: string, context: string): Slide[] {
   const fallback = fallbackSlides(topic, context);
   const parsed = Array.isArray(slides)
@@ -302,11 +352,12 @@ export const generateLesson = createServerFn({ method: "POST" })
       `  "video": { "title": str, "scenes": [ {"scene": int, "title": str, "duration_s": int, "visual_prompt": str (cinematic 3D scene description, microscopic zoom-ins where relevant), "narration": str (1-2 sentences)} ] x 4-6 }\n` +
       `}\n` +
       `If an explicit NCERT Activity is present anywhere in the excerpts, copy its process step-by-step in simple words without changing the order. ` +
+      `If there is no explicit Activity label, still return one "NCERT working guide" activity with sequential steps that explain the correct working of the topic using only the excerpts. ` +
       `Every slide bullet, activity step, and video scene must be grounded in the excerpts.`;
 
     const ai = await callLovableAI(system, userPrompt);
 
-    const activities = Array.isArray(ai.activities) ? ai.activities : [];
+    const activities = normalizeActivities(ai.activities, data.topic, context);
     const video = ai.video?.scenes?.length ? ai.video : fallbackVideo(data.topic, activities);
 
     return {
