@@ -4,11 +4,11 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 
 const Input = z.object({
-  topic: z.string().min(1),
-  subtopics: z.string().optional().default(""),
-  klass: z.string().min(1),
-  subject: z.string().min(1),
-  chapter: z.string().optional().default(""),
+  topic: z.coerce.string().min(1),
+  subtopics: z.coerce.string().optional().default(""),
+  klass: z.coerce.string().min(1),
+  subject: z.coerce.string().min(1),
+  chapter: z.coerce.string().optional().default(""),
 });
 
 export type Slide = {
