@@ -141,9 +141,9 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [verified, setVerified] = useState(false);
 
-  // Keep slides if result changes
-  useEffect(() => setSlides(result.slides), [result.slides]);
+  useEffect(() => { setSlides(result.slides); setVerified(false); setActiveIdx(0); }, [result]);
 
   function updateSlide(idx: number, patch: Partial<Slide>) {
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
@@ -175,79 +175,91 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
   return (
     <>
-      {/* Slides */}
-      <section className="mb-10">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
-          <h2 className="font-semibold text-lg">10-Slide Interactive Lesson</h2>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => setEditing((v) => !v)}>
-              <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setPresenting(true)}>
-              <Maximize2 className="h-4 w-4" />Presentation Mode
-            </Button>
-            <Button size="sm" variant="outline" onClick={downloadPDF}>
-              <Download className="h-4 w-4" />PDF
-            </Button>
-            <Button size="sm" onClick={downloadPPTX}>
-              <Download className="h-4 w-4" />PPTX
-            </Button>
-          </div>
-        </div>
+      {/* Step 1 — Activity verification (always first) */}
+      <ActivityVerification
+        matches={result.activity_matches}
+        activities={result.activities}
+        verified={verified}
+        onConfirm={() => setVerified(true)}
+        onReject={() => {
+          toast.message("Refine your Topic / Chapter / Subtopics and run Generate again.");
+          setVerified(false);
+        }}
+      />
 
-        {/* Active slide */}
-        <SlideCanvas
-          slide={slides[activeIdx]}
-          index={activeIdx}
-          total={slides.length}
-          editing={editing}
-          onChange={(patch) => updateSlide(activeIdx, patch)}
-        />
-
-        {/* Nav */}
-        <div className="flex items-center justify-between mt-4 print:hidden">
-          <Button variant="outline" size="sm" disabled={activeIdx === 0} onClick={() => setActiveIdx((i) => i - 1)}>
-            <ChevronLeft className="h-4 w-4" />Prev
-          </Button>
-          <div className="text-sm text-muted-foreground">{activeIdx + 1} / {slides.length}</div>
-          <Button variant="outline" size="sm" disabled={activeIdx === slides.length - 1} onClick={() => setActiveIdx((i) => i + 1)}>
-            Next<ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Thumbnails */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4 print:hidden">
-          {slides.map((s, i) => (
-            <button
-              key={i}
-              onClick={() => setActiveIdx(i)}
-              className={`text-left rounded-lg border p-2 text-xs transition ${
-                i === activeIdx ? "border-primary bg-primary/5" : "border-border hover:bg-card/60"
-              }`}
-            >
-              <div className="font-semibold truncate">{i + 1}. {s.title}</div>
-              <div className="text-muted-foreground truncate">{s.bullets?.[0]}</div>
-            </button>
-          ))}
-        </div>
-
-        {/* Print stack — all 10 slides for PDF export */}
-        <div className="hidden print:block">
-          {slides.map((s, i) => (
-            <div key={i} className="break-after-page mb-6">
-              <SlideCanvas slide={s} index={i} total={slides.length} editing={false} onChange={() => {}} />
+      {!verified ? (
+        <p className="text-xs text-muted-foreground mt-6">
+          Confirm the matched NCERT Activity above to unlock the 10-slide PPT, downloads, and 3D animated video.
+        </p>
+      ) : (
+        <>
+          {/* Slides */}
+          <section className="mb-10">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
+              <h2 className="font-semibold text-lg">10-Slide Interactive Lesson</h2>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => setEditing((v) => !v)}>
+                  <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setPresenting(true)}>
+                  <Maximize2 className="h-4 w-4" />Presentation Mode
+                </Button>
+                <Button size="sm" variant="outline" onClick={downloadPDF}>
+                  <Download className="h-4 w-4" />PDF
+                </Button>
+                <Button size="sm" onClick={downloadPPTX}>
+                  <Download className="h-4 w-4" />PPTX
+                </Button>
+              </div>
             </div>
-          ))}
-        </div>
-      </section>
 
-      {/* Activities */}
-      <ActivitiesView activities={result.activities} />
+            <SlideCanvas
+              slide={slides[activeIdx]}
+              index={activeIdx}
+              total={slides.length}
+              editing={editing}
+              onChange={(patch) => updateSlide(activeIdx, patch)}
+            />
 
-      {/* Video storyboard */}
-      <VideoView video={result.video} />
+            <div className="flex items-center justify-between mt-4 print:hidden">
+              <Button variant="outline" size="sm" disabled={activeIdx === 0} onClick={() => setActiveIdx((i) => i - 1)}>
+                <ChevronLeft className="h-4 w-4" />Prev
+              </Button>
+              <div className="text-sm text-muted-foreground">{activeIdx + 1} / {slides.length}</div>
+              <Button variant="outline" size="sm" disabled={activeIdx === slides.length - 1} onClick={() => setActiveIdx((i) => i + 1)}>
+                Next<ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
 
-      {/* Source */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4 print:hidden">
+              {slides.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveIdx(i)}
+                  className={`text-left rounded-lg border p-2 text-xs transition ${
+                    i === activeIdx ? "border-primary bg-primary/5" : "border-border hover:bg-card/60"
+                  }`}
+                >
+                  <div className="font-semibold truncate">{i + 1}. {s.title}</div>
+                  <div className="text-muted-foreground truncate">{s.bullets?.[0]}</div>
+                </button>
+              ))}
+            </div>
+
+            <div className="hidden print:block">
+              {slides.map((s, i) => (
+                <div key={i} className="break-after-page mb-6">
+                  <SlideCanvas slide={s} index={i} total={slides.length} editing={false} onChange={() => {}} />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <ActivitiesView activities={result.activities} />
+          <VideoView video={result.video} />
+        </>
+      )}
+
       <p className="text-xs text-muted-foreground mt-10">
         Source: {result.source_books.map((b) => `${b.subject} · Class ${b.class} · ${b.chapter}`).join(", ")} ({result.context_chars.toLocaleString()} chars of NCERT text)
       </p>
@@ -256,6 +268,92 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         <PresentationMode slides={slides} onClose={() => setPresenting(false)} />
       )}
     </>
+  );
+}
+
+function ActivityVerification({
+  matches, activities, verified, onConfirm, onReject,
+}: {
+  matches: GenerationResult["activity_matches"];
+  activities: GenerationResult["activities"];
+  verified: boolean;
+  onConfirm: () => void;
+  onReject: () => void;
+}) {
+  const top = matches?.[0];
+  const topConfidence = top?.confidence ?? 0;
+  const confidenceTone =
+    topConfidence >= 70 ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30"
+    : topConfidence >= 40 ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
+    : "bg-rose-500/10 text-rose-700 border-rose-500/30";
+
+  return (
+    <section className="mb-8">
+      <Card className="border-primary/30 shadow-soft">
+        <CardContent className="p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <FlaskConical className="h-4 w-4 text-primary" />
+                <h2 className="font-semibold text-lg">Step 1 — Verify the matched NCERT Activity</h2>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Confirm the activity below is the correct working before the PPT and 3D video are generated.
+              </p>
+            </div>
+            {verified ? (
+              <Badge className="rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-500/30">
+                ✓ Verified — lesson unlocked
+              </Badge>
+            ) : (
+              <Badge variant="outline" className={`rounded-full border ${confidenceTone}`}>
+                Top confidence: {topConfidence}%
+              </Badge>
+            )}
+          </div>
+
+          {matches?.length ? (
+            <ol className="space-y-3">
+              {matches.map((m, i) => (
+                <li key={`${m.book_id}:${m.chunk_index}`} className="rounded-lg border border-border/60 p-3 bg-card/40">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <Badge variant="secondary" className="rounded-full">#{i + 1}</Badge>
+                    {m.activity_id && <Badge className="rounded-full bg-primary/10 text-primary border-primary/30">{m.activity_id}</Badge>}
+                    <span className="text-muted-foreground truncate">{m.file_name || m.chapter}</span>
+                    <span className="ml-auto font-mono text-[11px] text-muted-foreground">chunk #{m.chunk_index} · confidence {m.confidence}%</span>
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed">
+                    {m.excerpt || "(no readable excerpt)"}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              No explicit Activity passage detected — the proposed working guide below was synthesised from the matched chapter text.
+            </p>
+          )}
+
+          {activities?.[0] && (
+            <div className="mt-4 rounded-lg bg-secondary/40 p-3 text-sm">
+              <div className="font-medium">Proposed working: {activities[0].name}</div>
+              <div className="text-muted-foreground">{activities[0].objective}</div>
+            </div>
+          )}
+
+          {!verified && (
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Button size="sm" onClick={onConfirm}>
+                <Sparkles className="h-4 w-4" />Confirm — generate PPT & video
+              </Button>
+              <Button size="sm" variant="outline" onClick={onReject}>
+                Not the right activity
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </section>
   );
 }
 
