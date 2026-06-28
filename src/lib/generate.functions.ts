@@ -36,11 +36,22 @@ export type VideoScene = {
   narration: string;
 };
 
+export type ActivityMatch = {
+  book_id: string;
+  chapter: string;
+  file_name: string;
+  chunk_index: number;
+  excerpt: string;
+  activity_id: string | null;
+  confidence: number; // 0-100
+};
+
 export type GenerationResult = {
   source_books: Array<{ id: string; chapter: string; class: string; subject: string }>;
   context_chars: number;
   slides: Slide[];
   activities: Activity[];
+  activity_matches: ActivityMatch[];
   video: { title: string; scenes: VideoScene[] };
 };
 
