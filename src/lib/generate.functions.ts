@@ -371,11 +371,37 @@ export const generateLesson = createServerFn({ method: "POST" })
     const activities = normalizeActivities(ai.activities, data.topic, context);
     const video = ai.video?.scenes?.length ? ai.video : fallbackVideo(data.topic, activities);
 
+    // Build verifiable activity matches with confidence so the user can confirm
+    // the correct NCERT activity was matched before the PPT and video are used.
+    const bookMeta = new Map(selectedBooks.map((b) => [b.id, b]));
+    const maxRaw = Math.max(1, ...activityChunks.map((c) => c._s));
+    const matchPool = activityChunks.length > 0
+      ? activityChunks
+      : ranked.slice(0, 5).map((c) => ({ ...c, _s: c._s }));
+    const activity_matches: ActivityMatch[] = matchPool.slice(0, 6).map((c) => {
+      const text = String(c.content || "");
+      const idMatch = text.match(/Activity\s+\d+(?:\.\d+)?/i);
+      const lower = text.toLowerCase();
+      const idx = idMatch ? Math.max(0, lower.indexOf(idMatch[0].toLowerCase()) - 40) : 0;
+      const excerpt = text.slice(idx, idx + 480).replace(/\s+/g, " ").trim();
+      const book = bookMeta.get(c.book_id);
+      return {
+        book_id: c.book_id,
+        chapter: book?.chapter || "",
+        file_name: book?.file_name || "",
+        chunk_index: c.chunk_index,
+        excerpt,
+        activity_id: idMatch ? idMatch[0] : null,
+        confidence: Math.min(100, Math.round((c._s / maxRaw) * 100)),
+      };
+    });
+
     return {
       source_books: selectedBooks.map((b) => ({ id: b.id, chapter: b.chapter, class: b.class, subject: b.subject })),
       context_chars: context.length,
       slides: normalizeSlides(ai.slides, data.topic, context),
       activities,
+      activity_matches,
       video,
     };
   });
