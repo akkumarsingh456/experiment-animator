@@ -141,9 +141,9 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [verified, setVerified] = useState(false);
 
-  // Keep slides if result changes
-  useEffect(() => setSlides(result.slides), [result.slides]);
+  useEffect(() => { setSlides(result.slides); setVerified(false); setActiveIdx(0); }, [result]);
 
   function updateSlide(idx: number, patch: Partial<Slide>) {
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
