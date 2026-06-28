@@ -43,11 +43,11 @@ import {
 } from "lucide-react";
 
 const SearchSchema = z.object({
-  topic: z.string().default(""),
-  subtopics: z.string().default(""),
-  klass: z.string().default("10"),
-  subject: z.string().default("Science"),
-  chapter: z.string().default(""),
+  topic: z.coerce.string().default(""),
+  subtopics: z.coerce.string().default(""),
+  klass: z.coerce.string().default("10"),
+  subject: z.coerce.string().default("Science"),
+  chapter: z.coerce.string().default(""),
 });
 
 export const Route = createFileRoute("/generate")({

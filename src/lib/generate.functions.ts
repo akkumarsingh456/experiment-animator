@@ -4,11 +4,11 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 
 const Input = z.object({
-  topic: z.string().min(1),
-  subtopics: z.string().optional().default(""),
-  klass: z.string().min(1),
-  subject: z.string().min(1),
-  chapter: z.string().optional().default(""),
+  topic: z.coerce.string().min(1),
+  subtopics: z.coerce.string().optional().default(""),
+  klass: z.coerce.string().min(1),
+  subject: z.coerce.string().min(1),
+  chapter: z.coerce.string().optional().default(""),
 });
 
 export type Slide = {
@@ -53,10 +53,182 @@ function supa() {
 }
 
 function score(text: string, terms: string[]) {
-  const t = text.toLowerCase();
+  const t = normalizeText(text);
   let s = 0;
-  for (const term of terms) if (term && t.includes(term)) s += term.length;
+  for (const term of terms) {
+    const normalized = normalizeText(term);
+    if (!normalized) continue;
+    if (t.includes(normalized)) {
+      s += normalized.length * 4;
+      continue;
+    }
+    const words = normalized.split(" ").filter((w) => w.length > 2);
+    const hits = words.filter((word) => t.includes(word)).length;
+    if (hits > 0) s += hits * 3 + (hits === words.length ? 12 : 0);
+  }
   return s;
+}
+
+function normalizeText(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\b(ch|chapter|class|ncert|part|book|vol|volume)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function classNumber(value: string) {
+  return value.match(/9|10|11|12/)?.[0] ?? normalizeText(value);
+}
+
+function subjectAliases(subject: string) {
+  const normalized = normalizeText(subject);
+  const map: Record<string, string[]> = {
+    math: ["math", "mathematics", "ganit"],
+    mathematics: ["math", "mathematics", "ganit"],
+    physics: ["physics", "bhautiki", "bhautik", "physical"],
+    chemistry: ["chemistry", "rasayan", "rasayanik"],
+    biology: ["biology", "jeev vigyan", "jiv vigyan"],
+    science: ["science", "vigyan"],
+    economics: ["economics", "arthashastra"],
+    history: ["history", "itihas"],
+    geography: ["geography", "bhugol"],
+    english: ["english"],
+    hindi: ["hindi"],
+    sanskrit: ["sanskrit"],
+  };
+  return map[normalized] ?? [normalized];
+}
+
+function subjectMatches(actual: string, requested: string) {
+  const a = normalizeText(actual);
+  return subjectAliases(requested).some((alias) => a.includes(alias) || alias.includes(a));
+}
+
+function buildTerms(data: z.infer<typeof Input>) {
+  const raw = [
+    data.topic,
+    data.chapter,
+    ...(data.subtopics || "").split(/[,;\n]/),
+  ];
+  const terms = new Set<string>();
+  for (const item of raw) {
+    const n = normalizeText(item || "");
+    if (!n) continue;
+    terms.add(n);
+    for (const word of n.split(" ")) if (word.length > 3 && !/^\d+$/.test(word)) terms.add(word);
+  }
+  terms.add("activity");
+  terms.add("experiment");
+  return [...terms];
+}
+
+function fallbackSlides(topic: string, context: string): Slide[] {
+  const sentences = context
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 30)
+    .slice(0, 30);
+  const visuals = ["lightbulb", "prism", "atom", "ruler", "beaker", "microscope", "bolt", "function", "brain", "sparkles"];
+  return Array.from({ length: 10 }, (_, i) => ({
+    title: i === 0 ? topic : `${topic} — Key idea ${i}`,
+    bullets: sentences.slice(i * 3, i * 3 + 3).length
+      ? sentences.slice(i * 3, i * 3 + 3)
+      : ["This slide uses only the matching uploaded NCERT text.", "Edit this text after generation if you want a simpler learner version."],
+    visual: visuals[i] ?? "lightbulb",
+    caption: "Generated from the selected Class, Subject and chapter memory.",
+  }));
+}
+
+function fallbackActivities(topic: string, context: string): Activity[] {
+  const sentences = context
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 35)
+    .slice(0, 5);
+  return [{
+    name: `${topic} — NCERT working guide`,
+    objective: `Understand the working of ${topic} using the selected NCERT text.`,
+    apparatus: ["NCERT diagram/text", "Notebook", "Teacher-guided classroom demonstration"],
+    steps: (sentences.length ? sentences : [
+      `Read the matching NCERT passage for ${topic}.`,
+      "Identify the main condition, change, observation and result described in the text.",
+      "Connect the observation to the NCERT explanation and conclusion.",
+    ]).map((sentence, index) => ({
+      step: index + 1,
+      title: index === 0 ? "Start from NCERT" : `Working step ${index + 1}`,
+      description: sentence,
+    })),
+    observation: "The observation is taken from the filtered NCERT excerpt shown in the generated lesson.",
+    conclusion: `The concept of ${topic} is explained only from the matching uploaded NCERT memory.`,
+  }];
+}
+
+function normalizeActivities(activities: unknown, topic: string, context: string): Activity[] {
+  if (!Array.isArray(activities) || activities.length === 0) return fallbackActivities(topic, context);
+  return activities.map((activity, index) => {
+    const value = activity as Partial<Activity>;
+    const steps = Array.isArray(value.steps) && value.steps.length > 0
+      ? value.steps.map((step, stepIndex) => {
+          const s = step as Partial<ActivityStep>;
+          return {
+            step: Number(s.step || stepIndex + 1),
+            title: String(s.title || `Step ${stepIndex + 1}`),
+            description: String(s.description || "Follow this NCERT step."),
+          };
+        })
+      : fallbackActivities(topic, context)[0].steps;
+    return {
+      name: String(value.name || `${topic} activity ${index + 1}`),
+      objective: String(value.objective || `Understand ${topic}.`),
+      apparatus: Array.isArray(value.apparatus) ? value.apparatus.map(String) : [],
+      steps,
+      observation: String(value.observation || "Observe the result described in NCERT."),
+      conclusion: String(value.conclusion || `Connect the activity result to ${topic}.`),
+    };
+  });
+}
+
+function normalizeSlides(slides: unknown, topic: string, context: string): Slide[] {
+  const fallback = fallbackSlides(topic, context);
+  const parsed = Array.isArray(slides)
+    ? slides.map((slide, index) => {
+        const value = slide as Partial<Slide>;
+        return {
+          title: String(value.title || fallback[index]?.title || topic),
+          bullets: Array.isArray(value.bullets) && value.bullets.length > 0
+            ? value.bullets.slice(0, 4).map(String)
+            : fallback[index]?.bullets ?? [],
+          visual: String(value.visual || fallback[index]?.visual || "lightbulb"),
+          caption: value.caption ? String(value.caption) : fallback[index]?.caption,
+        };
+      })
+    : [];
+  return [...parsed, ...fallback].slice(0, 10);
+}
+
+function fallbackVideo(topic: string, activities: Activity[]): { title: string; scenes: VideoScene[] } {
+  const steps = activities.flatMap((a) => a.steps || []);
+  const source = steps.length > 0 ? steps.slice(0, 6) : [
+    { step: 1, title: "Set up the concept", description: `Introduce ${topic} with the NCERT diagram or apparatus.` },
+    { step: 2, title: "Show the change", description: "Animate the ray, particle, object or quantity changing step by step." },
+    { step: 3, title: "Reveal the reason", description: "Zoom into the microscopic or conceptual cause behind the observation." },
+    { step: 4, title: "Connect result", description: "End with the NCERT observation and conclusion." },
+  ];
+  return {
+    title: `${topic} activity animation`,
+    scenes: source.map((step, index) => ({
+      scene: index + 1,
+      title: step.title,
+      duration_s: 5,
+      visual_prompt: `Cinematic 3D classroom-lab animation: ${step.description}`,
+      narration: step.description,
+    })),
+  };
 }
 
 async function callLovableAI(systemPrompt: string, userPrompt: string) {
@@ -95,27 +267,26 @@ export const generateLesson = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }): Promise<GenerationResult> => {
     const s = supa();
-    const terms = [data.topic, ...(data.subtopics || "").split(/[,;\n]/)]
-      .map((t) => t.trim().toLowerCase())
-      .filter(Boolean);
+    const terms = buildTerms(data);
 
-    // 1. Find matching books filtered by class + subject + optional chapter
-    let q = s
+    // 1. Find matching books by the selected class and subject. Many uploaded NCERT
+    // files are full books/parts (not one row per chapter), so the chapter field is
+    // used for ranking inside those books instead of incorrectly rejecting them.
+    const { data: classBooks, error: bErr } = await s
       .from("ncert_books")
       .select("id, class, subject, chapter, file_name")
-      .ilike("class", `%${data.klass}%`)
-      .ilike("subject", `%${data.subject}%`);
-    if (data.chapter) q = q.ilike("chapter", `%${data.chapter}%`);
-    const { data: books, error: bErr } = await q;
+      .ilike("class", `%${classNumber(data.klass)}%`)
+      .limit(100);
     if (bErr) throw new Error(bErr.message);
-    if (!books || books.length === 0) {
+    const candidates = (classBooks ?? []).filter((book) => subjectMatches(book.subject, data.subject));
+    if (candidates.length === 0) {
       throw new Error(
-        `No NCERT PDF found for Class ${data.klass} ${data.subject}${data.chapter ? " ch. " + data.chapter : ""}. Upload it first on the Upload page.`,
+        `No uploaded NCERT book found for Class ${data.klass} ${data.subject}. Check the Library page to confirm the class and subject labels.`,
       );
     }
 
-    // 2. Fetch chunks ONLY from those books (skip every other file)
-    const bookIds = books.map((b) => b.id);
+    // 2. Fetch chunks ONLY from matching Class + Subject books. Other files are skipped.
+    const bookIds = candidates.map((b) => b.id);
     const { data: chunks, error: cErr } = await s
       .from("ncert_chunks")
       .select("book_id, chunk_index, content")
@@ -123,16 +294,46 @@ export const generateLesson = createServerFn({ method: "POST" })
       .limit(2000);
     if (cErr) throw new Error(cErr.message);
 
-    // 3. Rank chunks by topic/subtopic relevance, take top ~25
-    const ranked = (chunks ?? [])
+    const chapterTerms = data.chapter ? [normalizeText(data.chapter), ...normalizeText(data.chapter).split(" ")] : [];
+    const bookScores = candidates
+      .map((book) => {
+        const metadataScore = score(`${book.chapter} ${book.file_name}`, [...terms, ...chapterTerms]);
+        const chunkScore = (chunks ?? [])
+          .filter((chunk) => chunk.book_id === book.id)
+          .reduce((sum, chunk) => sum + score(chunk.content, terms), 0);
+        return { ...book, _s: metadataScore * 5 + chunkScore };
+      })
+      .sort((a, b) => b._s - a._s);
+
+    const bestScore = bookScores[0]?._s ?? 0;
+    const selectedBooks = bestScore > 0
+      ? bookScores.filter((book) => book._s >= Math.max(1, bestScore * 0.45)).slice(0, 2)
+      : bookScores.slice(0, 2);
+    const selectedIds = new Set(selectedBooks.map((book) => book.id));
+    const selectedChunks = (chunks ?? []).filter((chunk) => selectedIds.has(chunk.book_id));
+
+    // 3. Rank chunks by topic/subtopic/chapter relevance and also keep Activity chunks
+    // so the experiment guide and animation storyboard are not missed.
+    const ranked = selectedChunks
       .map((c) => ({ ...c, _s: score(c.content, terms) }))
       .sort((a, b) => b._s - a._s)
-      .filter((c) => c._s > 0)
-      .slice(0, 25);
+      .filter((c) => c._s > 0);
+    const activityChunks = selectedChunks
+      .map((c) => ({ ...c, _s: score(c.content, ["activity", "experiment", data.topic]) }))
+      .sort((a, b) => b._s - a._s)
+      .filter((c) => normalizeText(c.content).includes("activity") || c._s > 12)
+      .slice(0, 12);
 
     // Fallback to first chunks if nothing matched (still strictly from filtered books)
-    const picked = ranked.length > 0 ? ranked : (chunks ?? []).slice(0, 20);
-    const context = picked.map((c) => c.content).join("\n---\n").slice(0, 24000);
+    const pickedMap = new Map<string, string>();
+    for (const chunk of [...ranked.slice(0, 28), ...activityChunks]) {
+      pickedMap.set(`${chunk.book_id}:${chunk.chunk_index}`, chunk.content);
+    }
+    const picked = [...pickedMap.values()].length > 0 ? [...pickedMap.values()] : selectedChunks.slice(0, 24).map((c) => c.content);
+    const context = picked.join("\n---\n").slice(0, 30000);
+    if (!context.trim()) {
+      throw new Error(`The matching Class ${data.klass} ${data.subject} PDF was found, but no readable text chunks were saved. Re-ingest that PDF from Upload.`);
+    }
 
     // 4. Ask AI for slides + activities + video storyboard
     const system =
@@ -141,7 +342,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       "Return strict JSON matching the schema, in clear concise English suitable for the student's class level.";
 
     const userPrompt = `NCERT EXCERPTS (verbatim, may be noisy from PDF extraction):\n${context}\n\n` +
-      `TASK: Build a 10-slide micro-lesson and detect any NCERT "Activity" (experiment) in the excerpts.\n` +
+      `TASK: Build a 10-slide micro-lesson, extract the NCERT activity/experiment steps, and create a sequential 3D animation storyboard.\n` +
       `Class: ${data.klass}\nSubject: ${data.subject}\nChapter: ${data.chapter || "(any in filtered book)"}\n` +
       `Topic: ${data.topic}\nSubtopics: ${data.subtopics || "(none)"}\n\n` +
       `Return JSON with this exact shape:\n` +
@@ -150,15 +351,20 @@ export const generateLesson = createServerFn({ method: "POST" })
       `  "activities": [ { "name": str (e.g. "Activity 1.1"), "objective": str, "apparatus": [str], "steps": [ {"step": int, "title": str, "description": str} ], "observation": str, "conclusion": str } ],\n` +
       `  "video": { "title": str, "scenes": [ {"scene": int, "title": str, "duration_s": int, "visual_prompt": str (cinematic 3D scene description, microscopic zoom-ins where relevant), "narration": str (1-2 sentences)} ] x 4-6 }\n` +
       `}\n` +
-      `If no explicit Activity is present, return an empty activities array. Every slide bullet must be grounded in the excerpts.`;
+      `If an explicit NCERT Activity is present anywhere in the excerpts, copy its process step-by-step in simple words without changing the order. ` +
+      `If there is no explicit Activity label, still return one "NCERT working guide" activity with sequential steps that explain the correct working of the topic using only the excerpts. ` +
+      `Every slide bullet, activity step, and video scene must be grounded in the excerpts.`;
 
     const ai = await callLovableAI(system, userPrompt);
 
+    const activities = normalizeActivities(ai.activities, data.topic, context);
+    const video = ai.video?.scenes?.length ? ai.video : fallbackVideo(data.topic, activities);
+
     return {
-      source_books: books.map((b) => ({ id: b.id, chapter: b.chapter, class: b.class, subject: b.subject })),
+      source_books: selectedBooks.map((b) => ({ id: b.id, chapter: b.chapter, class: b.class, subject: b.subject })),
       context_chars: context.length,
-      slides: Array.isArray(ai.slides) ? ai.slides.slice(0, 10) : [],
-      activities: Array.isArray(ai.activities) ? ai.activities : [],
-      video: ai.video ?? { title: data.topic, scenes: [] },
+      slides: normalizeSlides(ai.slides, data.topic, context),
+      activities,
+      video,
     };
   });
