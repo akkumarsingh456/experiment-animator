@@ -3,6 +3,47 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 
+export const generateSlideImage = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        title: z.string().default(""),
+        bullets: z.array(z.string()).default([]),
+        caption: z.string().optional().default(""),
+        subject: z.string().optional().default(""),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) throw new Error("Missing LOVABLE_API_KEY");
+    const prompt =
+      `Create a clean, educational 2D illustration in textbook-diagram style that visualises the slide content below for an Indian NCERT Class 9-12 ${data.subject || ""} lesson.\n\n` +
+      `Slide title: ${data.title}\n\nKey points:\n${(data.bullets || []).map((b, i) => `${i + 1}. ${b}`).join("\n")}` +
+      (data.caption ? `\n\nCaption: ${data.caption}` : "") +
+      `\n\nStyle: flat 2D vector, soft pastel palette on a light background, clear labelled shapes / arrows where helpful, minimal text, no photorealism, no watermark, no UI chrome.`;
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{ role: "user", content: prompt }],
+        modalities: ["image", "text"],
+      }),
+    });
+    if (!res.ok) throw new Error(`Image gateway ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    const j = await res.json();
+    const msg = j?.choices?.[0]?.message;
+    const url: string | undefined =
+      msg?.images?.[0]?.image_url?.url ||
+      msg?.images?.[0]?.url ||
+      (typeof msg?.content === "string"
+        ? msg.content.match(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/)?.[0]
+        : undefined);
+    if (!url) throw new Error("No image returned from gateway");
+    return { url };
+  });
+
 const Input = z.object({
   topic: z.coerce.string().min(1),
   subtopics: z.coerce.string().optional().default(""),
