@@ -30,6 +30,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         klass: z.string().optional().default(""),
         visual_prompt: z.string().optional().default(""),
         grounding: z.string().optional().default(""),
+        nocache: z.boolean().optional().default(false),
       })
       .parse(d),
   )
