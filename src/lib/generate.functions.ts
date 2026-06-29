@@ -121,6 +121,7 @@ const Input = z.object({
   klass: z.coerce.string().min(1),
   subject: z.coerce.string().min(1),
   chapter: z.coerce.string().optional().default(""),
+  nocache: z.coerce.boolean().optional().default(false),
 });
 
 export type Slide = {
