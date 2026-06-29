@@ -94,15 +94,17 @@ function classNumber(value: string) {
   return value.match(/9|10|11|12/)?.[0] ?? normalizeText(value);
 }
 
-function subjectAliases(subject: string) {
+function subjectAliases(subject: string, klass?: string) {
   const normalized = normalizeText(subject);
+  const cls = klass ? classNumber(klass) : "";
+  const isJunior = cls === "9" || cls === "10";
   const map: Record<string, string[]> = {
     math: ["math", "mathematics", "ganit"],
     mathematics: ["math", "mathematics", "ganit"],
-    physics: ["physics", "bhautiki", "bhautik", "physical"],
-    chemistry: ["chemistry", "rasayan", "rasayanik"],
-    biology: ["biology", "jeev vigyan", "jiv vigyan"],
-    science: ["science", "vigyan"],
+    physics: isJunior ? ["physics", "science", "vigyan", "bhautiki"] : ["physics", "bhautiki", "bhautik", "physical"],
+    chemistry: isJunior ? ["chemistry", "science", "vigyan", "rasayan"] : ["chemistry", "rasayan", "rasayanik"],
+    biology: isJunior ? ["biology", "science", "vigyan", "jeev"] : ["biology", "jeev vigyan", "jiv vigyan"],
+    science: ["science", "vigyan", "physics", "chemistry", "biology"],
     economics: ["economics", "arthashastra"],
     history: ["history", "itihas"],
     geography: ["geography", "bhugol"],
@@ -113,9 +115,9 @@ function subjectAliases(subject: string) {
   return map[normalized] ?? [normalized];
 }
 
-function subjectMatches(actual: string, requested: string) {
+function subjectMatches(actual: string, requested: string, klass?: string) {
   const a = normalizeText(actual);
-  return subjectAliases(requested).some((alias) => a.includes(alias) || alias.includes(a));
+  return subjectAliases(requested, klass).some((alias) => a.includes(alias) || alias.includes(a));
 }
 
 function buildTerms(data: z.infer<typeof Input>) {
@@ -289,21 +291,46 @@ export const generateLesson = createServerFn({ method: "POST" })
       .ilike("class", `%${classNumber(data.klass)}%`)
       .limit(100);
     if (bErr) throw new Error(bErr.message);
-    const candidates = (classBooks ?? []).filter((book) => subjectMatches(book.subject, data.subject));
+    let candidates = (classBooks ?? []).filter((book) => subjectMatches(book.subject, data.subject, data.klass));
+
+    // Fallback 1: same class, ignore subject filter and rank by topic later
+    if (candidates.length === 0 && (classBooks?.length ?? 0) > 0) {
+      candidates = classBooks!;
+    }
+
+    // Fallback 2: cross-class search — the requested topic may live in another class
+    // (e.g. "Electric Charges and Fields" is Class 12 Physics, not Class 10).
+    if (candidates.length === 0) {
+      const { data: allBooks } = await s
+        .from("ncert_books")
+        .select("id, class, subject, chapter, file_name")
+        .limit(500);
+      const pool = (allBooks ?? []).filter((b) => subjectMatches(b.subject, data.subject, b.class));
+      candidates = pool.length > 0 ? pool : (allBooks ?? []);
+    }
+
     if (candidates.length === 0) {
       throw new Error(
-        `No uploaded NCERT book found for Class ${data.klass} ${data.subject}. Check the Library page to confirm the class and subject labels.`,
+        `No uploaded NCERT books found in the library. Please upload PDFs from the Upload page.`,
       );
     }
 
-    // 2. Fetch chunks ONLY from matching Class + Subject books. Other files are skipped.
-    const bookIds = candidates.map((b) => b.id);
+
+    // 2. Pre-rank by metadata to keep chunk fetch bounded for cross-class searches.
+    const chapterTermsPre = data.chapter ? [normalizeText(data.chapter), ...normalizeText(data.chapter).split(" ")] : [];
+    const preRanked = candidates
+      .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject} ${b.class}`, [...terms, ...chapterTermsPre]) }))
+      .sort((a, z) => z.m - a.m);
+    const topCandidates = preRanked.slice(0, 10).map((x) => x.b);
+    const bookIds = topCandidates.map((b) => b.id);
+    candidates = topCandidates;
     const { data: chunks, error: cErr } = await s
       .from("ncert_chunks")
       .select("book_id, chunk_index, content")
       .in("book_id", bookIds)
-      .limit(2000);
+      .limit(3000);
     if (cErr) throw new Error(cErr.message);
+
 
     const chapterTerms = data.chapter ? [normalizeText(data.chapter), ...normalizeText(data.chapter).split(" ")] : [];
     const bookScores = candidates
@@ -316,12 +343,47 @@ export const generateLesson = createServerFn({ method: "POST" })
       })
       .sort((a, b) => b._s - a._s);
 
-    const bestScore = bookScores[0]?._s ?? 0;
-    const selectedBooks = bestScore > 0
+    let bestScore = bookScores[0]?._s ?? 0;
+    let selectedBooks = bestScore > 0
       ? bookScores.filter((book) => book._s >= Math.max(1, bestScore * 0.45)).slice(0, 2)
       : bookScores.slice(0, 2);
-    const selectedIds = new Set(selectedBooks.map((book) => book.id));
-    const selectedChunks = (chunks ?? []).filter((chunk) => selectedIds.has(chunk.book_id));
+    let selectedIds = new Set(selectedBooks.map((book) => book.id));
+    let selectedChunks = (chunks ?? []).filter((chunk) => selectedIds.has(chunk.book_id));
+
+    // Cross-class rescue: if no chunk in the current candidates actually matches
+    // the topic terms, search across ALL classes and subjects by topic relevance.
+    const hasTopicalHit = (chunks ?? []).some((c) => score(c.content, terms) > 8);
+    if (!hasTopicalHit) {
+      const { data: allBooks2 } = await s
+        .from("ncert_books")
+        .select("id, class, subject, chapter, file_name")
+        .limit(500);
+      const ranked2 = (allBooks2 ?? [])
+        .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject} ${b.class}`, [...terms, ...chapterTerms]) }))
+        .sort((a, z) => z.m - a.m)
+        .slice(0, 10)
+        .map((x) => x.b);
+      if (ranked2.length > 0) {
+        const { data: chunks2 } = await s
+          .from("ncert_chunks")
+          .select("book_id, chunk_index, content")
+          .in("book_id", ranked2.map((b) => b.id))
+          .limit(3000);
+        const scored2 = ranked2.map((book) => {
+          const meta = score(`${book.chapter} ${book.file_name}`, [...terms, ...chapterTerms]);
+          const chunkS = (chunks2 ?? []).filter((c) => c.book_id === book.id).reduce((s, c) => s + score(c.content, terms), 0);
+          return { ...book, _s: meta * 5 + chunkS };
+        }).sort((a, b) => b._s - a._s);
+        if ((scored2[0]?._s ?? 0) > bestScore) {
+          candidates = ranked2;
+          bestScore = scored2[0]._s;
+          selectedBooks = scored2.filter((b) => b._s >= Math.max(1, bestScore * 0.45)).slice(0, 2);
+          selectedIds = new Set(selectedBooks.map((b) => b.id));
+          selectedChunks = (chunks2 ?? []).filter((c) => selectedIds.has(c.book_id));
+        }
+      }
+    }
+
 
     // 3. Rank chunks by topic/subtopic/chapter relevance and also keep Activity chunks
     // so the experiment guide and animation storyboard are not missed.
