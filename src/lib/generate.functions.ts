@@ -48,14 +48,16 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       (data.bullets || []).join(" "),
     ]);
     const db = cacheSupa();
-    try {
-      const { data: hit } = await (db as any)
-        .from("slide_image_cache")
-        .select("image_url")
-        .eq("cache_key", cacheKey)
-        .maybeSingle();
-      if (hit?.image_url) return { url: hit.image_url as string, cached: true };
-    } catch { /* ignore cache miss */ }
+    if (!data.nocache) {
+      try {
+        const { data: hit } = await (db as any)
+          .from("slide_image_cache")
+          .select("image_url")
+          .eq("cache_key", cacheKey)
+          .maybeSingle();
+        if (hit?.image_url) return { url: hit.image_url as string, cached: true };
+      } catch { /* ignore cache miss */ }
+    }
 
     const grounding = (data.grounding || "").slice(0, 1500);
     const prompt =
