@@ -309,7 +309,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       </p>
 
       {presenting && (
-        <PresentationMode slides={slides} onClose={() => setPresenting(false)} />
+        <PresentationMode slides={slides} images={images} onClose={() => setPresenting(false)} />
       )}
     </>
   );
