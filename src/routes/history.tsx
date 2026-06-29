@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { signDownload } from "@/lib/ingest.functions";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
