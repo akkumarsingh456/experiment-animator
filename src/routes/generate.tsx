@@ -160,10 +160,28 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     if (!s) return;
     setImgLoading((m) => ({ ...m, [idx]: true }));
     try {
-      const r = await genImage({ data: { title: s.title, bullets: s.bullets || [], caption: s.caption || "", subject: search.subject } });
+      const r = await genImage({ data: {
+        title: s.title,
+        bullets: s.bullets || [],
+        caption: s.caption || "",
+        subject: search.subject,
+        klass: search.klass,
+        visual_prompt: s.visual_prompt || "",
+        grounding: s.grounding || s.ncert_quote || "",
+      } });
       setImages((m) => ({ ...m, [idx]: r.url }));
     } catch (e) {
       console.error("slide image failed", idx, e);
+      // soft retry once after a short delay so the auto-queue keeps moving
+      await new Promise((r) => setTimeout(r, 1500));
+      try {
+        const r2 = await genImage({ data: {
+          title: s.title, bullets: s.bullets || [], caption: s.caption || "",
+          subject: search.subject, klass: search.klass,
+          visual_prompt: s.visual_prompt || "", grounding: s.grounding || s.ncert_quote || "",
+        } });
+        setImages((m) => ({ ...m, [idx]: r2.url }));
+      } catch (e2) { console.error("retry failed", idx, e2); }
     } finally {
       setImgLoading((m) => ({ ...m, [idx]: false }));
     }
