@@ -596,7 +596,7 @@ function VideoView({ video }: { video: GenerationResult["video"] }) {
   );
 }
 
-function PresentationMode({ slides, onClose }: { slides: Slide[]; onClose: () => void }) {
+function PresentationMode({ slides, images, onClose }: { slides: Slide[]; images: Record<number, string>; onClose: () => void }) {
   const [i, setI] = useState(0);
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -614,26 +614,36 @@ function PresentationMode({ slides, onClose }: { slides: Slide[]; onClose: () =>
 
   const s = slides[i];
   const Icon = ICONS[(s?.visual || "atom").toLowerCase()] ?? Atom;
+  const img = images[i];
   return (
     <div className="fixed inset-0 z-50 bg-foreground text-background flex flex-col">
-      <div className="flex-1 grid place-items-center p-6 sm:p-12">
-        <div className="max-w-4xl w-full">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="h-12 w-12 rounded-2xl bg-background/10 grid place-items-center">
-              <Icon className="h-7 w-7" />
+      <div className="flex-1 grid place-items-center p-6 sm:p-12 overflow-auto">
+        <div className="max-w-6xl w-full grid md:grid-cols-[1.1fr_1fr] gap-8 items-center">
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-12 w-12 rounded-2xl bg-background/10 grid place-items-center">
+                <Icon className="h-7 w-7" />
+              </div>
+              <div className="text-xs font-mono opacity-60">Slide {i + 1} / {slides.length}</div>
             </div>
-            <div className="text-xs font-mono opacity-60">Slide {i + 1} / {slides.length}</div>
+            <h2 className="font-display text-3xl sm:text-5xl font-extrabold leading-tight">{s.title}</h2>
+            <ul className="mt-8 space-y-4">
+              {(s.bullets || []).map((b, k) => (
+                <li key={k} className="flex gap-3 text-lg sm:text-2xl">
+                  <span className="opacity-50">{k + 1}.</span>
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+            {s.caption && <p className="mt-8 italic opacity-70">{s.caption}</p>}
           </div>
-          <h2 className="font-display text-3xl sm:text-5xl font-extrabold leading-tight">{s.title}</h2>
-          <ul className="mt-8 space-y-4">
-            {(s.bullets || []).map((b, k) => (
-              <li key={k} className="flex gap-3 text-lg sm:text-2xl">
-                <span className="opacity-50">{k + 1}.</span>
-                <span>{b}</span>
-              </li>
-            ))}
-          </ul>
-          {s.caption && <p className="mt-8 italic opacity-70">{s.caption}</p>}
+          <div className="rounded-2xl bg-background/5 p-3 grid place-items-center min-h-[260px]">
+            {img ? (
+              <img src={img} alt={s.title} className="w-full max-h-[70vh] object-contain rounded-xl" />
+            ) : (
+              <div className="text-background/60 text-sm">2D illustration not ready yet…</div>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex items-center justify-between p-4 border-t border-background/10">
