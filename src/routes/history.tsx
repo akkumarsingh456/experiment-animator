@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { signDownload } from "@/lib/ingest.functions";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -109,11 +110,12 @@ function HistoryPage() {
         return;
       }
       setSigning(row.id);
-      const { data } = await supabase.storage
-        .from(BUCKET)
-        .createSignedUrl(row.storage_path, 60 * 60);
-      setSigning(null);
-      if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      try {
+        const { signedUrl } = await signDownload({ data: { path: row.storage_path } });
+        if (signedUrl) window.open(signedUrl, "_blank", "noopener,noreferrer");
+      } finally {
+        setSigning(null);
+      }
     },
     [],
   );

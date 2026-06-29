@@ -31,6 +31,13 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { extractPdfText, chunkText } from "@/lib/pdf-extract";
+import {
+  createUploadTicket,
+  signDownload,
+  insertBook,
+  insertPages,
+  insertChunks,
+} from "@/lib/ingest.functions";
 
 export const Route = createFileRoute("/upload")({
   head: () => ({
@@ -239,9 +246,17 @@ function UploadPage() {
         .replace(/[^a-zA-Z0-9_.-]/g, "");
       const path = `${meta.klass.replace(/\s+/g, "")}/${meta.subject}/${slug}.pdf`;
 
+      // Get a service-role-signed upload ticket, then upload the file directly with it.
+      let ticket;
+      try {
+        ticket = await createUploadTicket({ data: { path } });
+      } catch (e: any) {
+        step({ name: "upload", label: "Upload to storage", status: "error", msg: e?.message ?? "ticket failed" });
+        throw e;
+      }
       const { error: upErr } = await supabase.storage
         .from(BUCKET)
-        .upload(path, f, { contentType: "application/pdf", upsert: false });
+        .uploadToSignedUrl(path, ticket.token, f, { contentType: "application/pdf" });
       if (upErr) {
         step({ name: "upload", label: "Upload to storage", status: "error", msg: upErr.message });
         throw upErr;
@@ -249,10 +264,13 @@ function UploadPage() {
       setProgress(100);
       step({ name: "upload", label: "Upload to storage", status: "ok", msg: path });
 
-      const { data: signed } = await supabase.storage
-        .from(BUCKET)
-        .createSignedUrl(path, 60 * 60 * 24 * 365);
-      const downloadUrl = signed?.signedUrl ?? null;
+      let downloadUrl: string | null = null;
+      try {
+        const signed = await signDownload({ data: { path } });
+        downloadUrl = signed.signedUrl;
+      } catch {
+        downloadUrl = null;
+      }
 
       setStage("reading");
       setProgress(0);
@@ -278,59 +296,57 @@ function UploadPage() {
       setStage("saving");
       setStatusMsg("Saving NCERT memory to the database…");
       step({ name: "store-book", label: "Insert book record", status: "start" });
-      const { data: book, error: bErr } = await supabase
-        .from("ncert_books")
-        .insert({
-          class: meta.klass,
-          subject: meta.subject,
-          chapter: safeChapter,
-          file_name: f.name,
-          file_size: f.size,
-          storage_path: path,
-          download_url: downloadUrl,
-          num_pages: extracted.numPages,
-          num_chunks: chunks.length,
-          full_text: extracted.fullText.slice(0, 1_000_000),
-          learner_name: meta.learnerName || null,
-          learner_goal: meta.learnerGoals || null,
-          status: "ready",
-        })
-        .select("id")
-        .single();
-      if (bErr || !book) {
-        step({ name: "store-book", label: "Insert book record", status: "error", msg: bErr?.message ?? "insert failed" });
-        throw bErr ?? new Error("Insert failed");
+      let bookId: string;
+      try {
+        const r = await insertBook({
+          data: {
+            klass: meta.klass,
+            subject: meta.subject,
+            chapter: safeChapter,
+            file_name: f.name,
+            file_size: f.size,
+            storage_path: path,
+            download_url: downloadUrl,
+            num_pages: extracted.numPages,
+            num_chunks: chunks.length,
+            full_text: extracted.fullText.slice(0, 1_000_000),
+            learner_name: meta.learnerName || null,
+            learner_goal: meta.learnerGoals || null,
+          },
+        });
+        bookId = r.id;
+      } catch (e: any) {
+        step({ name: "store-book", label: "Insert book record", status: "error", msg: e?.message ?? "insert failed" });
+        throw e;
       }
-      const bookId = book.id as string;
       step({ name: "store-book", label: "Insert book record", status: "ok", msg: bookId });
 
       step({ name: "store-pages", label: "Store page text", status: "start" });
-      for (let i = 0; i < extracted.pages.length; i += 200) {
-        const slice = extracted.pages.slice(i, i + 200).map((p) => ({
-          book_id: bookId,
+      const PAGE_BATCH = 200;
+      for (let i = 0; i < extracted.pages.length; i += PAGE_BATCH) {
+        const slice = extracted.pages.slice(i, i + PAGE_BATCH).map((p) => ({
           page_number: p.page,
           text: p.text,
         }));
-        const { error: pErr } = await supabase.from("ncert_pages").insert(slice);
-        if (pErr) {
-          step({ name: "store-pages", label: "Store page text", status: "error", msg: pErr.message });
-          throw pErr;
+        try {
+          await insertPages({ data: { book_id: bookId, pages: slice } });
+        } catch (e: any) {
+          step({ name: "store-pages", label: "Store page text", status: "error", msg: e?.message ?? "insert failed" });
+          throw e;
         }
         setProgress(((i + slice.length) / extracted.pages.length) * 50);
       }
       step({ name: "store-pages", label: "Store page text", status: "ok", msg: `${extracted.pages.length} pages` });
 
       step({ name: "store-chunks", label: "Store memory chunks", status: "start" });
-      for (let i = 0; i < chunks.length; i += 200) {
-        const slice = chunks.slice(i, i + 200).map((content, j) => ({
-          book_id: bookId,
-          chunk_index: i + j,
-          content,
-        }));
-        const { error: cErr } = await supabase.from("ncert_chunks").insert(slice);
-        if (cErr) {
-          step({ name: "store-chunks", label: "Store memory chunks", status: "error", msg: cErr.message });
-          throw cErr;
+      const CHUNK_BATCH = 200;
+      for (let i = 0; i < chunks.length; i += CHUNK_BATCH) {
+        const slice = chunks.slice(i, i + CHUNK_BATCH);
+        try {
+          await insertChunks({ data: { book_id: bookId, start_index: i, chunks: slice } });
+        } catch (e: any) {
+          step({ name: "store-chunks", label: "Store memory chunks", status: "error", msg: e?.message ?? "insert failed" });
+          throw e;
         }
         setProgress(50 + ((i + slice.length) / chunks.length) * 50);
       }
