@@ -520,13 +520,24 @@ export const generateLesson = createServerFn({ method: "POST" })
       `Topic: ${data.topic}\nSubtopics: ${data.subtopics || "(none)"}\n\n` +
       `Return JSON with this exact shape:\n` +
       `{\n` +
-      `  "slides": [ { "title": str, "bullets": [str x 2-4], "visual": str (one of: atom, beaker, leaf, magnet, microscope, flask, dna, lightbulb, function, circuit, planet, ruler, prism, heart, brain, bolt), "caption": str } ] // exactly 10\n` +
+      `  "slides": [ {\n` +
+      `      "title": str (concise, exam-style),\n` +
+      `      "bullets": [str x 5-7] — DENSE, fact-rich, each 12-22 words, taken/paraphrased from the excerpts. NO filler, NO blank-sounding bullets,\n` +
+      `      "notes": [str x 2-4] — extra NCERT notes / extensions / common-mistake warnings that did not fit in bullets,\n` +
+      `      "key_terms": [ {"term": str, "meaning": str} x 2-4 ] — vocabulary defined exactly as in NCERT,\n` +
+      `      "ncert_quote": str (one short verbatim line from the excerpts that backs this slide),\n` +
+      `      "visual": str (one of: atom, beaker, leaf, magnet, microscope, flask, dna, lightbulb, function, circuit, planet, ruler, prism, heart, brain, bolt),\n` +
+      `      "visual_prompt": str — describe EXACTLY what the 2D diagram must show (objects, labels, formulas, arrows, structure, units) so a separate image model can draw it correctly. List every chemical formula, equation, structure or symbol that must appear, spelled exactly as in NCERT,\n` +
+      `      "grounding": str — paste the 1-3 sentence NCERT excerpt the diagram must agree with,\n` +
+      `      "caption": str\n` +
+      `  } ] // exactly 10 slides, every slide dense and informative — no empty slots,\n` +
       `  "activities": [ { "name": str (e.g. "Activity 1.1"), "objective": str, "apparatus": [str], "steps": [ {"step": int, "title": str, "description": str} ], "observation": str, "conclusion": str } ],\n` +
       `  "video": { "title": str, "scenes": [ {"scene": int, "title": str, "duration_s": int, "visual_prompt": str (cinematic 3D scene description, microscopic zoom-ins where relevant), "narration": str (1-2 sentences)} ] x 4-6 }\n` +
       `}\n` +
+      `Slide rules: 5-7 bullets per slide, no slide may feel empty or repetitive, every fact must come from the excerpts. Spell every chemical formula, symbol, SI unit and proper name exactly as NCERT does. For each slide, the "visual_prompt" must clearly describe the structure/diagram to draw so it cannot be mis-drawn; if you are not sure of a structure, prefer a simpler accurate diagram over an invented one.\n` +
       `If an explicit NCERT Activity is present anywhere in the excerpts, copy its process step-by-step in simple words without changing the order. ` +
       `If there is no explicit Activity label, still return one "NCERT working guide" activity with sequential steps that explain the correct working of the topic using only the excerpts. ` +
-      `Every slide bullet, activity step, and video scene must be grounded in the excerpts.`;
+      `Every slide bullet, note, activity step and video scene must be grounded in the excerpts.`;
 
     const ai = await callLovableAI(system, userPrompt);
 
