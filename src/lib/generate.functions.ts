@@ -1,7 +1,23 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
+import { createHash } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
+
+function hashKey(parts: Array<string | undefined | null>) {
+  const norm = parts
+    .map((p) => (p ?? "").toString().trim().toLowerCase().replace(/\s+/g, " "))
+    .join("|");
+  return createHash("sha256").update(norm).digest("hex").slice(0, 40);
+}
+
+function cacheSupa() {
+  return createClient<Database>(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+}
 
 export const generateSlideImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
@@ -14,12 +30,35 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         klass: z.string().optional().default(""),
         visual_prompt: z.string().optional().default(""),
         grounding: z.string().optional().default(""),
+        nocache: z.boolean().optional().default(false),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("Missing LOVABLE_API_KEY");
+
+    // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
+    const cacheKey = hashKey([
+      "img-v1",
+      data.klass,
+      data.subject,
+      data.title,
+      data.visual_prompt,
+      (data.bullets || []).join(" "),
+    ]);
+    const db = cacheSupa();
+    if (!data.nocache) {
+      try {
+        const { data: hit } = await (db as any)
+          .from("slide_image_cache")
+          .select("image_url")
+          .eq("cache_key", cacheKey)
+          .maybeSingle();
+        if (hit?.image_url) return { url: hit.image_url as string, cached: true };
+      } catch { /* ignore cache miss */ }
+    }
+
     const grounding = (data.grounding || "").slice(0, 1500);
     const prompt =
       `Create an accurate, exam-correct 2D textbook diagram for an Indian NCERT Class ${data.klass || "9-12"} ${data.subject || ""} lesson.\n\n` +
@@ -60,7 +99,20 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         ? msg.content.match(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/)?.[0]
         : undefined);
     if (!url) throw new Error("No image returned from gateway");
-    return { url };
+
+    // Save to cache (best-effort, don't fail generation on cache write errors)
+    try {
+      await (db as any).from("slide_image_cache").upsert({
+        cache_key: cacheKey,
+        klass: String(data.klass || ""),
+        subject: String(data.subject || ""),
+        title: String(data.title || ""),
+        visual_prompt: String(data.visual_prompt || ""),
+        image_url: url,
+      });
+    } catch (e) { console.warn("slide image cache write failed", e); }
+
+    return { url, cached: false };
   });
 
 const Input = z.object({
@@ -69,6 +121,7 @@ const Input = z.object({
   klass: z.coerce.string().min(1),
   subject: z.coerce.string().min(1),
   chapter: z.coerce.string().optional().default(""),
+  nocache: z.coerce.boolean().optional().default(false),
 });
 
 export type Slide = {
@@ -367,6 +420,27 @@ async function callLovableAI(systemPrompt: string, userPrompt: string) {
 export const generateLesson = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }): Promise<GenerationResult> => {
+    // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
+    const lessonKey = hashKey([
+      "lesson-v1",
+      data.klass,
+      data.subject,
+      data.chapter,
+      data.topic,
+      data.subtopics,
+    ]);
+    const cdb = cacheSupa();
+    if (!data.nocache) {
+      try {
+        const { data: hit } = await (cdb as any)
+          .from("lesson_cache")
+          .select("result")
+          .eq("cache_key", lessonKey)
+          .maybeSingle();
+        if (hit?.result) return hit.result as GenerationResult;
+      } catch { /* miss */ }
+    }
+
     const s = supa();
     const terms = buildTerms(data);
 
@@ -569,7 +643,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       };
     });
 
-    return {
+    const out: GenerationResult = {
       source_books: selectedBooks.map((b) => ({ id: b.id, chapter: b.chapter, class: b.class, subject: b.subject })),
       context_chars: context.length,
       slides: normalizeSlides(ai.slides, data.topic, context),
@@ -577,4 +651,19 @@ export const generateLesson = createServerFn({ method: "POST" })
       activity_matches,
       video,
     };
+
+    // Save lesson cache (best-effort) so repeat regenerations are instant.
+    try {
+      await (cdb as any).from("lesson_cache").upsert({
+        cache_key: lessonKey,
+        klass: String(data.klass || ""),
+        subject: String(data.subject || ""),
+        chapter: String(data.chapter || ""),
+        topic: String(data.topic || ""),
+        subtopics: String(data.subtopics || ""),
+        result: out,
+      });
+    } catch (e) { console.warn("lesson cache write failed", e); }
+
+    return out;
   });
