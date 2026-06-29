@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      lesson_cache: {
+        Row: {
+          cache_key: string
+          chapter: string
+          created_at: string
+          klass: string
+          result: Json
+          subject: string
+          subtopics: string
+          topic: string
+        }
+        Insert: {
+          cache_key: string
+          chapter?: string
+          created_at?: string
+          klass: string
+          result: Json
+          subject: string
+          subtopics?: string
+          topic: string
+        }
+        Update: {
+          cache_key?: string
+          chapter?: string
+          created_at?: string
+          klass?: string
+          result?: Json
+          subject?: string
+          subtopics?: string
+          topic?: string
+        }
+        Relationships: []
+      }
       ncert_books: {
         Row: {
           chapter: string
@@ -134,6 +167,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      slide_image_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          image_url: string
+          klass: string
+          subject: string
+          title: string
+          visual_prompt: string
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          image_url: string
+          klass: string
+          subject: string
+          title: string
+          visual_prompt?: string
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          image_url?: string
+          klass?: string
+          subject?: string
+          title?: string
+          visual_prompt?: string
+        }
+        Relationships: []
       }
     }
     Views: {
