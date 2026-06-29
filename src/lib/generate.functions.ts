@@ -36,6 +36,26 @@ export const generateSlideImage = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("Missing LOVABLE_API_KEY");
+
+    // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
+    const cacheKey = hashKey([
+      "img-v1",
+      data.klass,
+      data.subject,
+      data.title,
+      data.visual_prompt,
+      (data.bullets || []).join(" "),
+    ]);
+    const db = cacheSupa();
+    try {
+      const { data: hit } = await (db as any)
+        .from("slide_image_cache")
+        .select("image_url")
+        .eq("cache_key", cacheKey)
+        .maybeSingle();
+      if (hit?.image_url) return { url: hit.image_url as string, cached: true };
+    } catch { /* ignore cache miss */ }
+
     const grounding = (data.grounding || "").slice(0, 1500);
     const prompt =
       `Create an accurate, exam-correct 2D textbook diagram for an Indian NCERT Class ${data.klass || "9-12"} ${data.subject || ""} lesson.\n\n` +
@@ -76,7 +96,20 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         ? msg.content.match(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/)?.[0]
         : undefined);
     if (!url) throw new Error("No image returned from gateway");
-    return { url };
+
+    // Save to cache (best-effort, don't fail generation on cache write errors)
+    try {
+      await (db as any).from("slide_image_cache").upsert({
+        cache_key: cacheKey,
+        klass: String(data.klass || ""),
+        subject: String(data.subject || ""),
+        title: String(data.title || ""),
+        visual_prompt: String(data.visual_prompt || ""),
+        image_url: url,
+      });
+    } catch (e) { console.warn("slide image cache write failed", e); }
+
+    return { url, cached: false };
   });
 
 const Input = z.object({
