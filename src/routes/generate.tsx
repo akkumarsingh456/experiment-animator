@@ -677,16 +677,32 @@ function PresentationMode({ slides, images, onClose }: { slides: Slide[]; images
               </div>
               <div className="text-xs font-mono opacity-60">Slide {i + 1} / {slides.length}</div>
             </div>
-            <h2 className="font-display text-3xl sm:text-5xl font-extrabold leading-tight">{s.title}</h2>
-            <ul className="mt-8 space-y-4">
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold leading-tight">{s.title}</h2>
+            <ul className="mt-6 space-y-2.5">
               {(s.bullets || []).map((b, k) => (
-                <li key={k} className="flex gap-3 text-lg sm:text-2xl">
+                <li key={k} className="flex gap-3 text-base sm:text-lg leading-relaxed">
                   <span className="opacity-50">{k + 1}.</span>
                   <span>{b}</span>
                 </li>
               ))}
             </ul>
-            {s.caption && <p className="mt-8 italic opacity-70">{s.caption}</p>}
+            {s.notes?.length ? (
+              <div className="mt-5 rounded-xl bg-background/5 p-4 border border-background/10">
+                <div className="text-[10px] font-semibold uppercase tracking-wider opacity-70 mb-2">NCERT notes</div>
+                <ol className="space-y-1.5 list-decimal list-inside text-sm sm:text-base opacity-90">
+                  {s.notes.map((n, k) => <li key={k}>{n}</li>)}
+                </ol>
+              </div>
+            ) : null}
+            {s.key_terms?.length ? (
+              <div className="mt-3 text-sm opacity-85">
+                {s.key_terms.map((t, k) => (
+                  <div key={k}><span className="font-semibold">{t.term}:</span> {t.meaning}</div>
+                ))}
+              </div>
+            ) : null}
+            {s.ncert_quote && <p className="mt-4 italic opacity-70 border-l-2 border-background/30 pl-3 text-sm">“{s.ncert_quote}”</p>}
+            {s.caption && <p className="mt-4 italic opacity-60 text-sm">{s.caption}</p>}
           </div>
           <div className="rounded-2xl bg-background/5 p-3 grid place-items-center min-h-[260px]">
             {img ? (
