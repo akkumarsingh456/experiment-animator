@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   generateLesson,
+  generateSlideImage,
   type GenerationResult,
   type Slide,
 } from "@/lib/generate.functions";
