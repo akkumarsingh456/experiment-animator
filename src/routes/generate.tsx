@@ -154,8 +154,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
   }
 
-  async function ensureImage(idx: number) {
-    if (images[idx] || imgLoading[idx]) return;
+  async function ensureImage(idx: number, force = false) {
+    if (!force && (images[idx] || imgLoading[idx])) return;
     const s = slides[idx];
     if (!s) return;
     setImgLoading((m) => ({ ...m, [idx]: true }));
@@ -168,6 +168,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         klass: search.klass,
         visual_prompt: s.visual_prompt || "",
         grounding: s.grounding || s.ncert_quote || "",
+        nocache: force,
       } });
       setImages((m) => ({ ...m, [idx]: r.url }));
     } catch (e) {
@@ -179,6 +180,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           title: s.title, bullets: s.bullets || [], caption: s.caption || "",
           subject: search.subject, klass: search.klass,
           visual_prompt: s.visual_prompt || "", grounding: s.grounding || s.ncert_quote || "",
+          nocache: force,
         } });
         setImages((m) => ({ ...m, [idx]: r2.url }));
       } catch (e2) { console.error("retry failed", idx, e2); }
