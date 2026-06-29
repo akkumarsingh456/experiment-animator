@@ -643,7 +643,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       };
     });
 
-    return {
+    const out: GenerationResult = {
       source_books: selectedBooks.map((b) => ({ id: b.id, chapter: b.chapter, class: b.class, subject: b.subject })),
       context_chars: context.length,
       slides: normalizeSlides(ai.slides, data.topic, context),
@@ -651,4 +651,19 @@ export const generateLesson = createServerFn({ method: "POST" })
       activity_matches,
       video,
     };
+
+    // Save lesson cache (best-effort) so repeat regenerations are instant.
+    try {
+      await (cdb as any).from("lesson_cache").upsert({
+        cache_key: lessonKey,
+        klass: String(data.klass || ""),
+        subject: String(data.subject || ""),
+        chapter: String(data.chapter || ""),
+        topic: String(data.topic || ""),
+        subtopics: String(data.subtopics || ""),
+        result: out,
+      });
+    } catch (e) { console.warn("lesson cache write failed", e); }
+
+    return out;
   });
