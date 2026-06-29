@@ -48,6 +48,28 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       (data.bullets || []).join(" "),
     ]);
     const db = cacheSupa();
+    const startedAt = Date.now();
+    const auditBase = {
+      cache_key: cacheKey,
+      klass: String(data.klass || ""),
+      subject: String(data.subject || ""),
+      title: String(data.title || ""),
+      visual_prompt: String(data.visual_prompt || ""),
+      grounding: String(data.grounding || "").slice(0, 4000),
+      bullets: (data.bullets || []).join(" | ").slice(0, 2000),
+      caption: String(data.caption || "").slice(0, 1000),
+      nocache: !!data.nocache,
+    };
+    const logAudit = async (extra: Record<string, unknown>) => {
+      try {
+        await (db as any).from("slide_image_audit").insert({
+          ...auditBase,
+          ...extra,
+          duration_ms: Date.now() - startedAt,
+        });
+      } catch (e) { console.warn("slide_image_audit write failed", e); }
+    };
+
     if (!data.nocache) {
       try {
         const { data: hit } = await (db as any)
@@ -55,7 +77,10 @@ export const generateSlideImage = createServerFn({ method: "POST" })
           .select("image_url")
           .eq("cache_key", cacheKey)
           .maybeSingle();
-        if (hit?.image_url) return { url: hit.image_url as string, cached: true };
+        if (hit?.image_url) {
+          await logAudit({ status: "cache_hit", cached: true, image_url: hit.image_url });
+          return { url: hit.image_url as string, cached: true };
+        }
       } catch { /* ignore cache miss */ }
     }
 
@@ -84,12 +109,24 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         }),
       });
     }
-    let res = await call();
-    if (!res.ok && (res.status === 429 || res.status >= 500)) {
-      await new Promise((r) => setTimeout(r, 1200));
+    let res: Response;
+    try {
       res = await call();
+      if (!res.ok && (res.status === 429 || res.status >= 500)) {
+        await new Promise((r) => setTimeout(r, 1200));
+        res = await call();
+      }
+      if (!res.ok) {
+        const errTxt = (await res.text()).slice(0, 200);
+        await logAudit({ status: "error", cached: false, error: `gateway ${res.status}: ${errTxt}` });
+        throw new Error(`Image gateway ${res.status}: ${errTxt}`);
+      }
+    } catch (e: any) {
+      if (!String(e?.message || "").startsWith("Image gateway")) {
+        await logAudit({ status: "error", cached: false, error: String(e?.message || e).slice(0, 500) });
+      }
+      throw e;
     }
-    if (!res.ok) throw new Error(`Image gateway ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const j = await res.json();
     const msg = j?.choices?.[0]?.message;
     const url: string | undefined =
@@ -98,7 +135,10 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       (typeof msg?.content === "string"
         ? msg.content.match(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/)?.[0]
         : undefined);
-    if (!url) throw new Error("No image returned from gateway");
+    if (!url) {
+      await logAudit({ status: "error", cached: false, error: "No image returned from gateway" });
+      throw new Error("No image returned from gateway");
+    }
 
     // Save to cache (best-effort, don't fail generation on cache write errors)
     try {
@@ -112,8 +152,10 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       });
     } catch (e) { console.warn("slide image cache write failed", e); }
 
+    await logAudit({ status: "success", cached: false, image_url: url });
     return { url, cached: false };
   });
+
 
 const Input = z.object({
   topic: z.coerce.string().min(1),
