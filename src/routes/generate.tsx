@@ -442,9 +442,9 @@ function SlideCanvas({
   return (
     <Card className="overflow-hidden border-border/60 shadow-soft">
       <CardContent className="p-0">
-        <div className="grid md:grid-cols-[1fr_360px] min-h-[420px]">
-          <div className="p-6 sm:p-10 flex flex-col">
-            <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+        <div className="grid md:grid-cols-[1.4fr_1fr]">
+          <div className="p-5 sm:p-7 flex flex-col gap-4">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span className="font-mono">Slide {index + 1} / {total}</span>
               <Badge variant="outline" className="rounded-full text-[10px]">NCERT-grounded</Badge>
             </div>
@@ -455,9 +455,9 @@ function SlideCanvas({
                 className="font-display text-2xl sm:text-3xl font-bold border-0 px-0 shadow-none focus-visible:ring-0 h-auto"
               />
             ) : (
-              <h3 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">{slide.title}</h3>
+              <h3 className="font-display text-2xl sm:text-3xl font-bold tracking-tight leading-tight">{slide.title}</h3>
             )}
-            <ul className="mt-5 space-y-2 flex-1">
+            <ul className="space-y-2">
               {(slide.bullets || []).map((b, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
@@ -472,13 +472,34 @@ function SlideCanvas({
                       className="min-h-[40px] resize-none"
                     />
                   ) : (
-                    <p className="text-sm sm:text-base leading-relaxed">{b}</p>
+                    <p className="text-sm sm:text-[15px] leading-relaxed">{b}</p>
                   )}
                 </li>
               ))}
             </ul>
+            {slide.notes?.length ? (
+              <div className="rounded-lg bg-secondary/50 border border-border/50 p-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-primary mb-1.5">NCERT notes</div>
+                <ol className="space-y-1.5 list-decimal list-inside text-sm leading-relaxed text-foreground/85">
+                  {slide.notes.map((n, i) => <li key={i}>{n}</li>)}
+                </ol>
+              </div>
+            ) : null}
+            {slide.key_terms?.length ? (
+              <div className="rounded-lg bg-accent/20 border border-border/50 p-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-primary mb-1.5">Key terms</div>
+                <dl className="grid sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  {slide.key_terms.map((t, i) => (
+                    <div key={i}><dt className="font-semibold inline">{t.term}: </dt><dd className="inline text-muted-foreground">{t.meaning}</dd></div>
+                  ))}
+                </dl>
+              </div>
+            ) : null}
+            {slide.ncert_quote ? (
+              <p className="text-xs italic text-muted-foreground border-l-2 border-primary/40 pl-3">“{slide.ncert_quote}”</p>
+            ) : null}
             {(editing || slide.caption) && (
-              <div className="mt-4">
+              <div>
                 {editing ? (
                   <Input
                     value={slide.caption ?? ""}
@@ -491,17 +512,17 @@ function SlideCanvas({
               </div>
             )}
           </div>
-          <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid place-items-center p-4 border-t md:border-t-0 md:border-l border-border/60 min-h-[260px]">
-            <div className="absolute top-3 left-3 text-[10px] font-mono text-muted-foreground bg-card/70 rounded px-2 py-0.5">2D illustration</div>
+          <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid place-items-center p-4 border-t md:border-t-0 md:border-l border-border/60 min-h-[320px]">
+            <div className="absolute top-3 left-3 text-[10px] font-mono text-muted-foreground bg-card/70 rounded px-2 py-0.5">2D illustration · NCERT-verified prompt</div>
             {onRegenImage && imageUrl && !imageLoading && (
               <button onClick={onRegenImage} className="absolute top-3 right-3 text-[10px] font-mono text-muted-foreground bg-card/70 rounded px-2 py-0.5 hover:bg-card print:hidden">↻ regenerate</button>
             )}
             {imageUrl ? (
-              <img src={imageUrl} alt={slide.title} className="max-h-[320px] w-full object-contain rounded-lg shadow-soft bg-card" />
+              <img src={imageUrl} alt={slide.title} className="max-h-[420px] w-full object-contain rounded-lg shadow-soft bg-card" />
             ) : imageLoading ? (
               <div className="flex flex-col items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="text-xs">Drawing 2D illustration…</span>
+                <span className="text-xs">Drawing NCERT-accurate diagram…</span>
               </div>
             ) : (
               <div className="h-32 w-32 rounded-full bg-card shadow-glow grid place-items-center">
