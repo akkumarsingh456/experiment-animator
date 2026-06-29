@@ -94,15 +94,17 @@ function classNumber(value: string) {
   return value.match(/9|10|11|12/)?.[0] ?? normalizeText(value);
 }
 
-function subjectAliases(subject: string) {
+function subjectAliases(subject: string, klass?: string) {
   const normalized = normalizeText(subject);
+  const cls = klass ? classNumber(klass) : "";
+  const isJunior = cls === "9" || cls === "10";
   const map: Record<string, string[]> = {
     math: ["math", "mathematics", "ganit"],
     mathematics: ["math", "mathematics", "ganit"],
-    physics: ["physics", "bhautiki", "bhautik", "physical"],
-    chemistry: ["chemistry", "rasayan", "rasayanik"],
-    biology: ["biology", "jeev vigyan", "jiv vigyan"],
-    science: ["science", "vigyan"],
+    physics: isJunior ? ["physics", "science", "vigyan", "bhautiki"] : ["physics", "bhautiki", "bhautik", "physical"],
+    chemistry: isJunior ? ["chemistry", "science", "vigyan", "rasayan"] : ["chemistry", "rasayan", "rasayanik"],
+    biology: isJunior ? ["biology", "science", "vigyan", "jeev"] : ["biology", "jeev vigyan", "jiv vigyan"],
+    science: ["science", "vigyan", "physics", "chemistry", "biology"],
     economics: ["economics", "arthashastra"],
     history: ["history", "itihas"],
     geography: ["geography", "bhugol"],
@@ -113,9 +115,9 @@ function subjectAliases(subject: string) {
   return map[normalized] ?? [normalized];
 }
 
-function subjectMatches(actual: string, requested: string) {
+function subjectMatches(actual: string, requested: string, klass?: string) {
   const a = normalizeText(actual);
-  return subjectAliases(requested).some((alias) => a.includes(alias) || alias.includes(a));
+  return subjectAliases(requested, klass).some((alias) => a.includes(alias) || alias.includes(a));
 }
 
 function buildTerms(data: z.infer<typeof Input>) {
