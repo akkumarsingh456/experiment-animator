@@ -216,14 +216,26 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       slides.forEach((s, i) => {
         const slide = pptx.addSlide();
         slide.background = { color: "F7F8FC" };
-        slide.addText(s.title || "", { x: 0.5, y: 0.4, w: 8.2, h: 0.9, fontSize: 30, bold: true, color: "1F2A4A", fontFace: "Calibri" });
+        slide.addText(s.title || "", { x: 0.4, y: 0.3, w: 12.6, h: 0.8, fontSize: 28, bold: true, color: "1F2A4A", fontFace: "Calibri" });
+        // Left column: bullets
         slide.addText((s.bullets || []).map((b) => ({ text: b, options: { bullet: true } })),
-          { x: 0.7, y: 1.6, w: 8.0, h: 4.5, fontSize: 18, color: "33415C", fontFace: "Calibri" });
-        if (s.caption) slide.addText(s.caption, { x: 0.7, y: 6.4, w: 8.0, h: 0.6, fontSize: 13, italic: true, color: "5A6B91" });
-        const img = images[i];
-        if (img) {
-          slide.addImage({ data: img, x: 9.1, y: 0.5, w: 3.7, h: 3.7 });
+          { x: 0.5, y: 1.2, w: 7.6, h: 4.2, fontSize: 15, color: "33415C", fontFace: "Calibri", valign: "top" });
+        // NCERT notes
+        if (s.notes?.length) {
+          slide.addText("NCERT Notes", { x: 0.5, y: 5.5, w: 7.6, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
+          slide.addText((s.notes).map((n) => ({ text: n, options: { bullet: { type: "number" } } })),
+            { x: 0.5, y: 5.85, w: 7.6, h: 1.4, fontSize: 12, color: "475569" });
         }
+        // Right column: image + key terms + quote
+        const img = images[i];
+        if (img) slide.addImage({ data: img, x: 8.4, y: 1.2, w: 4.6, h: 3.4 });
+        if (s.key_terms?.length) {
+          slide.addText("Key terms", { x: 8.4, y: 4.7, w: 4.6, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
+          slide.addText(s.key_terms.map((t) => ({ text: `${t.term}: ${t.meaning}`, options: { bullet: true } })),
+            { x: 8.4, y: 5.0, w: 4.6, h: 1.6, fontSize: 11, color: "475569" });
+        }
+        if (s.ncert_quote) slide.addText(`“${s.ncert_quote}”`, { x: 8.4, y: 6.6, w: 4.6, h: 0.6, fontSize: 10, italic: true, color: "5A6B91" });
+        if (s.caption) slide.addText(s.caption, { x: 0.5, y: 7.0, w: 7.6, h: 0.3, fontSize: 11, italic: true, color: "5A6B91" });
       });
       await pptx.writeFile({ fileName: `${title || "lesson"}.pptx` });
     } catch (e) {
