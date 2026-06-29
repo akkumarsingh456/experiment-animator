@@ -294,7 +294,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               onChange={(patch) => updateSlide(activeIdx, patch)}
               imageUrl={images[activeIdx]}
               imageLoading={!!imgLoading[activeIdx]}
-              onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx); }}
+              onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, true); }}
             />
 
             <div className="flex items-center justify-between mt-4 print:hidden">
