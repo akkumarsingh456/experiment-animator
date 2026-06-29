@@ -168,6 +168,63 @@ export type Database = {
           },
         ]
       }
+      slide_image_audit: {
+        Row: {
+          bullets: string
+          cache_key: string
+          cached: boolean
+          caption: string
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          grounding: string
+          id: string
+          image_url: string | null
+          klass: string
+          nocache: boolean
+          status: string
+          subject: string
+          title: string
+          visual_prompt: string
+        }
+        Insert: {
+          bullets?: string
+          cache_key: string
+          cached?: boolean
+          caption?: string
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          grounding?: string
+          id?: string
+          image_url?: string | null
+          klass?: string
+          nocache?: boolean
+          status?: string
+          subject?: string
+          title?: string
+          visual_prompt?: string
+        }
+        Update: {
+          bullets?: string
+          cache_key?: string
+          cached?: boolean
+          caption?: string
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          grounding?: string
+          id?: string
+          image_url?: string | null
+          klass?: string
+          nocache?: boolean
+          status?: string
+          subject?: string
+          title?: string
+          visual_prompt?: string
+        }
+        Relationships: []
+      }
       slide_image_cache: {
         Row: {
           cache_key: string
