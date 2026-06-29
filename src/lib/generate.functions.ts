@@ -316,14 +316,21 @@ export const generateLesson = createServerFn({ method: "POST" })
     }
 
 
-    // 2. Fetch chunks ONLY from matching Class + Subject books. Other files are skipped.
-    const bookIds = candidates.map((b) => b.id);
+    // 2. Pre-rank by metadata to keep chunk fetch bounded for cross-class searches.
+    const chapterTermsPre = data.chapter ? [normalizeText(data.chapter), ...normalizeText(data.chapter).split(" ")] : [];
+    const preRanked = candidates
+      .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject} ${b.class}`, [...terms, ...chapterTermsPre]) }))
+      .sort((a, z) => z.m - a.m);
+    const topCandidates = preRanked.slice(0, 10).map((x) => x.b);
+    const bookIds = topCandidates.map((b) => b.id);
+    candidates = topCandidates;
     const { data: chunks, error: cErr } = await s
       .from("ncert_chunks")
       .select("book_id, chunk_index, content")
       .in("book_id", bookIds)
-      .limit(2000);
+      .limit(3000);
     if (cErr) throw new Error(cErr.message);
+
 
     const chapterTerms = data.chapter ? [normalizeText(data.chapter), ...normalizeText(data.chapter).split(" ")] : [];
     const bookScores = candidates
