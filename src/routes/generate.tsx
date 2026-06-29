@@ -402,14 +402,17 @@ function ActivityVerification({
 }
 
 function SlideCanvas({
-  slide, index, total, editing, onChange,
-}: { slide: Slide; index: number; total: number; editing: boolean; onChange: (p: Partial<Slide>) => void }) {
+  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage,
+}: {
+  slide: Slide; index: number; total: number; editing: boolean; onChange: (p: Partial<Slide>) => void;
+  imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void;
+}) {
   if (!slide) return null;
   const Icon = ICONS[(slide.visual || "atom").toLowerCase()] ?? Atom;
   return (
     <Card className="overflow-hidden border-border/60 shadow-soft">
       <CardContent className="p-0">
-        <div className="grid md:grid-cols-[1fr_320px] min-h-[420px]">
+        <div className="grid md:grid-cols-[1fr_360px] min-h-[420px]">
           <div className="p-6 sm:p-10 flex flex-col">
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
               <span className="font-mono">Slide {index + 1} / {total}</span>
@@ -458,11 +461,23 @@ function SlideCanvas({
               </div>
             )}
           </div>
-          <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid place-items-center p-6 border-t md:border-t-0 md:border-l border-border/60">
-            <div className="absolute top-3 right-3 text-[10px] font-mono text-muted-foreground bg-card/70 rounded px-2 py-0.5">3D model · {slide.visual}</div>
-            <div className="h-32 w-32 rounded-full bg-card shadow-glow grid place-items-center animate-pulse">
-              <Icon className="h-16 w-16 text-primary" />
-            </div>
+          <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid place-items-center p-4 border-t md:border-t-0 md:border-l border-border/60 min-h-[260px]">
+            <div className="absolute top-3 left-3 text-[10px] font-mono text-muted-foreground bg-card/70 rounded px-2 py-0.5">2D illustration</div>
+            {onRegenImage && imageUrl && !imageLoading && (
+              <button onClick={onRegenImage} className="absolute top-3 right-3 text-[10px] font-mono text-muted-foreground bg-card/70 rounded px-2 py-0.5 hover:bg-card print:hidden">↻ regenerate</button>
+            )}
+            {imageUrl ? (
+              <img src={imageUrl} alt={slide.title} className="max-h-[320px] w-full object-contain rounded-lg shadow-soft bg-card" />
+            ) : imageLoading ? (
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="text-xs">Drawing 2D illustration…</span>
+              </div>
+            ) : (
+              <div className="h-32 w-32 rounded-full bg-card shadow-glow grid place-items-center">
+                <Icon className="h-16 w-16 text-primary" />
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
