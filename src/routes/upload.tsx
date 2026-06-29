@@ -31,6 +31,13 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { extractPdfText, chunkText } from "@/lib/pdf-extract";
+import {
+  createUploadTicket,
+  signDownload,
+  insertBook,
+  insertPages,
+  insertChunks,
+} from "@/lib/ingest.functions";
 
 export const Route = createFileRoute("/upload")({
   head: () => ({
