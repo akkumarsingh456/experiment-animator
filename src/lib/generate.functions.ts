@@ -211,14 +211,22 @@ function fallbackSlides(topic: string, context: string): Slide[] {
     .filter((s) => s.length > 30)
     .slice(0, 30);
   const visuals = ["lightbulb", "prism", "atom", "ruler", "beaker", "microscope", "bolt", "function", "brain", "sparkles"];
-  return Array.from({ length: 10 }, (_, i) => ({
-    title: i === 0 ? topic : `${topic} — Key idea ${i}`,
-    bullets: sentences.slice(i * 3, i * 3 + 3).length
-      ? sentences.slice(i * 3, i * 3 + 3)
-      : ["This slide uses only the matching uploaded NCERT text.", "Edit this text after generation if you want a simpler learner version."],
-    visual: visuals[i] ?? "lightbulb",
-    caption: "Generated from the selected Class, Subject and chapter memory.",
-  }));
+  return Array.from({ length: 10 }, (_, i) => {
+    const bs = sentences.slice(i * 4, i * 4 + 6);
+    return {
+      title: i === 0 ? topic : `${topic} — Key idea ${i}`,
+      bullets: bs.length ? bs : [
+        "This slide uses only the matching uploaded NCERT text.",
+        "Edit this text after generation if you want a simpler learner version.",
+      ],
+      notes: sentences.slice(30 + i * 2, 30 + i * 2 + 2),
+      key_terms: [],
+      visual: visuals[i] ?? "lightbulb",
+      visual_prompt: `Clean 2D NCERT-style diagram illustrating: ${topic} — key idea ${i}.`,
+      grounding: sentences.slice(i * 4, i * 4 + 6).join(" "),
+      caption: "Generated from the selected Class, Subject and chapter memory.",
+    };
+  });
 }
 
 function fallbackActivities(topic: string, context: string): Activity[] {
