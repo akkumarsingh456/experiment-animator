@@ -123,18 +123,59 @@ function UploadPage() {
   const [batchLog, setBatchLog] = useState<BatchLogEntry[]>([]);
   const [openSteps, setOpenSteps] = useState<Record<string, boolean>>({});
 
+  const [libraryVerify, setLibraryVerify] = useState<{
+    checking: boolean;
+    total: number;
+    loaded: number;
+    lastChecked: number | null;
+    message: string;
+  }>({ checking: false, total: 0, loaded: 0, lastChecked: null, message: "" });
+
   const refreshLibrary = useCallback(async () => {
-    const { data, error: e } = await supabase
+    setLibraryVerify((v) => ({ ...v, checking: true, message: "Verifying library…" }));
+    // 1. Get authoritative total count
+    const { count } = await supabase
       .from("ncert_books")
-      .select("id, class, subject, chapter, file_name, num_pages, num_chunks, created_at")
-      .order("created_at", { ascending: false })
-      .limit(50);
-    if (!e && data) setLibrary(data as LibraryBook[]);
+      .select("id", { count: "exact", head: true });
+    const total = count ?? 0;
+
+    // 2. Page through every row (no 50-row cap, no 1000-row PostgREST cap)
+    const pageSize = 500;
+    const all: LibraryBook[] = [];
+    for (let from = 0; from < Math.max(total, 1); from += pageSize) {
+      const to = from + pageSize - 1;
+      const { data, error: e } = await supabase
+        .from("ncert_books")
+        .select("id, class, subject, chapter, file_name, num_pages, num_chunks, created_at")
+        .order("class", { ascending: true })
+        .order("subject", { ascending: true })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+      if (e) break;
+      if (!data || data.length === 0) break;
+      all.push(...(data as LibraryBook[]));
+      if (data.length < pageSize) break;
+    }
+    setLibrary(all);
+    setLibraryVerify({
+      checking: false,
+      total,
+      loaded: all.length,
+      lastChecked: Date.now(),
+      message:
+        all.length === total
+          ? `All ${total} books verified and visible.`
+          : `Showing ${all.length} of ${total} books — retrying…`,
+    });
   }, []);
 
   useEffect(() => {
     refreshLibrary();
+    // Auto-verify every 20s so newly-ingested PDFs always appear without a manual reload.
+    const id = setInterval(refreshLibrary, 20000);
+    return () => clearInterval(id);
   }, [refreshLibrary]);
+
 
   const canSubmit =
     !!file &&
@@ -973,10 +1014,42 @@ function UploadPage() {
 
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Library className="h-5 w-5 text-primary" /> Your NCERT library
-            </CardTitle>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Library className="h-5 w-5 text-primary" /> Your NCERT library
+              </CardTitle>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                {libraryVerify.checking ? (
+                  <span className="flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Verifying…
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    {libraryVerify.loaded === libraryVerify.total ? (
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                    ) : (
+                      <AlertTriangle className="h-3 w-3 text-amber-600" />
+                    )}
+                    {libraryVerify.loaded}/{libraryVerify.total} books
+                    {libraryVerify.lastChecked && (
+                      <> · checked {new Date(libraryVerify.lastChecked).toLocaleTimeString()}</>
+                    )}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={refreshLibrary}
+                  className="rounded-md border border-border px-2 py-1 hover:bg-muted"
+                >
+                  Verify now
+                </button>
+              </div>
+            </div>
+            {libraryVerify.message && (
+              <p className="text-xs text-muted-foreground mt-1">{libraryVerify.message}</p>
+            )}
           </CardHeader>
+
           <CardContent>
             {library.length === 0 ? (
               <p className="text-sm text-muted-foreground">
