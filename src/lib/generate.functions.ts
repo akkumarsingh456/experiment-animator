@@ -291,12 +291,30 @@ export const generateLesson = createServerFn({ method: "POST" })
       .ilike("class", `%${classNumber(data.klass)}%`)
       .limit(100);
     if (bErr) throw new Error(bErr.message);
-    const candidates = (classBooks ?? []).filter((book) => subjectMatches(book.subject, data.subject));
+    let candidates = (classBooks ?? []).filter((book) => subjectMatches(book.subject, data.subject, data.klass));
+
+    // Fallback 1: same class, ignore subject filter and rank by topic later
+    if (candidates.length === 0 && (classBooks?.length ?? 0) > 0) {
+      candidates = classBooks!;
+    }
+
+    // Fallback 2: cross-class search — the requested topic may live in another class
+    // (e.g. "Electric Charges and Fields" is Class 12 Physics, not Class 10).
+    if (candidates.length === 0) {
+      const { data: allBooks } = await s
+        .from("ncert_books")
+        .select("id, class, subject, chapter, file_name")
+        .limit(500);
+      const pool = (allBooks ?? []).filter((b) => subjectMatches(b.subject, data.subject, b.class));
+      candidates = pool.length > 0 ? pool : (allBooks ?? []);
+    }
+
     if (candidates.length === 0) {
       throw new Error(
-        `No uploaded NCERT book found for Class ${data.klass} ${data.subject}. Check the Library page to confirm the class and subject labels.`,
+        `No uploaded NCERT books found in the library. Please upload PDFs from the Upload page.`,
       );
     }
+
 
     // 2. Fetch chunks ONLY from matching Class + Subject books. Other files are skipped.
     const bookIds = candidates.map((b) => b.id);
