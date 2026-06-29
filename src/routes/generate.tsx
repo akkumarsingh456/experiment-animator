@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   generateLesson,
+  generateSlideImage,
   type GenerationResult,
   type Slide,
 } from "@/lib/generate.functions";
@@ -137,17 +138,53 @@ function GeneratePage() {
 }
 
 function ResultView({ result, title }: { result: GenerationResult; title: string }) {
+  const search = Route.useSearch();
+  const genImage = useServerFn(generateSlideImage);
   const [slides, setSlides] = useState<Slide[]>(result.slides);
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [verified, setVerified] = useState(false);
+  const [images, setImages] = useState<Record<number, string>>({});
+  const [imgLoading, setImgLoading] = useState<Record<number, boolean>>({});
 
-  useEffect(() => { setSlides(result.slides); setVerified(false); setActiveIdx(0); }, [result]);
+  useEffect(() => { setSlides(result.slides); setVerified(false); setActiveIdx(0); setImages({}); setImgLoading({}); }, [result]);
 
   function updateSlide(idx: number, patch: Partial<Slide>) {
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
   }
+
+  async function ensureImage(idx: number) {
+    if (images[idx] || imgLoading[idx]) return;
+    const s = slides[idx];
+    if (!s) return;
+    setImgLoading((m) => ({ ...m, [idx]: true }));
+    try {
+      const r = await genImage({ data: { title: s.title, bullets: s.bullets || [], caption: s.caption || "", subject: search.subject } });
+      setImages((m) => ({ ...m, [idx]: r.url }));
+    } catch (e) {
+      console.error("slide image failed", idx, e);
+    } finally {
+      setImgLoading((m) => ({ ...m, [idx]: false }));
+    }
+  }
+
+  // Auto-generate images for every slide once verified, sequentially to avoid rate limits.
+  useEffect(() => {
+    if (!verified) return;
+    let cancelled = false;
+    (async () => {
+      for (let i = 0; i < slides.length; i++) {
+        if (cancelled) break;
+        await ensureImage(i);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verified, slides.length]);
+
+  // Always ensure the active slide's image if user edits or jumps around.
+  useEffect(() => { if (verified) ensureImage(activeIdx); /* eslint-disable-next-line */ }, [activeIdx, verified]);
 
   async function downloadPDF() {
     window.print();
@@ -158,13 +195,17 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       const pptxgen = (await import("pptxgenjs")).default;
       const pptx = new pptxgen();
       pptx.layout = "LAYOUT_WIDE";
-      slides.forEach((s) => {
+      slides.forEach((s, i) => {
         const slide = pptx.addSlide();
         slide.background = { color: "F7F8FC" };
-        slide.addText(s.title || "", { x: 0.5, y: 0.4, w: 12, h: 0.9, fontSize: 32, bold: true, color: "1F2A4A", fontFace: "Calibri" });
+        slide.addText(s.title || "", { x: 0.5, y: 0.4, w: 8.2, h: 0.9, fontSize: 30, bold: true, color: "1F2A4A", fontFace: "Calibri" });
         slide.addText((s.bullets || []).map((b) => ({ text: b, options: { bullet: true } })),
-          { x: 0.7, y: 1.6, w: 11, h: 4.5, fontSize: 20, color: "33415C", fontFace: "Calibri" });
-        if (s.caption) slide.addText(s.caption, { x: 0.7, y: 6.4, w: 11, h: 0.6, fontSize: 14, italic: true, color: "5A6B91" });
+          { x: 0.7, y: 1.6, w: 8.0, h: 4.5, fontSize: 18, color: "33415C", fontFace: "Calibri" });
+        if (s.caption) slide.addText(s.caption, { x: 0.7, y: 6.4, w: 8.0, h: 0.6, fontSize: 13, italic: true, color: "5A6B91" });
+        const img = images[i];
+        if (img) {
+          slide.addImage({ data: img, x: 9.1, y: 0.5, w: 3.7, h: 3.7 });
+        }
       });
       await pptx.writeFile({ fileName: `${title || "lesson"}.pptx` });
     } catch (e) {
@@ -219,6 +260,9 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               total={slides.length}
               editing={editing}
               onChange={(patch) => updateSlide(activeIdx, patch)}
+              imageUrl={images[activeIdx]}
+              imageLoading={!!imgLoading[activeIdx]}
+              onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx); }}
             />
 
             <div className="flex items-center justify-between mt-4 print:hidden">
@@ -249,7 +293,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
             <div className="hidden print:block">
               {slides.map((s, i) => (
                 <div key={i} className="break-after-page mb-6">
-                  <SlideCanvas slide={s} index={i} total={slides.length} editing={false} onChange={() => {}} />
+                  <SlideCanvas slide={s} index={i} total={slides.length} editing={false} onChange={() => {}} imageUrl={images[i]} imageLoading={false} onRegenImage={() => {}} />
                 </div>
               ))}
             </div>
@@ -265,7 +309,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       </p>
 
       {presenting && (
-        <PresentationMode slides={slides} onClose={() => setPresenting(false)} />
+        <PresentationMode slides={slides} images={images} onClose={() => setPresenting(false)} />
       )}
     </>
   );
@@ -358,14 +402,17 @@ function ActivityVerification({
 }
 
 function SlideCanvas({
-  slide, index, total, editing, onChange,
-}: { slide: Slide; index: number; total: number; editing: boolean; onChange: (p: Partial<Slide>) => void }) {
+  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage,
+}: {
+  slide: Slide; index: number; total: number; editing: boolean; onChange: (p: Partial<Slide>) => void;
+  imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void;
+}) {
   if (!slide) return null;
   const Icon = ICONS[(slide.visual || "atom").toLowerCase()] ?? Atom;
   return (
     <Card className="overflow-hidden border-border/60 shadow-soft">
       <CardContent className="p-0">
-        <div className="grid md:grid-cols-[1fr_320px] min-h-[420px]">
+        <div className="grid md:grid-cols-[1fr_360px] min-h-[420px]">
           <div className="p-6 sm:p-10 flex flex-col">
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
               <span className="font-mono">Slide {index + 1} / {total}</span>
@@ -414,11 +461,23 @@ function SlideCanvas({
               </div>
             )}
           </div>
-          <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid place-items-center p-6 border-t md:border-t-0 md:border-l border-border/60">
-            <div className="absolute top-3 right-3 text-[10px] font-mono text-muted-foreground bg-card/70 rounded px-2 py-0.5">3D model · {slide.visual}</div>
-            <div className="h-32 w-32 rounded-full bg-card shadow-glow grid place-items-center animate-pulse">
-              <Icon className="h-16 w-16 text-primary" />
-            </div>
+          <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid place-items-center p-4 border-t md:border-t-0 md:border-l border-border/60 min-h-[260px]">
+            <div className="absolute top-3 left-3 text-[10px] font-mono text-muted-foreground bg-card/70 rounded px-2 py-0.5">2D illustration</div>
+            {onRegenImage && imageUrl && !imageLoading && (
+              <button onClick={onRegenImage} className="absolute top-3 right-3 text-[10px] font-mono text-muted-foreground bg-card/70 rounded px-2 py-0.5 hover:bg-card print:hidden">↻ regenerate</button>
+            )}
+            {imageUrl ? (
+              <img src={imageUrl} alt={slide.title} className="max-h-[320px] w-full object-contain rounded-lg shadow-soft bg-card" />
+            ) : imageLoading ? (
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="text-xs">Drawing 2D illustration…</span>
+              </div>
+            ) : (
+              <div className="h-32 w-32 rounded-full bg-card shadow-glow grid place-items-center">
+                <Icon className="h-16 w-16 text-primary" />
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
@@ -537,7 +596,7 @@ function VideoView({ video }: { video: GenerationResult["video"] }) {
   );
 }
 
-function PresentationMode({ slides, onClose }: { slides: Slide[]; onClose: () => void }) {
+function PresentationMode({ slides, images, onClose }: { slides: Slide[]; images: Record<number, string>; onClose: () => void }) {
   const [i, setI] = useState(0);
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -555,26 +614,36 @@ function PresentationMode({ slides, onClose }: { slides: Slide[]; onClose: () =>
 
   const s = slides[i];
   const Icon = ICONS[(s?.visual || "atom").toLowerCase()] ?? Atom;
+  const img = images[i];
   return (
     <div className="fixed inset-0 z-50 bg-foreground text-background flex flex-col">
-      <div className="flex-1 grid place-items-center p-6 sm:p-12">
-        <div className="max-w-4xl w-full">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="h-12 w-12 rounded-2xl bg-background/10 grid place-items-center">
-              <Icon className="h-7 w-7" />
+      <div className="flex-1 grid place-items-center p-6 sm:p-12 overflow-auto">
+        <div className="max-w-6xl w-full grid md:grid-cols-[1.1fr_1fr] gap-8 items-center">
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-12 w-12 rounded-2xl bg-background/10 grid place-items-center">
+                <Icon className="h-7 w-7" />
+              </div>
+              <div className="text-xs font-mono opacity-60">Slide {i + 1} / {slides.length}</div>
             </div>
-            <div className="text-xs font-mono opacity-60">Slide {i + 1} / {slides.length}</div>
+            <h2 className="font-display text-3xl sm:text-5xl font-extrabold leading-tight">{s.title}</h2>
+            <ul className="mt-8 space-y-4">
+              {(s.bullets || []).map((b, k) => (
+                <li key={k} className="flex gap-3 text-lg sm:text-2xl">
+                  <span className="opacity-50">{k + 1}.</span>
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+            {s.caption && <p className="mt-8 italic opacity-70">{s.caption}</p>}
           </div>
-          <h2 className="font-display text-3xl sm:text-5xl font-extrabold leading-tight">{s.title}</h2>
-          <ul className="mt-8 space-y-4">
-            {(s.bullets || []).map((b, k) => (
-              <li key={k} className="flex gap-3 text-lg sm:text-2xl">
-                <span className="opacity-50">{k + 1}.</span>
-                <span>{b}</span>
-              </li>
-            ))}
-          </ul>
-          {s.caption && <p className="mt-8 italic opacity-70">{s.caption}</p>}
+          <div className="rounded-2xl bg-background/5 p-3 grid place-items-center min-h-[260px]">
+            {img ? (
+              <img src={img} alt={s.title} className="w-full max-h-[70vh] object-contain rounded-xl" />
+            ) : (
+              <div className="text-background/60 text-sm">2D illustration not ready yet…</div>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex items-center justify-between p-4 border-t border-background/10">
