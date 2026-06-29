@@ -281,16 +281,31 @@ function normalizeActivities(activities: unknown, topic: string, context: string
 
 function normalizeSlides(slides: unknown, topic: string, context: string): Slide[] {
   const fallback = fallbackSlides(topic, context);
-  const parsed = Array.isArray(slides)
+  const parsed: Slide[] = Array.isArray(slides)
     ? slides.map((slide, index) => {
-        const value = slide as Partial<Slide>;
+        const v = slide as Partial<Slide> & { key_terms?: unknown; notes?: unknown };
+        const bullets = Array.isArray(v.bullets) && v.bullets.length > 0
+          ? v.bullets.slice(0, 7).map(String)
+          : fallback[index]?.bullets ?? [];
+        const notes = Array.isArray(v.notes)
+          ? (v.notes as unknown[]).slice(0, 4).map(String)
+          : fallback[index]?.notes ?? [];
+        const key_terms = Array.isArray(v.key_terms)
+          ? (v.key_terms as Array<{ term?: unknown; meaning?: unknown }>)
+              .slice(0, 4)
+              .map((t) => ({ term: String(t?.term ?? ""), meaning: String(t?.meaning ?? "") }))
+              .filter((t) => t.term)
+          : [];
         return {
-          title: String(value.title || fallback[index]?.title || topic),
-          bullets: Array.isArray(value.bullets) && value.bullets.length > 0
-            ? value.bullets.slice(0, 4).map(String)
-            : fallback[index]?.bullets ?? [],
-          visual: String(value.visual || fallback[index]?.visual || "lightbulb"),
-          caption: value.caption ? String(value.caption) : fallback[index]?.caption,
+          title: String(v.title || fallback[index]?.title || topic),
+          bullets,
+          notes,
+          key_terms,
+          ncert_quote: v.ncert_quote ? String(v.ncert_quote) : undefined,
+          visual: String(v.visual || fallback[index]?.visual || "lightbulb"),
+          visual_prompt: v.visual_prompt ? String(v.visual_prompt) : fallback[index]?.visual_prompt,
+          grounding: v.grounding ? String(v.grounding) : fallback[index]?.grounding,
+          caption: v.caption ? String(v.caption) : fallback[index]?.caption,
         };
       })
     : [];
