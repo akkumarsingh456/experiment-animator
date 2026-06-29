@@ -420,6 +420,27 @@ async function callLovableAI(systemPrompt: string, userPrompt: string) {
 export const generateLesson = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }): Promise<GenerationResult> => {
+    // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
+    const lessonKey = hashKey([
+      "lesson-v1",
+      data.klass,
+      data.subject,
+      data.chapter,
+      data.topic,
+      data.subtopics,
+    ]);
+    const cdb = cacheSupa();
+    if (!data.nocache) {
+      try {
+        const { data: hit } = await (cdb as any)
+          .from("lesson_cache")
+          .select("result")
+          .eq("cache_key", lessonKey)
+          .maybeSingle();
+        if (hit?.result) return hit.result as GenerationResult;
+      } catch { /* miss */ }
+    }
+
     const s = supa();
     const terms = buildTerms(data);
 
