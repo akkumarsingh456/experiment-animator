@@ -357,20 +357,32 @@ export const generateLesson = createServerFn({ method: "POST" })
     }
 
 
-    // 2. Pre-rank by metadata to keep chunk fetch bounded for cross-class searches.
+    // 2. Pre-rank by metadata. Keep ALL class+subject matches in play so every
+    // uploaded NCERT PDF for the selected Class & Subject is readable by the
+    // generator. We only cap when we had to widen the search cross-class.
     const chapterTermsPre = data.chapter ? [normalizeText(data.chapter), ...normalizeText(data.chapter).split(" ")] : [];
     const preRanked = candidates
       .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject} ${b.class}`, [...terms, ...chapterTermsPre]) }))
       .sort((a, z) => z.m - a.m);
-    const topCandidates = preRanked.slice(0, 10).map((x) => x.b);
-    const bookIds = topCandidates.map((b) => b.id);
+    const cap = candidates.length <= 20 ? candidates.length : 20;
+    const topCandidates = preRanked.slice(0, cap).map((x) => x.b);
     candidates = topCandidates;
-    const { data: chunks, error: cErr } = await s
-      .from("ncert_chunks")
-      .select("book_id, chunk_index, content")
-      .in("book_id", bookIds)
-      .limit(3000);
-    if (cErr) throw new Error(cErr.message);
+
+    // 3. Fetch chunks PER BOOK in parallel so a single global LIMIT cannot
+    // silently drop entire PDFs from the search context. Each book contributes
+    // up to 1200 chunks (covers full NCERT books).
+    const perBookChunks = await Promise.all(
+      topCandidates.map((b) =>
+        s
+          .from("ncert_chunks")
+          .select("book_id, chunk_index, content")
+          .eq("book_id", b.id)
+          .order("chunk_index", { ascending: true })
+          .limit(1200)
+          .then((r) => r.data ?? []),
+      ),
+    );
+    const chunks = perBookChunks.flat();
 
 
     const chapterTerms = data.chapter ? [normalizeText(data.chapter), ...normalizeText(data.chapter).split(" ")] : [];
