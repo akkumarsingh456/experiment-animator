@@ -160,10 +160,28 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     if (!s) return;
     setImgLoading((m) => ({ ...m, [idx]: true }));
     try {
-      const r = await genImage({ data: { title: s.title, bullets: s.bullets || [], caption: s.caption || "", subject: search.subject } });
+      const r = await genImage({ data: {
+        title: s.title,
+        bullets: s.bullets || [],
+        caption: s.caption || "",
+        subject: search.subject,
+        klass: search.klass,
+        visual_prompt: s.visual_prompt || "",
+        grounding: s.grounding || s.ncert_quote || "",
+      } });
       setImages((m) => ({ ...m, [idx]: r.url }));
     } catch (e) {
       console.error("slide image failed", idx, e);
+      // soft retry once after a short delay so the auto-queue keeps moving
+      await new Promise((r) => setTimeout(r, 1500));
+      try {
+        const r2 = await genImage({ data: {
+          title: s.title, bullets: s.bullets || [], caption: s.caption || "",
+          subject: search.subject, klass: search.klass,
+          visual_prompt: s.visual_prompt || "", grounding: s.grounding || s.ncert_quote || "",
+        } });
+        setImages((m) => ({ ...m, [idx]: r2.url }));
+      } catch (e2) { console.error("retry failed", idx, e2); }
     } finally {
       setImgLoading((m) => ({ ...m, [idx]: false }));
     }
@@ -198,14 +216,26 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       slides.forEach((s, i) => {
         const slide = pptx.addSlide();
         slide.background = { color: "F7F8FC" };
-        slide.addText(s.title || "", { x: 0.5, y: 0.4, w: 8.2, h: 0.9, fontSize: 30, bold: true, color: "1F2A4A", fontFace: "Calibri" });
+        slide.addText(s.title || "", { x: 0.4, y: 0.3, w: 12.6, h: 0.8, fontSize: 28, bold: true, color: "1F2A4A", fontFace: "Calibri" });
+        // Left column: bullets
         slide.addText((s.bullets || []).map((b) => ({ text: b, options: { bullet: true } })),
-          { x: 0.7, y: 1.6, w: 8.0, h: 4.5, fontSize: 18, color: "33415C", fontFace: "Calibri" });
-        if (s.caption) slide.addText(s.caption, { x: 0.7, y: 6.4, w: 8.0, h: 0.6, fontSize: 13, italic: true, color: "5A6B91" });
-        const img = images[i];
-        if (img) {
-          slide.addImage({ data: img, x: 9.1, y: 0.5, w: 3.7, h: 3.7 });
+          { x: 0.5, y: 1.2, w: 7.6, h: 4.2, fontSize: 15, color: "33415C", fontFace: "Calibri", valign: "top" });
+        // NCERT notes
+        if (s.notes?.length) {
+          slide.addText("NCERT Notes", { x: 0.5, y: 5.5, w: 7.6, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
+          slide.addText((s.notes).map((n) => ({ text: n, options: { bullet: { type: "number" } } })),
+            { x: 0.5, y: 5.85, w: 7.6, h: 1.4, fontSize: 12, color: "475569" });
         }
+        // Right column: image + key terms + quote
+        const img = images[i];
+        if (img) slide.addImage({ data: img, x: 8.4, y: 1.2, w: 4.6, h: 3.4 });
+        if (s.key_terms?.length) {
+          slide.addText("Key terms", { x: 8.4, y: 4.7, w: 4.6, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
+          slide.addText(s.key_terms.map((t) => ({ text: `${t.term}: ${t.meaning}`, options: { bullet: true } })),
+            { x: 8.4, y: 5.0, w: 4.6, h: 1.6, fontSize: 11, color: "475569" });
+        }
+        if (s.ncert_quote) slide.addText(`“${s.ncert_quote}”`, { x: 8.4, y: 6.6, w: 4.6, h: 0.6, fontSize: 10, italic: true, color: "5A6B91" });
+        if (s.caption) slide.addText(s.caption, { x: 0.5, y: 7.0, w: 7.6, h: 0.3, fontSize: 11, italic: true, color: "5A6B91" });
       });
       await pptx.writeFile({ fileName: `${title || "lesson"}.pptx` });
     } catch (e) {
@@ -412,9 +442,9 @@ function SlideCanvas({
   return (
     <Card className="overflow-hidden border-border/60 shadow-soft">
       <CardContent className="p-0">
-        <div className="grid md:grid-cols-[1fr_360px] min-h-[420px]">
-          <div className="p-6 sm:p-10 flex flex-col">
-            <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+        <div className="grid md:grid-cols-[1.4fr_1fr]">
+          <div className="p-5 sm:p-7 flex flex-col gap-4">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span className="font-mono">Slide {index + 1} / {total}</span>
               <Badge variant="outline" className="rounded-full text-[10px]">NCERT-grounded</Badge>
             </div>
@@ -425,9 +455,9 @@ function SlideCanvas({
                 className="font-display text-2xl sm:text-3xl font-bold border-0 px-0 shadow-none focus-visible:ring-0 h-auto"
               />
             ) : (
-              <h3 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">{slide.title}</h3>
+              <h3 className="font-display text-2xl sm:text-3xl font-bold tracking-tight leading-tight">{slide.title}</h3>
             )}
-            <ul className="mt-5 space-y-2 flex-1">
+            <ul className="space-y-2">
               {(slide.bullets || []).map((b, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
@@ -442,13 +472,34 @@ function SlideCanvas({
                       className="min-h-[40px] resize-none"
                     />
                   ) : (
-                    <p className="text-sm sm:text-base leading-relaxed">{b}</p>
+                    <p className="text-sm sm:text-[15px] leading-relaxed">{b}</p>
                   )}
                 </li>
               ))}
             </ul>
+            {slide.notes?.length ? (
+              <div className="rounded-lg bg-secondary/50 border border-border/50 p-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-primary mb-1.5">NCERT notes</div>
+                <ol className="space-y-1.5 list-decimal list-inside text-sm leading-relaxed text-foreground/85">
+                  {slide.notes.map((n, i) => <li key={i}>{n}</li>)}
+                </ol>
+              </div>
+            ) : null}
+            {slide.key_terms?.length ? (
+              <div className="rounded-lg bg-accent/20 border border-border/50 p-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-primary mb-1.5">Key terms</div>
+                <dl className="grid sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  {slide.key_terms.map((t, i) => (
+                    <div key={i}><dt className="font-semibold inline">{t.term}: </dt><dd className="inline text-muted-foreground">{t.meaning}</dd></div>
+                  ))}
+                </dl>
+              </div>
+            ) : null}
+            {slide.ncert_quote ? (
+              <p className="text-xs italic text-muted-foreground border-l-2 border-primary/40 pl-3">“{slide.ncert_quote}”</p>
+            ) : null}
             {(editing || slide.caption) && (
-              <div className="mt-4">
+              <div>
                 {editing ? (
                   <Input
                     value={slide.caption ?? ""}
@@ -461,17 +512,17 @@ function SlideCanvas({
               </div>
             )}
           </div>
-          <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid place-items-center p-4 border-t md:border-t-0 md:border-l border-border/60 min-h-[260px]">
-            <div className="absolute top-3 left-3 text-[10px] font-mono text-muted-foreground bg-card/70 rounded px-2 py-0.5">2D illustration</div>
+          <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid place-items-center p-4 border-t md:border-t-0 md:border-l border-border/60 min-h-[320px]">
+            <div className="absolute top-3 left-3 text-[10px] font-mono text-muted-foreground bg-card/70 rounded px-2 py-0.5">2D illustration · NCERT-verified prompt</div>
             {onRegenImage && imageUrl && !imageLoading && (
               <button onClick={onRegenImage} className="absolute top-3 right-3 text-[10px] font-mono text-muted-foreground bg-card/70 rounded px-2 py-0.5 hover:bg-card print:hidden">↻ regenerate</button>
             )}
             {imageUrl ? (
-              <img src={imageUrl} alt={slide.title} className="max-h-[320px] w-full object-contain rounded-lg shadow-soft bg-card" />
+              <img src={imageUrl} alt={slide.title} className="max-h-[420px] w-full object-contain rounded-lg shadow-soft bg-card" />
             ) : imageLoading ? (
               <div className="flex flex-col items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="text-xs">Drawing 2D illustration…</span>
+                <span className="text-xs">Drawing NCERT-accurate diagram…</span>
               </div>
             ) : (
               <div className="h-32 w-32 rounded-full bg-card shadow-glow grid place-items-center">
@@ -626,16 +677,32 @@ function PresentationMode({ slides, images, onClose }: { slides: Slide[]; images
               </div>
               <div className="text-xs font-mono opacity-60">Slide {i + 1} / {slides.length}</div>
             </div>
-            <h2 className="font-display text-3xl sm:text-5xl font-extrabold leading-tight">{s.title}</h2>
-            <ul className="mt-8 space-y-4">
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold leading-tight">{s.title}</h2>
+            <ul className="mt-6 space-y-2.5">
               {(s.bullets || []).map((b, k) => (
-                <li key={k} className="flex gap-3 text-lg sm:text-2xl">
+                <li key={k} className="flex gap-3 text-base sm:text-lg leading-relaxed">
                   <span className="opacity-50">{k + 1}.</span>
                   <span>{b}</span>
                 </li>
               ))}
             </ul>
-            {s.caption && <p className="mt-8 italic opacity-70">{s.caption}</p>}
+            {s.notes?.length ? (
+              <div className="mt-5 rounded-xl bg-background/5 p-4 border border-background/10">
+                <div className="text-[10px] font-semibold uppercase tracking-wider opacity-70 mb-2">NCERT notes</div>
+                <ol className="space-y-1.5 list-decimal list-inside text-sm sm:text-base opacity-90">
+                  {s.notes.map((n, k) => <li key={k}>{n}</li>)}
+                </ol>
+              </div>
+            ) : null}
+            {s.key_terms?.length ? (
+              <div className="mt-3 text-sm opacity-85">
+                {s.key_terms.map((t, k) => (
+                  <div key={k}><span className="font-semibold">{t.term}:</span> {t.meaning}</div>
+                ))}
+              </div>
+            ) : null}
+            {s.ncert_quote && <p className="mt-4 italic opacity-70 border-l-2 border-background/30 pl-3 text-sm">“{s.ncert_quote}”</p>}
+            {s.caption && <p className="mt-4 italic opacity-60 text-sm">{s.caption}</p>}
           </div>
           <div className="rounded-2xl bg-background/5 p-3 grid place-items-center min-h-[260px]">
             {img ? (

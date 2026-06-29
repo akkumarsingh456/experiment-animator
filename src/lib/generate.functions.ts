@@ -11,26 +11,45 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         bullets: z.array(z.string()).default([]),
         caption: z.string().optional().default(""),
         subject: z.string().optional().default(""),
+        klass: z.string().optional().default(""),
+        visual_prompt: z.string().optional().default(""),
+        grounding: z.string().optional().default(""),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("Missing LOVABLE_API_KEY");
+    const grounding = (data.grounding || "").slice(0, 1500);
     const prompt =
-      `Create a clean, educational 2D illustration in textbook-diagram style that visualises the slide content below for an Indian NCERT Class 9-12 ${data.subject || ""} lesson.\n\n` +
-      `Slide title: ${data.title}\n\nKey points:\n${(data.bullets || []).map((b, i) => `${i + 1}. ${b}`).join("\n")}` +
-      (data.caption ? `\n\nCaption: ${data.caption}` : "") +
-      `\n\nStyle: flat 2D vector, soft pastel palette on a light background, clear labelled shapes / arrows where helpful, minimal text, no photorealism, no watermark, no UI chrome.`;
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "content-type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: prompt }],
-        modalities: ["image", "text"],
-      }),
-    });
+      `Create an accurate, exam-correct 2D textbook diagram for an Indian NCERT Class ${data.klass || "9-12"} ${data.subject || ""} lesson.\n\n` +
+      `Slide title: ${data.title}\n` +
+      `Key bullets to illustrate visually (do NOT add unrelated objects):\n${(data.bullets || []).map((b, i) => `${i + 1}. ${b}`).join("\n")}\n` +
+      (data.caption ? `Caption: ${data.caption}\n` : "") +
+      (data.visual_prompt ? `\nWhat to draw (NCERT-aligned scene description): ${data.visual_prompt}\n` : "") +
+      (grounding ? `\nGROUND TRUTH (verbatim NCERT excerpt — every symbol, formula, structure and label MUST match this and standard NCERT conventions):\n"""${grounding}"""\n` : "") +
+      `\nHARD REQUIREMENTS:\n` +
+      `- Use only scientifically correct chemical formulas, equations, units, arrows, labels and structures exactly as in NCERT.\n` +
+      `- Spell every label, element symbol, variable and SI unit correctly; double check before drawing.\n` +
+      `- No imagined or decorative facts. If unsure about a symbol, omit it instead of guessing.\n` +
+      `- Flat 2D vector textbook-diagram style, soft pastel palette on light cream background, crisp black labels, clear arrows where helpful.\n` +
+      `- Minimal extra text. No photorealism, no watermark, no UI chrome, no human figures unless the topic requires them.`;
+    async function call() {
+      return fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "content-type": "application/json", Authorization: `Bearer ${key}` },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image",
+          messages: [{ role: "user", content: prompt }],
+          modalities: ["image", "text"],
+        }),
+      });
+    }
+    let res = await call();
+    if (!res.ok && (res.status === 429 || res.status >= 500)) {
+      await new Promise((r) => setTimeout(r, 1200));
+      res = await call();
+    }
     if (!res.ok) throw new Error(`Image gateway ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const j = await res.json();
     const msg = j?.choices?.[0]?.message;
@@ -54,8 +73,13 @@ const Input = z.object({
 
 export type Slide = {
   title: string;
-  bullets: string[];
-  visual: string; // icon hint or 3d model name
+  bullets: string[];          // 5-7 dense, NCERT-grounded bullets
+  notes: string[];            // 2-4 extra explanatory notes pulled from NCERT
+  key_terms: { term: string; meaning: string }[]; // 2-4 vocabulary items
+  ncert_quote?: string;       // short verbatim NCERT line for credibility
+  visual: string;             // icon hint
+  visual_prompt?: string;     // detailed scene description for 2D diagram
+  grounding?: string;         // NCERT excerpt used to verify the image
   caption?: string;
 };
 
@@ -187,14 +211,22 @@ function fallbackSlides(topic: string, context: string): Slide[] {
     .filter((s) => s.length > 30)
     .slice(0, 30);
   const visuals = ["lightbulb", "prism", "atom", "ruler", "beaker", "microscope", "bolt", "function", "brain", "sparkles"];
-  return Array.from({ length: 10 }, (_, i) => ({
-    title: i === 0 ? topic : `${topic} — Key idea ${i}`,
-    bullets: sentences.slice(i * 3, i * 3 + 3).length
-      ? sentences.slice(i * 3, i * 3 + 3)
-      : ["This slide uses only the matching uploaded NCERT text.", "Edit this text after generation if you want a simpler learner version."],
-    visual: visuals[i] ?? "lightbulb",
-    caption: "Generated from the selected Class, Subject and chapter memory.",
-  }));
+  return Array.from({ length: 10 }, (_, i) => {
+    const bs = sentences.slice(i * 4, i * 4 + 6);
+    return {
+      title: i === 0 ? topic : `${topic} — Key idea ${i}`,
+      bullets: bs.length ? bs : [
+        "This slide uses only the matching uploaded NCERT text.",
+        "Edit this text after generation if you want a simpler learner version.",
+      ],
+      notes: sentences.slice(30 + i * 2, 30 + i * 2 + 2),
+      key_terms: [],
+      visual: visuals[i] ?? "lightbulb",
+      visual_prompt: `Clean 2D NCERT-style diagram illustrating: ${topic} — key idea ${i}.`,
+      grounding: sentences.slice(i * 4, i * 4 + 6).join(" "),
+      caption: "Generated from the selected Class, Subject and chapter memory.",
+    };
+  });
 }
 
 function fallbackActivities(topic: string, context: string): Activity[] {
@@ -249,16 +281,31 @@ function normalizeActivities(activities: unknown, topic: string, context: string
 
 function normalizeSlides(slides: unknown, topic: string, context: string): Slide[] {
   const fallback = fallbackSlides(topic, context);
-  const parsed = Array.isArray(slides)
+  const parsed: Slide[] = Array.isArray(slides)
     ? slides.map((slide, index) => {
-        const value = slide as Partial<Slide>;
+        const v = slide as Partial<Slide> & { key_terms?: unknown; notes?: unknown };
+        const bullets = Array.isArray(v.bullets) && v.bullets.length > 0
+          ? v.bullets.slice(0, 7).map(String)
+          : fallback[index]?.bullets ?? [];
+        const notes = Array.isArray(v.notes)
+          ? (v.notes as unknown[]).slice(0, 4).map(String)
+          : fallback[index]?.notes ?? [];
+        const key_terms = Array.isArray(v.key_terms)
+          ? (v.key_terms as Array<{ term?: unknown; meaning?: unknown }>)
+              .slice(0, 4)
+              .map((t) => ({ term: String(t?.term ?? ""), meaning: String(t?.meaning ?? "") }))
+              .filter((t) => t.term)
+          : [];
         return {
-          title: String(value.title || fallback[index]?.title || topic),
-          bullets: Array.isArray(value.bullets) && value.bullets.length > 0
-            ? value.bullets.slice(0, 4).map(String)
-            : fallback[index]?.bullets ?? [],
-          visual: String(value.visual || fallback[index]?.visual || "lightbulb"),
-          caption: value.caption ? String(value.caption) : fallback[index]?.caption,
+          title: String(v.title || fallback[index]?.title || topic),
+          bullets,
+          notes,
+          key_terms,
+          ncert_quote: v.ncert_quote ? String(v.ncert_quote) : undefined,
+          visual: String(v.visual || fallback[index]?.visual || "lightbulb"),
+          visual_prompt: v.visual_prompt ? String(v.visual_prompt) : fallback[index]?.visual_prompt,
+          grounding: v.grounding ? String(v.grounding) : fallback[index]?.grounding,
+          caption: v.caption ? String(v.caption) : fallback[index]?.caption,
         };
       })
     : [];
@@ -473,13 +520,24 @@ export const generateLesson = createServerFn({ method: "POST" })
       `Topic: ${data.topic}\nSubtopics: ${data.subtopics || "(none)"}\n\n` +
       `Return JSON with this exact shape:\n` +
       `{\n` +
-      `  "slides": [ { "title": str, "bullets": [str x 2-4], "visual": str (one of: atom, beaker, leaf, magnet, microscope, flask, dna, lightbulb, function, circuit, planet, ruler, prism, heart, brain, bolt), "caption": str } ] // exactly 10\n` +
+      `  "slides": [ {\n` +
+      `      "title": str (concise, exam-style),\n` +
+      `      "bullets": [str x 5-7] — DENSE, fact-rich, each 12-22 words, taken/paraphrased from the excerpts. NO filler, NO blank-sounding bullets,\n` +
+      `      "notes": [str x 2-4] — extra NCERT notes / extensions / common-mistake warnings that did not fit in bullets,\n` +
+      `      "key_terms": [ {"term": str, "meaning": str} x 2-4 ] — vocabulary defined exactly as in NCERT,\n` +
+      `      "ncert_quote": str (one short verbatim line from the excerpts that backs this slide),\n` +
+      `      "visual": str (one of: atom, beaker, leaf, magnet, microscope, flask, dna, lightbulb, function, circuit, planet, ruler, prism, heart, brain, bolt),\n` +
+      `      "visual_prompt": str — describe EXACTLY what the 2D diagram must show (objects, labels, formulas, arrows, structure, units) so a separate image model can draw it correctly. List every chemical formula, equation, structure or symbol that must appear, spelled exactly as in NCERT,\n` +
+      `      "grounding": str — paste the 1-3 sentence NCERT excerpt the diagram must agree with,\n` +
+      `      "caption": str\n` +
+      `  } ] // exactly 10 slides, every slide dense and informative — no empty slots,\n` +
       `  "activities": [ { "name": str (e.g. "Activity 1.1"), "objective": str, "apparatus": [str], "steps": [ {"step": int, "title": str, "description": str} ], "observation": str, "conclusion": str } ],\n` +
       `  "video": { "title": str, "scenes": [ {"scene": int, "title": str, "duration_s": int, "visual_prompt": str (cinematic 3D scene description, microscopic zoom-ins where relevant), "narration": str (1-2 sentences)} ] x 4-6 }\n` +
       `}\n` +
+      `Slide rules: 5-7 bullets per slide, no slide may feel empty or repetitive, every fact must come from the excerpts. Spell every chemical formula, symbol, SI unit and proper name exactly as NCERT does. For each slide, the "visual_prompt" must clearly describe the structure/diagram to draw so it cannot be mis-drawn; if you are not sure of a structure, prefer a simpler accurate diagram over an invented one.\n` +
       `If an explicit NCERT Activity is present anywhere in the excerpts, copy its process step-by-step in simple words without changing the order. ` +
       `If there is no explicit Activity label, still return one "NCERT working guide" activity with sequential steps that explain the correct working of the topic using only the excerpts. ` +
-      `Every slide bullet, activity step, and video scene must be grounded in the excerpts.`;
+      `Every slide bullet, note, activity step and video scene must be grounded in the excerpts.`;
 
     const ai = await callLovableAI(system, userPrompt);
 
