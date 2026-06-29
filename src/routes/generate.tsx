@@ -138,17 +138,53 @@ function GeneratePage() {
 }
 
 function ResultView({ result, title }: { result: GenerationResult; title: string }) {
+  const search = Route.useSearch();
+  const genImage = useServerFn(generateSlideImage);
   const [slides, setSlides] = useState<Slide[]>(result.slides);
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [verified, setVerified] = useState(false);
+  const [images, setImages] = useState<Record<number, string>>({});
+  const [imgLoading, setImgLoading] = useState<Record<number, boolean>>({});
 
-  useEffect(() => { setSlides(result.slides); setVerified(false); setActiveIdx(0); }, [result]);
+  useEffect(() => { setSlides(result.slides); setVerified(false); setActiveIdx(0); setImages({}); setImgLoading({}); }, [result]);
 
   function updateSlide(idx: number, patch: Partial<Slide>) {
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
   }
+
+  async function ensureImage(idx: number) {
+    if (images[idx] || imgLoading[idx]) return;
+    const s = slides[idx];
+    if (!s) return;
+    setImgLoading((m) => ({ ...m, [idx]: true }));
+    try {
+      const r = await genImage({ data: { title: s.title, bullets: s.bullets || [], caption: s.caption || "", subject: search.subject } });
+      setImages((m) => ({ ...m, [idx]: r.url }));
+    } catch (e) {
+      console.error("slide image failed", idx, e);
+    } finally {
+      setImgLoading((m) => ({ ...m, [idx]: false }));
+    }
+  }
+
+  // Auto-generate images for every slide once verified, sequentially to avoid rate limits.
+  useEffect(() => {
+    if (!verified) return;
+    let cancelled = false;
+    (async () => {
+      for (let i = 0; i < slides.length; i++) {
+        if (cancelled) break;
+        await ensureImage(i);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verified, slides.length]);
+
+  // Always ensure the active slide's image if user edits or jumps around.
+  useEffect(() => { if (verified) ensureImage(activeIdx); /* eslint-disable-next-line */ }, [activeIdx, verified]);
 
   async function downloadPDF() {
     window.print();
@@ -159,13 +195,17 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       const pptxgen = (await import("pptxgenjs")).default;
       const pptx = new pptxgen();
       pptx.layout = "LAYOUT_WIDE";
-      slides.forEach((s) => {
+      slides.forEach((s, i) => {
         const slide = pptx.addSlide();
         slide.background = { color: "F7F8FC" };
-        slide.addText(s.title || "", { x: 0.5, y: 0.4, w: 12, h: 0.9, fontSize: 32, bold: true, color: "1F2A4A", fontFace: "Calibri" });
+        slide.addText(s.title || "", { x: 0.5, y: 0.4, w: 8.2, h: 0.9, fontSize: 30, bold: true, color: "1F2A4A", fontFace: "Calibri" });
         slide.addText((s.bullets || []).map((b) => ({ text: b, options: { bullet: true } })),
-          { x: 0.7, y: 1.6, w: 11, h: 4.5, fontSize: 20, color: "33415C", fontFace: "Calibri" });
-        if (s.caption) slide.addText(s.caption, { x: 0.7, y: 6.4, w: 11, h: 0.6, fontSize: 14, italic: true, color: "5A6B91" });
+          { x: 0.7, y: 1.6, w: 8.0, h: 4.5, fontSize: 18, color: "33415C", fontFace: "Calibri" });
+        if (s.caption) slide.addText(s.caption, { x: 0.7, y: 6.4, w: 8.0, h: 0.6, fontSize: 13, italic: true, color: "5A6B91" });
+        const img = images[i];
+        if (img) {
+          slide.addImage({ data: img, x: 9.1, y: 0.5, w: 3.7, h: 3.7 });
+        }
       });
       await pptx.writeFile({ fileName: `${title || "lesson"}.pptx` });
     } catch (e) {
