@@ -1,7 +1,23 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
+import { createHash } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
+
+function hashKey(parts: Array<string | undefined | null>) {
+  const norm = parts
+    .map((p) => (p ?? "").toString().trim().toLowerCase().replace(/\s+/g, " "))
+    .join("|");
+  return createHash("sha256").update(norm).digest("hex").slice(0, 40);
+}
+
+function cacheSupa() {
+  return createClient<Database>(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+}
 
 export const generateSlideImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
