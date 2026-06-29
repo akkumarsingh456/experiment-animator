@@ -73,8 +73,13 @@ const Input = z.object({
 
 export type Slide = {
   title: string;
-  bullets: string[];
-  visual: string; // icon hint or 3d model name
+  bullets: string[];          // 5-7 dense, NCERT-grounded bullets
+  notes: string[];            // 2-4 extra explanatory notes pulled from NCERT
+  key_terms: { term: string; meaning: string }[]; // 2-4 vocabulary items
+  ncert_quote?: string;       // short verbatim NCERT line for credibility
+  visual: string;             // icon hint
+  visual_prompt?: string;     // detailed scene description for 2D diagram
+  grounding?: string;         // NCERT excerpt used to verify the image
   caption?: string;
 };
 
