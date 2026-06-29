@@ -11,26 +11,45 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         bullets: z.array(z.string()).default([]),
         caption: z.string().optional().default(""),
         subject: z.string().optional().default(""),
+        klass: z.string().optional().default(""),
+        visual_prompt: z.string().optional().default(""),
+        grounding: z.string().optional().default(""),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("Missing LOVABLE_API_KEY");
+    const grounding = (data.grounding || "").slice(0, 1500);
     const prompt =
-      `Create a clean, educational 2D illustration in textbook-diagram style that visualises the slide content below for an Indian NCERT Class 9-12 ${data.subject || ""} lesson.\n\n` +
-      `Slide title: ${data.title}\n\nKey points:\n${(data.bullets || []).map((b, i) => `${i + 1}. ${b}`).join("\n")}` +
-      (data.caption ? `\n\nCaption: ${data.caption}` : "") +
-      `\n\nStyle: flat 2D vector, soft pastel palette on a light background, clear labelled shapes / arrows where helpful, minimal text, no photorealism, no watermark, no UI chrome.`;
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "content-type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: prompt }],
-        modalities: ["image", "text"],
-      }),
-    });
+      `Create an accurate, exam-correct 2D textbook diagram for an Indian NCERT Class ${data.klass || "9-12"} ${data.subject || ""} lesson.\n\n` +
+      `Slide title: ${data.title}\n` +
+      `Key bullets to illustrate visually (do NOT add unrelated objects):\n${(data.bullets || []).map((b, i) => `${i + 1}. ${b}`).join("\n")}\n` +
+      (data.caption ? `Caption: ${data.caption}\n` : "") +
+      (data.visual_prompt ? `\nWhat to draw (NCERT-aligned scene description): ${data.visual_prompt}\n` : "") +
+      (grounding ? `\nGROUND TRUTH (verbatim NCERT excerpt — every symbol, formula, structure and label MUST match this and standard NCERT conventions):\n"""${grounding}"""\n` : "") +
+      `\nHARD REQUIREMENTS:\n` +
+      `- Use only scientifically correct chemical formulas, equations, units, arrows, labels and structures exactly as in NCERT.\n` +
+      `- Spell every label, element symbol, variable and SI unit correctly; double check before drawing.\n` +
+      `- No imagined or decorative facts. If unsure about a symbol, omit it instead of guessing.\n` +
+      `- Flat 2D vector textbook-diagram style, soft pastel palette on light cream background, crisp black labels, clear arrows where helpful.\n` +
+      `- Minimal extra text. No photorealism, no watermark, no UI chrome, no human figures unless the topic requires them.`;
+    async function call() {
+      return fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "content-type": "application/json", Authorization: `Bearer ${key}` },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image",
+          messages: [{ role: "user", content: prompt }],
+          modalities: ["image", "text"],
+        }),
+      });
+    }
+    let res = await call();
+    if (!res.ok && (res.status === 429 || res.status >= 500)) {
+      await new Promise((r) => setTimeout(r, 1200));
+      res = await call();
+    }
     if (!res.ok) throw new Error(`Image gateway ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const j = await res.json();
     const msg = j?.choices?.[0]?.message;
