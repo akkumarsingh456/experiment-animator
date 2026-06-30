@@ -121,3 +121,8 @@
     linear-gradient(90deg, oklch(0.7 0.05 250 / 0.08) 1px, transparent 1px);
   background-size: 32px 32px;
 }
+
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  body { background: white !important; }
+}
