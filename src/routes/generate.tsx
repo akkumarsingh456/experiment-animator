@@ -271,7 +271,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           {/* Slides */}
           <section className="mb-10">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
-              <h2 className="font-semibold text-lg">10-Slide Interactive Lesson</h2>
+              <h2 className="font-semibold text-lg">15-Slide Interactive Lesson · A4 landscape (smart-board ready)</h2>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => setEditing((v) => !v)}>
                   <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
