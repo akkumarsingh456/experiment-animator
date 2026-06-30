@@ -207,30 +207,38 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     try {
       const pptxgen = (await import("pptxgenjs")).default;
       const pptx = new pptxgen();
-      pptx.layout = "LAYOUT_WIDE";
+      // A4 landscape — 11.69in x 8.27in. Better for printing & smart-board display.
+      pptx.defineLayout({ name: "A4_LANDSCAPE", width: 11.69, height: 8.27 });
+      pptx.layout = "A4_LANDSCAPE";
+      const W = 11.69, H = 8.27;
       slides.forEach((s, i) => {
         const slide = pptx.addSlide();
         slide.background = { color: "F7F8FC" };
-        slide.addText(s.title || "", { x: 0.4, y: 0.3, w: 12.6, h: 0.8, fontSize: 28, bold: true, color: "1F2A4A", fontFace: "Calibri" });
+        slide.addText(`Slide ${i + 1} / ${slides.length}`, { x: 0.3, y: 0.2, w: 4, h: 0.3, fontSize: 10, color: "8090B0", fontFace: "Calibri" });
+        slide.addText(s.title || "", { x: 0.4, y: 0.55, w: W - 0.8, h: 0.85, fontSize: 26, bold: true, color: "1F2A4A", fontFace: "Calibri" });
         // Left column: bullets
+        const leftW = 6.6;
         slide.addText((s.bullets || []).map((b) => ({ text: b, options: { bullet: true } })),
-          { x: 0.5, y: 1.2, w: 7.6, h: 4.2, fontSize: 15, color: "33415C", fontFace: "Calibri", valign: "top" });
+          { x: 0.5, y: 1.5, w: leftW, h: 3.6, fontSize: 14, color: "33415C", fontFace: "Calibri", valign: "top", paraSpaceAfter: 4 });
         // NCERT notes
         if (s.notes?.length) {
-          slide.addText("NCERT Notes", { x: 0.5, y: 5.5, w: 7.6, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
+          slide.addText("NCERT Notes", { x: 0.5, y: 5.2, w: leftW, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
           slide.addText((s.notes).map((n) => ({ text: n, options: { bullet: { type: "number" } } })),
-            { x: 0.5, y: 5.85, w: 7.6, h: 1.4, fontSize: 12, color: "475569" });
+            { x: 0.5, y: 5.55, w: leftW, h: 1.8, fontSize: 11, color: "475569", paraSpaceAfter: 3 });
         }
         // Right column: image + key terms + quote
+        const rightX = leftW + 0.7;
+        const rightW = W - rightX - 0.4;
         const img = images[i];
-        if (img) slide.addImage({ data: img, x: 8.4, y: 1.2, w: 4.6, h: 3.4 });
+        if (img) slide.addImage({ data: img, x: rightX, y: 1.5, w: rightW, h: 3.2 });
         if (s.key_terms?.length) {
-          slide.addText("Key terms", { x: 8.4, y: 4.7, w: 4.6, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
+          slide.addText("Key terms", { x: rightX, y: 4.85, w: rightW, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
           slide.addText(s.key_terms.map((t) => ({ text: `${t.term}: ${t.meaning}`, options: { bullet: true } })),
-            { x: 8.4, y: 5.0, w: 4.6, h: 1.6, fontSize: 11, color: "475569" });
+            { x: rightX, y: 5.2, w: rightW, h: 1.8, fontSize: 11, color: "475569", paraSpaceAfter: 3 });
         }
-        if (s.ncert_quote) slide.addText(`“${s.ncert_quote}”`, { x: 8.4, y: 6.6, w: 4.6, h: 0.6, fontSize: 10, italic: true, color: "5A6B91" });
-        if (s.caption) slide.addText(s.caption, { x: 0.5, y: 7.0, w: 7.6, h: 0.3, fontSize: 11, italic: true, color: "5A6B91" });
+        if (s.ncert_quote) slide.addText(`“${s.ncert_quote}”`, { x: rightX, y: 7.1, w: rightW, h: 0.6, fontSize: 10, italic: true, color: "5A6B91" });
+        if (s.caption) slide.addText(s.caption, { x: 0.5, y: 7.5, w: leftW, h: 0.4, fontSize: 10, italic: true, color: "5A6B91" });
+        slide.addText("EduPlan AI · NCERT-grounded", { x: W - 3, y: H - 0.4, w: 2.8, h: 0.3, fontSize: 9, color: "8090B0", align: "right" });
       });
       await pptx.writeFile({ fileName: `${title || "lesson"}.pptx` });
     } catch (e) {
@@ -238,6 +246,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       console.error(e);
     }
   }
+
 
   return (
     <>
