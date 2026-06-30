@@ -154,7 +154,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
   }
 
-  async function ensureImage(idx: number, force = false) {
+  async function ensureImage(idx: number, opts: { force?: boolean; cacheOnly?: boolean } = {}) {
+    const { force = false, cacheOnly = false } = opts;
     if (!force && (images[idx] || imgLoading[idx])) return;
     const s = slides[idx];
     if (!s) return;
@@ -169,42 +170,34 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         visual_prompt: s.visual_prompt || "",
         grounding: s.grounding || s.ncert_quote || "",
         nocache: force,
+        cacheOnly,
       } });
-      setImages((m) => ({ ...m, [idx]: r.url }));
+      if (r.url) setImages((m) => ({ ...m, [idx]: r.url }));
     } catch (e) {
       console.error("slide image failed", idx, e);
-      // soft retry once after a short delay so the auto-queue keeps moving
-      await new Promise((r) => setTimeout(r, 1500));
-      try {
-        const r2 = await genImage({ data: {
-          title: s.title, bullets: s.bullets || [], caption: s.caption || "",
-          subject: search.subject, klass: search.klass,
-          visual_prompt: s.visual_prompt || "", grounding: s.grounding || s.ncert_quote || "",
-          nocache: force,
-        } });
-        setImages((m) => ({ ...m, [idx]: r2.url }));
-      } catch (e2) { console.error("retry failed", idx, e2); }
+      if (!cacheOnly) toast.error("Image generation failed — try again.");
     } finally {
       setImgLoading((m) => ({ ...m, [idx]: false }));
     }
   }
 
-  // Auto-generate images for every slide once verified, sequentially to avoid rate limits.
+  // On verify and on slide change: only pull cached images (no credit spend).
+  // Fresh image generation requires an explicit click on the slide's button.
   useEffect(() => {
     if (!verified) return;
     let cancelled = false;
     (async () => {
       for (let i = 0; i < slides.length; i++) {
         if (cancelled) break;
-        await ensureImage(i);
+        await ensureImage(i, { cacheOnly: true });
       }
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verified, slides.length]);
 
-  // Always ensure the active slide's image if user edits or jumps around.
-  useEffect(() => { if (verified) ensureImage(activeIdx); /* eslint-disable-next-line */ }, [activeIdx, verified]);
+  useEffect(() => { if (verified) ensureImage(activeIdx, { cacheOnly: true }); /* eslint-disable-next-line */ }, [activeIdx, verified]);
+
 
   async function downloadPDF() {
     window.print();
