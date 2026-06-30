@@ -31,6 +31,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         visual_prompt: z.string().optional().default(""),
         grounding: z.string().optional().default(""),
         nocache: z.boolean().optional().default(false),
+        cacheOnly: z.boolean().optional().default(false),
       })
       .parse(d),
   )
@@ -83,6 +84,15 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         }
       } catch { /* ignore cache miss */ }
     }
+
+    // Credit-saving guard: caller asked for cache-only — never spend credits on
+    // a fresh image generation. Returns an empty url so the UI can show a
+    // "Generate diagram" button instead.
+    if (data.cacheOnly) {
+      await logAudit({ status: "cache_miss_skipped", cached: false });
+      return { url: "", cached: false, skipped: true };
+    }
+
 
     const grounding = (data.grounding || "").slice(0, 1500);
     const prompt =
@@ -305,24 +315,25 @@ function fallbackSlides(topic: string, context: string): Slide[] {
     .map((s) => s.trim())
     .filter((s) => s.length > 30)
     .slice(0, 30);
-  const visuals = ["lightbulb", "prism", "atom", "ruler", "beaker", "microscope", "bolt", "function", "brain", "sparkles"];
-  return Array.from({ length: 10 }, (_, i) => {
-    const bs = sentences.slice(i * 4, i * 4 + 6);
+  const visuals = ["lightbulb", "prism", "atom", "ruler", "beaker", "microscope", "bolt", "function", "brain", "sparkles", "magnet", "leaf", "dna", "planet", "heart"];
+  return Array.from({ length: 15 }, (_, i) => {
+    const bs = sentences.slice(i * 3, i * 3 + 6);
     return {
       title: i === 0 ? topic : `${topic} — Key idea ${i}`,
       bullets: bs.length ? bs : [
         "This slide uses only the matching uploaded NCERT text.",
         "Edit this text after generation if you want a simpler learner version.",
       ],
-      notes: sentences.slice(30 + i * 2, 30 + i * 2 + 2),
+      notes: sentences.slice(45 + i * 2, 45 + i * 2 + 2),
       key_terms: [],
       visual: visuals[i] ?? "lightbulb",
       visual_prompt: `Clean 2D NCERT-style diagram illustrating: ${topic} — key idea ${i}.`,
-      grounding: sentences.slice(i * 4, i * 4 + 6).join(" "),
+      grounding: sentences.slice(i * 3, i * 3 + 6).join(" "),
       caption: "Generated from the selected Class, Subject and chapter memory.",
     };
   });
 }
+
 
 function fallbackActivities(topic: string, context: string): Activity[] {
   const sentences = context
@@ -404,8 +415,9 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
         };
       })
     : [];
-  return [...parsed, ...fallback].slice(0, 10);
+  return [...parsed, ...fallback].slice(0, 15);
 }
+
 
 function fallbackVideo(topic: string, activities: Activity[]): { title: string; scenes: VideoScene[] } {
   const steps = activities.flatMap((a) => a.steps || []);
@@ -464,7 +476,7 @@ export const generateLesson = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
     const lessonKey = hashKey([
-      "lesson-v1",
+      "lesson-v2-15",
       data.klass,
       data.subject,
       data.chapter,
@@ -631,7 +643,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       "Return strict JSON matching the schema, in clear concise English suitable for the student's class level.";
 
     const userPrompt = `NCERT EXCERPTS (verbatim, may be noisy from PDF extraction):\n${context}\n\n` +
-      `TASK: Build a 10-slide micro-lesson, extract the NCERT activity/experiment steps, and create a sequential 3D animation storyboard.\n` +
+      `TASK: Build a 15-slide micro-lesson, extract the NCERT activity/experiment steps, and create a sequential 3D animation storyboard.\n` +
       `Class: ${data.klass}\nSubject: ${data.subject}\nChapter: ${data.chapter || "(any in filtered book)"}\n` +
       `Topic: ${data.topic}\nSubtopics: ${data.subtopics || "(none)"}\n\n` +
       `Return JSON with this exact shape:\n` +
@@ -646,7 +658,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       `      "visual_prompt": str — describe EXACTLY what the 2D diagram must show (objects, labels, formulas, arrows, structure, units) so a separate image model can draw it correctly. List every chemical formula, equation, structure or symbol that must appear, spelled exactly as in NCERT,\n` +
       `      "grounding": str — paste the 1-3 sentence NCERT excerpt the diagram must agree with,\n` +
       `      "caption": str\n` +
-      `  } ] // exactly 10 slides, every slide dense and informative — no empty slots,\n` +
+      `  } ] // EXACTLY 15 slides covering the chapter end-to-end (intro, definitions, sub-topics, formulas/laws, worked examples, activity link, common mistakes, applications, summary). Every slide must be dense and informative — no empty slots and no repetition,\n` +
       `  "activities": [ { "name": str (e.g. "Activity 1.1"), "objective": str, "apparatus": [str], "steps": [ {"step": int, "title": str, "description": str} ], "observation": str, "conclusion": str } ],\n` +
       `  "video": { "title": str, "scenes": [ {"scene": int, "title": str, "duration_s": int, "visual_prompt": str (cinematic 3D scene description, microscopic zoom-ins where relevant), "narration": str (1-2 sentences)} ] x 4-6 }\n` +
       `}\n` +

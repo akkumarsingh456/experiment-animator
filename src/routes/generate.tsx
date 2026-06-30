@@ -154,7 +154,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
   }
 
-  async function ensureImage(idx: number, force = false) {
+  async function ensureImage(idx: number, opts: { force?: boolean; cacheOnly?: boolean } = {}) {
+    const { force = false, cacheOnly = false } = opts;
     if (!force && (images[idx] || imgLoading[idx])) return;
     const s = slides[idx];
     if (!s) return;
@@ -169,42 +170,34 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         visual_prompt: s.visual_prompt || "",
         grounding: s.grounding || s.ncert_quote || "",
         nocache: force,
+        cacheOnly,
       } });
-      setImages((m) => ({ ...m, [idx]: r.url }));
+      if (r.url) setImages((m) => ({ ...m, [idx]: r.url }));
     } catch (e) {
       console.error("slide image failed", idx, e);
-      // soft retry once after a short delay so the auto-queue keeps moving
-      await new Promise((r) => setTimeout(r, 1500));
-      try {
-        const r2 = await genImage({ data: {
-          title: s.title, bullets: s.bullets || [], caption: s.caption || "",
-          subject: search.subject, klass: search.klass,
-          visual_prompt: s.visual_prompt || "", grounding: s.grounding || s.ncert_quote || "",
-          nocache: force,
-        } });
-        setImages((m) => ({ ...m, [idx]: r2.url }));
-      } catch (e2) { console.error("retry failed", idx, e2); }
+      if (!cacheOnly) toast.error("Image generation failed — try again.");
     } finally {
       setImgLoading((m) => ({ ...m, [idx]: false }));
     }
   }
 
-  // Auto-generate images for every slide once verified, sequentially to avoid rate limits.
+  // On verify and on slide change: only pull cached images (no credit spend).
+  // Fresh image generation requires an explicit click on the slide's button.
   useEffect(() => {
     if (!verified) return;
     let cancelled = false;
     (async () => {
       for (let i = 0; i < slides.length; i++) {
         if (cancelled) break;
-        await ensureImage(i);
+        await ensureImage(i, { cacheOnly: true });
       }
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verified, slides.length]);
 
-  // Always ensure the active slide's image if user edits or jumps around.
-  useEffect(() => { if (verified) ensureImage(activeIdx); /* eslint-disable-next-line */ }, [activeIdx, verified]);
+  useEffect(() => { if (verified) ensureImage(activeIdx, { cacheOnly: true }); /* eslint-disable-next-line */ }, [activeIdx, verified]);
+
 
   async function downloadPDF() {
     window.print();
@@ -214,30 +207,38 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     try {
       const pptxgen = (await import("pptxgenjs")).default;
       const pptx = new pptxgen();
-      pptx.layout = "LAYOUT_WIDE";
+      // A4 landscape — 11.69in x 8.27in. Better for printing & smart-board display.
+      pptx.defineLayout({ name: "A4_LANDSCAPE", width: 11.69, height: 8.27 });
+      pptx.layout = "A4_LANDSCAPE";
+      const W = 11.69, H = 8.27;
       slides.forEach((s, i) => {
         const slide = pptx.addSlide();
         slide.background = { color: "F7F8FC" };
-        slide.addText(s.title || "", { x: 0.4, y: 0.3, w: 12.6, h: 0.8, fontSize: 28, bold: true, color: "1F2A4A", fontFace: "Calibri" });
+        slide.addText(`Slide ${i + 1} / ${slides.length}`, { x: 0.3, y: 0.2, w: 4, h: 0.3, fontSize: 10, color: "8090B0", fontFace: "Calibri" });
+        slide.addText(s.title || "", { x: 0.4, y: 0.55, w: W - 0.8, h: 0.85, fontSize: 26, bold: true, color: "1F2A4A", fontFace: "Calibri" });
         // Left column: bullets
+        const leftW = 6.6;
         slide.addText((s.bullets || []).map((b) => ({ text: b, options: { bullet: true } })),
-          { x: 0.5, y: 1.2, w: 7.6, h: 4.2, fontSize: 15, color: "33415C", fontFace: "Calibri", valign: "top" });
+          { x: 0.5, y: 1.5, w: leftW, h: 3.6, fontSize: 14, color: "33415C", fontFace: "Calibri", valign: "top", paraSpaceAfter: 4 });
         // NCERT notes
         if (s.notes?.length) {
-          slide.addText("NCERT Notes", { x: 0.5, y: 5.5, w: 7.6, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
+          slide.addText("NCERT Notes", { x: 0.5, y: 5.2, w: leftW, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
           slide.addText((s.notes).map((n) => ({ text: n, options: { bullet: { type: "number" } } })),
-            { x: 0.5, y: 5.85, w: 7.6, h: 1.4, fontSize: 12, color: "475569" });
+            { x: 0.5, y: 5.55, w: leftW, h: 1.8, fontSize: 11, color: "475569", paraSpaceAfter: 3 });
         }
         // Right column: image + key terms + quote
+        const rightX = leftW + 0.7;
+        const rightW = W - rightX - 0.4;
         const img = images[i];
-        if (img) slide.addImage({ data: img, x: 8.4, y: 1.2, w: 4.6, h: 3.4 });
+        if (img) slide.addImage({ data: img, x: rightX, y: 1.5, w: rightW, h: 3.2 });
         if (s.key_terms?.length) {
-          slide.addText("Key terms", { x: 8.4, y: 4.7, w: 4.6, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
+          slide.addText("Key terms", { x: rightX, y: 4.85, w: rightW, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
           slide.addText(s.key_terms.map((t) => ({ text: `${t.term}: ${t.meaning}`, options: { bullet: true } })),
-            { x: 8.4, y: 5.0, w: 4.6, h: 1.6, fontSize: 11, color: "475569" });
+            { x: rightX, y: 5.2, w: rightW, h: 1.8, fontSize: 11, color: "475569", paraSpaceAfter: 3 });
         }
-        if (s.ncert_quote) slide.addText(`“${s.ncert_quote}”`, { x: 8.4, y: 6.6, w: 4.6, h: 0.6, fontSize: 10, italic: true, color: "5A6B91" });
-        if (s.caption) slide.addText(s.caption, { x: 0.5, y: 7.0, w: 7.6, h: 0.3, fontSize: 11, italic: true, color: "5A6B91" });
+        if (s.ncert_quote) slide.addText(`“${s.ncert_quote}”`, { x: rightX, y: 7.1, w: rightW, h: 0.6, fontSize: 10, italic: true, color: "5A6B91" });
+        if (s.caption) slide.addText(s.caption, { x: 0.5, y: 7.5, w: leftW, h: 0.4, fontSize: 10, italic: true, color: "5A6B91" });
+        slide.addText("EduPlan AI · NCERT-grounded", { x: W - 3, y: H - 0.4, w: 2.8, h: 0.3, fontSize: 9, color: "8090B0", align: "right" });
       });
       await pptx.writeFile({ fileName: `${title || "lesson"}.pptx` });
     } catch (e) {
@@ -245,6 +246,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       console.error(e);
     }
   }
+
 
   return (
     <>
@@ -269,7 +271,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           {/* Slides */}
           <section className="mb-10">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
-              <h2 className="font-semibold text-lg">10-Slide Interactive Lesson</h2>
+              <h2 className="font-semibold text-lg">15-Slide Interactive Lesson · A4 landscape (smart-board ready)</h2>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => setEditing((v) => !v)}>
                   <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
@@ -294,7 +296,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               onChange={(patch) => updateSlide(activeIdx, patch)}
               imageUrl={images[activeIdx]}
               imageLoading={!!imgLoading[activeIdx]}
-              onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, true); }}
+              onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
             />
 
             <div className="flex items-center justify-between mt-4 print:hidden">
@@ -307,7 +309,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4 print:hidden">
+            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2 mt-4 print:hidden">
               {slides.map((s, i) => (
                 <button
                   key={i}
@@ -527,8 +529,21 @@ function SlideCanvas({
                 <span className="text-xs">Drawing NCERT-accurate diagram…</span>
               </div>
             ) : (
-              <div className="h-32 w-32 rounded-full bg-card shadow-glow grid place-items-center">
-                <Icon className="h-16 w-16 text-primary" />
+              <div className="flex flex-col items-center gap-3 text-center px-4">
+                <div className="h-28 w-28 rounded-full bg-card shadow-glow grid place-items-center">
+                  <Icon className="h-14 w-14 text-primary" />
+                </div>
+                {onRegenImage && (
+                  <button
+                    onClick={onRegenImage}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium px-3 py-1.5 hover:opacity-90 print:hidden"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> Generate 2D diagram
+                  </button>
+                )}
+                <p className="text-[10px] text-muted-foreground max-w-[200px] leading-snug">
+                  Diagrams are generated on demand to save credits. Cached results load instantly.
+                </p>
               </div>
             )}
           </div>
