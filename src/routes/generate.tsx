@@ -529,8 +529,21 @@ function SlideCanvas({
                 <span className="text-xs">Drawing NCERT-accurate diagram…</span>
               </div>
             ) : (
-              <div className="h-32 w-32 rounded-full bg-card shadow-glow grid place-items-center">
-                <Icon className="h-16 w-16 text-primary" />
+              <div className="flex flex-col items-center gap-3 text-center px-4">
+                <div className="h-28 w-28 rounded-full bg-card shadow-glow grid place-items-center">
+                  <Icon className="h-14 w-14 text-primary" />
+                </div>
+                {onRegenImage && (
+                  <button
+                    onClick={onRegenImage}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium px-3 py-1.5 hover:opacity-90 print:hidden"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> Generate 2D diagram
+                  </button>
+                )}
+                <p className="text-[10px] text-muted-foreground max-w-[200px] leading-snug">
+                  Diagrams are generated on demand to save credits. Cached results load instantly.
+                </p>
               </div>
             )}
           </div>
