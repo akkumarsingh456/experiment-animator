@@ -309,7 +309,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4 print:hidden">
+            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2 mt-4 print:hidden">
               {slides.map((s, i) => (
                 <button
                   key={i}
