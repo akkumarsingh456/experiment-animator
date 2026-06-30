@@ -643,7 +643,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       "Return strict JSON matching the schema, in clear concise English suitable for the student's class level.";
 
     const userPrompt = `NCERT EXCERPTS (verbatim, may be noisy from PDF extraction):\n${context}\n\n` +
-      `TASK: Build a 10-slide micro-lesson, extract the NCERT activity/experiment steps, and create a sequential 3D animation storyboard.\n` +
+      `TASK: Build a 15-slide micro-lesson, extract the NCERT activity/experiment steps, and create a sequential 3D animation storyboard.\n` +
       `Class: ${data.klass}\nSubject: ${data.subject}\nChapter: ${data.chapter || "(any in filtered book)"}\n` +
       `Topic: ${data.topic}\nSubtopics: ${data.subtopics || "(none)"}\n\n` +
       `Return JSON with this exact shape:\n` +
@@ -658,7 +658,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       `      "visual_prompt": str — describe EXACTLY what the 2D diagram must show (objects, labels, formulas, arrows, structure, units) so a separate image model can draw it correctly. List every chemical formula, equation, structure or symbol that must appear, spelled exactly as in NCERT,\n` +
       `      "grounding": str — paste the 1-3 sentence NCERT excerpt the diagram must agree with,\n` +
       `      "caption": str\n` +
-      `  } ] // exactly 10 slides, every slide dense and informative — no empty slots,\n` +
+      `  } ] // EXACTLY 15 slides covering the chapter end-to-end (intro, definitions, sub-topics, formulas/laws, worked examples, activity link, common mistakes, applications, summary). Every slide must be dense and informative — no empty slots and no repetition,\n` +
       `  "activities": [ { "name": str (e.g. "Activity 1.1"), "objective": str, "apparatus": [str], "steps": [ {"step": int, "title": str, "description": str} ], "observation": str, "conclusion": str } ],\n` +
       `  "video": { "title": str, "scenes": [ {"scene": int, "title": str, "duration_s": int, "visual_prompt": str (cinematic 3D scene description, microscopic zoom-ins where relevant), "narration": str (1-2 sentences)} ] x 4-6 }\n` +
       `}\n` +
