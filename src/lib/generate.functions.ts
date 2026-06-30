@@ -85,6 +85,15 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       } catch { /* ignore cache miss */ }
     }
 
+    // Credit-saving guard: caller asked for cache-only — never spend credits on
+    // a fresh image generation. Returns an empty url so the UI can show a
+    // "Generate diagram" button instead.
+    if (data.cacheOnly) {
+      await logAudit({ status: "cache_miss_skipped", cached: false });
+      return { url: "", cached: false, skipped: true };
+    }
+
+
     const grounding = (data.grounding || "").slice(0, 1500);
     const prompt =
       `Create an accurate, exam-correct 2D textbook diagram for an Indian NCERT Class ${data.klass || "9-12"} ${data.subject || ""} lesson.\n\n` +
