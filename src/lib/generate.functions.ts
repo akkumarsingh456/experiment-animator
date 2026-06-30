@@ -356,8 +356,7 @@ function subjectMatches(actual: string, requested: string, klass?: string) {
 }
 
 function buildTerms(data: z.infer<typeof Input>) {
-  const raw = [data.topic, data.chapter, ...(data.subtopics || "").split(/[,;\n]/)];
-  const terms = new Set<string>();
+  const raw = [data.topic, data.chapter, ...(data.subtopics || "").split(/[,;\n]/)];\n  const terms = new Set<string>();
   for (const item of raw) {
     const n = normalizeText(item || "");
     if (!n) continue;
