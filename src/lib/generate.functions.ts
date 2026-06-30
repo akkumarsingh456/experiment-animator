@@ -415,8 +415,9 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
         };
       })
     : [];
-  return [...parsed, ...fallback].slice(0, 10);
+  return [...parsed, ...fallback].slice(0, 15);
 }
+
 
 function fallbackVideo(topic: string, activities: Activity[]): { title: string; scenes: VideoScene[] } {
   const steps = activities.flatMap((a) => a.steps || []);
