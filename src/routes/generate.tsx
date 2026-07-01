@@ -49,6 +49,7 @@ const SearchSchema = z.object({
   klass: z.coerce.string().default("10"),
   subject: z.coerce.string().default("Science"),
   chapter: z.coerce.string().default(""),
+  go: z.coerce.string().default(""),
 });
 
 export const Route = createFileRoute("/generate")({
@@ -73,7 +74,7 @@ function GeneratePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!search.topic) return;
+    if (!search.topic || search.go !== "1") return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -81,8 +82,13 @@ function GeneratePage() {
       .then((r) => { if (!cancelled) setResult(r); })
       .catch((e) => { if (!cancelled) setError(e?.message ?? String(e)); })
       .finally(() => { if (!cancelled) setLoading(false); });
+    // clear the trigger so refresh/back doesn't re-spend credits
+    if (typeof window !== "undefined") {
+      nav({ to: "/generate", search: { ...search, go: "" }, replace: true });
+    }
     return () => { cancelled = true; };
-  }, [search.topic, search.subtopics, search.klass, search.subject, search.chapter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.go]);
 
   return (
     <div className="min-h-screen">
