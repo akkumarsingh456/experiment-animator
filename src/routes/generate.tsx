@@ -49,6 +49,7 @@ const SearchSchema = z.object({
   klass: z.coerce.string().default("10"),
   subject: z.coerce.string().default("Science"),
   chapter: z.coerce.string().default(""),
+  go: z.coerce.string().default(""),
 });
 
 export const Route = createFileRoute("/generate")({
