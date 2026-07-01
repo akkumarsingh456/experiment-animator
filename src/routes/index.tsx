@@ -66,7 +66,7 @@ function GeneratorBlock() {
     if (!topic.trim()) return;
     nav({
       to: "/generate",
-      search: { topic, subtopics, klass, subject, chapter },
+      search: { topic, subtopics, klass, subject, chapter, go: "1" },
     });
   }
 
