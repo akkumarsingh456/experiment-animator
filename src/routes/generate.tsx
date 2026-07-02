@@ -69,24 +69,28 @@ function GeneratePage() {
   const search = Route.useSearch();
   const nav = useNavigate();
   const run = useServerFn(generateLesson);
+  const requestIdRef = useRef(0);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!search.topic || search.go !== "1") return;
-    let cancelled = false;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
     setLoading(true);
     setError(null);
     run({ data: search })
-      .then((r) => { if (!cancelled) setResult(r); })
-      .catch((e) => { if (!cancelled) setError(e?.message ?? String(e)); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    // clear the trigger so refresh/back doesn't re-spend credits
+      .then((r) => { if (requestIdRef.current === requestId) setResult(r); })
+      .catch((e) => { if (requestIdRef.current === requestId) setError(e?.message ?? String(e)); })
+      .finally(() => { if (requestIdRef.current === requestId) setLoading(false); });
+    // Clear the trigger without router navigation; router navigation rerenders
+    // this component and cancels the in-flight server function result.
     if (typeof window !== "undefined") {
-      nav({ to: "/generate", search: { ...search, go: "" }, replace: true });
+      const url = new URL(window.location.href);
+      url.searchParams.set("go", "");
+      window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
     }
-    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.go]);
 
