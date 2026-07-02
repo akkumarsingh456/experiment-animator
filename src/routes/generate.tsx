@@ -69,24 +69,28 @@ function GeneratePage() {
   const search = Route.useSearch();
   const nav = useNavigate();
   const run = useServerFn(generateLesson);
+  const requestIdRef = useRef(0);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!search.topic || search.go !== "1") return;
-    let cancelled = false;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
     setLoading(true);
     setError(null);
     run({ data: search })
-      .then((r) => { if (!cancelled) setResult(r); })
-      .catch((e) => { if (!cancelled) setError(e?.message ?? String(e)); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    // clear the trigger so refresh/back doesn't re-spend credits
+      .then((r) => { if (requestIdRef.current === requestId) setResult(r); })
+      .catch((e) => { if (requestIdRef.current === requestId) setError(e?.message ?? String(e)); })
+      .finally(() => { if (requestIdRef.current === requestId) setLoading(false); });
+    // Clear the trigger without router navigation; router navigation rerenders
+    // this component and cancels the in-flight server function result.
     if (typeof window !== "undefined") {
-      nav({ to: "/generate", search: { ...search, go: "" }, replace: true });
+      const url = new URL(window.location.href);
+      url.searchParams.set("go", "");
+      window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
     }
-    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.go]);
 
@@ -118,7 +122,7 @@ function GeneratePage() {
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
               <p className="mt-4 font-medium">Reading your NCERT chapter…</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Filtering only matching PDF, ranking relevant passages, building 10-slide lesson and 3D storyboard.
+                Filtering matching PDFs, ranking passages, and building a 15-slide lesson locally from saved NCERT text.
               </p>
             </CardContent>
           </Card>
@@ -187,22 +191,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     }
   }
 
-  // On verify and on slide change: only pull cached images (no credit spend).
-  // Fresh image generation requires an explicit click on the slide's button.
-  useEffect(() => {
-    if (!verified) return;
-    let cancelled = false;
-    (async () => {
-      for (let i = 0; i < slides.length; i++) {
-        if (cancelled) break;
-        await ensureImage(i, { cacheOnly: true });
-      }
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [verified, slides.length]);
-
-  useEffect(() => { if (verified) ensureImage(activeIdx, { cacheOnly: true }); /* eslint-disable-next-line */ }, [activeIdx, verified]);
+  // No automatic image requests. Free/local 2D previews are generated only
+  // when you click the visible slide's button.
 
 
   async function downloadPDF() {
@@ -270,7 +260,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
       {!verified ? (
         <p className="text-xs text-muted-foreground mt-6">
-          Confirm the matched NCERT Activity above to unlock the 10-slide PPT, downloads, and 3D animated video.
+          Confirm the matched NCERT Activity above to unlock the 15-slide PPT, downloads, and 3D animated storyboard.
         </p>
       ) : (
         <>
@@ -532,7 +522,7 @@ function SlideCanvas({
             ) : imageLoading ? (
               <div className="flex flex-col items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="text-xs">Drawing NCERT-accurate diagram…</span>
+                <span className="text-xs">Drawing local NCERT diagram…</span>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-3 text-center px-4">
@@ -544,11 +534,11 @@ function SlideCanvas({
                     onClick={onRegenImage}
                     className="inline-flex items-center gap-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium px-3 py-1.5 hover:opacity-90 print:hidden"
                   >
-                    <Sparkles className="h-3.5 w-3.5" /> Generate 2D diagram
+                    <Sparkles className="h-3.5 w-3.5" /> Generate free 2D diagram
                   </button>
                 )}
                 <p className="text-[10px] text-muted-foreground max-w-[200px] leading-snug">
-                  Diagrams are generated on demand to save credits. Cached results load instantly.
+                  Diagrams are local SVG previews, generated without AI credits.
                 </p>
               </div>
             )}
