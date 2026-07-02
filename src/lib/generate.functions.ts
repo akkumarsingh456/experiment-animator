@@ -697,8 +697,10 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Call FREE AI gateway instead of paid Lovable gateway
     const ai = await callFreeAI(system, userPrompt);
 
-    const activities = normalizeActivities(ai.activities, data.topic, context);
-    const video = ai.video?.scenes?.length ? ai.video : fallbackVideo(data.topic, activities);
+    const activities = normalizeActivities((ai as any).activities, data.topic, context);
+    const aiVideo = (ai as any).video as { title?: string; scenes?: VideoScene[] } | undefined;
+    const video = aiVideo?.scenes?.length ? { title: aiVideo.title || `${data.topic} animation`, scenes: aiVideo.scenes } : fallbackVideo(data.topic, activities);
+
 
     // Build verifiable activity matches with confidence
     const bookMeta = new Map(selectedBooks.map((b) => [b.id, b]));
@@ -725,7 +727,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     const out: GenerationResult = {
       source_books: selectedBooks.map((b) => ({ id: b.id, chapter: b.chapter, class: b.class, subject: b.subject })),
       context_chars: context.length,
-      slides: normalizeSlides(ai.slides, data.topic, context),
+      slides: normalizeSlides((ai as any).slides, data.topic, context),
       activities,
       activity_matches,
       video,
