@@ -570,11 +570,11 @@ export const generateLesson = createServerFn({ method: "POST" })
     const preRanked = candidates
       .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject} ${b.class}`, [...terms, ...chapterTermsPre]) }))
       .sort((a, z) => z.m - a.m);
-    const cap = candidates.length <= 20 ? candidates.length : 20;
+    const cap = candidates.length <= 6 ? candidates.length : 6;
     const topCandidates = preRanked.slice(0, cap).map((x) => x.b);
     candidates = topCandidates;
 
-    // 3. Fetch chunks PER BOOK in parallel
+    // 3. Fetch chunks PER BOOK in parallel (bounded for speed)
     const perBookChunks = await Promise.all(
       topCandidates.map((b) =>
         s
@@ -582,11 +582,12 @@ export const generateLesson = createServerFn({ method: "POST" })
           .select("book_id, chunk_index, content")
           .eq("book_id", b.id)
           .order("chunk_index", { ascending: true })
-          .limit(1200)
+          .limit(300)
           .then((r) => r.data ?? []),
       ),
     );
     const chunks = perBookChunks.flat();
+
 
     const chapterTerms = data.chapter ? [normalizeText(data.chapter), ...normalizeText(data.chapter).split(" ")] : [];
     const bookScores = candidates
@@ -696,8 +697,10 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Call FREE AI gateway instead of paid Lovable gateway
     const ai = await callFreeAI(system, userPrompt);
 
-    const activities = normalizeActivities(ai.activities, data.topic, context);
-    const video = ai.video?.scenes?.length ? ai.video : fallbackVideo(data.topic, activities);
+    const activities = normalizeActivities((ai as any).activities, data.topic, context);
+    const aiVideo = (ai as any).video as { title?: string; scenes?: VideoScene[] } | undefined;
+    const video = aiVideo?.scenes?.length ? { title: aiVideo.title || `${data.topic} animation`, scenes: aiVideo.scenes } : fallbackVideo(data.topic, activities);
+
 
     // Build verifiable activity matches with confidence
     const bookMeta = new Map(selectedBooks.map((b) => [b.id, b]));
@@ -724,7 +727,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     const out: GenerationResult = {
       source_books: selectedBooks.map((b) => ({ id: b.id, chapter: b.chapter, class: b.class, subject: b.subject })),
       context_chars: context.length,
-      slides: normalizeSlides(ai.slides, data.topic, context),
+      slides: normalizeSlides((ai as any).slides, data.topic, context),
       activities,
       activity_matches,
       video,
