@@ -570,11 +570,11 @@ export const generateLesson = createServerFn({ method: "POST" })
     const preRanked = candidates
       .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject} ${b.class}`, [...terms, ...chapterTermsPre]) }))
       .sort((a, z) => z.m - a.m);
-    const cap = candidates.length <= 20 ? candidates.length : 20;
+    const cap = candidates.length <= 6 ? candidates.length : 6;
     const topCandidates = preRanked.slice(0, cap).map((x) => x.b);
     candidates = topCandidates;
 
-    // 3. Fetch chunks PER BOOK in parallel
+    // 3. Fetch chunks PER BOOK in parallel (bounded for speed)
     const perBookChunks = await Promise.all(
       topCandidates.map((b) =>
         s
@@ -582,11 +582,12 @@ export const generateLesson = createServerFn({ method: "POST" })
           .select("book_id, chunk_index, content")
           .eq("book_id", b.id)
           .order("chunk_index", { ascending: true })
-          .limit(1200)
+          .limit(300)
           .then((r) => r.data ?? []),
       ),
     );
     const chunks = perBookChunks.flat();
+
 
     const chapterTerms = data.chapter ? [normalizeText(data.chapter), ...normalizeText(data.chapter).split(" ")] : [];
     const bookScores = candidates
