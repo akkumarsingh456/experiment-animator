@@ -191,22 +191,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     }
   }
 
-  // On verify and on slide change: only pull cached images (no credit spend).
-  // Fresh image generation requires an explicit click on the slide's button.
-  useEffect(() => {
-    if (!verified) return;
-    let cancelled = false;
-    (async () => {
-      for (let i = 0; i < slides.length; i++) {
-        if (cancelled) break;
-        await ensureImage(i, { cacheOnly: true });
-      }
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [verified, slides.length]);
-
-  useEffect(() => { if (verified) ensureImage(activeIdx, { cacheOnly: true }); /* eslint-disable-next-line */ }, [activeIdx, verified]);
+  // No automatic image requests. Free/local 2D previews are generated only
+  // when you click the visible slide's button.
 
 
   async function downloadPDF() {
