@@ -3,7 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
-import { callFreeAI } from "./free-ai-gateway";
 
 function hashKey(parts: Array<string | undefined | null>) {
   const norm = parts
@@ -20,13 +19,7 @@ function cacheSupa() {
   );
 }
 
-/**
- * Generate slide images using free internet-based rendering
- * Instead of calling paid Lovable image gateway, we now:
- * 1. Cache the diagram prompt
- * 2. Generate SVG/Canvas-based diagrams or use free image APIs
- * 3. Return cached results instantly on repeat
- */
+/** Generate slide images locally as deterministic SVG data URIs — no AI/image API call. */
 export const generateSlideImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
@@ -102,8 +95,8 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       return { url: "", cached: false, skipped: true };
     }
 
-    // Generate SVG-based diagram (free, no API calls needed)
-    const url = generateDiagramSVG(data.title, data.bullets, data.visual_prompt);
+    // Generate SVG-based diagram locally (free, no API calls needed).
+    const url = generateDiagramSVG(data.title, data.bullets, data.visual_prompt, data.subject, data.grounding);
 
     // Save to cache (best-effort, don't fail generation on cache write errors)
     try {
@@ -123,34 +116,32 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     return { url, cached: false };
   });
 
-/**
- * Generate SVG-based diagram for NCERT-style educational diagrams
- * Uses data URI so no external image hosting needed
- */
-function generateDiagramSVG(title: string, bullets: string[], visualPrompt: string): string {
+/** Generate SVG-based NCERT-style diagrams. Uses data URI so no external image hosting is needed. */
+function generateDiagramSVG(title: string, bullets: string[], visualPrompt: string, subject = "", grounding = ""): string {
   const width = 800;
   const height = 600;
+  const prompt = `${title} ${visualPrompt} ${grounding}`.toLowerCase();
   const colors = {
     bg: "#fafaf8",
     text: "#1a1a1a",
-    accent: "#5856d6",
-    lightAccent: "#e5e4ff",
+    accent: normalizeText(subject).includes("chem") ? "#0f8a5f" : normalizeText(subject).includes("bio") ? "#9a5a20" : "#2563eb",
+    lightAccent: normalizeText(subject).includes("chem") ? "#def7ec" : normalizeText(subject).includes("bio") ? "#fff1dc" : "#dbeafe",
     grid: "#e0e0e0",
   };
 
-  // Extract key elements from visual prompt
-  const hasArrows = visualPrompt.toLowerCase().includes("arrow");
-  const hasFormula = /[A-Z][a-z]?\d*\+?[A-Z]?/.test(visualPrompt);
-  const hasStructure = visualPrompt.toLowerCase().includes("structure") || visualPrompt.toLowerCase().includes("diagram");
+  const wrappedTitle = wrapSvgText(title, 36, 2);
+  const wrappedPrompt = wrapSvgText(visualPrompt || bullets[0] || title, 52, 3);
 
   let svgContent = `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
       <defs>
         <style>
           text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-          .title { font-size: 32px; font-weight: 600; fill: ${colors.text}; }
-          .bullet { font-size: 16px; fill: ${colors.text}; }
-          .subtitle { font-size: 18px; fill: ${colors.accent}; font-weight: 500; }
+          .title { font-size: 28px; font-weight: 700; fill: ${colors.text}; }
+          .bullet { font-size: 17px; fill: ${colors.text}; }
+          .subtitle { font-size: 18px; fill: ${colors.accent}; font-weight: 600; }
+          .label { font-size: 15px; fill: ${colors.text}; font-weight: 600; }
+          .small { font-size: 13px; fill: ${colors.text}; opacity: 0.72; }
         </style>
       </defs>
       
@@ -159,7 +150,7 @@ function generateDiagramSVG(title: string, bullets: string[], visualPrompt: stri
       
       <!-- Title Section -->
       <rect x="20" y="20" width="${width - 40}" height="80" fill="${colors.lightAccent}" rx="12"/>
-      <text class="title" x="40" y="70">${escapeXml(title.slice(0, 40))}</text>
+      ${wrappedTitle.map((line, i) => `<text class="title" x="40" y="${56 + i * 30}">${escapeXml(line)}</text>`).join("")}
       
       <!-- Grid Pattern -->
       <defs>
@@ -171,34 +162,77 @@ function generateDiagramSVG(title: string, bullets: string[], visualPrompt: stri
       <rect x="20" y="120" width="${width - 40}" height="${height - 160}" fill="none" stroke="${colors.accent}" stroke-width="2" rx="8"/>
   `;
 
-  // Add content elements
-  if (hasArrows) {
-    // Add directional arrows
+  if (prompt.includes("capacitor") || prompt.includes("capacitance") || prompt.includes("dielectric")) {
     svgContent += `
       <defs>
         <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
           <polygon points="0 0, 10 3, 0 6" fill="${colors.accent}"/>
         </marker>
       </defs>
-      <line x1="100" y1="300" x2="700" y2="300" stroke="${colors.accent}" stroke-width="3" marker-end="url(#arrowhead)"/>
+      <rect x="235" y="190" width="26" height="250" fill="${colors.accent}" rx="4"/>
+      <rect x="540" y="190" width="26" height="250" fill="${colors.accent}" rx="4"/>
+      <rect x="315" y="225" width="170" height="180" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-dasharray="8 8" rx="10"/>
+      <text class="label" x="248" y="176" text-anchor="middle">+ plate</text>
+      <text class="label" x="553" y="176" text-anchor="middle">− plate</text>
+      <text class="label" x="400" y="215" text-anchor="middle">dielectric / air gap</text>
+      ${[240, 290, 340, 390].map((y) => `<line x1="280" y1="${y}" x2="520" y2="${y}" stroke="${colors.accent}" stroke-width="2.5" marker-end="url(#arrowhead)" opacity="0.85"/>`).join("")}
+      <text class="subtitle" x="400" y="470" text-anchor="middle">C = Q / V · field between charged plates</text>
     `;
-  }
-
-  if (hasFormula || hasStructure) {
-    // Add chemical formula or structure representation
+  } else if (prompt.includes("potential") || prompt.includes("equipotential") || prompt.includes("electric field") || prompt.includes("charge")) {
     svgContent += `
-      <text class="subtitle" x="400" y="280" text-anchor="middle">${escapeXml(visualPrompt.slice(0, 60))}</text>
-      <circle cx="250" cy="300" r="30" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="2"/>
-      <circle cx="550" cy="300" r="30" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="2"/>
+      <defs><marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><polygon points="0 0, 10 3, 0 6" fill="${colors.accent}"/></marker></defs>
+      <circle cx="400" cy="310" r="30" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="4"/>
+      <text class="subtitle" x="400" y="318" text-anchor="middle">+q</text>
+      ${[90, 45, 0, -45, -90, 135, 180, 225].map((deg) => {
+        const rad = (deg * Math.PI) / 180;
+        const x1 = 400 + Math.cos(rad) * 55;
+        const y1 = 310 + Math.sin(rad) * 55;
+        const x2 = 400 + Math.cos(rad) * 185;
+        const y2 = 310 + Math.sin(rad) * 185;
+        return `<line x1="${x1.toFixed(0)}" y1="${y1.toFixed(0)}" x2="${x2.toFixed(0)}" y2="${y2.toFixed(0)}" stroke="${colors.accent}" stroke-width="2.5" marker-end="url(#arrowhead)"/>`;
+      }).join("")}
+      <circle cx="400" cy="310" r="95" fill="none" stroke="${colors.accent}" stroke-width="2" stroke-dasharray="6 6" opacity="0.75"/>
+      <circle cx="400" cy="310" r="145" fill="none" stroke="${colors.accent}" stroke-width="2" stroke-dasharray="6 6" opacity="0.55"/>
+      <text class="label" x="560" y="210">equipotential surfaces</text>
+      <text class="label" x="560" y="238">electric field is normal to them</text>
+    `;
+  } else if (prompt.includes("ray") || prompt.includes("lens") || prompt.includes("mirror") || prompt.includes("prism")) {
+    svgContent += `
+      <defs><marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><polygon points="0 0, 10 3, 0 6" fill="${colors.accent}"/></marker></defs>
+      <line x1="80" y1="310" x2="720" y2="310" stroke="#222" stroke-width="2" opacity="0.55"/>
+      <polygon points="390,190 500,430 280,430" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="3"/>
+      <line x1="110" y1="260" x2="350" y2="310" stroke="${colors.accent}" stroke-width="4" marker-end="url(#arrowhead)"/>
+      <line x1="350" y1="310" x2="510" y2="345" stroke="${colors.accent}" stroke-width="4" marker-end="url(#arrowhead)"/>
+      <line x1="510" y1="345" x2="700" y2="390" stroke="${colors.accent}" stroke-width="4" marker-end="url(#arrowhead)"/>
+      <text class="label" x="398" y="462" text-anchor="middle">ray path / deviation</text>
+    `;
+  } else if (prompt.includes("cell") || prompt.includes("tissue") || prompt.includes("organ") || prompt.includes("heart") || prompt.includes("blood")) {
+    svgContent += `
+      <ellipse cx="400" cy="310" rx="205" ry="145" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="4"/>
+      <circle cx="390" cy="310" r="54" fill="#fff" stroke="${colors.accent}" stroke-width="3"/>
+      <circle cx="410" cy="305" r="18" fill="${colors.accent}" opacity="0.75"/>
+      <path d="M250 270 C320 210, 470 215, 550 270" fill="none" stroke="${colors.accent}" stroke-width="3" opacity="0.7"/>
+      <path d="M255 350 C330 410, 480 400, 555 345" fill="none" stroke="${colors.accent}" stroke-width="3" opacity="0.7"/>
+      <text class="label" x="400" y="490" text-anchor="middle">labelled biological structure from NCERT text</text>
+    `;
+  } else {
+    svgContent += `
+      <defs><marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><polygon points="0 0, 10 3, 0 6" fill="${colors.accent}"/></marker></defs>
+      <circle cx="210" cy="310" r="54" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="3"/>
+      <rect x="350" y="255" width="110" height="110" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="3" rx="16"/>
+      <polygon points="595,250 665,365 525,365" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="3"/>
+      <line x1="270" y1="310" x2="340" y2="310" stroke="${colors.accent}" stroke-width="3" marker-end="url(#arrowhead)"/>
+      <line x1="470" y1="310" x2="520" y2="310" stroke="${colors.accent}" stroke-width="3" marker-end="url(#arrowhead)"/>
+      ${wrappedPrompt.map((line, i) => `<text class="subtitle" x="400" y="${450 + i * 24}" text-anchor="middle">${escapeXml(line)}</text>`).join("")}
     `;
   }
 
   // Add bullet points
-  const bulletY = height - 100;
+  const bulletY = height - 92;
   bullets.slice(0, 3).forEach((bullet, idx) => {
     svgContent += `
       <circle cx="40" cy="${bulletY + idx * 25}" r="4" fill="${colors.accent}"/>
-      <text class="bullet" x="60" y="${bulletY + idx * 25 + 5}">${escapeXml(bullet.slice(0, 50))}</text>
+      <text class="bullet" x="60" y="${bulletY + idx * 25 + 5}">${escapeXml(trimToWords(bullet, 78))}</text>
     `;
   });
 
@@ -211,6 +245,24 @@ function generateDiagramSVG(title: string, bullets: string[], visualPrompt: stri
   // Convert to data URI
   const base64 = Buffer.from(svgContent).toString("base64");
   return `data:image/svg+xml;base64,${base64}`;
+}
+
+function wrapSvgText(value: string, maxChars: number, maxLines: number) {
+  const words = value.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (next.length > maxChars && line) {
+      lines.push(line);
+      line = word;
+      if (lines.length >= maxLines) break;
+    } else {
+      line = next;
+    }
+  }
+  if (line && lines.length < maxLines) lines.push(line);
+  return lines.length ? lines : ["NCERT diagram"];
 }
 
 function escapeXml(str: string): string {
@@ -230,6 +282,13 @@ function escapeXml(str: string): string {
         return c;
     }
   });
+}
+
+function trimToWords(value: string, max = 160) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max).replace(/\s+\S*$/, "");
+  return `${cut}…`;
 }
 
 const Input = z.object({
@@ -369,41 +428,165 @@ function buildTerms(data: z.infer<typeof Input>) {
   return [...terms];
 }
 
-function fallbackSlides(topic: string, context: string): Slide[] {
-  const sentences = context
+function splitSentences(context: string) {
+  return context
     .replace(/\s+/g, " ")
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 30)
-    .slice(0, 30);
-  const visuals = ["lightbulb", "prism", "atom", "ruler", "beaker", "microscope", "bolt", "function", "brain", "sparkles", "magnet", "leaf", "dna", "planet", "heart"];
-  return Array.from({ length: 15 }, (_, i) => {
-    const bs = sentences.slice(i * 3, i * 3 + 6);
-    return {
-      title: i === 0 ? topic : `${topic} — Key idea ${i}`,
-      bullets: bs.length
-        ? bs
-        : [
-            "This slide uses only the matching uploaded NCERT text.",
-            "Edit this text after generation if you want a simpler learner version.",
-          ],
-      notes: sentences.slice(45 + i * 2, 45 + i * 2 + 2),
-      key_terms: [],
-      visual: visuals[i] ?? "lightbulb",
-      visual_prompt: `Clean 2D NCERT-style diagram illustrating: ${topic} — key idea ${i}.`,
-      grounding: sentences.slice(i * 3, i * 3 + 6).join(" "),
-      caption: "Generated from the selected Class, Subject and chapter memory.",
-    };
+    .replace(/([.!?])\s+(?=[A-Z0-9])/g, "$1|SPLIT|")
+    .split("|SPLIT|")
+    .map((s) => s.replace(/\s+/g, " ").trim())
+    .filter((s) => s.length > 28 && s.length < 420)
+    .filter((s) => !/^\d+$/.test(s));
+}
+
+function uniqueByNormalized(items: string[]) {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of items) {
+    const key = normalizeText(item).slice(0, 120);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
+function titleCase(value: string) {
+  return value
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function sentenceHasAny(sentence: string, terms: string[]) {
+  const n = normalizeText(sentence);
+  return terms.some((term) => {
+    const t = normalizeText(term);
+    return t.length > 2 && n.includes(t);
   });
 }
 
-function fallbackActivities(topic: string, context: string): Activity[] {
-  const sentences = context
-    .replace(/\s+/g, " ")
-    .split(/(?<=[.!?])\s+/)
+function pickSentences(sentences: string[], terms: string[], count: number, offset = 0) {
+  const relevant = sentences.filter((s) => sentenceHasAny(s, terms));
+  const pool = uniqueByNormalized([...relevant, ...sentences]);
+  const picked: string[] = [];
+  for (let i = offset; picked.length < count && i < pool.length; i++) picked.push(pool[i]);
+  for (let i = 0; picked.length < count && i < pool.length; i++) picked.push(pool[i]);
+  return uniqueByNormalized(picked).slice(0, count);
+}
+
+function extractFormulaSentences(sentences: string[]) {
+  return sentences.filter((s) => /[A-Za-z]\s*=|\bSI\b|unit|formula|law|equation|proportional|constant|\bV\b|\bQ\b|\bC\b|\bE\b|ε|epsilon|coulomb|farad|volt/i.test(s));
+}
+
+function extractDefinitionSentences(sentences: string[]) {
+  return sentences.filter((s) => /\bis\b|\bare\b|defined as|called|known as|means|refers to/i.test(s));
+}
+
+function extractKeyTerms(sentences: string[], topic: string): { term: string; meaning: string }[] {
+  const candidates: { term: string; meaning: string }[] = [];
+  for (const sentence of sentences) {
+    const clean = trimToWords(sentence, 180);
+    const patterns = [
+      /([A-Z][A-Za-z\s-]{3,45})\s+is\s+([^.;]{20,160})/,
+      /([A-Za-z\s-]{3,45})\s+is defined as\s+([^.;]{20,160})/i,
+      /([A-Za-z\s-]{3,45})\s+are\s+([^.;]{20,160})/i,
+    ];
+    for (const pattern of patterns) {
+      const match = clean.match(pattern);
+      if (!match) continue;
+      const term = titleCase(match[1].replace(/^(the|a|an)\s+/i, "")).slice(0, 42);
+      const meaning = trimToWords(match[2], 130);
+      if (normalizeText(term).length > 2 && meaning.length > 20) candidates.push({ term, meaning });
+    }
+  }
+  const topicWords = normalizeText(topic).split(" ").filter((w) => w.length > 4);
+  for (const word of topicWords) {
+    const sentence = sentences.find((s) => normalizeText(s).includes(word));
+    if (sentence) candidates.push({ term: titleCase(word), meaning: trimToWords(sentence, 130) });
+  }
+  const seen = new Set<string>();
+  return candidates.filter((item) => {
+    const key = normalizeText(item.term);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 4);
+}
+
+function makeSlide(title: string, source: string[], topic: string, visual: string, index: number): Slide {
+  const cleaned = uniqueByNormalized(source).filter(Boolean);
+  const bullets = cleaned.slice(0, 7).map((s) => trimToWords(s, 180));
+  while (bullets.length < 5) {
+    bullets.push(
+      index === 0
+        ? `This point is grounded in the uploaded NCERT chapter passage for ${topic}.`
+        : `Revise this idea with the matching NCERT excerpt and classroom examples for ${topic}.`,
+    );
+  }
+  const notesSource = cleaned.slice(7, 12).length ? cleaned.slice(7, 12) : cleaned.slice(0, 4);
+  return {
+    title,
+    bullets: bullets.slice(0, 7),
+    notes: notesSource.slice(0, 4).map((s) => trimToWords(s, 210)),
+    key_terms: extractKeyTerms(cleaned, topic),
+    ncert_quote: cleaned[0] ? trimToWords(cleaned[0], 180) : undefined,
+    visual,
+    visual_prompt: `Draw a clean labelled 2D NCERT diagram for ${title}. Include arrows, labels, symbols/formulas, and only details supported by the grounding excerpt.`,
+    grounding: cleaned.slice(0, 3).join(" "),
+    caption: `NCERT-grounded visual summary for ${title}.`,
+  };
+}
+
+function fallbackSlides(topic: string, context: string): Slide[] {
+  const sentences = uniqueByNormalized(splitSentences(context)).slice(0, 160);
+  const visuals = ["lightbulb", "prism", "atom", "ruler", "beaker", "microscope", "bolt", "function", "brain", "sparkles", "magnet", "leaf", "dna", "planet", "heart"];
+  return Array.from({ length: 15 }, (_, i) => {
+    const bs = sentences.slice(i * 7, i * 7 + 12);
+    return makeSlide(i === 0 ? topic : `${topic} — Key idea ${i}`, bs, topic, visuals[i] ?? "lightbulb", i);
+  });
+}
+
+function buildLocalSlides(topic: string, subtopics: string, context: string): Slide[] {
+  const sentences = uniqueByNormalized(splitSentences(context)).slice(0, 220);
+  if (sentences.length === 0) return fallbackSlides(topic, context);
+  const subtopicList = (subtopics || "")
+    .split(/[,;\n]/)
     .map((s) => s.trim())
-    .filter((s) => s.length > 35)
-    .slice(0, 5);
+    .filter(Boolean)
+    .slice(0, 8);
+  const definitions = uniqueByNormalized(extractDefinitionSentences(sentences));
+  const formulas = uniqueByNormalized(extractFormulaSentences(sentences));
+  const activityText = uniqueByNormalized(sentences.filter((s) => /activity|experiment|observe|apparatus|procedure|conclusion/i.test(s)));
+  const topicTerms = [topic, ...topic.split(/\s+/), ...subtopicList];
+  const visuals = ["lightbulb", "atom", "ruler", "bolt", "function", "magnet", "beaker", "microscope", "brain", "prism", "circuit", "planet", "leaf", "dna", "heart"];
+  const plan = [
+    { title: `${topic}: NCERT overview`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 12, 0) },
+    { title: `Core definitions in ${topic}`, terms: ["defined", "called", "is", topic], source: [...definitions, ...pickSentences(sentences, topicTerms, 8, 8)] },
+    { title: `Symbols, quantities and units`, terms: ["unit", "SI", "formula", "symbol", ...topicTerms], source: [...formulas, ...pickSentences(sentences, topicTerms, 8, 16)] },
+    ...subtopicList.slice(0, 8).map((name, idx) => ({
+      title: titleCase(name),
+      terms: [name, ...name.split(/\s+/)],
+      source: pickSentences(sentences, [name, ...name.split(/\s+/)], 12, 24 + idx * 8),
+    })),
+    { title: `NCERT activity / working`, terms: ["activity", "experiment", "observe", topic], source: [...activityText, ...pickSentences(sentences, topicTerms, 8, 42)] },
+    { title: `Important NCERT relationships`, terms: ["law", "relation", "formula", "proportional", topic], source: [...formulas, ...pickSentences(sentences, topicTerms, 8, 56)] },
+    { title: `Applications and interpretation`, terms: ["application", "used", "therefore", "hence", topic], source: pickSentences(sentences, ["application", "used", "therefore", "hence", ...topicTerms], 12, 70) },
+    { title: `Common exam points`, terms: ["important", "remember", "note", "example", topic], source: pickSentences(sentences, ["important", "example", "note", ...topicTerms], 12, 84) },
+    { title: `${topic}: final revision`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 12, 100) },
+  ];
+  const slides = plan.slice(0, 15).map((item, index) =>
+    makeSlide(item.title, item.source.length ? item.source : pickSentences(sentences, item.terms, 12, index * 9), topic, visuals[index] ?? "lightbulb", index),
+  );
+  while (slides.length < 15) {
+    const index = slides.length;
+    slides.push(makeSlide(`${topic} — NCERT point ${index + 1}`, pickSentences(sentences, topicTerms, 12, index * 9), topic, visuals[index] ?? "lightbulb", index));
+  }
+  return slides.slice(0, 15);
+}
+
+function fallbackActivities(topic: string, context: string): Activity[] {
+  const sentences = splitSentences(context).filter((s) => sentenceHasAny(s, [topic, "activity", "experiment", "observe", "apparatus"])).slice(0, 6);
   return [
     {
       name: `${topic} — NCERT working guide`,
@@ -483,6 +666,29 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
   return [...parsed, ...fallback].slice(0, 15);
 }
 
+function buildLocalActivities(topic: string, context: string): Activity[] {
+  const sentences = splitSentences(context);
+  const activityStart = sentences.findIndex((s) => /Activity\s+\d+(?:\.\d+)?|experiment|apparatus|procedure/i.test(s));
+  const pool = activityStart >= 0 ? sentences.slice(activityStart, activityStart + 12) : sentences.filter((s) => sentenceHasAny(s, [topic, "observe", "show", "place", "connect", "measure", "calculate"])).slice(0, 8);
+  if (pool.length === 0) return fallbackActivities(topic, context);
+  const id = pool.join(" ").match(/Activity\s+\d+(?:\.\d+)?/i)?.[0];
+  const steps = pool.slice(0, 7).map((sentence, index) => ({
+    step: index + 1,
+    title: index === 0 ? "NCERT starting point" : `Working step ${index + 1}`,
+    description: trimToWords(sentence, 220),
+  }));
+  return [
+    {
+      name: id || `${topic} — NCERT working guide`,
+      objective: `Understand ${topic} using only the matched NCERT passage.`,
+      apparatus: uniqueByNormalized(pool.join(" ").match(/\b(voltmeter|ammeter|cell|battery|wire|key|resistor|capacitor|plate|dielectric|glass rod|silk|pith ball|lens|mirror|prism|beaker|test tube|magnet|spring balance|ruler|scale)\b/gi) ?? []).slice(0, 8),
+      steps,
+      observation: trimToWords(pool.find((s) => /observe|observation|seen|notice|shows|found/i.test(s)) || pool[Math.min(steps.length - 1, 2)] || pool[0], 240),
+      conclusion: trimToWords(pool.find((s) => /conclude|therefore|hence|thus|shows that|we find/i.test(s)) || pool[pool.length - 1], 240),
+    },
+  ];
+}
+
 function fallbackVideo(topic: string, activities: Activity[]): { title: string; scenes: VideoScene[] } {
   const steps = activities.flatMap((a) => a.steps || []);
   const source =
@@ -506,17 +712,13 @@ function fallbackVideo(topic: string, activities: Activity[]): { title: string; 
   };
 }
 
-/**
- * Main lesson generation function — NOW USES FREE AI GATEWAY
- * Replaces callLovableAI with callFreeAI (Groq API)
- * No credits required, completely free text generation
- */
+/** Main lesson generation function — local NCERT-excerpt builder, no paid AI calls. */
 export const generateLesson = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
     const lessonKey = hashKey([
-      "lesson-v2-15",
+      "lesson-v3-local-15",
       data.klass,
       data.subject,
       data.chapter,
@@ -662,44 +864,11 @@ export const generateLesson = createServerFn({ method: "POST" })
       throw new Error(`The matching Class ${data.klass} ${data.subject} PDF was found, but no readable text chunks were saved. Re-ingest that PDF from Upload.`);
     }
 
-    // 4. Ask AI for slides + activities + video storyboard using FREE Groq API
-    const system =
-      "You are an NCERT-aligned curriculum designer for Indian Class 9-12. " +
-      "Use ONLY the provided NCERT excerpts as source of truth. Do NOT invent facts. " +
-      "Return strict JSON matching the schema, in clear concise English suitable for the student's class level.";
-
-    const userPrompt =
-      `NCERT EXCERPTS (verbatim, may be noisy from PDF extraction):\n${context}\n\n` +
-      `TASK: Build a 15-slide micro-lesson, extract the NCERT activity/experiment steps, and create a sequential 3D animation storyboard.\n` +
-      `Class: ${data.klass}\nSubject: ${data.subject}\nChapter: ${data.chapter || "(any in filtered book)"}\n` +
-      `Topic: ${data.topic}\nSubtopics: ${data.subtopics || "(none)"}\n\n` +
-      `Return JSON with this exact shape:\n` +
-      `{\n` +
-      `  "slides": [ {\n` +
-      `      "title": str (concise, exam-style),\n` +
-      `      "bullets": [str x 5-7] — DENSE, fact-rich, each 12-22 words, taken/paraphrased from the excerpts. NO filler, NO blank-sounding bullets,\n` +
-      `      "notes": [str x 2-4] — extra NCERT notes / extensions / common-mistake warnings that did not fit in bullets,\n` +
-      `      "key_terms": [ {"term": str, "meaning": str} x 2-4 ] — vocabulary defined exactly as in NCERT,\n` +
-      `      "ncert_quote": str (one short verbatim line from the excerpts that backs this slide),\n` +
-      `      "visual": str (one of: atom, beaker, leaf, magnet, microscope, flask, dna, lightbulb, function, circuit, planet, ruler, prism, heart, brain, bolt),\n` +
-      `      "visual_prompt": str — describe EXACTLY what the 2D diagram must show (objects, labels, formulas, arrows, structure, units) so a separate image model can draw it correctly. List every element.\n` +
-      `      "grounding": str — paste the 1-3 sentence NCERT excerpt the diagram must agree with,\n` +
-      `      "caption": str\n` +
-      `  } ] // EXACTLY 15 slides covering the chapter end-to-end (intro, definitions, sub-topics, formulas/laws, worked examples, activity link, common mistakes, applications, summary). Every slide must feel complete and exam-relevant.\n` +
-      `  "activities": [ { "name": str (e.g. "Activity 1.1"), "objective": str, "apparatus": [str], "steps": [ {"step": int, "title": str, "description": str} ], "observation": str, "conclusion": str } ] // 1-3 NCERT activities extracted step-by-step.\n` +
-      `  "video": { "title": str, "scenes": [ {"scene": int, "title": str, "duration_s": int, "visual_prompt": str (cinematic 3D scene description, microscopic zoom-ins where relevant), "narration": str} ] } // 5 sequential animation scenes, each 5-8 seconds, covering the full activity.\n` +
-      `}\n` +
-      `Slide rules: 5-7 bullets per slide, no slide may feel empty or repetitive, every fact must come from the excerpts. Spell every chemical formula, symbol, SI unit and proper name exactly as NCERT does.\n` +
-      `If an explicit NCERT Activity is present anywhere in the excerpts, copy its process step-by-step in simple words without changing the order. ` +
-      `If there is no explicit Activity label, still return one "NCERT working guide" activity with sequential steps that explain the correct working of the topic using only the excerpts. ` +
-      `Every slide bullet, note, activity step and video scene must be grounded in the excerpts.`;
-
-    // Call FREE AI gateway instead of paid Lovable gateway
-    const ai = await callFreeAI(system, userPrompt);
-
-    const activities = normalizeActivities((ai as any).activities, data.topic, context);
-    const aiVideo = (ai as any).video as { title?: string; scenes?: VideoScene[] } | undefined;
-    const video = aiVideo?.scenes?.length ? { title: aiVideo.title || `${data.topic} animation`, scenes: aiVideo.scenes } : fallbackVideo(data.topic, activities);
+    // 4. Build slides + activity + storyboard locally from saved NCERT text.
+    // This is intentionally AI-free so it is fast, repeatable, and never spends credits on page load.
+    const slides = buildLocalSlides(data.topic, data.subtopics, context);
+    const activities = normalizeActivities(buildLocalActivities(data.topic, context), data.topic, context);
+    const video = fallbackVideo(data.topic, activities);
 
 
     // Build verifiable activity matches with confidence
@@ -727,7 +896,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     const out: GenerationResult = {
       source_books: selectedBooks.map((b) => ({ id: b.id, chapter: b.chapter, class: b.class, subject: b.subject })),
       context_chars: context.length,
-      slides: normalizeSlides((ai as any).slides, data.topic, context),
+      slides,
       activities,
       activity_matches,
       video,
