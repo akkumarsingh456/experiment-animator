@@ -300,6 +300,8 @@ const Input = z.object({
   nocache: z.coerce.boolean().optional().default(false),
 });
 
+export type SlideVerification = { coverage: number; matched: number; total: number; missing: string[] };
+
 export type Slide = {
   title: string;
   bullets: string[];
@@ -310,6 +312,7 @@ export type Slide = {
   visual_prompt?: string;
   grounding?: string;
   caption?: string;
+  verification?: SlideVerification;
 };
 
 export type ActivityStep = { step: number; title: string; description: string };
