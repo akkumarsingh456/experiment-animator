@@ -550,6 +550,32 @@ function fallbackSlides(topic: string, context: string): Slide[] {
   });
 }
 
+function validateSlideAgainstContext(slide: Slide, contextNorm: string): SlideVerification {
+  const parts = [
+    ...(slide.bullets || []),
+    ...(slide.notes || []),
+    ...(slide.key_terms || []).map((t) => `${t.term} ${t.meaning}`),
+    slide.ncert_quote || "",
+  ].map((s) => String(s || "").trim()).filter(Boolean);
+  if (parts.length === 0) return { coverage: 0, matched: 0, total: 0, missing: [] };
+  let matched = 0;
+  const missing: string[] = [];
+  for (const p of parts) {
+    const tokens = normalizeText(p).split(" ").filter((w) => w.length > 4);
+    if (tokens.length === 0) { matched++; continue; }
+    const hits = tokens.filter((t) => contextNorm.includes(t)).length;
+    const ratio = hits / tokens.length;
+    if (ratio >= 0.5) matched++;
+    else missing.push(trimToWords(p, 110));
+  }
+  return {
+    coverage: Math.round((matched / parts.length) * 100),
+    matched,
+    total: parts.length,
+    missing: missing.slice(0, 3),
+  };
+}
+
 function buildLocalSlides(topic: string, subtopics: string, context: string): Slide[] {
   const sentences = uniqueByNormalized(splitSentences(context)).slice(0, 220);
   if (sentences.length === 0) return fallbackSlides(topic, context);
