@@ -300,6 +300,8 @@ const Input = z.object({
   nocache: z.coerce.boolean().optional().default(false),
 });
 
+export type SlideVerification = { coverage: number; matched: number; total: number; missing: string[] };
+
 export type Slide = {
   title: string;
   bullets: string[];
@@ -310,6 +312,7 @@ export type Slide = {
   visual_prompt?: string;
   grounding?: string;
   caption?: string;
+  verification?: SlideVerification;
 };
 
 export type ActivityStep = { step: number; title: string; description: string };
@@ -545,6 +548,32 @@ function fallbackSlides(topic: string, context: string): Slide[] {
     const bs = sentences.slice(i * 7, i * 7 + 12);
     return makeSlide(i === 0 ? topic : `${topic} — Key idea ${i}`, bs, topic, visuals[i] ?? "lightbulb", i);
   });
+}
+
+function validateSlideAgainstContext(slide: Slide, contextNorm: string): SlideVerification {
+  const parts = [
+    ...(slide.bullets || []),
+    ...(slide.notes || []),
+    ...(slide.key_terms || []).map((t) => `${t.term} ${t.meaning}`),
+    slide.ncert_quote || "",
+  ].map((s) => String(s || "").trim()).filter(Boolean);
+  if (parts.length === 0) return { coverage: 0, matched: 0, total: 0, missing: [] };
+  let matched = 0;
+  const missing: string[] = [];
+  for (const p of parts) {
+    const tokens = normalizeText(p).split(" ").filter((w) => w.length > 4);
+    if (tokens.length === 0) { matched++; continue; }
+    const hits = tokens.filter((t) => contextNorm.includes(t)).length;
+    const ratio = hits / tokens.length;
+    if (ratio >= 0.5) matched++;
+    else missing.push(trimToWords(p, 110));
+  }
+  return {
+    coverage: Math.round((matched / parts.length) * 100),
+    matched,
+    total: parts.length,
+    missing: missing.slice(0, 3),
+  };
 }
 
 function buildLocalSlides(topic: string, subtopics: string, context: string): Slide[] {
@@ -866,7 +895,9 @@ export const generateLesson = createServerFn({ method: "POST" })
 
     // 4. Build slides + activity + storyboard locally from saved NCERT text.
     // This is intentionally AI-free so it is fast, repeatable, and never spends credits on page load.
-    const slides = buildLocalSlides(data.topic, data.subtopics, context);
+    const slidesRaw = buildLocalSlides(data.topic, data.subtopics, context);
+    const contextNorm = normalizeText(context);
+    const slides = slidesRaw.map((sl) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm) }));
     const activities = normalizeActivities(buildLocalActivities(data.topic, context), data.topic, context);
     const video = fallbackVideo(data.topic, activities);
 
