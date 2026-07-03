@@ -439,111 +439,131 @@ function SlideCanvas({
 }) {
   if (!slide) return null;
   const Icon = ICONS[(slide.visual || "atom").toLowerCase()] ?? Atom;
+  const v = slide.verification;
+  const vTone = !v ? "" :
+    v.coverage >= 80 ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" :
+    v.coverage >= 55 ? "bg-amber-500/10 text-amber-700 border-amber-500/30" :
+    "bg-rose-500/10 text-rose-700 border-rose-500/30";
   return (
     <Card className="overflow-hidden border-border/60 shadow-soft">
       <CardContent className="p-0">
-        <div className="grid md:grid-cols-[1.4fr_1fr]">
-          <div className="p-5 sm:p-7 flex flex-col gap-4">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span className="font-mono">Slide {index + 1} / {total}</span>
+        {/* A4 landscape aspect (297:210 ≈ 1.414). Everything inside is clipped so
+            no content spills off the smart-board projection. */}
+        <div className="relative w-full aspect-[297/210] overflow-hidden bg-card grid grid-rows-[auto_1fr_auto]">
+          {/* Header band (fixed height) */}
+          <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span className="font-mono">Slide {index + 1} / {total}</span>
+            <div className="flex items-center gap-2">
+              {v && (
+                <Badge variant="outline" className={`rounded-full text-[10px] ${vTone}`}>
+                  Notes match {v.coverage}% ({v.matched}/{v.total})
+                </Badge>
+              )}
               <Badge variant="outline" className="rounded-full text-[10px]">NCERT-grounded</Badge>
             </div>
-            {editing ? (
-              <Input
-                value={slide.title}
-                onChange={(e) => onChange({ title: e.target.value })}
-                className="font-display text-2xl sm:text-3xl font-bold border-0 px-0 shadow-none focus-visible:ring-0 h-auto"
-              />
-            ) : (
-              <h3 className="font-display text-2xl sm:text-3xl font-bold tracking-tight leading-tight">{slide.title}</h3>
-            )}
-            <ul className="space-y-2">
-              {(slide.bullets || []).map((b, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                  {editing ? (
-                    <Textarea
-                      value={b}
-                      onChange={(e) => {
-                        const next = [...slide.bullets];
-                        next[i] = e.target.value;
-                        onChange({ bullets: next });
-                      }}
-                      className="min-h-[40px] resize-none"
-                    />
-                  ) : (
-                    <p className="text-sm sm:text-[15px] leading-relaxed">{b}</p>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {slide.notes?.length ? (
-              <div className="rounded-lg bg-secondary/50 border border-border/50 p-3">
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-primary mb-1.5">NCERT notes</div>
-                <ol className="space-y-1.5 list-decimal list-inside text-sm leading-relaxed text-foreground/85">
-                  {slide.notes.map((n, i) => <li key={i}>{n}</li>)}
-                </ol>
-              </div>
-            ) : null}
-            {slide.key_terms?.length ? (
-              <div className="rounded-lg bg-accent/20 border border-border/50 p-3">
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-primary mb-1.5">Key terms</div>
-                <dl className="grid sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                  {slide.key_terms.map((t, i) => (
-                    <div key={i}><dt className="font-semibold inline">{t.term}: </dt><dd className="inline text-muted-foreground">{t.meaning}</dd></div>
-                  ))}
-                </dl>
-              </div>
-            ) : null}
-            {slide.ncert_quote ? (
-              <p className="text-xs italic text-muted-foreground border-l-2 border-primary/40 pl-3">“{slide.ncert_quote}”</p>
-            ) : null}
-            {(editing || slide.caption) && (
-              <div>
-                {editing ? (
-                  <Input
-                    value={slide.caption ?? ""}
-                    placeholder="Caption (optional)"
-                    onChange={(e) => onChange({ caption: e.target.value })}
-                  />
-                ) : (
-                  <p className="text-xs italic text-muted-foreground">{slide.caption}</p>
-                )}
-              </div>
-            )}
           </div>
-          <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid place-items-center p-4 border-t md:border-t-0 md:border-l border-border/60 min-h-[320px]">
-            <div className="absolute top-3 left-3 text-[10px] font-mono text-muted-foreground bg-card/70 rounded px-2 py-0.5">2D illustration · NCERT-verified prompt</div>
-            {onRegenImage && imageUrl && !imageLoading && (
-              <button onClick={onRegenImage} className="absolute top-3 right-3 text-[10px] font-mono text-muted-foreground bg-card/70 rounded px-2 py-0.5 hover:bg-card print:hidden">↻ regenerate</button>
-            )}
-            {imageUrl ? (
-              <img src={imageUrl} alt={slide.title} className="max-h-[420px] w-full object-contain rounded-lg shadow-soft bg-card" />
-            ) : imageLoading ? (
-              <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="text-xs">Drawing local NCERT diagram…</span>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-3 text-center px-4">
-                <div className="h-28 w-28 rounded-full bg-card shadow-glow grid place-items-center">
-                  <Icon className="h-14 w-14 text-primary" />
+
+          {/* Body — 2-column, clipped */}
+          <div className="grid grid-cols-[1.35fr_1fr] min-h-0 overflow-hidden">
+            <div className="p-4 sm:p-5 flex flex-col gap-2 min-h-0 overflow-hidden">
+              {editing ? (
+                <Input
+                  value={slide.title}
+                  onChange={(e) => onChange({ title: e.target.value })}
+                  className="font-display text-lg sm:text-xl font-bold border-0 px-0 shadow-none focus-visible:ring-0 h-auto"
+                />
+              ) : (
+                <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight leading-tight line-clamp-2">{slide.title}</h3>
+              )}
+              <ul className="space-y-1 overflow-hidden">
+                {(slide.bullets || []).slice(0, 5).map((b, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="mt-1.5 h-1 w-1 rounded-full bg-primary shrink-0" />
+                    {editing ? (
+                      <Textarea
+                        value={b}
+                        onChange={(e) => {
+                          const next = [...slide.bullets];
+                          next[i] = e.target.value;
+                          onChange({ bullets: next });
+                        }}
+                        className="min-h-[32px] resize-none text-xs"
+                      />
+                    ) : (
+                      <p className="text-[12px] leading-snug line-clamp-2">{b}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {slide.notes?.length ? (
+                <div className="rounded-md bg-secondary/50 border border-border/50 p-2 overflow-hidden">
+                  <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-1">NCERT notes</div>
+                  <ol className="space-y-0.5 list-decimal list-inside text-[11px] leading-snug text-foreground/85">
+                    {slide.notes.slice(0, 3).map((n, i) => <li key={i} className="line-clamp-2">{n}</li>)}
+                  </ol>
                 </div>
-                {onRegenImage && (
-                  <button
-                    onClick={onRegenImage}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium px-3 py-1.5 hover:opacity-90 print:hidden"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" /> Generate free 2D diagram
-                  </button>
-                )}
-                <p className="text-[10px] text-muted-foreground max-w-[200px] leading-snug">
-                  Diagrams are local SVG previews, generated without AI credits.
-                </p>
-              </div>
-            )}
+              ) : null}
+              {slide.key_terms?.length ? (
+                <div className="rounded-md bg-accent/20 border border-border/50 p-2 overflow-hidden">
+                  <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-1">Key terms</div>
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] leading-snug">
+                    {slide.key_terms.slice(0, 4).map((t, i) => (
+                      <div key={i} className="line-clamp-2"><dt className="font-semibold inline">{t.term}: </dt><dd className="inline text-muted-foreground">{t.meaning}</dd></div>
+                    ))}
+                  </dl>
+                </div>
+              ) : null}
+              {slide.ncert_quote ? (
+                <p className="text-[10px] italic text-muted-foreground border-l-2 border-primary/40 pl-2 line-clamp-2">“{slide.ncert_quote}”</p>
+              ) : null}
+            </div>
+            <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid place-items-center p-3 border-l border-border/60 overflow-hidden">
+              <div className="absolute top-2 left-2 text-[9px] font-mono text-muted-foreground bg-card/70 rounded px-1.5 py-0.5">2D · NCERT</div>
+              {onRegenImage && imageUrl && !imageLoading && (
+                <button onClick={onRegenImage} className="absolute top-2 right-2 text-[9px] font-mono text-muted-foreground bg-card/70 rounded px-1.5 py-0.5 hover:bg-card print:hidden">↻</button>
+              )}
+              {imageUrl ? (
+                <img src={imageUrl} alt={slide.title} className="max-h-full max-w-full object-contain rounded-md shadow-soft bg-card" />
+              ) : imageLoading ? (
+                <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="text-[10px]">Drawing…</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-center px-3">
+                  <div className="h-16 w-16 rounded-full bg-card shadow-glow grid place-items-center">
+                    <Icon className="h-8 w-8 text-primary" />
+                  </div>
+                  {onRegenImage && (
+                    <button
+                      onClick={onRegenImage}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-[10px] font-medium px-2.5 py-1 hover:opacity-90 print:hidden"
+                    >
+                      <Sparkles className="h-3 w-3" /> 2D diagram
+                    </button>
+                  )}
+                  <p className="text-[9px] text-muted-foreground max-w-[160px] leading-tight">
+                    Local SVG · no credits.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer band (fixed height) */}
+          <div className="px-4 sm:px-6 py-2 border-t border-border/60 bg-secondary/40 flex items-center justify-between text-[10px] text-muted-foreground">
+            <span className="truncate max-w-[70%] italic">{slide.caption || `NCERT-grounded summary — ${slide.title}`}</span>
+            <span className="font-mono shrink-0">EduPlan AI · A4</span>
           </div>
         </div>
+
+        {/* Verification detail (outside A4 frame, visible on scroll — not printed) */}
+        {v && v.missing.length > 0 && (
+          <div className="px-4 py-2 border-t border-border/60 text-[11px] text-muted-foreground print:hidden">
+            <span className="font-semibold text-rose-700">Flagged as not directly matched in NCERT text:</span>{" "}
+            {v.missing.map((m, i) => <span key={i} className="italic">“{m}”{i < v.missing.length - 1 ? "; " : ""}</span>)}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
