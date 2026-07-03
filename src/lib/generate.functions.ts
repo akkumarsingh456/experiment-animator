@@ -869,7 +869,9 @@ export const generateLesson = createServerFn({ method: "POST" })
 
     // 4. Build slides + activity + storyboard locally from saved NCERT text.
     // This is intentionally AI-free so it is fast, repeatable, and never spends credits on page load.
-    const slides = buildLocalSlides(data.topic, data.subtopics, context);
+    const slidesRaw = buildLocalSlides(data.topic, data.subtopics, context);
+    const contextNorm = normalizeText(context);
+    const slides = slidesRaw.map((sl) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm) }));
     const activities = normalizeActivities(buildLocalActivities(data.topic, context), data.topic, context);
     const video = fallbackVideo(data.topic, activities);
 
