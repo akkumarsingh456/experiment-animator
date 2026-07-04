@@ -162,13 +162,89 @@ function generateDiagramSVG(title: string, bullets: string[], visualPrompt: stri
       <rect x="20" y="120" width="${width - 40}" height="${height - 160}" fill="none" stroke="${colors.accent}" stroke-width="2" rx="8"/>
   `;
 
-  if (prompt.includes("capacitor") || prompt.includes("capacitance") || prompt.includes("dielectric")) {
+  const arrowDef = `<defs><marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><polygon points="0 0, 10 3, 0 6" fill="${colors.accent}"/></marker><marker id="arrowred" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><polygon points="0 0, 10 3, 0 6" fill="#c0392b"/></marker></defs>`;
+
+  if (prompt.includes("faraday") || (prompt.includes("magnet") && prompt.includes("coil")) || prompt.includes("induced emf") || prompt.includes("electromagnetic induction")) {
+    // Bar magnet moving into a coil, induced current shown, galvanometer
     svgContent += `
-      <defs>
-        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-          <polygon points="0 0, 10 3, 0 6" fill="${colors.accent}"/>
-        </marker>
-      </defs>
+      ${arrowDef}
+      <!-- Coil (loops) -->
+      ${[0,1,2,3,4,5].map(i => `<ellipse cx="${430 + i*22}" cy="310" rx="18" ry="80" fill="none" stroke="${colors.accent}" stroke-width="3"/>`).join("")}
+      <!-- Bar magnet -->
+      <rect x="180" y="285" width="110" height="50" fill="#c0392b"/>
+      <rect x="290" y="285" width="110" height="50" fill="#2c3e50"/>
+      <text class="label" x="235" y="316" text-anchor="middle" fill="#fff">N</text>
+      <text class="label" x="345" y="316" text-anchor="middle" fill="#fff">S</text>
+      <line x1="400" y1="260" x2="440" y2="260" stroke="#c0392b" stroke-width="3" marker-end="url(#arrowred)"/>
+      <text class="label" x="420" y="252" text-anchor="middle" fill="#c0392b">motion</text>
+      <!-- Galvanometer -->
+      <circle cx="640" cy="310" r="42" fill="#fff" stroke="${colors.accent}" stroke-width="3"/>
+      <line x1="640" y1="310" x2="665" y2="285" stroke="${colors.accent}" stroke-width="3"/>
+      <text class="label" x="640" y="365" text-anchor="middle">G</text>
+      <line x1="562" y1="290" x2="600" y2="290" stroke="${colors.accent}" stroke-width="2"/>
+      <line x1="562" y1="330" x2="600" y2="330" stroke="${colors.accent}" stroke-width="2"/>
+      <text class="subtitle" x="400" y="470" text-anchor="middle">ε = − dΦ/dt · Faraday's law of induction</text>
+    `;
+  } else if (prompt.includes("lenz")) {
+    svgContent += `
+      ${arrowDef}
+      ${[0,1,2,3,4].map(i => `<ellipse cx="${380 + i*26}" cy="310" rx="18" ry="85" fill="none" stroke="${colors.accent}" stroke-width="3"/>`).join("")}
+      <rect x="170" y="285" width="90" height="50" fill="#c0392b"/>
+      <rect x="260" y="285" width="90" height="50" fill="#2c3e50"/>
+      <text class="label" x="215" y="316" text-anchor="middle" fill="#fff">N</text>
+      <text class="label" x="305" y="316" text-anchor="middle" fill="#fff">S</text>
+      <line x1="360" y1="245" x2="410" y2="245" stroke="#c0392b" stroke-width="3" marker-end="url(#arrowred)"/>
+      <text class="label" x="385" y="235" fill="#c0392b" text-anchor="middle">magnet →</text>
+      <line x1="500" y1="245" x2="450" y2="245" stroke="${colors.accent}" stroke-width="3" marker-end="url(#arrowhead)"/>
+      <text class="label" x="530" y="240" fill="${colors.accent}">induced N (opposes)</text>
+      <text class="subtitle" x="400" y="470" text-anchor="middle">Lenz's law · induced current opposes the change in flux</text>
+    `;
+  } else if (prompt.includes("motional") || prompt.includes("rod") && prompt.includes("rail")) {
+    svgContent += `
+      ${arrowDef}
+      <!-- rails -->
+      <line x1="180" y1="220" x2="620" y2="220" stroke="${colors.text}" stroke-width="3"/>
+      <line x1="180" y1="400" x2="620" y2="400" stroke="${colors.text}" stroke-width="3"/>
+      <line x1="180" y1="220" x2="180" y2="400" stroke="${colors.text}" stroke-width="3"/>
+      <!-- moving rod -->
+      <rect x="440" y="210" width="10" height="200" fill="${colors.accent}"/>
+      <line x1="455" y1="310" x2="520" y2="310" stroke="#c0392b" stroke-width="4" marker-end="url(#arrowred)"/>
+      <text class="label" x="490" y="300" text-anchor="middle" fill="#c0392b">v</text>
+      <!-- B field dots -->
+      ${[0,1,2,3,4,5,6].map(i => [0,1,2].map(j => `<circle cx="${240 + i*45}" cy="${255 + j*45}" r="3" fill="${colors.accent}"/><circle cx="${240 + i*45}" cy="${255 + j*45}" r="9" fill="none" stroke="${colors.accent}"/>`).join("")).join("")}
+      <text class="subtitle" x="400" y="470" text-anchor="middle">ε = B·l·v · motional EMF across the rod</text>
+    `;
+  } else if (prompt.includes("eddy")) {
+    svgContent += `
+      ${arrowDef}
+      <rect x="260" y="200" width="280" height="220" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="3"/>
+      ${[0,1,2].map(i => `<circle cx="${340 + i*70}" cy="310" r="${30 + i*8}" fill="none" stroke="${colors.accent}" stroke-width="2.5"/>`).join("")}
+      <path d="M 340 280 A 30 30 0 0 1 370 310" fill="none" stroke="${colors.accent}" stroke-width="3" marker-end="url(#arrowhead)"/>
+      <text class="label" x="400" y="180" text-anchor="middle">changing B into conductor</text>
+      <text class="subtitle" x="400" y="470" text-anchor="middle">Eddy currents · circulating loops that dissipate energy</text>
+    `;
+  } else if (prompt.includes("self-induct") || prompt.includes("self induct") || prompt.includes("inductor")) {
+    svgContent += `
+      ${arrowDef}
+      ${[0,1,2,3,4,5,6,7].map(i => `<path d="M ${230 + i*45} 310 a 20 40 0 1 1 0.01 0" fill="none" stroke="${colors.accent}" stroke-width="3"/>`).join("")}
+      <line x1="180" y1="310" x2="230" y2="310" stroke="${colors.accent}" stroke-width="3"/>
+      <line x1="590" y1="310" x2="640" y2="310" stroke="${colors.accent}" stroke-width="3"/>
+      <text class="label" x="400" y="230" text-anchor="middle">solenoid — coil of N turns</text>
+      <text class="subtitle" x="400" y="470" text-anchor="middle">ε = − L (dI/dt) · L = μ₀ N² A / l</text>
+    `;
+  } else if (prompt.includes("mutual") && prompt.includes("induct")) {
+    svgContent += `
+      ${arrowDef}
+      ${[0,1,2,3,4].map(i => `<ellipse cx="${240 + i*22}" cy="310" rx="14" ry="70" fill="none" stroke="${colors.accent}" stroke-width="3"/>`).join("")}
+      ${[0,1,2,3,4].map(i => `<ellipse cx="${470 + i*22}" cy="310" rx="14" ry="70" fill="none" stroke="#c0392b" stroke-width="3"/>`).join("")}
+      <text class="label" x="290" y="230" text-anchor="middle">primary (I₁)</text>
+      <text class="label" x="520" y="230" text-anchor="middle">secondary (ε₂)</text>
+      <line x1="360" y1="310" x2="460" y2="310" stroke="${colors.accent}" stroke-dasharray="6 4" stroke-width="2"/>
+      <text class="subtitle" x="400" y="470" text-anchor="middle">ε₂ = − M (dI₁/dt) · mutual inductance M</text>
+    `;
+  } else if (prompt.includes("capacitor") || prompt.includes("capacitance") || prompt.includes("dielectric")) {
+    svgContent += `
+      ${arrowDef}
       <rect x="235" y="190" width="26" height="250" fill="${colors.accent}" rx="4"/>
       <rect x="540" y="190" width="26" height="250" fill="${colors.accent}" rx="4"/>
       <rect x="315" y="225" width="170" height="180" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-dasharray="8 8" rx="10"/>
@@ -180,7 +256,7 @@ function generateDiagramSVG(title: string, bullets: string[], visualPrompt: stri
     `;
   } else if (prompt.includes("potential") || prompt.includes("equipotential") || prompt.includes("electric field") || prompt.includes("charge")) {
     svgContent += `
-      <defs><marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><polygon points="0 0, 10 3, 0 6" fill="${colors.accent}"/></marker></defs>
+      ${arrowDef}
       <circle cx="400" cy="310" r="30" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="4"/>
       <text class="subtitle" x="400" y="318" text-anchor="middle">+q</text>
       ${[90, 45, 0, -45, -90, 135, 180, 225].map((deg) => {
@@ -198,7 +274,7 @@ function generateDiagramSVG(title: string, bullets: string[], visualPrompt: stri
     `;
   } else if (prompt.includes("ray") || prompt.includes("lens") || prompt.includes("mirror") || prompt.includes("prism")) {
     svgContent += `
-      <defs><marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><polygon points="0 0, 10 3, 0 6" fill="${colors.accent}"/></marker></defs>
+      ${arrowDef}
       <line x1="80" y1="310" x2="720" y2="310" stroke="#222" stroke-width="2" opacity="0.55"/>
       <polygon points="390,190 500,430 280,430" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="3"/>
       <line x1="110" y1="260" x2="350" y2="310" stroke="${colors.accent}" stroke-width="4" marker-end="url(#arrowhead)"/>
@@ -217,7 +293,7 @@ function generateDiagramSVG(title: string, bullets: string[], visualPrompt: stri
     `;
   } else {
     svgContent += `
-      <defs><marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><polygon points="0 0, 10 3, 0 6" fill="${colors.accent}"/></marker></defs>
+      ${arrowDef}
       <circle cx="210" cy="310" r="54" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="3"/>
       <rect x="350" y="255" width="110" height="110" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="3" rx="16"/>
       <polygon points="595,250 665,365 525,365" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="3"/>
