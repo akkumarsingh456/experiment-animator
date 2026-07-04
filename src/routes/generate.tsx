@@ -191,8 +191,13 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     }
   }
 
-  // No automatic image requests. Free/local 2D previews are generated only
-  // when you click the visible slide's button.
+  // Auto-generate the free local 2D SVG for the currently visible slide (no credits used).
+  useEffect(() => {
+    if (!images[activeIdx] && !imgLoading[activeIdx]) ensureImage(activeIdx);
+    const next = activeIdx + 1;
+    if (next < slides.length && !images[next] && !imgLoading[next]) ensureImage(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIdx, slides.length]);
 
 
   async function downloadPDF() {
