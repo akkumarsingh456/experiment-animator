@@ -191,8 +191,13 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     }
   }
 
-  // No automatic image requests. Free/local 2D previews are generated only
-  // when you click the visible slide's button.
+  // Auto-generate the free local 2D SVG for the currently visible slide (no credits used).
+  useEffect(() => {
+    if (!images[activeIdx] && !imgLoading[activeIdx]) ensureImage(activeIdx);
+    const next = activeIdx + 1;
+    if (next < slides.length && !images[next] && !imgLoading[next]) ensureImage(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIdx, slides.length]);
 
 
   async function downloadPDF() {
@@ -339,7 +344,12 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       </p>
 
       {presenting && (
-        <PresentationMode slides={slides} images={images} onClose={() => setPresenting(false)} />
+        <PresentationMode
+          slides={slides}
+          images={images}
+          onClose={() => setPresenting(false)}
+          onNeedImage={(idx) => ensureImage(idx)}
+        />
       )}
     </>
   );
@@ -680,7 +690,7 @@ function VideoView({ video }: { video: GenerationResult["video"] }) {
   );
 }
 
-function PresentationMode({ slides, images, onClose }: { slides: Slide[]; images: Record<number, string>; onClose: () => void }) {
+function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Slide[]; images: Record<number, string>; onClose: () => void; onNeedImage: (idx: number) => void }) {
   const [i, setI] = useState(0);
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -696,58 +706,97 @@ function PresentationMode({ slides, images, onClose }: { slides: Slide[]; images
     };
   }, [slides.length, onClose]);
 
+  // Auto-generate the free local 2D SVG for the active slide (and next one, prefetch)
+  useEffect(() => {
+    if (!images[i]) onNeedImage(i);
+    if (i + 1 < slides.length && !images[i + 1]) onNeedImage(i + 1);
+  }, [i, images, onNeedImage, slides.length]);
+
   const s = slides[i];
   const Icon = ICONS[(s?.visual || "atom").toLowerCase()] ?? Atom;
   const img = images[i];
   return (
-    <div className="fixed inset-0 z-50 bg-foreground text-background flex flex-col">
-      <div className="flex-1 grid place-items-center p-6 sm:p-12 overflow-auto">
-        <div className="max-w-6xl w-full grid md:grid-cols-[1.1fr_1fr] gap-8 items-center">
-          <div>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-12 w-12 rounded-2xl bg-background/10 grid place-items-center">
-                <Icon className="h-7 w-7" />
-              </div>
-              <div className="text-xs font-mono opacity-60">Slide {i + 1} / {slides.length}</div>
-            </div>
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold leading-tight">{s.title}</h2>
-            <ul className="mt-6 space-y-2.5">
-              {(s.bullets || []).map((b, k) => (
-                <li key={k} className="flex gap-3 text-base sm:text-lg leading-relaxed">
-                  <span className="opacity-50">{k + 1}.</span>
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
-            {s.notes?.length ? (
-              <div className="mt-5 rounded-xl bg-background/5 p-4 border border-background/10">
-                <div className="text-[10px] font-semibold uppercase tracking-wider opacity-70 mb-2">NCERT notes</div>
-                <ol className="space-y-1.5 list-decimal list-inside text-sm sm:text-base opacity-90">
-                  {s.notes.map((n, k) => <li key={k}>{n}</li>)}
-                </ol>
-              </div>
-            ) : null}
-            {s.key_terms?.length ? (
-              <div className="mt-3 text-sm opacity-85">
-                {s.key_terms.map((t, k) => (
-                  <div key={k}><span className="font-semibold">{t.term}:</span> {t.meaning}</div>
-                ))}
-              </div>
-            ) : null}
-            {s.ncert_quote && <p className="mt-4 italic opacity-70 border-l-2 border-background/30 pl-3 text-sm">“{s.ncert_quote}”</p>}
-            {s.caption && <p className="mt-4 italic opacity-60 text-sm">{s.caption}</p>}
+    <div className="fixed inset-0 z-50 bg-foreground text-background flex flex-col overflow-hidden">
+      {/* Top bar (fixed) */}
+      <div className="shrink-0 flex items-center justify-between px-5 py-2 border-b border-background/10 text-xs">
+        <div className="flex items-center gap-2 opacity-70 font-mono">
+          <Icon className="h-4 w-4" /> Slide {i + 1} / {slides.length}
+        </div>
+        <button onClick={onClose} className="opacity-70 hover:opacity-100">Exit ✕</button>
+      </div>
+
+      {/* A4 landscape frame that scales to fit — no scroll */}
+      <div className="flex-1 min-h-0 grid place-items-center p-3 sm:p-5">
+        <div
+          className="w-full h-full max-w-[min(100%,calc(100vh*1.414))] max-h-[min(100%,calc(100vw/1.414))] aspect-[297/210] bg-background text-foreground rounded-xl shadow-2xl grid grid-rows-[auto_1fr_auto] overflow-hidden"
+        >
+          {/* Slide header */}
+          <div className="px-6 pt-4 pb-2 border-b border-border/40">
+            <h2 className="font-display text-[clamp(18px,2.6vw,34px)] font-extrabold leading-tight line-clamp-2">
+              {s.title}
+            </h2>
           </div>
-          <div className="rounded-2xl bg-background/5 p-3 grid place-items-center min-h-[260px]">
-            {img ? (
-              <img src={img} alt={s.title} className="w-full max-h-[70vh] object-contain rounded-xl" />
-            ) : (
-              <div className="text-background/60 text-sm">2D illustration not ready yet…</div>
-            )}
+
+          {/* Body: text left, diagram right — both clipped to A4 area */}
+          <div className="grid grid-cols-[1.3fr_1fr] min-h-0 overflow-hidden">
+            <div className="p-5 min-h-0 overflow-hidden flex flex-col gap-2">
+              <ul className="space-y-1.5 overflow-hidden">
+                {(s.bullets || []).slice(0, 6).map((b, k) => (
+                  <li key={k} className="flex gap-2 text-[clamp(11px,1.15vw,16px)] leading-snug">
+                    <span className="opacity-50 shrink-0">{k + 1}.</span>
+                    <span className="line-clamp-2">{b}</span>
+                  </li>
+                ))}
+              </ul>
+              {s.notes?.length ? (
+                <div className="rounded-md bg-secondary/60 border border-border/40 p-2 overflow-hidden">
+                  <div className="text-[9px] font-semibold uppercase tracking-wider opacity-70 mb-1">NCERT notes</div>
+                  <ol className="space-y-0.5 list-decimal list-inside text-[clamp(10px,1vw,13px)] leading-snug">
+                    {s.notes.slice(0, 3).map((n, k) => <li key={k} className="line-clamp-2">{n}</li>)}
+                  </ol>
+                </div>
+              ) : null}
+              {s.key_terms?.length ? (
+                <div className="text-[clamp(10px,1vw,13px)] leading-snug overflow-hidden">
+                  {s.key_terms.slice(0, 3).map((t, k) => (
+                    <div key={k} className="line-clamp-1"><span className="font-semibold">{t.term}:</span> <span className="opacity-80">{t.meaning}</span></div>
+                  ))}
+                </div>
+              ) : null}
+              {s.ncert_quote && (
+                <p className="italic opacity-70 border-l-2 border-primary/40 pl-2 text-[clamp(10px,0.95vw,12px)] line-clamp-2">"{s.ncert_quote}"</p>
+              )}
+            </div>
+
+            {/* Diagram column — image sits UPPER / center */}
+            <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col items-center justify-start p-3 min-h-0 overflow-hidden">
+              <div className="w-full flex-1 min-h-0 grid place-items-center pt-1">
+                {img ? (
+                  <img src={img} alt={s.title} className="max-h-full max-w-full object-contain rounded-md bg-card shadow" />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span className="text-[10px]">Drawing free 2D diagram…</span>
+                  </div>
+                )}
+              </div>
+              {s.caption && (
+                <p className="mt-1 text-[clamp(9px,0.85vw,11px)] italic text-muted-foreground text-center line-clamp-1">{s.caption}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-1.5 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground">
+            <span className="italic truncate max-w-[70%]">NCERT-grounded · {s.title}</span>
+            <span className="font-mono">EduPlan AI · A4</span>
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between p-4 border-t border-background/10">
-        <Button variant="ghost" size="sm" onClick={onClose} className="text-background hover:bg-background/10">Exit ✕</Button>
+
+      {/* Bottom controls (fixed) */}
+      <div className="shrink-0 flex items-center justify-between px-5 py-2 border-t border-background/10 text-xs">
+        <div className="opacity-60 font-mono">← → to navigate · Esc to exit</div>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" disabled={i === 0} onClick={() => setI(i - 1)} className="text-background hover:bg-background/10">
             <ChevronLeft className="h-4 w-4" />Prev
