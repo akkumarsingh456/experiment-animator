@@ -739,26 +739,64 @@ function buildLocalSlides(topic: string, subtopics: string, context: string): Sl
   const topicTerms = [topic, ...topic.split(/\s+/), ...subtopicList];
   const visuals = ["lightbulb", "atom", "ruler", "bolt", "function", "magnet", "beaker", "microscope", "brain", "prism", "circuit", "planet", "leaf", "dna", "heart"];
   const plan = [
-    { title: `${topic}: NCERT overview`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 12, 0) },
-    { title: `Core definitions in ${topic}`, terms: ["defined", "called", "is", topic], source: [...definitions, ...pickSentences(sentences, topicTerms, 8, 8)] },
-    { title: `Symbols, quantities and units`, terms: ["unit", "SI", "formula", "symbol", ...topicTerms], source: [...formulas, ...pickSentences(sentences, topicTerms, 8, 16)] },
+    { title: `${topic}: NCERT overview`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 16, 0) },
+    { title: `Core definitions in ${topic}`, terms: ["defined", "called", "is", topic], source: [...definitions, ...pickSentences(sentences, topicTerms, 10, 8)] },
+    { title: `Symbols, quantities and units`, terms: ["unit", "SI", "formula", "symbol", ...topicTerms], source: [...formulas, ...pickSentences(sentences, topicTerms, 10, 16)] },
     ...subtopicList.slice(0, 8).map((name, idx) => ({
       title: titleCase(name),
       terms: [name, ...name.split(/\s+/)],
-      source: pickSentences(sentences, [name, ...name.split(/\s+/)], 12, 24 + idx * 8),
+      source: pickSentences(sentences, [name, ...name.split(/\s+/)], 14, 24 + idx * 8),
     })),
-    { title: `NCERT activity / working`, terms: ["activity", "experiment", "observe", topic], source: [...activityText, ...pickSentences(sentences, topicTerms, 8, 42)] },
-    { title: `Important NCERT relationships`, terms: ["law", "relation", "formula", "proportional", topic], source: [...formulas, ...pickSentences(sentences, topicTerms, 8, 56)] },
-    { title: `Applications and interpretation`, terms: ["application", "used", "therefore", "hence", topic], source: pickSentences(sentences, ["application", "used", "therefore", "hence", ...topicTerms], 12, 70) },
-    { title: `Common exam points`, terms: ["important", "remember", "note", "example", topic], source: pickSentences(sentences, ["important", "example", "note", ...topicTerms], 12, 84) },
-    { title: `${topic}: final revision`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 12, 100) },
+    { title: `NCERT activity / working`, terms: ["activity", "experiment", "observe", topic], source: [...activityText, ...pickSentences(sentences, topicTerms, 10, 42)] },
+    { title: `Important NCERT relationships`, terms: ["law", "relation", "formula", "proportional", topic], source: [...formulas, ...pickSentences(sentences, topicTerms, 10, 56)] },
+    { title: `Applications and interpretation`, terms: ["application", "used", "therefore", "hence", topic], source: pickSentences(sentences, ["application", "used", "therefore", "hence", ...topicTerms], 14, 70) },
+    { title: `Common exam points`, terms: ["important", "remember", "note", "example", topic], source: pickSentences(sentences, ["important", "example", "note", ...topicTerms], 14, 84) },
+    { title: `${topic}: final revision`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 14, 100) },
   ];
-  const slides = plan.slice(0, 15).map((item, index) =>
-    makeSlide(item.title, item.source.length ? item.source : pickSentences(sentences, item.terms, 12, index * 9), topic, visuals[index] ?? "lightbulb", index),
-  );
-  while (slides.length < 15) {
-    const index = slides.length;
-    slides.push(makeSlide(`${topic} — NCERT point ${index + 1}`, pickSentences(sentences, topicTerms, 12, index * 9), topic, visuals[index] ?? "lightbulb", index));
+
+  // Global dedupe: no sentence appears on more than one slide.
+  const usedSentences = new Set<string>();
+  const filterUnused = (arr: string[]) => {
+    const out: string[] = [];
+    for (const s of uniqueByNormalized(arr)) {
+      const key = normalizeText(s).slice(0, 140);
+      if (!key || usedSentences.has(key)) continue;
+      usedSentences.add(key);
+      out.push(s);
+      if (out.length >= 12) break;
+    }
+    return out;
+  };
+  const usedTitles = new Set<string>();
+  const makeUniqueTitle = (t: string) => {
+    let base = t.trim();
+    let attempt = base;
+    let i = 2;
+    while (usedTitles.has(normalizeText(attempt))) {
+      attempt = `${base} (${i++})`;
+    }
+    usedTitles.add(normalizeText(attempt));
+    return attempt;
+  };
+
+  const slides: Slide[] = [];
+  for (let index = 0; index < plan.length && slides.length < 15; index++) {
+    const item = plan[index];
+    let src = filterUnused(item.source);
+    if (src.length < 3) {
+      src = filterUnused([...src, ...pickSentences(sentences, item.terms, 14, index * 9)]);
+    }
+    if (src.length < 3) continue; // skip empty slide rather than duplicate one
+    slides.push(makeSlide(makeUniqueTitle(item.title), src, topic, visuals[index] ?? "lightbulb", index));
+  }
+  // Top up with residual sentences if plan produced <15 slides.
+  let offset = 0;
+  while (slides.length < 15 && offset < sentences.length) {
+    const src = filterUnused(sentences.slice(offset, offset + 14));
+    offset += 14;
+    if (src.length < 3) continue;
+    const idx = slides.length;
+    slides.push(makeSlide(makeUniqueTitle(`${topic} — NCERT point ${idx + 1}`), src, topic, visuals[idx] ?? "lightbulb", idx));
   }
   return slides.slice(0, 15);
 }
