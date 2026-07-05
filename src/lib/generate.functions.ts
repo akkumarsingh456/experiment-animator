@@ -39,7 +39,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     const cacheKey = hashKey([
-      "img-v1",
+      "img-v2-wiki",
       data.klass,
       data.subject,
       data.title,
@@ -87,18 +87,29 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       }
     }
 
-    // Credit-saving guard: caller asked for cache-only — never spend credits on
-    // a fresh image generation. Returns an empty url so the UI can show a
-    // "Generate diagram" button instead.
     if (data.cacheOnly) {
       await logAudit({ status: "cache_miss_skipped", cached: false });
       return { url: "", cached: false, skipped: true };
     }
 
-    // Generate SVG-based diagram locally (free, no API calls needed).
-    const url = generateDiagramSVG(data.title, data.bullets, data.visual_prompt, data.subject, data.grounding);
+    // 1) Try Wikimedia Commons — free, no API key, high-quality NCERT-style diagrams.
+    let url = "";
+    let source: "wikimedia" | "local" = "local";
+    try {
+      const wiki = await fetchWikimediaDiagram(data.title, data.visual_prompt, data.subject);
+      if (wiki) {
+        url = wiki;
+        source = "wikimedia";
+      }
+    } catch (e) {
+      console.warn("wikimedia lookup failed", e);
+    }
 
-    // Save to cache (best-effort, don't fail generation on cache write errors)
+    // 2) Fallback: high-fidelity local SVG (no external call).
+    if (!url) {
+      url = generateDiagramSVG(data.title, data.bullets, data.visual_prompt, data.subject, data.grounding);
+    }
+
     try {
       await (db as any).from("slide_image_cache").upsert({
         cache_key: cacheKey,
@@ -112,9 +123,71 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       console.warn("slide image cache write failed", e);
     }
 
-    await logAudit({ status: "success", cached: false, image_url: url });
-    return { url, cached: false };
+    await logAudit({ status: "success", cached: false, image_url: url, source });
+    return { url, cached: false, source };
   });
+
+/** Search Wikimedia Commons for a topic-matching diagram (SVG/PNG). Free, keyless. */
+async function fetchWikimediaDiagram(title: string, visualPrompt: string, subject: string): Promise<string | null> {
+  const cleanedTitle = String(title || "").replace(/[—–:·|].*$/, "").trim();
+  const query = [cleanedTitle, visualPrompt, subject, "diagram"]
+    .map((s) => String(s || "").trim())
+    .filter(Boolean)
+    .join(" ")
+    .slice(0, 200);
+  if (!query) return null;
+
+  const endpoint = new URL("https://commons.wikimedia.org/w/api.php");
+  endpoint.searchParams.set("action", "query");
+  endpoint.searchParams.set("format", "json");
+  endpoint.searchParams.set("origin", "*");
+  endpoint.searchParams.set("generator", "search");
+  endpoint.searchParams.set("gsrsearch", `${query} filetype:bitmap|drawing`);
+  endpoint.searchParams.set("gsrnamespace", "6");
+  endpoint.searchParams.set("gsrlimit", "8");
+  endpoint.searchParams.set("prop", "imageinfo");
+  endpoint.searchParams.set("iiprop", "url|mime|size");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3500);
+  let json: any;
+  try {
+    const res = await fetch(endpoint.toString(), {
+      headers: { "User-Agent": "EduPlanAI/1.0 (educational NCERT diagrams)" },
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    json = await res.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const pages: any[] = Object.values(json?.query?.pages || {});
+  if (!pages.length) return null;
+
+  const scored = pages
+    .map((p) => {
+      const ii = p?.imageinfo?.[0];
+      if (!ii?.url) return null;
+      const mime = String(ii.mime || "").toLowerCase();
+      const name = String(p.title || "").toLowerCase();
+      if (!/^image\/(svg\+xml|png|jpeg|jpg)$/.test(mime)) return null;
+      // Reject photos of people/logos/flags: prefer schematic content.
+      if (/\b(flag|logo|portrait|photograph|photo of|selfie|coat of arms|seal of)\b/.test(name)) return null;
+      let bonus = 0;
+      if (mime === "image/svg+xml") bonus += 40;
+      if (/diagram|schema|schematic|figure|illustration/.test(name)) bonus += 20;
+      const q = normalizeText(query);
+      const matches = q.split(" ").filter((w) => w.length > 3 && name.includes(w)).length;
+      return { url: ii.url as string, score: bonus + matches * 10 };
+    })
+    .filter((x): x is { url: string; score: number } => !!x)
+    .sort((a, b) => b.score - a.score);
+
+  return scored[0]?.url ?? null;
+}
 
 /** Generate SVG-based NCERT-style diagrams. Uses data URI so no external image hosting is needed. */
 function generateDiagramSVG(title: string, bullets: string[], visualPrompt: string, subject = "", grounding = ""): string {
@@ -152,6 +225,11 @@ function generateDiagramSVG(title: string, bullets: string[], visualPrompt: stri
       <rect x="20" y="20" width="${width - 40}" height="80" fill="${colors.lightAccent}" rx="12"/>
       ${wrappedTitle.map((line, i) => `<text class="title" x="40" y="${56 + i * 30}">${escapeXml(line)}</text>`).join("")}
       
+      <!-- Outer border -->
+      <rect x="10" y="10" width="${width - 20}" height="${height - 20}" fill="none" stroke="${colors.accent}" stroke-width="3" rx="14"/>
+      <!-- Inner double-line frame -->
+      <rect x="18" y="108" width="${width - 36}" height="${height - 136}" fill="none" stroke="${colors.accent}" stroke-width="1" opacity="0.35" rx="10"/>
+
       <!-- Grid Pattern -->
       <defs>
         <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -666,26 +744,64 @@ function buildLocalSlides(topic: string, subtopics: string, context: string): Sl
   const topicTerms = [topic, ...topic.split(/\s+/), ...subtopicList];
   const visuals = ["lightbulb", "atom", "ruler", "bolt", "function", "magnet", "beaker", "microscope", "brain", "prism", "circuit", "planet", "leaf", "dna", "heart"];
   const plan = [
-    { title: `${topic}: NCERT overview`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 12, 0) },
-    { title: `Core definitions in ${topic}`, terms: ["defined", "called", "is", topic], source: [...definitions, ...pickSentences(sentences, topicTerms, 8, 8)] },
-    { title: `Symbols, quantities and units`, terms: ["unit", "SI", "formula", "symbol", ...topicTerms], source: [...formulas, ...pickSentences(sentences, topicTerms, 8, 16)] },
+    { title: `${topic}: NCERT overview`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 16, 0) },
+    { title: `Core definitions in ${topic}`, terms: ["defined", "called", "is", topic], source: [...definitions, ...pickSentences(sentences, topicTerms, 10, 8)] },
+    { title: `Symbols, quantities and units`, terms: ["unit", "SI", "formula", "symbol", ...topicTerms], source: [...formulas, ...pickSentences(sentences, topicTerms, 10, 16)] },
     ...subtopicList.slice(0, 8).map((name, idx) => ({
       title: titleCase(name),
       terms: [name, ...name.split(/\s+/)],
-      source: pickSentences(sentences, [name, ...name.split(/\s+/)], 12, 24 + idx * 8),
+      source: pickSentences(sentences, [name, ...name.split(/\s+/)], 14, 24 + idx * 8),
     })),
-    { title: `NCERT activity / working`, terms: ["activity", "experiment", "observe", topic], source: [...activityText, ...pickSentences(sentences, topicTerms, 8, 42)] },
-    { title: `Important NCERT relationships`, terms: ["law", "relation", "formula", "proportional", topic], source: [...formulas, ...pickSentences(sentences, topicTerms, 8, 56)] },
-    { title: `Applications and interpretation`, terms: ["application", "used", "therefore", "hence", topic], source: pickSentences(sentences, ["application", "used", "therefore", "hence", ...topicTerms], 12, 70) },
-    { title: `Common exam points`, terms: ["important", "remember", "note", "example", topic], source: pickSentences(sentences, ["important", "example", "note", ...topicTerms], 12, 84) },
-    { title: `${topic}: final revision`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 12, 100) },
+    { title: `NCERT activity / working`, terms: ["activity", "experiment", "observe", topic], source: [...activityText, ...pickSentences(sentences, topicTerms, 10, 42)] },
+    { title: `Important NCERT relationships`, terms: ["law", "relation", "formula", "proportional", topic], source: [...formulas, ...pickSentences(sentences, topicTerms, 10, 56)] },
+    { title: `Applications and interpretation`, terms: ["application", "used", "therefore", "hence", topic], source: pickSentences(sentences, ["application", "used", "therefore", "hence", ...topicTerms], 14, 70) },
+    { title: `Common exam points`, terms: ["important", "remember", "note", "example", topic], source: pickSentences(sentences, ["important", "example", "note", ...topicTerms], 14, 84) },
+    { title: `${topic}: final revision`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 14, 100) },
   ];
-  const slides = plan.slice(0, 15).map((item, index) =>
-    makeSlide(item.title, item.source.length ? item.source : pickSentences(sentences, item.terms, 12, index * 9), topic, visuals[index] ?? "lightbulb", index),
-  );
-  while (slides.length < 15) {
-    const index = slides.length;
-    slides.push(makeSlide(`${topic} — NCERT point ${index + 1}`, pickSentences(sentences, topicTerms, 12, index * 9), topic, visuals[index] ?? "lightbulb", index));
+
+  // Global dedupe: no sentence appears on more than one slide.
+  const usedSentences = new Set<string>();
+  const filterUnused = (arr: string[]) => {
+    const out: string[] = [];
+    for (const s of uniqueByNormalized(arr)) {
+      const key = normalizeText(s).slice(0, 140);
+      if (!key || usedSentences.has(key)) continue;
+      usedSentences.add(key);
+      out.push(s);
+      if (out.length >= 12) break;
+    }
+    return out;
+  };
+  const usedTitles = new Set<string>();
+  const makeUniqueTitle = (t: string) => {
+    let base = t.trim();
+    let attempt = base;
+    let i = 2;
+    while (usedTitles.has(normalizeText(attempt))) {
+      attempt = `${base} (${i++})`;
+    }
+    usedTitles.add(normalizeText(attempt));
+    return attempt;
+  };
+
+  const slides: Slide[] = [];
+  for (let index = 0; index < plan.length && slides.length < 15; index++) {
+    const item = plan[index];
+    let src = filterUnused(item.source);
+    if (src.length < 3) {
+      src = filterUnused([...src, ...pickSentences(sentences, item.terms, 14, index * 9)]);
+    }
+    if (src.length < 3) continue; // skip empty slide rather than duplicate one
+    slides.push(makeSlide(makeUniqueTitle(item.title), src, topic, visuals[index] ?? "lightbulb", index));
+  }
+  // Top up with residual sentences if plan produced <15 slides.
+  let offset = 0;
+  while (slides.length < 15 && offset < sentences.length) {
+    const src = filterUnused(sentences.slice(offset, offset + 14));
+    offset += 14;
+    if (src.length < 3) continue;
+    const idx = slides.length;
+    slides.push(makeSlide(makeUniqueTitle(`${topic} — NCERT point ${idx + 1}`), src, topic, visuals[idx] ?? "lightbulb", idx));
   }
   return slides.slice(0, 15);
 }
@@ -823,7 +939,7 @@ export const generateLesson = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
     const lessonKey = hashKey([
-      "lesson-v3-local-15",
+      "lesson-v4-unique-wiki",
       data.klass,
       data.subject,
       data.chapter,
