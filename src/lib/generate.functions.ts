@@ -225,6 +225,11 @@ function generateDiagramSVG(title: string, bullets: string[], visualPrompt: stri
       <rect x="20" y="20" width="${width - 40}" height="80" fill="${colors.lightAccent}" rx="12"/>
       ${wrappedTitle.map((line, i) => `<text class="title" x="40" y="${56 + i * 30}">${escapeXml(line)}</text>`).join("")}
       
+      <!-- Outer border -->
+      <rect x="10" y="10" width="${width - 20}" height="${height - 20}" fill="none" stroke="${colors.accent}" stroke-width="3" rx="14"/>
+      <!-- Inner double-line frame -->
+      <rect x="18" y="108" width="${width - 36}" height="${height - 136}" fill="none" stroke="${colors.accent}" stroke-width="1" opacity="0.35" rx="10"/>
+
       <!-- Grid Pattern -->
       <defs>
         <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
