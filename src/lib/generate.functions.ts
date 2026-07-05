@@ -934,7 +934,7 @@ export const generateLesson = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
     const lessonKey = hashKey([
-      "lesson-v3-local-15",
+      "lesson-v4-unique-wiki",
       data.klass,
       data.subject,
       data.chapter,
