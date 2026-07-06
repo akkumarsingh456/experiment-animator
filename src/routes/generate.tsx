@@ -773,11 +773,13 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
               )}
             </div>
 
-            {/* Diagram column — image sits UPPER / center */}
+            {/* Diagram column — A4-framed image, upper/centre aligned */}
             <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col items-center justify-start p-3 min-h-0 overflow-hidden">
-              <div className="w-full flex-1 min-h-0 grid place-items-center pt-1">
+              <div className="w-full flex-1 min-h-0 flex items-center justify-center">
                 {img ? (
-                  <img src={img} alt={s.title} className="max-h-full max-w-full object-contain rounded-md bg-card shadow" />
+                  <div className="w-full max-h-full aspect-[1414/1000] rounded-md overflow-hidden bg-card shadow border border-border/40">
+                    <img src={img} alt={s.title} className="w-full h-full object-contain" />
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
