@@ -913,7 +913,7 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
         };
       })
     : [];
-  return [...parsed, ...fallback].slice(0, 15);
+  return [...parsed, ...fallback].slice(0, 10);
 }
 
 function buildLocalActivities(topic: string, context: string): Activity[] {
