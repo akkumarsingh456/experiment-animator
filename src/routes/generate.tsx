@@ -122,7 +122,7 @@ function GeneratePage() {
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
               <p className="mt-4 font-medium">Reading your NCERT chapter…</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Filtering matching PDFs, ranking passages, and building a 15-slide lesson locally from saved NCERT text.
+                Filtering matching PDFs, ranking passages, and building a 10-slide lesson locally from saved NCERT text.
               </p>
             </CardContent>
           </Card>
@@ -265,7 +265,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
       {!verified ? (
         <p className="text-xs text-muted-foreground mt-6">
-          Confirm the matched NCERT Activity above to unlock the 15-slide PPT, downloads, and 3D animated storyboard.
+          Confirm the matched NCERT Activity above to unlock the 10-slide PPT, downloads, and 3D animated storyboard.
         </p>
       ) : (
         <>

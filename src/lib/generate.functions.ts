@@ -727,7 +727,7 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
 function fallbackSlides(topic: string, context: string): Slide[] {
   const sentences = uniqueByNormalized(splitSentences(context)).slice(0, 160);
   const visuals = ["lightbulb", "prism", "atom", "ruler", "beaker", "microscope", "bolt", "function", "brain", "sparkles", "magnet", "leaf", "dna", "planet", "heart"];
-  return Array.from({ length: 15 }, (_, i) => {
+  return Array.from({ length: 10 }, (_, i) => {
     const bs = sentences.slice(i * 7, i * 7 + 12);
     return makeSlide(i === 0 ? topic : `${topic} — Key idea ${i}`, bs, topic, visuals[i] ?? "lightbulb", i);
   });
@@ -814,7 +814,7 @@ function buildLocalSlides(topic: string, subtopics: string, context: string): Sl
   };
 
   const slides: Slide[] = [];
-  for (let index = 0; index < plan.length && slides.length < 15; index++) {
+  for (let index = 0; index < plan.length && slides.length < 10; index++) {
     const item = plan[index];
     let src = filterUnused(item.source);
     if (src.length < 3) {
@@ -825,14 +825,14 @@ function buildLocalSlides(topic: string, subtopics: string, context: string): Sl
   }
   // Top up with residual sentences if plan produced <15 slides.
   let offset = 0;
-  while (slides.length < 15 && offset < sentences.length) {
+  while (slides.length < 10 && offset < sentences.length) {
     const src = filterUnused(sentences.slice(offset, offset + 14));
     offset += 14;
     if (src.length < 3) continue;
     const idx = slides.length;
     slides.push(makeSlide(makeUniqueTitle(`${topic} — NCERT point ${idx + 1}`), src, topic, visuals[idx] ?? "lightbulb", idx));
   }
-  return slides.slice(0, 15);
+  return slides.slice(0, 10);
 }
 
 function fallbackActivities(topic: string, context: string): Activity[] {
@@ -968,7 +968,7 @@ export const generateLesson = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
     const lessonKey = hashKey([
-      "lesson-v4-unique-wiki",
+      "lesson-v5-10slide-a4",
       data.klass,
       data.subject,
       data.chapter,
