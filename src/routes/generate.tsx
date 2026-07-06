@@ -122,7 +122,7 @@ function GeneratePage() {
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
               <p className="mt-4 font-medium">Reading your NCERT chapter…</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Filtering matching PDFs, ranking passages, and building a 15-slide lesson locally from saved NCERT text.
+                Filtering matching PDFs, ranking passages, and building a 10-slide lesson locally from saved NCERT text.
               </p>
             </CardContent>
           </Card>
@@ -265,7 +265,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
       {!verified ? (
         <p className="text-xs text-muted-foreground mt-6">
-          Confirm the matched NCERT Activity above to unlock the 15-slide PPT, downloads, and 3D animated storyboard.
+          Confirm the matched NCERT Activity above to unlock the 10-slide PPT, downloads, and 3D animated storyboard.
         </p>
       ) : (
         <>
@@ -528,12 +528,17 @@ function SlideCanvas({
               ) : null}
             </div>
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid place-items-center p-3 border-l border-border/60 overflow-hidden">
-              <div className="absolute top-2 left-2 text-[9px] font-mono text-muted-foreground bg-card/70 rounded px-1.5 py-0.5">2D · NCERT</div>
+              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D · NCERT</div>
               {onRegenImage && imageUrl && !imageLoading && (
-                <button onClick={onRegenImage} className="absolute top-2 right-2 text-[9px] font-mono text-muted-foreground bg-card/70 rounded px-1.5 py-0.5 hover:bg-card print:hidden">↻</button>
+                <button onClick={onRegenImage} className="absolute top-2 right-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 hover:bg-card border border-border/40 print:hidden">↻</button>
               )}
               {imageUrl ? (
-                <img src={imageUrl} alt={slide.title} className="max-h-full max-w-full object-contain rounded-md shadow-soft bg-card" />
+                // A4-landscape frame matches the SVG viewBox so labels never crop.
+                <div className="w-full h-full flex items-center justify-center p-1">
+                  <div className="w-full max-h-full aspect-[1414/1000] rounded-md overflow-hidden bg-card shadow-soft border border-border/50">
+                    <img src={imageUrl} alt={slide.title} className="w-full h-full object-contain" />
+                  </div>
+                </div>
               ) : imageLoading ? (
                 <div className="flex flex-col items-center gap-1 text-muted-foreground">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -768,11 +773,13 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
               )}
             </div>
 
-            {/* Diagram column — image sits UPPER / center */}
+            {/* Diagram column — A4-framed image, upper/centre aligned */}
             <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col items-center justify-start p-3 min-h-0 overflow-hidden">
-              <div className="w-full flex-1 min-h-0 grid place-items-center pt-1">
+              <div className="w-full flex-1 min-h-0 flex items-center justify-center">
                 {img ? (
-                  <img src={img} alt={s.title} className="max-h-full max-w-full object-contain rounded-md bg-card shadow" />
+                  <div className="w-full max-h-full aspect-[1414/1000] rounded-md overflow-hidden bg-card shadow border border-border/40">
+                    <img src={img} alt={s.title} className="w-full h-full object-contain" />
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />

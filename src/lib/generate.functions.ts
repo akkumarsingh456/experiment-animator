@@ -39,7 +39,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     const cacheKey = hashKey([
-      "img-v2-wiki",
+      "img-v3-wiki-a4",
       data.klass,
       data.subject,
       data.title,
@@ -189,214 +189,243 @@ async function fetchWikimediaDiagram(title: string, visualPrompt: string, subjec
   return scored[0]?.url ?? null;
 }
 
-/** Generate SVG-based NCERT-style diagrams. Uses data URI so no external image hosting is needed. */
+/** Generate SVG-based NCERT-style diagrams. A4-landscape aspect (1414:1000) so it
+ *  slots into the slide's right-column frame without cropping labels. */
 function generateDiagramSVG(title: string, bullets: string[], visualPrompt: string, subject = "", grounding = ""): string {
-  const width = 800;
-  const height = 600;
+  // A4-landscape ratio (297 x 210 mm ≈ 1.414). We use a large canvas for crisp
+  // scaling and reserve generous padding so text labels never touch the border.
+  const width = 1414;
+  const height = 1000;
   const prompt = `${title} ${visualPrompt} ${grounding}`.toLowerCase();
+  const subjectNorm = normalizeText(subject);
+  const accent = subjectNorm.includes("chem") ? "#0f8a5f"
+               : subjectNorm.includes("bio")  ? "#9a5a20"
+               : subjectNorm.includes("math") ? "#7c3aed"
+               : "#2563eb";
   const colors = {
     bg: "#fafaf8",
-    text: "#1a1a1a",
-    accent: normalizeText(subject).includes("chem") ? "#0f8a5f" : normalizeText(subject).includes("bio") ? "#9a5a20" : "#2563eb",
-    lightAccent: normalizeText(subject).includes("chem") ? "#def7ec" : normalizeText(subject).includes("bio") ? "#fff1dc" : "#dbeafe",
-    grid: "#e0e0e0",
+    text: "#0f172a",
+    accent,
+    lightAccent: subjectNorm.includes("chem") ? "#def7ec"
+                : subjectNorm.includes("bio")  ? "#fff1dc"
+                : subjectNorm.includes("math") ? "#ede9fe"
+                : "#dbeafe",
+    grid: "#e5e7eb",
+    muted: "#475569",
   };
 
-  const wrappedTitle = wrapSvgText(title, 36, 2);
-  const wrappedPrompt = wrapSvgText(visualPrompt || bullets[0] || title, 52, 3);
+  // Layout regions (all coordinates in canvas units).
+  const PAD = 28;                 // outer padding — keeps stroke away from crop
+  const TITLE_H = 110;            // title band
+  const FOOTER_H = 70;            // caption/formula band
+  const bodyTop = PAD + TITLE_H + 16;
+  const bodyBottom = height - PAD - FOOTER_H - 16;
+  const bodyLeft = PAD + 20;
+  const bodyRight = width - PAD - 20;
+  const bodyW = bodyRight - bodyLeft;
+  const bodyH = bodyBottom - bodyTop;
+  const cx = (bodyLeft + bodyRight) / 2;
+  const cy = (bodyTop + bodyBottom) / 2;
+
+  const wrappedTitle = wrapSvgText(title, 46, 2);
+  const caption = trimToWords(visualPrompt || bullets[0] || title, 120);
+
+  // Deterministic per-slide variant so no two slides look identical, even for
+  // the same broad topic family (rotates orientation / colour of the sketch).
+  const variantSeed = Array.from(title).reduce((a, c) => a + c.charCodeAt(0), 0);
+  const variant = variantSeed % 3;
 
   let svgContent = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
       <defs>
         <style>
-          text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-          .title { font-size: 28px; font-weight: 700; fill: ${colors.text}; }
-          .bullet { font-size: 17px; fill: ${colors.text}; }
-          .subtitle { font-size: 18px; fill: ${colors.accent}; font-weight: 600; }
-          .label { font-size: 15px; fill: ${colors.text}; font-weight: 600; }
-          .small { font-size: 13px; fill: ${colors.text}; opacity: 0.72; }
+          text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif; }
+          .title    { font-size: 40px; font-weight: 800; fill: ${colors.text}; }
+          .subtitle { font-size: 26px; fill: ${colors.accent}; font-weight: 700; }
+          .label    { font-size: 22px; fill: ${colors.text}; font-weight: 600; }
+          .small    { font-size: 18px; fill: ${colors.muted}; }
+          .cap      { font-size: 20px; fill: ${colors.muted}; font-style: italic; }
+          .bullet   { font-size: 22px; fill: ${colors.text}; }
         </style>
-      </defs>
-      
-      <!-- Background -->
-      <rect width="${width}" height="${height}" fill="${colors.bg}"/>
-      
-      <!-- Title Section -->
-      <rect x="20" y="20" width="${width - 40}" height="80" fill="${colors.lightAccent}" rx="12"/>
-      ${wrappedTitle.map((line, i) => `<text class="title" x="40" y="${56 + i * 30}">${escapeXml(line)}</text>`).join("")}
-      
-      <!-- Outer border -->
-      <rect x="10" y="10" width="${width - 20}" height="${height - 20}" fill="none" stroke="${colors.accent}" stroke-width="3" rx="14"/>
-      <!-- Inner double-line frame -->
-      <rect x="18" y="108" width="${width - 36}" height="${height - 136}" fill="none" stroke="${colors.accent}" stroke-width="1" opacity="0.35" rx="10"/>
-
-      <!-- Grid Pattern -->
-      <defs>
-        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="${colors.grid}" stroke-width="0.5"/>
+        <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto"><polygon points="0 0, 12 4, 0 8" fill="${colors.accent}"/></marker>
+        <marker id="arrowred"  markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto"><polygon points="0 0, 12 4, 0 8" fill="#c0392b"/></marker>
+        <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+          <path d="M 48 0 L 0 0 0 48" fill="none" stroke="${colors.grid}" stroke-width="1"/>
         </pattern>
       </defs>
-      <rect x="20" y="120" width="${width - 40}" height="${height - 160}" fill="url(#grid)" rx="8"/>
-      <rect x="20" y="120" width="${width - 40}" height="${height - 160}" fill="none" stroke="${colors.accent}" stroke-width="2" rx="8"/>
+
+      <!-- Page background -->
+      <rect width="${width}" height="${height}" fill="${colors.bg}"/>
+
+      <!-- Outer safety border (matches slide card border, rounded like the frame) -->
+      <rect x="${PAD}" y="${PAD}" width="${width - PAD * 2}" height="${height - PAD * 2}"
+            fill="none" stroke="${colors.accent}" stroke-width="4" rx="20" ry="20"/>
+      <rect x="${PAD + 10}" y="${PAD + 10}" width="${width - (PAD + 10) * 2}" height="${height - (PAD + 10) * 2}"
+            fill="none" stroke="${colors.accent}" stroke-width="1.2" opacity="0.35" rx="14" ry="14"/>
+
+      <!-- Title band -->
+      <rect x="${PAD + 16}" y="${PAD + 16}" width="${width - (PAD + 16) * 2}" height="${TITLE_H}"
+            fill="${colors.lightAccent}" rx="14" ry="14"/>
+      ${wrappedTitle.map((line, i) => `<text class="title" x="${PAD + 40}" y="${PAD + 60 + i * 44}">${escapeXml(line)}</text>`).join("")}
+
+      <!-- Body panel with subtle grid -->
+      <rect x="${bodyLeft - 12}" y="${bodyTop - 12}" width="${bodyW + 24}" height="${bodyH + 24}"
+            fill="url(#grid)" rx="12" ry="12"/>
+      <rect x="${bodyLeft - 12}" y="${bodyTop - 12}" width="${bodyW + 24}" height="${bodyH + 24}"
+            fill="none" stroke="${colors.accent}" stroke-width="2" rx="12" ry="12"/>
   `;
 
-  const arrowDef = `<defs><marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><polygon points="0 0, 10 3, 0 6" fill="${colors.accent}"/></marker><marker id="arrowred" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><polygon points="0 0, 10 3, 0 6" fill="#c0392b"/></marker></defs>`;
-
-  if (prompt.includes("faraday") || (prompt.includes("magnet") && prompt.includes("coil")) || prompt.includes("induced emf") || prompt.includes("electromagnetic induction")) {
-    // Bar magnet moving into a coil, induced current shown, galvanometer
+  // Choose a diagram family. Every branch draws inside the [bodyLeft..bodyRight]
+  // x [bodyTop..bodyBottom] box so labels never fall off the canvas.
+  if (/faraday|electromagnetic induction|induced emf|magnet.*coil|coil.*magnet/.test(prompt)) {
+    const coilX = cx + 40 + variant * 20;
     svgContent += `
-      ${arrowDef}
-      <!-- Coil (loops) -->
-      ${[0,1,2,3,4,5].map(i => `<ellipse cx="${430 + i*22}" cy="310" rx="18" ry="80" fill="none" stroke="${colors.accent}" stroke-width="3"/>`).join("")}
-      <!-- Bar magnet -->
-      <rect x="180" y="285" width="110" height="50" fill="#c0392b"/>
-      <rect x="290" y="285" width="110" height="50" fill="#2c3e50"/>
-      <text class="label" x="235" y="316" text-anchor="middle" fill="#fff">N</text>
-      <text class="label" x="345" y="316" text-anchor="middle" fill="#fff">S</text>
-      <line x1="400" y1="260" x2="440" y2="260" stroke="#c0392b" stroke-width="3" marker-end="url(#arrowred)"/>
-      <text class="label" x="420" y="252" text-anchor="middle" fill="#c0392b">motion</text>
-      <!-- Galvanometer -->
-      <circle cx="640" cy="310" r="42" fill="#fff" stroke="${colors.accent}" stroke-width="3"/>
-      <line x1="640" y1="310" x2="665" y2="285" stroke="${colors.accent}" stroke-width="3"/>
-      <text class="label" x="640" y="365" text-anchor="middle">G</text>
-      <line x1="562" y1="290" x2="600" y2="290" stroke="${colors.accent}" stroke-width="2"/>
-      <line x1="562" y1="330" x2="600" y2="330" stroke="${colors.accent}" stroke-width="2"/>
-      <text class="subtitle" x="400" y="470" text-anchor="middle">ε = − dΦ/dt · Faraday's law of induction</text>
+      ${Array.from({ length: 7 }, (_, i) => `<ellipse cx="${coilX + i * 34}" cy="${cy}" rx="26" ry="130" fill="none" stroke="${colors.accent}" stroke-width="4"/>`).join("")}
+      <rect x="${cx - 320}" y="${cy - 40}" width="150" height="80" fill="#c0392b" rx="4"/>
+      <rect x="${cx - 170}" y="${cy - 40}" width="150" height="80" fill="#2c3e50" rx="4"/>
+      <text class="label" x="${cx - 245}" y="${cy + 8}" text-anchor="middle" fill="#fff">N</text>
+      <text class="label" x="${cx - 95}" y="${cy + 8}" text-anchor="middle" fill="#fff">S</text>
+      <line x1="${cx - 20}" y1="${cy - 80}" x2="${cx + 40}" y2="${cy - 80}" stroke="#c0392b" stroke-width="5" marker-end="url(#arrowred)"/>
+      <text class="label" x="${cx + 10}" y="${cy - 92}" fill="#c0392b" text-anchor="middle">motion v</text>
+      <circle cx="${bodyRight - 80}" cy="${cy}" r="60" fill="#fff" stroke="${colors.accent}" stroke-width="4"/>
+      <line x1="${bodyRight - 80}" y1="${cy}" x2="${bodyRight - 45}" y2="${cy - 35}" stroke="${colors.accent}" stroke-width="4"/>
+      <text class="label" x="${bodyRight - 80}" y="${cy + 100}" text-anchor="middle">Galvanometer</text>
+      <text class="subtitle" x="${cx}" y="${bodyBottom + 4}" text-anchor="middle">ε = − dΦ/dt  ·  Faraday's law</text>
     `;
-  } else if (prompt.includes("lenz")) {
+  } else if (/lenz/.test(prompt)) {
     svgContent += `
-      ${arrowDef}
-      ${[0,1,2,3,4].map(i => `<ellipse cx="${380 + i*26}" cy="310" rx="18" ry="85" fill="none" stroke="${colors.accent}" stroke-width="3"/>`).join("")}
-      <rect x="170" y="285" width="90" height="50" fill="#c0392b"/>
-      <rect x="260" y="285" width="90" height="50" fill="#2c3e50"/>
-      <text class="label" x="215" y="316" text-anchor="middle" fill="#fff">N</text>
-      <text class="label" x="305" y="316" text-anchor="middle" fill="#fff">S</text>
-      <line x1="360" y1="245" x2="410" y2="245" stroke="#c0392b" stroke-width="3" marker-end="url(#arrowred)"/>
-      <text class="label" x="385" y="235" fill="#c0392b" text-anchor="middle">magnet →</text>
-      <line x1="500" y1="245" x2="450" y2="245" stroke="${colors.accent}" stroke-width="3" marker-end="url(#arrowhead)"/>
-      <text class="label" x="530" y="240" fill="${colors.accent}">induced N (opposes)</text>
-      <text class="subtitle" x="400" y="470" text-anchor="middle">Lenz's law · induced current opposes the change in flux</text>
+      ${Array.from({ length: 6 }, (_, i) => `<ellipse cx="${cx + i * 36}" cy="${cy}" rx="26" ry="140" fill="none" stroke="${colors.accent}" stroke-width="4"/>`).join("")}
+      <rect x="${cx - 340}" y="${cy - 40}" width="140" height="80" fill="#c0392b" rx="4"/>
+      <rect x="${cx - 200}" y="${cy - 40}" width="140" height="80" fill="#2c3e50" rx="4"/>
+      <text class="label" x="${cx - 270}" y="${cy + 8}" text-anchor="middle" fill="#fff">N</text>
+      <text class="label" x="${cx - 130}" y="${cy + 8}" text-anchor="middle" fill="#fff">S</text>
+      <line x1="${cx - 40}" y1="${cy - 110}" x2="${cx + 40}" y2="${cy - 110}" stroke="#c0392b" stroke-width="5" marker-end="url(#arrowred)"/>
+      <text class="label" x="${cx}" y="${cy - 124}" fill="#c0392b" text-anchor="middle">magnet →</text>
+      <line x1="${cx + 260}" y1="${cy - 110}" x2="${cx + 180}" y2="${cy - 110}" stroke="${colors.accent}" stroke-width="5" marker-end="url(#arrowhead)"/>
+      <text class="label" x="${cx + 340}" y="${cy - 114}">induced N (opposes)</text>
+      <text class="subtitle" x="${cx}" y="${bodyBottom + 4}" text-anchor="middle">Lenz's law · induced current opposes the change</text>
     `;
-  } else if (prompt.includes("motional") || prompt.includes("rod") && prompt.includes("rail")) {
+  } else if (/motional|rod.*rail|rail.*rod/.test(prompt)) {
     svgContent += `
-      ${arrowDef}
-      <!-- rails -->
-      <line x1="180" y1="220" x2="620" y2="220" stroke="${colors.text}" stroke-width="3"/>
-      <line x1="180" y1="400" x2="620" y2="400" stroke="${colors.text}" stroke-width="3"/>
-      <line x1="180" y1="220" x2="180" y2="400" stroke="${colors.text}" stroke-width="3"/>
-      <!-- moving rod -->
-      <rect x="440" y="210" width="10" height="200" fill="${colors.accent}"/>
-      <line x1="455" y1="310" x2="520" y2="310" stroke="#c0392b" stroke-width="4" marker-end="url(#arrowred)"/>
-      <text class="label" x="490" y="300" text-anchor="middle" fill="#c0392b">v</text>
-      <!-- B field dots -->
-      ${[0,1,2,3,4,5,6].map(i => [0,1,2].map(j => `<circle cx="${240 + i*45}" cy="${255 + j*45}" r="3" fill="${colors.accent}"/><circle cx="${240 + i*45}" cy="${255 + j*45}" r="9" fill="none" stroke="${colors.accent}"/>`).join("")).join("")}
-      <text class="subtitle" x="400" y="470" text-anchor="middle">ε = B·l·v · motional EMF across the rod</text>
+      <line x1="${bodyLeft + 40}" y1="${cy - 140}" x2="${bodyRight - 40}" y2="${cy - 140}" stroke="${colors.text}" stroke-width="4"/>
+      <line x1="${bodyLeft + 40}" y1="${cy + 140}" x2="${bodyRight - 40}" y2="${cy + 140}" stroke="${colors.text}" stroke-width="4"/>
+      <line x1="${bodyLeft + 40}" y1="${cy - 140}" x2="${bodyLeft + 40}" y2="${cy + 140}" stroke="${colors.text}" stroke-width="4"/>
+      <rect x="${cx - 5}" y="${cy - 150}" width="14" height="300" fill="${colors.accent}" rx="3"/>
+      <line x1="${cx + 20}" y1="${cy}" x2="${cx + 120}" y2="${cy}" stroke="#c0392b" stroke-width="6" marker-end="url(#arrowred)"/>
+      <text class="label" x="${cx + 70}" y="${cy - 14}" text-anchor="middle" fill="#c0392b">v</text>
+      ${Array.from({ length: 7 }, (_, i) => Array.from({ length: 3 }, (_, j) => {
+        const x = bodyLeft + 120 + i * 130;
+        const y = cy - 90 + j * 90;
+        return `<circle cx="${x}" cy="${y}" r="4" fill="${colors.accent}"/><circle cx="${x}" cy="${y}" r="12" fill="none" stroke="${colors.accent}" stroke-width="1.5"/>`;
+      }).join("")).join("")}
+      <text class="small" x="${bodyLeft + 40}" y="${cy - 160}">B field (out of page)</text>
+      <text class="subtitle" x="${cx}" y="${bodyBottom + 4}" text-anchor="middle">ε = B · l · v  ·  motional EMF</text>
     `;
-  } else if (prompt.includes("eddy")) {
+  } else if (/eddy/.test(prompt)) {
     svgContent += `
-      ${arrowDef}
-      <rect x="260" y="200" width="280" height="220" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="3"/>
-      ${[0,1,2].map(i => `<circle cx="${340 + i*70}" cy="310" r="${30 + i*8}" fill="none" stroke="${colors.accent}" stroke-width="2.5"/>`).join("")}
-      <path d="M 340 280 A 30 30 0 0 1 370 310" fill="none" stroke="${colors.accent}" stroke-width="3" marker-end="url(#arrowhead)"/>
-      <text class="label" x="400" y="180" text-anchor="middle">changing B into conductor</text>
-      <text class="subtitle" x="400" y="470" text-anchor="middle">Eddy currents · circulating loops that dissipate energy</text>
+      <rect x="${cx - 250}" y="${cy - 160}" width="500" height="320" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="4" rx="12"/>
+      ${[0,1,2,3].map(i => `<circle cx="${cx - 140 + i * 90}" cy="${cy}" r="${40 + i * 10}" fill="none" stroke="${colors.accent}" stroke-width="3"/>`).join("")}
+      <path d="M ${cx - 140} ${cy - 40} A 40 40 0 0 1 ${cx - 100} ${cy}" fill="none" stroke="${colors.accent}" stroke-width="4" marker-end="url(#arrowhead)"/>
+      <text class="label" x="${cx}" y="${cy - 180}" text-anchor="middle">changing B into conductor</text>
+      <text class="subtitle" x="${cx}" y="${bodyBottom + 4}" text-anchor="middle">Eddy currents dissipate energy as heat</text>
     `;
-  } else if (prompt.includes("self-induct") || prompt.includes("self induct") || prompt.includes("inductor")) {
+  } else if (/self.?induct|inductor|solenoid/.test(prompt)) {
     svgContent += `
-      ${arrowDef}
-      ${[0,1,2,3,4,5,6,7].map(i => `<path d="M ${230 + i*45} 310 a 20 40 0 1 1 0.01 0" fill="none" stroke="${colors.accent}" stroke-width="3"/>`).join("")}
-      <line x1="180" y1="310" x2="230" y2="310" stroke="${colors.accent}" stroke-width="3"/>
-      <line x1="590" y1="310" x2="640" y2="310" stroke="${colors.accent}" stroke-width="3"/>
-      <text class="label" x="400" y="230" text-anchor="middle">solenoid — coil of N turns</text>
-      <text class="subtitle" x="400" y="470" text-anchor="middle">ε = − L (dI/dt) · L = μ₀ N² A / l</text>
+      ${Array.from({ length: 10 }, (_, i) => `<path d="M ${bodyLeft + 120 + i * 80} ${cy} a 30 60 0 1 1 0.01 0" fill="none" stroke="${colors.accent}" stroke-width="5"/>`).join("")}
+      <line x1="${bodyLeft + 40}" y1="${cy}" x2="${bodyLeft + 120}" y2="${cy}" stroke="${colors.accent}" stroke-width="5"/>
+      <line x1="${bodyLeft + 920}" y1="${cy}" x2="${bodyRight - 40}" y2="${cy}" stroke="${colors.accent}" stroke-width="5"/>
+      <text class="label" x="${cx}" y="${cy - 120}" text-anchor="middle">solenoid — N turns, area A, length l</text>
+      <text class="subtitle" x="${cx}" y="${bodyBottom + 4}" text-anchor="middle">ε = − L (dI/dt)  ·  L = μ₀ N² A / l</text>
     `;
-  } else if (prompt.includes("mutual") && prompt.includes("induct")) {
+  } else if (/mutual.*induct/.test(prompt)) {
     svgContent += `
-      ${arrowDef}
-      ${[0,1,2,3,4].map(i => `<ellipse cx="${240 + i*22}" cy="310" rx="14" ry="70" fill="none" stroke="${colors.accent}" stroke-width="3"/>`).join("")}
-      ${[0,1,2,3,4].map(i => `<ellipse cx="${470 + i*22}" cy="310" rx="14" ry="70" fill="none" stroke="#c0392b" stroke-width="3"/>`).join("")}
-      <text class="label" x="290" y="230" text-anchor="middle">primary (I₁)</text>
-      <text class="label" x="520" y="230" text-anchor="middle">secondary (ε₂)</text>
-      <line x1="360" y1="310" x2="460" y2="310" stroke="${colors.accent}" stroke-dasharray="6 4" stroke-width="2"/>
-      <text class="subtitle" x="400" y="470" text-anchor="middle">ε₂ = − M (dI₁/dt) · mutual inductance M</text>
+      ${Array.from({ length: 6 }, (_, i) => `<ellipse cx="${bodyLeft + 200 + i * 34}" cy="${cy}" rx="22" ry="120" fill="none" stroke="${colors.accent}" stroke-width="4"/>`).join("")}
+      ${Array.from({ length: 6 }, (_, i) => `<ellipse cx="${cx + 160 + i * 34}" cy="${cy}" rx="22" ry="120" fill="none" stroke="#c0392b" stroke-width="4"/>`).join("")}
+      <text class="label" x="${bodyLeft + 300}" y="${cy - 150}" text-anchor="middle">primary I₁</text>
+      <text class="label" x="${cx + 250}" y="${cy - 150}" text-anchor="middle">secondary ε₂</text>
+      <line x1="${bodyLeft + 400}" y1="${cy}" x2="${cx + 150}" y2="${cy}" stroke="${colors.accent}" stroke-dasharray="10 6" stroke-width="3"/>
+      <text class="subtitle" x="${cx}" y="${bodyBottom + 4}" text-anchor="middle">ε₂ = − M (dI₁/dt)  ·  mutual inductance</text>
     `;
-  } else if (prompt.includes("capacitor") || prompt.includes("capacitance") || prompt.includes("dielectric")) {
+  } else if (/capacitor|capacitance|dielectric/.test(prompt)) {
     svgContent += `
-      ${arrowDef}
-      <rect x="235" y="190" width="26" height="250" fill="${colors.accent}" rx="4"/>
-      <rect x="540" y="190" width="26" height="250" fill="${colors.accent}" rx="4"/>
-      <rect x="315" y="225" width="170" height="180" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-dasharray="8 8" rx="10"/>
-      <text class="label" x="248" y="176" text-anchor="middle">+ plate</text>
-      <text class="label" x="553" y="176" text-anchor="middle">− plate</text>
-      <text class="label" x="400" y="215" text-anchor="middle">dielectric / air gap</text>
-      ${[240, 290, 340, 390].map((y) => `<line x1="280" y1="${y}" x2="520" y2="${y}" stroke="${colors.accent}" stroke-width="2.5" marker-end="url(#arrowhead)" opacity="0.85"/>`).join("")}
-      <text class="subtitle" x="400" y="470" text-anchor="middle">C = Q / V · field between charged plates</text>
+      <rect x="${cx - 240}" y="${cy - 160}" width="30" height="320" fill="${colors.accent}" rx="4"/>
+      <rect x="${cx + 210}" y="${cy - 160}" width="30" height="320" fill="${colors.accent}" rx="4"/>
+      <rect x="${cx - 200}" y="${cy - 130}" width="400" height="260" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-dasharray="12 8" rx="12"/>
+      <text class="label" x="${cx - 225}" y="${cy - 180}" text-anchor="middle">+ plate</text>
+      <text class="label" x="${cx + 225}" y="${cy - 180}" text-anchor="middle">− plate</text>
+      <text class="label" x="${cx}" y="${cy - 145}" text-anchor="middle">dielectric</text>
+      ${[cy - 70, cy, cy + 70].map(y => `<line x1="${cx - 180}" y1="${y}" x2="${cx + 190}" y2="${y}" stroke="${colors.accent}" stroke-width="3" marker-end="url(#arrowhead)"/>`).join("")}
+      <text class="subtitle" x="${cx}" y="${bodyBottom + 4}" text-anchor="middle">C = Q / V  ·  parallel-plate capacitor</text>
     `;
-  } else if (prompt.includes("potential") || prompt.includes("equipotential") || prompt.includes("electric field") || prompt.includes("charge")) {
+  } else if (/equipotential|electric field|charge|coulomb/.test(prompt)) {
     svgContent += `
-      ${arrowDef}
-      <circle cx="400" cy="310" r="30" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="4"/>
-      <text class="subtitle" x="400" y="318" text-anchor="middle">+q</text>
-      ${[90, 45, 0, -45, -90, 135, 180, 225].map((deg) => {
+      <circle cx="${cx}" cy="${cy}" r="42" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="5"/>
+      <text class="subtitle" x="${cx}" y="${cy + 10}" text-anchor="middle">+q</text>
+      ${[0, 45, 90, 135, 180, 225, 270, 315].map(deg => {
         const rad = (deg * Math.PI) / 180;
-        const x1 = 400 + Math.cos(rad) * 55;
-        const y1 = 310 + Math.sin(rad) * 55;
-        const x2 = 400 + Math.cos(rad) * 185;
-        const y2 = 310 + Math.sin(rad) * 185;
-        return `<line x1="${x1.toFixed(0)}" y1="${y1.toFixed(0)}" x2="${x2.toFixed(0)}" y2="${y2.toFixed(0)}" stroke="${colors.accent}" stroke-width="2.5" marker-end="url(#arrowhead)"/>`;
+        const r1 = 60, r2 = 260;
+        return `<line x1="${(cx + Math.cos(rad) * r1).toFixed(0)}" y1="${(cy + Math.sin(rad) * r1).toFixed(0)}" x2="${(cx + Math.cos(rad) * r2).toFixed(0)}" y2="${(cy + Math.sin(rad) * r2).toFixed(0)}" stroke="${colors.accent}" stroke-width="3" marker-end="url(#arrowhead)"/>`;
       }).join("")}
-      <circle cx="400" cy="310" r="95" fill="none" stroke="${colors.accent}" stroke-width="2" stroke-dasharray="6 6" opacity="0.75"/>
-      <circle cx="400" cy="310" r="145" fill="none" stroke="${colors.accent}" stroke-width="2" stroke-dasharray="6 6" opacity="0.55"/>
-      <text class="label" x="560" y="210">equipotential surfaces</text>
-      <text class="label" x="560" y="238">electric field is normal to them</text>
+      <circle cx="${cx}" cy="${cy}" r="140" fill="none" stroke="${colors.accent}" stroke-width="2" stroke-dasharray="8 6" opacity="0.65"/>
+      <circle cx="${cx}" cy="${cy}" r="220" fill="none" stroke="${colors.accent}" stroke-width="2" stroke-dasharray="8 6" opacity="0.45"/>
+      <text class="small" x="${bodyRight - 40}" y="${bodyTop + 40}" text-anchor="end">equipotential surfaces</text>
+      <text class="subtitle" x="${cx}" y="${bodyBottom + 4}" text-anchor="middle">radial E-field of a point charge</text>
     `;
-  } else if (prompt.includes("ray") || prompt.includes("lens") || prompt.includes("mirror") || prompt.includes("prism")) {
+  } else if (/ray|lens|mirror|prism|refraction|reflection/.test(prompt)) {
     svgContent += `
-      ${arrowDef}
-      <line x1="80" y1="310" x2="720" y2="310" stroke="#222" stroke-width="2" opacity="0.55"/>
-      <polygon points="390,190 500,430 280,430" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="3"/>
-      <line x1="110" y1="260" x2="350" y2="310" stroke="${colors.accent}" stroke-width="4" marker-end="url(#arrowhead)"/>
-      <line x1="350" y1="310" x2="510" y2="345" stroke="${colors.accent}" stroke-width="4" marker-end="url(#arrowhead)"/>
-      <line x1="510" y1="345" x2="700" y2="390" stroke="${colors.accent}" stroke-width="4" marker-end="url(#arrowhead)"/>
-      <text class="label" x="398" y="462" text-anchor="middle">ray path / deviation</text>
+      <line x1="${bodyLeft + 40}" y1="${cy}" x2="${bodyRight - 40}" y2="${cy}" stroke="${colors.text}" stroke-width="2" opacity="0.5" stroke-dasharray="6 6"/>
+      <polygon points="${cx},${cy - 200} ${cx + 190},${cy + 200} ${cx - 190},${cy + 200}" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="4"/>
+      <line x1="${bodyLeft + 60}" y1="${cy - 60}" x2="${cx - 70}" y2="${cy + 10}" stroke="${colors.accent}" stroke-width="5" marker-end="url(#arrowhead)"/>
+      <line x1="${cx - 70}" y1="${cy + 10}" x2="${cx + 90}" y2="${cy + 90}" stroke="${colors.accent}" stroke-width="5" marker-end="url(#arrowhead)"/>
+      <line x1="${cx + 90}" y1="${cy + 90}" x2="${bodyRight - 60}" y2="${cy + 200}" stroke="${colors.accent}" stroke-width="5" marker-end="url(#arrowhead)"/>
+      <text class="label" x="${bodyLeft + 60}" y="${cy - 80}">incident ray</text>
+      <text class="label" x="${bodyRight - 60}" y="${cy + 232}" text-anchor="end">emergent ray</text>
+      <text class="subtitle" x="${cx}" y="${bodyBottom + 4}" text-anchor="middle">refraction through a prism</text>
     `;
-  } else if (prompt.includes("cell") || prompt.includes("tissue") || prompt.includes("organ") || prompt.includes("heart") || prompt.includes("blood")) {
+  } else if (/cell|tissue|organ|heart|blood|neuron|plant|photosynth/.test(prompt)) {
     svgContent += `
-      <ellipse cx="400" cy="310" rx="205" ry="145" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="4"/>
-      <circle cx="390" cy="310" r="54" fill="#fff" stroke="${colors.accent}" stroke-width="3"/>
-      <circle cx="410" cy="305" r="18" fill="${colors.accent}" opacity="0.75"/>
-      <path d="M250 270 C320 210, 470 215, 550 270" fill="none" stroke="${colors.accent}" stroke-width="3" opacity="0.7"/>
-      <path d="M255 350 C330 410, 480 400, 555 345" fill="none" stroke="${colors.accent}" stroke-width="3" opacity="0.7"/>
-      <text class="label" x="400" y="490" text-anchor="middle">labelled biological structure from NCERT text</text>
+      <ellipse cx="${cx}" cy="${cy}" rx="360" ry="220" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="5"/>
+      <circle cx="${cx - 30}" cy="${cy}" r="86" fill="#fff" stroke="${colors.accent}" stroke-width="4"/>
+      <circle cx="${cx - 10}" cy="${cy - 8}" r="28" fill="${colors.accent}" opacity="0.7"/>
+      <path d="M ${cx - 240} ${cy - 60} C ${cx - 100} ${cy - 200}, ${cx + 140} ${cy - 200}, ${cx + 260} ${cy - 60}" fill="none" stroke="${colors.accent}" stroke-width="3" opacity="0.7"/>
+      <path d="M ${cx - 240} ${cy + 60} C ${cx - 100} ${cy + 200}, ${cx + 140} ${cy + 200}, ${cx + 260} ${cy + 60}" fill="none" stroke="${colors.accent}" stroke-width="3" opacity="0.7"/>
+      <text class="label" x="${cx - 30}" y="${cy - 100}" text-anchor="middle">nucleus</text>
+      <text class="label" x="${cx + 280}" y="${cy}" text-anchor="start">membrane</text>
+      <text class="subtitle" x="${cx}" y="${bodyBottom + 4}" text-anchor="middle">labelled structure from NCERT</text>
+    `;
+  } else if (/triangle|angle|geometry|circle|polygon|theorem/.test(prompt)) {
+    svgContent += `
+      <polygon points="${cx - 220},${cy + 140} ${cx + 220},${cy + 140} ${cx + 30},${cy - 200}"
+               fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="5"/>
+      <text class="label" x="${cx - 240}" y="${cy + 170}">A</text>
+      <text class="label" x="${cx + 240}" y="${cy + 170}">B</text>
+      <text class="label" x="${cx + 30}" y="${cy - 220}" text-anchor="middle">C</text>
+      <text class="subtitle" x="${cx}" y="${bodyBottom + 4}" text-anchor="middle">${escapeXml(trimToWords(title, 60))}</text>
     `;
   } else {
-    svgContent += `
-      ${arrowDef}
-      <circle cx="210" cy="310" r="54" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="3"/>
-      <rect x="350" y="255" width="110" height="110" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="3" rx="16"/>
-      <polygon points="595,250 665,365 525,365" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="3"/>
-      <line x1="270" y1="310" x2="340" y2="310" stroke="${colors.accent}" stroke-width="3" marker-end="url(#arrowhead)"/>
-      <line x1="470" y1="310" x2="520" y2="310" stroke="${colors.accent}" stroke-width="3" marker-end="url(#arrowhead)"/>
-      ${wrappedPrompt.map((line, i) => `<text class="subtitle" x="400" y="${450 + i * 24}" text-anchor="middle">${escapeXml(line)}</text>`).join("")}
-    `;
+    // Generic labelled sketch — three linked concept nodes with an arrow flow.
+    const nodes = [
+      { x: bodyLeft + 180, y: cy, label: wrapSvgText(bullets[0] || "concept", 14, 2) },
+      { x: cx,             y: cy, label: wrapSvgText(bullets[1] || title,     14, 2) },
+      { x: bodyRight - 180, y: cy, label: wrapSvgText(bullets[2] || "result",  14, 2) },
+    ];
+    svgContent += nodes.map((n, i) => `
+      <circle cx="${n.x}" cy="${n.y}" r="110" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="4"/>
+      ${n.label.map((line, li) => `<text class="label" x="${n.x}" y="${n.y - 6 + li * 26}" text-anchor="middle">${escapeXml(line)}</text>`).join("")}
+      ${i < nodes.length - 1 ? `<line x1="${n.x + 115}" y1="${n.y}" x2="${nodes[i + 1].x - 118}" y2="${n.y}" stroke="${colors.accent}" stroke-width="5" marker-end="url(#arrowhead)"/>` : ""}
+    `).join("");
+    svgContent += `<text class="subtitle" x="${cx}" y="${bodyBottom + 4}" text-anchor="middle">${escapeXml(trimToWords(caption, 70))}</text>`;
   }
 
-  // Add bullet points
-  const bulletY = height - 92;
-  bullets.slice(0, 3).forEach((bullet, idx) => {
-    svgContent += `
-      <circle cx="40" cy="${bulletY + idx * 25}" r="4" fill="${colors.accent}"/>
-      <text class="bullet" x="60" y="${bulletY + idx * 25 + 5}">${escapeXml(trimToWords(bullet, 78))}</text>
-    `;
-  });
-
-  // Add footer text
+  // Footer — caption band, always inside the outer border.
   svgContent += `
-    <text x="${width / 2}" y="${height - 10}" text-anchor="middle" style="font-size: 12px; fill: ${colors.text}; opacity: 0.6;">NCERT-aligned Educational Diagram</text>
+    <rect x="${PAD + 16}" y="${height - PAD - FOOTER_H - 4}" width="${width - (PAD + 16) * 2}" height="${FOOTER_H}"
+          fill="${colors.lightAccent}" opacity="0.7" rx="12" ry="12"/>
+    <text class="cap" x="${cx}" y="${height - PAD - FOOTER_H / 2 + 8}" text-anchor="middle">${escapeXml(trimToWords(caption, 110))}</text>
+    <text class="small" x="${width - PAD - 24}" y="${height - PAD - 18}" text-anchor="end">NCERT-aligned · EduPlan AI</text>
     </svg>
   `;
 
-  // Convert to data URI
   const base64 = Buffer.from(svgContent).toString("base64");
   return `data:image/svg+xml;base64,${base64}`;
 }
@@ -698,7 +727,7 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
 function fallbackSlides(topic: string, context: string): Slide[] {
   const sentences = uniqueByNormalized(splitSentences(context)).slice(0, 160);
   const visuals = ["lightbulb", "prism", "atom", "ruler", "beaker", "microscope", "bolt", "function", "brain", "sparkles", "magnet", "leaf", "dna", "planet", "heart"];
-  return Array.from({ length: 15 }, (_, i) => {
+  return Array.from({ length: 10 }, (_, i) => {
     const bs = sentences.slice(i * 7, i * 7 + 12);
     return makeSlide(i === 0 ? topic : `${topic} — Key idea ${i}`, bs, topic, visuals[i] ?? "lightbulb", i);
   });
@@ -785,7 +814,7 @@ function buildLocalSlides(topic: string, subtopics: string, context: string): Sl
   };
 
   const slides: Slide[] = [];
-  for (let index = 0; index < plan.length && slides.length < 15; index++) {
+  for (let index = 0; index < plan.length && slides.length < 10; index++) {
     const item = plan[index];
     let src = filterUnused(item.source);
     if (src.length < 3) {
@@ -796,14 +825,14 @@ function buildLocalSlides(topic: string, subtopics: string, context: string): Sl
   }
   // Top up with residual sentences if plan produced <15 slides.
   let offset = 0;
-  while (slides.length < 15 && offset < sentences.length) {
+  while (slides.length < 10 && offset < sentences.length) {
     const src = filterUnused(sentences.slice(offset, offset + 14));
     offset += 14;
     if (src.length < 3) continue;
     const idx = slides.length;
     slides.push(makeSlide(makeUniqueTitle(`${topic} — NCERT point ${idx + 1}`), src, topic, visuals[idx] ?? "lightbulb", idx));
   }
-  return slides.slice(0, 15);
+  return slides.slice(0, 10);
 }
 
 function fallbackActivities(topic: string, context: string): Activity[] {
@@ -884,7 +913,7 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
         };
       })
     : [];
-  return [...parsed, ...fallback].slice(0, 15);
+  return [...parsed, ...fallback].slice(0, 10);
 }
 
 function buildLocalActivities(topic: string, context: string): Activity[] {
@@ -939,7 +968,7 @@ export const generateLesson = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
     const lessonKey = hashKey([
-      "lesson-v4-unique-wiki",
+      "lesson-v5-10slide-a4",
       data.klass,
       data.subject,
       data.chapter,
