@@ -528,12 +528,17 @@ function SlideCanvas({
               ) : null}
             </div>
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid place-items-center p-3 border-l border-border/60 overflow-hidden">
-              <div className="absolute top-2 left-2 text-[9px] font-mono text-muted-foreground bg-card/70 rounded px-1.5 py-0.5">2D · NCERT</div>
+              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D · NCERT</div>
               {onRegenImage && imageUrl && !imageLoading && (
-                <button onClick={onRegenImage} className="absolute top-2 right-2 text-[9px] font-mono text-muted-foreground bg-card/70 rounded px-1.5 py-0.5 hover:bg-card print:hidden">↻</button>
+                <button onClick={onRegenImage} className="absolute top-2 right-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 hover:bg-card border border-border/40 print:hidden">↻</button>
               )}
               {imageUrl ? (
-                <img src={imageUrl} alt={slide.title} className="max-h-full max-w-full object-contain rounded-md shadow-soft bg-card" />
+                // A4-landscape frame matches the SVG viewBox so labels never crop.
+                <div className="w-full h-full flex items-center justify-center p-1">
+                  <div className="w-full max-h-full aspect-[1414/1000] rounded-md overflow-hidden bg-card shadow-soft border border-border/50">
+                    <img src={imageUrl} alt={slide.title} className="w-full h-full object-contain" />
+                  </div>
+                </div>
               ) : imageLoading ? (
                 <div className="flex flex-col items-center gap-1 text-muted-foreground">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
