@@ -39,7 +39,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     const cacheKey = hashKey([
-      "img-v2-wiki",
+      "img-v3-wiki-a4",
       data.klass,
       data.subject,
       data.title,
