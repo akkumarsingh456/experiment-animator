@@ -133,7 +133,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
   });
 
 /** Search Wikimedia Commons for a topic-matching diagram (SVG/PNG). Free, keyless. */
-async function fetchWikimediaDiagram(title: string, visualPrompt: string, subject: string): Promise<string | null> {
+async function fetchWikimediaDiagram(title: string, visualPrompt: string, subject: string, avoidUrls: string[] = []): Promise<string | null> {
   const cleanedTitle = String(title || "").replace(/[—–:·|].*$/, "").trim();
   const query = [cleanedTitle, visualPrompt, subject, "diagram"]
     .map((s) => String(s || "").trim())
@@ -191,12 +191,12 @@ async function fetchWikimediaDiagram(title: string, visualPrompt: string, subjec
     .filter((x): x is { url: string; score: number } => !!x)
     .sort((a, b) => b.score - a.score);
 
-  return scored[0]?.url ?? null;
+  return scored.find((item) => !avoidUrls.includes(item.url))?.url ?? null;
 }
 
 /** Generate SVG-based NCERT-style diagrams. A4-landscape aspect (1414:1000) so it
  *  slots into the slide's right-column frame without cropping labels. */
-function generateDiagramSVG(title: string, bullets: string[], visualPrompt: string, subject = "", grounding = ""): string {
+function generateDiagramSVG(title: string, bullets: string[], visualPrompt: string, subject = "", grounding = "", slideIndex = 0): string {
   // A4-landscape ratio (297 x 210 mm ≈ 1.414). We use a large canvas for crisp
   // scaling and reserve generous padding so text labels never touch the border.
   const width = 1414;
