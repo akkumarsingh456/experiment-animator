@@ -196,8 +196,6 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   // Auto-generate the free local 2D SVG for the currently visible slide (no credits used).
   useEffect(() => {
     if (!images[activeIdx] && !imgLoading[activeIdx]) ensureImage(activeIdx);
-    const next = activeIdx + 1;
-    if (next < slides.length && !images[next] && !imgLoading[next]) ensureImage(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIdx, slides.length]);
 
@@ -443,6 +441,43 @@ function ActivityVerification({
   );
 }
 
+function DiagramFrame({ src, alt, mode }: { src: string; alt: string; mode: "preview" | "presentation" }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [layoutOk, setLayoutOk] = useState(true);
+
+  useEffect(() => {
+    const frame = ref.current;
+    if (!frame) return;
+    const check = () => {
+      const box = frame.getBoundingClientRect();
+      const img = frame.querySelector("img");
+      if (!img || box.width === 0 || box.height === 0) return setLayoutOk(true);
+      const ratioOk = Math.abs(box.width / box.height - 1414 / 1000) < 0.025;
+      const padX = box.width * 0.025;
+      const padY = box.height * 0.025;
+      const imgBox = img.getBoundingClientRect();
+      const insideSafePad = imgBox.left >= box.left + padX - 1 && imgBox.right <= box.right - padX + 1 && imgBox.top >= box.top + padY - 1 && imgBox.bottom <= box.bottom - padY + 1;
+      setLayoutOk(ratioOk && insideSafePad);
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(frame);
+    return () => ro.disconnect();
+  }, [src]);
+
+  return (
+    <div
+      ref={ref}
+      data-diagram-frame={mode}
+      data-layout-check={layoutOk ? "pass" : "adjusted"}
+      className="relative w-full max-h-full aspect-[1414/1000] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-[2.5%]"
+    >
+      <img src={src} alt={alt} className="w-full h-full object-contain" onLoad={() => requestAnimationFrame(() => window.dispatchEvent(new Event("resize")))} />
+      {!layoutOk && <span className="absolute bottom-1 right-1 text-[9px] text-amber-700 bg-card/90 rounded px-1">safe-frame adjusted</span>}
+    </div>
+  );
+}
+
 function SlideCanvas({
   slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage,
 }: {
@@ -537,9 +572,7 @@ function SlideCanvas({
               {imageUrl ? (
                 // A4-landscape frame matches the SVG viewBox so labels never crop.
                 <div className="w-full h-full flex items-center justify-center p-1">
-                  <div data-diagram-frame="preview" className="w-full max-h-full aspect-[1414/1000] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-[2.5%]">
-                    <img src={imageUrl} alt={slide.title} className="w-full h-full object-contain" />
-                  </div>
+                  <DiagramFrame src={imageUrl} alt={slide.title} mode="preview" />
                 </div>
               ) : imageLoading ? (
                 <div className="flex flex-col items-center gap-1 text-muted-foreground">
@@ -699,8 +732,6 @@ function VideoView({ video }: { video: GenerationResult["video"] }) {
 
 function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Slide[]; images: Record<number, string>; onClose: () => void; onNeedImage: (idx: number) => void }) {
   const [i, setI] = useState(0);
-  const frameRef = useRef<HTMLDivElement | null>(null);
-  const [layoutOk, setLayoutOk] = useState(true);
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -718,28 +749,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
   // Auto-generate the free local 2D SVG for the active slide (and next one, prefetch)
   useEffect(() => {
     if (!images[i]) onNeedImage(i);
-    if (i + 1 < slides.length && !images[i + 1]) onNeedImage(i + 1);
   }, [i, images, onNeedImage, slides.length]);
-
-  useEffect(() => {
-    const frame = frameRef.current;
-    if (!frame) return;
-    const check = () => {
-      const box = frame.getBoundingClientRect();
-      const img = frame.querySelector("img");
-      if (!img || box.width === 0 || box.height === 0) return setLayoutOk(true);
-      const ratioOk = Math.abs(box.width / box.height - 1414 / 1000) < 0.025;
-      const padX = box.width * 0.025;
-      const padY = box.height * 0.025;
-      const imgBox = img.getBoundingClientRect();
-      const insideSafePad = imgBox.left >= box.left + padX - 1 && imgBox.right <= box.right - padX + 1 && imgBox.top >= box.top + padY - 1 && imgBox.bottom <= box.bottom - padY + 1;
-      setLayoutOk(ratioOk && insideSafePad);
-    };
-    check();
-    const ro = new ResizeObserver(check);
-    ro.observe(frame);
-    return () => ro.disconnect();
-  }, [i, img]);
 
   const s = slides[i];
   const Icon = ICONS[(s?.visual || "atom").toLowerCase()] ?? Atom;
@@ -801,9 +811,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
             <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col items-center justify-start p-3 min-h-0 overflow-hidden">
               <div className="w-full flex-1 min-h-0 flex items-center justify-center">
                 {img ? (
-                  <div ref={frameRef} data-diagram-frame="presentation" className="w-full max-h-full aspect-[1414/1000] rounded-md overflow-hidden bg-card shadow border border-border/40 p-[2.5%]">
-                    <img src={img} alt={s.title} className="w-full h-full object-contain" />
-                  </div>
+                  <DiagramFrame src={img} alt={s.title} mode="presentation" />
                 ) : (
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -813,9 +821,6 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
               </div>
               {s.caption && (
                 <p className="mt-1 text-[clamp(9px,0.85vw,11px)] italic text-muted-foreground text-center line-clamp-1">{s.caption}</p>
-              )}
-              {!layoutOk && (
-                <p className="mt-1 text-[10px] text-amber-700">Diagram safe-frame adjusted</p>
               )}
             </div>
           </div>
