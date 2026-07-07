@@ -177,6 +177,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         caption: s.caption || "",
         subject: search.subject,
         klass: search.klass,
+        slideIndex: idx,
+        avoidUrls: Object.entries(images).filter(([key]) => Number(key) !== idx).map(([, value]) => value),
         visual_prompt: s.visual_prompt || "",
         grounding: s.grounding || s.ncert_quote || "",
         nocache: force,
@@ -272,7 +274,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           {/* Slides */}
           <section className="mb-10">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
-              <h2 className="font-semibold text-lg">15-Slide Interactive Lesson · A4 landscape (smart-board ready)</h2>
+              <h2 className="font-semibold text-lg">10-Slide Interactive Lesson · A4 landscape (smart-board ready)</h2>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => setEditing((v) => !v)}>
                   <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
@@ -535,7 +537,7 @@ function SlideCanvas({
               {imageUrl ? (
                 // A4-landscape frame matches the SVG viewBox so labels never crop.
                 <div className="w-full h-full flex items-center justify-center p-1">
-                  <div className="w-full max-h-full aspect-[1414/1000] rounded-md overflow-hidden bg-card shadow-soft border border-border/50">
+                  <div data-diagram-frame="preview" className="w-full max-h-full aspect-[1414/1000] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-[2.5%]">
                     <img src={imageUrl} alt={slide.title} className="w-full h-full object-contain" />
                   </div>
                 </div>
@@ -697,6 +699,8 @@ function VideoView({ video }: { video: GenerationResult["video"] }) {
 
 function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Slide[]; images: Record<number, string>; onClose: () => void; onNeedImage: (idx: number) => void }) {
   const [i, setI] = useState(0);
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  const [layoutOk, setLayoutOk] = useState(true);
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -716,6 +720,26 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
     if (!images[i]) onNeedImage(i);
     if (i + 1 < slides.length && !images[i + 1]) onNeedImage(i + 1);
   }, [i, images, onNeedImage, slides.length]);
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    const check = () => {
+      const box = frame.getBoundingClientRect();
+      const img = frame.querySelector("img");
+      if (!img || box.width === 0 || box.height === 0) return setLayoutOk(true);
+      const ratioOk = Math.abs(box.width / box.height - 1414 / 1000) < 0.025;
+      const padX = box.width * 0.025;
+      const padY = box.height * 0.025;
+      const imgBox = img.getBoundingClientRect();
+      const insideSafePad = imgBox.left >= box.left + padX - 1 && imgBox.right <= box.right - padX + 1 && imgBox.top >= box.top + padY - 1 && imgBox.bottom <= box.bottom - padY + 1;
+      setLayoutOk(ratioOk && insideSafePad);
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(frame);
+    return () => ro.disconnect();
+  }, [i, img]);
 
   const s = slides[i];
   const Icon = ICONS[(s?.visual || "atom").toLowerCase()] ?? Atom;
@@ -777,7 +801,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
             <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col items-center justify-start p-3 min-h-0 overflow-hidden">
               <div className="w-full flex-1 min-h-0 flex items-center justify-center">
                 {img ? (
-                  <div className="w-full max-h-full aspect-[1414/1000] rounded-md overflow-hidden bg-card shadow border border-border/40">
+                  <div ref={frameRef} data-diagram-frame="presentation" className="w-full max-h-full aspect-[1414/1000] rounded-md overflow-hidden bg-card shadow border border-border/40 p-[2.5%]">
                     <img src={img} alt={s.title} className="w-full h-full object-contain" />
                   </div>
                 ) : (
@@ -789,6 +813,9 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
               </div>
               {s.caption && (
                 <p className="mt-1 text-[clamp(9px,0.85vw,11px)] italic text-muted-foreground text-center line-clamp-1">{s.caption}</p>
+              )}
+              {!layoutOk && (
+                <p className="mt-1 text-[10px] text-amber-700">Diagram safe-frame adjusted</p>
               )}
             </div>
           </div>
