@@ -31,6 +31,8 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         klass: z.string().optional().default(""),
         visual_prompt: z.string().optional().default(""),
         grounding: z.string().optional().default(""),
+        slideIndex: z.number().int().min(0).max(50).optional().default(0),
+        avoidUrls: z.array(z.string()).optional().default([]),
         nocache: z.boolean().optional().default(false),
         cacheOnly: z.boolean().optional().default(false),
       })
@@ -39,11 +41,13 @@ export const generateSlideImage = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     const cacheKey = hashKey([
-      "img-v3-wiki-a4",
+      "img-v4-safe-unique-a4",
       data.klass,
       data.subject,
+      String(data.slideIndex),
       data.title,
       data.visual_prompt,
+      data.grounding.slice(0, 500),
       (data.bullets || []).join(" "),
     ]);
     const db = cacheSupa();
@@ -57,6 +61,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       grounding: String(data.grounding || "").slice(0, 4000),
       bullets: (data.bullets || []).join(" | ").slice(0, 2000),
       caption: String(data.caption || "").slice(0, 1000),
+      slide_index: data.slideIndex,
       nocache: !!data.nocache,
     };
     const logAudit = async (extra: Record<string, unknown>) => {
@@ -78,7 +83,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
           .select("image_url")
           .eq("cache_key", cacheKey)
           .maybeSingle();
-        if (hit?.image_url) {
+        if (hit?.image_url && !data.avoidUrls.includes(hit.image_url)) {
           await logAudit({ status: "cache_hit", cached: true, image_url: hit.image_url });
           return { url: hit.image_url as string, cached: true };
         }
@@ -96,7 +101,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     let url = "";
     let source: "wikimedia" | "local" = "local";
     try {
-      const wiki = await fetchWikimediaDiagram(data.title, data.visual_prompt, data.subject);
+      const wiki = await fetchWikimediaDiagram(data.title, data.visual_prompt, data.subject, data.avoidUrls);
       if (wiki) {
         url = wiki;
         source = "wikimedia";
@@ -107,7 +112,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
 
     // 2) Fallback: high-fidelity local SVG (no external call).
     if (!url) {
-      url = generateDiagramSVG(data.title, data.bullets, data.visual_prompt, data.subject, data.grounding);
+      url = generateDiagramSVG(data.title, data.bullets, data.visual_prompt, data.subject, data.grounding, data.slideIndex);
     }
 
     try {
