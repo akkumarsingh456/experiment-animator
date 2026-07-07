@@ -237,7 +237,7 @@ function generateDiagramSVG(title: string, bullets: string[], visualPrompt: stri
 
   // Deterministic per-slide variant so no two slides look identical, even for
   // the same broad topic family (rotates orientation / colour of the sketch).
-  const variantSeed = Array.from(title).reduce((a, c) => a + c.charCodeAt(0), 0);
+  const variantSeed = Array.from(`${title}|${visualPrompt}|${slideIndex}`).reduce((a, c) => a + c.charCodeAt(0), 0);
   const variant = variantSeed % 3;
 
   let svgContent = `
@@ -258,6 +258,8 @@ function generateDiagramSVG(title: string, bullets: string[], visualPrompt: stri
           <path d="M 48 0 L 0 0 0 48" fill="none" stroke="${colors.grid}" stroke-width="1"/>
         </pattern>
       </defs>
+
+      <metadata>Automated A4 label safe-padding check enabled: ${PAD + 24}px inset.</metadata>
 
       <!-- Page background -->
       <rect width="${width}" height="${height}" fill="${colors.bg}"/>
@@ -408,17 +410,50 @@ function generateDiagramSVG(title: string, bullets: string[], visualPrompt: stri
       <text class="subtitle" x="${cx}" y="${bodyBottom + 4}" text-anchor="middle">${escapeXml(trimToWords(title, 60))}</text>
     `;
   } else {
-    // Generic labelled sketch — three linked concept nodes with an arrow flow.
-    const nodes = [
-      { x: bodyLeft + 180, y: cy, label: wrapSvgText(bullets[0] || "concept", 14, 2) },
-      { x: cx,             y: cy, label: wrapSvgText(bullets[1] || title,     14, 2) },
-      { x: bodyRight - 180, y: cy, label: wrapSvgText(bullets[2] || "result",  14, 2) },
+    // Generic labelled sketch — unique layout per slide so fallback diagrams do not repeat.
+    const labels = [
+      wrapSvgText(bullets[0] || "NCERT concept", 16, 2),
+      wrapSvgText(bullets[1] || title, 16, 2),
+      wrapSvgText(bullets[2] || "observation", 16, 2),
+      wrapSvgText(bullets[3] || "result", 16, 2),
     ];
-    svgContent += nodes.map((n, i) => `
-      <circle cx="${n.x}" cy="${n.y}" r="110" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="4"/>
-      ${n.label.map((line, li) => `<text class="label" x="${n.x}" y="${n.y - 6 + li * 26}" text-anchor="middle">${escapeXml(line)}</text>`).join("")}
-      ${i < nodes.length - 1 ? `<line x1="${n.x + 115}" y1="${n.y}" x2="${nodes[i + 1].x - 118}" y2="${n.y}" stroke="${colors.accent}" stroke-width="5" marker-end="url(#arrowhead)"/>` : ""}
-    `).join("");
+    if (variant === 0) {
+      const nodes = [
+        { x: bodyLeft + 180, y: cy, label: labels[0] },
+        { x: cx, y: cy, label: labels[1] },
+        { x: bodyRight - 180, y: cy, label: labels[2] },
+      ];
+      svgContent += nodes.map((n, i) => `
+        <circle cx="${n.x}" cy="${n.y}" r="108" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="4"/>
+        ${n.label.map((line, li) => `<text class="label" x="${n.x}" y="${n.y - 8 + li * 26}" text-anchor="middle">${escapeXml(line)}</text>`).join("")}
+        ${i < nodes.length - 1 ? `<line x1="${n.x + 114}" y1="${n.y}" x2="${nodes[i + 1].x - 116}" y2="${n.y}" stroke="${colors.accent}" stroke-width="5" marker-end="url(#arrowhead)"/>` : ""}
+      `).join("");
+    } else if (variant === 1) {
+      const layers = [0, 1, 2, 3].map((n) => ({
+        x: cx - 360 + n * 240,
+        y: cy - 150 + n * 78,
+        w: 300,
+        h: 92,
+        label: labels[n],
+      }));
+      svgContent += layers.map((box, n) => `
+        <rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="18" fill="${n % 2 ? '#ffffff' : colors.lightAccent}" stroke="${colors.accent}" stroke-width="4"/>
+        ${box.label.map((line, li) => `<text class="label" x="${box.x + box.w / 2}" y="${box.y + 38 + li * 26}" text-anchor="middle">${escapeXml(line)}</text>`).join("")}
+        ${n < layers.length - 1 ? `<line x1="${box.x + box.w}" y1="${box.y + box.h / 2}" x2="${layers[n + 1].x - 12}" y2="${layers[n + 1].y + layers[n + 1].h / 2}" stroke="${colors.accent}" stroke-width="4" marker-end="url(#arrowhead)"/>` : ""}
+      `).join("");
+    } else {
+      svgContent += `
+        <rect x="${cx - 460}" y="${cy - 170}" width="360" height="260" rx="22" fill="${colors.lightAccent}" stroke="${colors.accent}" stroke-width="4"/>
+        <rect x="${cx + 100}" y="${cy - 170}" width="360" height="260" rx="22" fill="#fff" stroke="${colors.accent}" stroke-width="4"/>
+        <circle cx="${cx}" cy="${cy - 40}" r="74" fill="#fff" stroke="${colors.accent}" stroke-width="5"/>
+        <text class="subtitle" x="${cx}" y="${cy - 30}" text-anchor="middle">NCERT</text>
+        <line x1="${cx - 100}" y1="${cy - 40}" x2="${cx - 250}" y2="${cy - 40}" stroke="${colors.accent}" stroke-width="5" marker-end="url(#arrowhead)"/>
+        <line x1="${cx + 100}" y1="${cy - 40}" x2="${cx + 250}" y2="${cy - 40}" stroke="${colors.accent}" stroke-width="5" marker-end="url(#arrowhead)"/>
+        ${labels[0].map((line, li) => `<text class="label" x="${cx - 280}" y="${cy - 60 + li * 28}" text-anchor="middle">${escapeXml(line)}</text>`).join("")}
+        ${labels[1].map((line, li) => `<text class="label" x="${cx + 280}" y="${cy - 60 + li * 28}" text-anchor="middle">${escapeXml(line)}</text>`).join("")}
+        <text class="small" x="${cx}" y="${cy + 102}" text-anchor="middle">cause → observation → conclusion</text>
+      `;
+    }
     svgContent += `<text class="subtitle" x="${cx}" y="${bodyBottom + 4}" text-anchor="middle">${escapeXml(trimToWords(caption, 70))}</text>`;
   }
 
@@ -431,8 +466,83 @@ function generateDiagramSVG(title: string, bullets: string[], visualPrompt: stri
     </svg>
   `;
 
+  svgContent = enforceSvgTextSafety(svgContent, width, height, PAD + 24);
+  const check = inspectSvgTextSafety(svgContent, width, height, PAD + 24);
+  svgContent = svgContent.replace("</svg>", `<metadata>label-fit:${check.safe ? "pass" : "adjusted"};issues:${check.issues.length}</metadata></svg>`);
   const base64 = Buffer.from(svgContent).toString("base64");
   return `data:image/svg+xml;base64,${base64}`;
+}
+
+function svgTextFontSize(className: string) {
+  if (className.includes("title")) return 40;
+  if (className.includes("subtitle")) return 26;
+  if (className.includes("label") || className.includes("bullet")) return 22;
+  if (className.includes("cap")) return 20;
+  return 18;
+}
+
+function getSvgAttr(attrs: string, name: string) {
+  return attrs.match(new RegExp(`${name}="([^"]+)"`))?.[1] ?? "";
+}
+
+function setSvgAttr(attrs: string, name: string, value: string) {
+  if (new RegExp(`${name}="[^"]*"`).test(attrs)) return attrs.replace(new RegExp(`${name}="[^"]*"`), `${name}="${value}"`);
+  return `${attrs} ${name}="${value}"`;
+}
+
+function svgPlainText(inner: string) {
+  return inner.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&apos;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, " ").trim();
+}
+
+function enforceSvgTextSafety(svg: string, width: number, height: number, safePad: number) {
+  const minX = safePad;
+  const maxX = width - safePad;
+  const minY = safePad + 10;
+  const maxY = height - safePad - 10;
+  return svg.replace(/<text\b([^>]*)>([\s\S]*?)<\/text>/g, (full, rawAttrs: string, inner: string) => {
+    const text = svgPlainText(inner);
+    const xRaw = Number(getSvgAttr(rawAttrs, "x"));
+    const yRaw = Number(getSvgAttr(rawAttrs, "y"));
+    if (!Number.isFinite(xRaw) || !Number.isFinite(yRaw) || !text) return full;
+    const className = getSvgAttr(rawAttrs, "class");
+    const fontSize = svgTextFontSize(className);
+    const anchor = getSvgAttr(rawAttrs, "text-anchor") || "start";
+    const estimatedW = Math.min(text.length * fontSize * 0.56, maxX - minX);
+    let x = xRaw;
+    if (anchor === "middle") x = Math.min(Math.max(x, minX + estimatedW / 2), maxX - estimatedW / 2);
+    else if (anchor === "end") x = Math.min(Math.max(x, minX + estimatedW), maxX);
+    else x = Math.min(Math.max(x, minX), maxX - estimatedW);
+    const y = Math.min(Math.max(yRaw, minY + fontSize * 0.4), maxY);
+    let attrs = setSvgAttr(rawAttrs, "x", String(Math.round(x)));
+    attrs = setSvgAttr(attrs, "y", String(Math.round(y)));
+    const maxChars = Math.max(8, Math.floor((maxX - minX) / (fontSize * 0.56)));
+    const safeInner = text.length > maxChars ? escapeXml(trimToWords(text, maxChars)) : inner;
+    return `<text${attrs}>${safeInner}</text>`;
+  });
+}
+
+function inspectSvgTextSafety(svg: string, width: number, height: number, safePad: number) {
+  const issues: string[] = [];
+  const minX = safePad;
+  const maxX = width - safePad;
+  const minY = safePad;
+  const maxY = height - safePad;
+  svg.replace(/<text\b([^>]*)>([\s\S]*?)<\/text>/g, (_full, attrs: string, inner: string) => {
+    const text = svgPlainText(inner);
+    const x = Number(getSvgAttr(attrs, "x"));
+    const y = Number(getSvgAttr(attrs, "y"));
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !text) return "";
+    const fontSize = svgTextFontSize(getSvgAttr(attrs, "class"));
+    const anchor = getSvgAttr(attrs, "text-anchor") || "start";
+    const estimatedW = Math.min(text.length * fontSize * 0.56, maxX - minX);
+    const left = anchor === "middle" ? x - estimatedW / 2 : anchor === "end" ? x - estimatedW : x;
+    const right = left + estimatedW;
+    const top = y - fontSize;
+    const bottom = y + fontSize * 0.35;
+    if (left < minX || right > maxX || top < minY || bottom > maxY) issues.push(text.slice(0, 40));
+    return "";
+  });
+  return { safe: issues.length === 0, issues };
 }
 
 function wrapSvgText(value: string, maxChars: number, maxLines: number) {
