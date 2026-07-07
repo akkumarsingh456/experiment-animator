@@ -177,6 +177,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         caption: s.caption || "",
         subject: search.subject,
         klass: search.klass,
+        slideIndex: idx,
+        avoidUrls: Object.entries(images).filter(([key]) => Number(key) !== idx).map(([, value]) => value),
         visual_prompt: s.visual_prompt || "",
         grounding: s.grounding || s.ncert_quote || "",
         nocache: force,
@@ -194,8 +196,6 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   // Auto-generate the free local 2D SVG for the currently visible slide (no credits used).
   useEffect(() => {
     if (!images[activeIdx] && !imgLoading[activeIdx]) ensureImage(activeIdx);
-    const next = activeIdx + 1;
-    if (next < slides.length && !images[next] && !imgLoading[next]) ensureImage(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIdx, slides.length]);
 
@@ -272,7 +272,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           {/* Slides */}
           <section className="mb-10">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
-              <h2 className="font-semibold text-lg">15-Slide Interactive Lesson · A4 landscape (smart-board ready)</h2>
+              <h2 className="font-semibold text-lg">10-Slide Interactive Lesson · A4 landscape (smart-board ready)</h2>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => setEditing((v) => !v)}>
                   <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
@@ -441,6 +441,43 @@ function ActivityVerification({
   );
 }
 
+function DiagramFrame({ src, alt, mode }: { src: string; alt: string; mode: "preview" | "presentation" }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [layoutOk, setLayoutOk] = useState(true);
+
+  useEffect(() => {
+    const frame = ref.current;
+    if (!frame) return;
+    const check = () => {
+      const box = frame.getBoundingClientRect();
+      const img = frame.querySelector("img");
+      if (!img || box.width === 0 || box.height === 0) return setLayoutOk(true);
+      const ratioOk = Math.abs(box.width / box.height - 1414 / 1000) < 0.025;
+      const padX = box.width * 0.025;
+      const padY = box.height * 0.025;
+      const imgBox = img.getBoundingClientRect();
+      const insideSafePad = imgBox.left >= box.left + padX - 1 && imgBox.right <= box.right - padX + 1 && imgBox.top >= box.top + padY - 1 && imgBox.bottom <= box.bottom - padY + 1;
+      setLayoutOk(ratioOk && insideSafePad);
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(frame);
+    return () => ro.disconnect();
+  }, [src]);
+
+  return (
+    <div
+      ref={ref}
+      data-diagram-frame={mode}
+      data-layout-check={layoutOk ? "pass" : "adjusted"}
+      className="relative w-full max-h-full aspect-[1414/1000] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-[2.5%]"
+    >
+      <img src={src} alt={alt} className="w-full h-full object-contain" onLoad={() => requestAnimationFrame(() => window.dispatchEvent(new Event("resize")))} />
+      {!layoutOk && <span className="absolute bottom-1 right-1 text-[9px] text-amber-700 bg-card/90 rounded px-1">safe-frame adjusted</span>}
+    </div>
+  );
+}
+
 function SlideCanvas({
   slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage,
 }: {
@@ -535,9 +572,7 @@ function SlideCanvas({
               {imageUrl ? (
                 // A4-landscape frame matches the SVG viewBox so labels never crop.
                 <div className="w-full h-full flex items-center justify-center p-1">
-                  <div className="w-full max-h-full aspect-[1414/1000] rounded-md overflow-hidden bg-card shadow-soft border border-border/50">
-                    <img src={imageUrl} alt={slide.title} className="w-full h-full object-contain" />
-                  </div>
+                  <DiagramFrame src={imageUrl} alt={slide.title} mode="preview" />
                 </div>
               ) : imageLoading ? (
                 <div className="flex flex-col items-center gap-1 text-muted-foreground">
@@ -714,7 +749,6 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
   // Auto-generate the free local 2D SVG for the active slide (and next one, prefetch)
   useEffect(() => {
     if (!images[i]) onNeedImage(i);
-    if (i + 1 < slides.length && !images[i + 1]) onNeedImage(i + 1);
   }, [i, images, onNeedImage, slides.length]);
 
   const s = slides[i];
@@ -777,9 +811,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
             <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col items-center justify-start p-3 min-h-0 overflow-hidden">
               <div className="w-full flex-1 min-h-0 flex items-center justify-center">
                 {img ? (
-                  <div className="w-full max-h-full aspect-[1414/1000] rounded-md overflow-hidden bg-card shadow border border-border/40">
-                    <img src={img} alt={s.title} className="w-full h-full object-contain" />
-                  </div>
+                  <DiagramFrame src={img} alt={s.title} mode="presentation" />
                 ) : (
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
