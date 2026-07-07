@@ -938,7 +938,7 @@ function buildLocalSlides(topic: string, subtopics: string, context: string): Sl
     if (src.length < 3) continue; // skip empty slide rather than duplicate one
     slides.push(makeSlide(makeUniqueTitle(item.title), src, topic, visuals[index] ?? "lightbulb", index));
   }
-  // Top up with residual sentences if plan produced <15 slides.
+  // Top up with residual sentences if the plan produced fewer than 10 unique slides.
   let offset = 0;
   while (slides.length < 10 && offset < sentences.length) {
     const src = filterUnused(sentences.slice(offset, offset + 14));
@@ -1083,7 +1083,7 @@ export const generateLesson = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
     const lessonKey = hashKey([
-      "lesson-v5-10slide-a4",
+      "lesson-v6-10slide-unique-safe-diagrams",
       data.klass,
       data.subject,
       data.chapter,
