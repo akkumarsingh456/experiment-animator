@@ -503,10 +503,12 @@ function SlideCanvas({
             <div className="flex items-center gap-2">
               {v && (
                 <Badge variant="outline" className={`rounded-full text-[10px] ${vTone}`}>
-                  Notes match {v.coverage}% ({v.matched}/{v.total})
+                  Notes {v.coverage}% · Diagram {v.diagram_match}% · Labels {v.diagram_label_fit}
                 </Badge>
               )}
-              <Badge variant="outline" className="rounded-full text-[10px]">NCERT-grounded</Badge>
+              <Badge variant="outline" className="rounded-full text-[10px]">
+                {v?.overall_pass ? "NCERT ✓ verified" : "NCERT-grounded"}
+              </Badge>
             </div>
           </div>
 
