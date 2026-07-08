@@ -1120,7 +1120,7 @@ export const generateLesson = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
     const lessonKey = hashKey([
-      "lesson-v7-concise-ncert-diverse-diagrams",
+      "lesson-v8-strict-notes-diagram-validation",
       data.klass,
       data.subject,
       data.chapter,
