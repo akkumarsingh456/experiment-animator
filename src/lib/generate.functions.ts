@@ -598,7 +598,16 @@ const Input = z.object({
   nocache: z.coerce.boolean().optional().default(false),
 });
 
-export type SlideVerification = { coverage: number; matched: number; total: number; missing: string[] };
+export type SlideVerification = {
+  coverage: number;
+  matched: number;
+  total: number;
+  missing: string[];
+  diagram_match: number;
+  diagram_label_fit: "pass" | "adjusted";
+  diagram_issues: string[];
+  overall_pass: boolean;
+};
 
 export type Slide = {
   title: string;
