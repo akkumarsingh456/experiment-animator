@@ -1270,7 +1270,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // This is intentionally AI-free so it is fast, repeatable, and never spends credits on page load.
     const slidesRaw = buildLocalSlides(data.topic, data.subtopics, context);
     const contextNorm = normalizeText(context);
-    const slides = slidesRaw.map((sl) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm) }));
+    const slides = slidesRaw.map((sl, i) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm, i) }));
     const activities = normalizeActivities(buildLocalActivities(data.topic, context), data.topic, context);
     const video = fallbackVideo(data.topic, activities);
 
