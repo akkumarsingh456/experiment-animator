@@ -598,7 +598,16 @@ const Input = z.object({
   nocache: z.coerce.boolean().optional().default(false),
 });
 
-export type SlideVerification = { coverage: number; matched: number; total: number; missing: string[] };
+export type SlideVerification = {
+  coverage: number;
+  matched: number;
+  total: number;
+  missing: string[];
+  diagram_match: number;
+  diagram_label_fit: "pass" | "adjusted";
+  diagram_issues: string[];
+  overall_pass: boolean;
+};
 
 export type Slide = {
   title: string;
@@ -848,29 +857,57 @@ function fallbackSlides(topic: string, context: string): Slide[] {
   });
 }
 
-function validateSlideAgainstContext(slide: Slide, contextNorm: string): SlideVerification {
+function validateSlideAgainstContext(slide: Slide, contextNorm: string, slideIndex = 0): SlideVerification {
   const parts = [
     ...(slide.bullets || []),
     ...(slide.notes || []),
     ...(slide.key_terms || []).map((t) => `${t.term} ${t.meaning}`),
     slide.ncert_quote || "",
   ].map((s) => String(s || "").trim()).filter(Boolean);
-  if (parts.length === 0) return { coverage: 0, matched: 0, total: 0, missing: [] };
+
+  const matchRatio = (text: string) => {
+    const tokens = normalizeText(text).split(" ").filter((w) => w.length > 4);
+    if (tokens.length === 0) return 1;
+    const hits = tokens.filter((t) => contextNorm.includes(t)).length;
+    return hits / tokens.length;
+  };
+
   let matched = 0;
   const missing: string[] = [];
   for (const p of parts) {
-    const tokens = normalizeText(p).split(" ").filter((w) => w.length > 4);
-    if (tokens.length === 0) { matched++; continue; }
-    const hits = tokens.filter((t) => contextNorm.includes(t)).length;
-    const ratio = hits / tokens.length;
-    if (ratio >= 0.5) matched++;
+    if (matchRatio(p) >= 0.5) matched++;
     else missing.push(trimToWords(p, 110));
   }
+  const coverage = parts.length === 0 ? 0 : Math.round((matched / parts.length) * 100);
+
+  // Diagram validation: (a) does the visual prompt/title match NCERT source text,
+  // and (b) does the auto-generated SVG keep every label inside the safe frame?
+  const diagramText = [slide.title, slide.visual_prompt || "", slide.caption || ""].join(" ").trim();
+  const diagram_match = diagramText ? Math.round(matchRatio(diagramText) * 100) : 0;
+
+  let diagram_label_fit: "pass" | "adjusted" = "pass";
+  const diagram_issues: string[] = [];
+  try {
+    const svgDataUrl = generateDiagramSVG(slide.title, slide.bullets || [], slide.visual_prompt || "", "", slide.grounding || "", slideIndex);
+    const b64 = svgDataUrl.split(",")[1] || "";
+    const svg = b64 ? Buffer.from(b64, "base64").toString("utf8") : "";
+    const fit = inspectSvgTextSafety(svg, 1414, 1000, 52);
+    diagram_label_fit = fit.safe ? "pass" : "adjusted";
+    if (!fit.safe) diagram_issues.push(...fit.issues.slice(0, 3));
+  } catch {
+    /* keep defaults */
+  }
+
+  const overall_pass = coverage >= 60 && diagram_match >= 40 && diagram_label_fit === "pass";
   return {
-    coverage: Math.round((matched / parts.length) * 100),
+    coverage,
     matched,
     total: parts.length,
     missing: missing.slice(0, 3),
+    diagram_match,
+    diagram_label_fit,
+    diagram_issues,
+    overall_pass,
   };
 }
 
@@ -1083,7 +1120,7 @@ export const generateLesson = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
     const lessonKey = hashKey([
-      "lesson-v7-concise-ncert-diverse-diagrams",
+      "lesson-v8-strict-notes-diagram-validation",
       data.klass,
       data.subject,
       data.chapter,
@@ -1233,7 +1270,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // This is intentionally AI-free so it is fast, repeatable, and never spends credits on page load.
     const slidesRaw = buildLocalSlides(data.topic, data.subtopics, context);
     const contextNorm = normalizeText(context);
-    const slides = slidesRaw.map((sl) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm) }));
+    const slides = slidesRaw.map((sl, i) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm, i) }));
     const activities = normalizeActivities(buildLocalActivities(data.topic, context), data.topic, context);
     const video = fallbackVideo(data.topic, activities);
 
