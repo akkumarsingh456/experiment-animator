@@ -569,37 +569,24 @@ function SlideCanvas({
                 <p className="text-[10px] italic text-muted-foreground border-l-2 border-primary/40 pl-2 line-clamp-2">“{slide.ncert_quote}”</p>
               ) : null}
             </div>
-            <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid place-items-center p-3 border-l border-border/60 overflow-hidden">
-              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D · NCERT</div>
-              {onRegenImage && imageUrl && !imageLoading && (
-                <button onClick={onRegenImage} className="absolute top-2 right-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 hover:bg-card border border-border/40 print:hidden">↻</button>
-              )}
-              {imageUrl ? (
-                // A4-landscape frame matches the SVG viewBox so labels never crop.
-                <div className="w-full h-full flex items-center justify-center p-1">
-                  <DiagramFrame src={imageUrl} alt={slide.title} mode="preview" />
-                </div>
-              ) : imageLoading ? (
-                <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  <span className="text-[10px]">Drawing…</span>
+            <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid grid-rows-2 p-3 border-l border-border/60 overflow-hidden gap-2">
+              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D · Mermaid</div>
+              {/* 2D — Mermaid flowchart from NCERT bullets */}
+              <div className="relative w-full h-full rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-2 min-h-0">
+                <MermaidDiagram code={slide.mermaid_flow || `flowchart TD\n  A["${(slide.title || "NCERT concept").replace(/"/g, "'")}"] --> B["Key idea"]`} />
+              </div>
+              {/* 3D — Spline scene mapped from model_category (hidden when 'none' or unmapped) */}
+              {slide.model_category && slide.model_category !== "none" && resolveModelUrl(slide.model_category) ? (
+                <div className="relative w-full h-full rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">
+                  <div className="absolute top-1 left-1 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">3D · Spline</div>
+                  <ThreeDViewer sceneUrl={resolveModelUrl(slide.model_category)} />
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-2 text-center px-3">
-                  <div className="h-16 w-16 rounded-full bg-card shadow-glow grid place-items-center">
-                    <Icon className="h-8 w-8 text-primary" />
+                <div className="relative w-full h-full rounded-md overflow-hidden bg-card shadow-soft border border-border/50 grid place-items-center text-[10px] text-muted-foreground p-2 text-center">
+                  <div className="flex flex-col items-center gap-1">
+                    <Icon className="h-6 w-6 text-primary" />
+                    <span>No 3D model for this concept</span>
                   </div>
-                  {onRegenImage && (
-                    <button
-                      onClick={onRegenImage}
-                      className="inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-[10px] font-medium px-2.5 py-1 hover:opacity-90 print:hidden"
-                    >
-                      <Sparkles className="h-3 w-3" /> 2D diagram
-                    </button>
-                  )}
-                  <p className="text-[9px] text-muted-foreground max-w-[160px] leading-tight">
-                    Local SVG · no credits.
-                  </p>
                 </div>
               )}
             </div>
