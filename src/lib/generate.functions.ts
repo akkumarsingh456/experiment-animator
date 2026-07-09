@@ -899,9 +899,10 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
     );
   }
   const notesSource = cleaned.slice(7, 12).length ? cleaned.slice(7, 12) : cleaned.slice(0, 4);
+  const bulletsOut = bullets.slice(0, 7);
   return {
     title,
-    bullets: bullets.slice(0, 7),
+    bullets: bulletsOut,
     notes: notesSource.slice(0, 4).map((s) => trimToWords(s, 210)),
     key_terms: extractKeyTerms(cleaned, topic),
     ncert_quote: cleaned[0] ? trimToWords(cleaned[0], 180) : undefined,
@@ -909,6 +910,8 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
     visual_prompt: `Draw a clean labelled 2D NCERT diagram for ${title}. Include arrows, labels, symbols/formulas, and only details supported by the grounding excerpt.`,
     grounding: cleaned.slice(0, 3).join(" "),
     caption: `NCERT-grounded visual summary for ${title}.`,
+    mermaid_flow: buildMermaidFlow(title, bulletsOut, index),
+    model_category: pickModelCategory("", `${topic} ${title}`),
   };
 }
 
