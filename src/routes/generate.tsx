@@ -196,11 +196,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     }
   }
 
-  // Auto-generate the free local 2D SVG for the currently visible slide (no credits used).
-  useEffect(() => {
-    if (!images[activeIdx] && !imgLoading[activeIdx]) ensureImage(activeIdx);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeIdx, slides.length]);
+  // 2D diagrams are now client-rendered with Mermaid.js and 3D via Spline.
+  // No server image generation is triggered per slide.
 
 
   async function downloadPDF() {
