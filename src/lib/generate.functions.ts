@@ -1195,7 +1195,7 @@ export const generateLesson = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
     const lessonKey = hashKey([
-      "lesson-v8-strict-notes-diagram-validation",
+      "lesson-v9-mermaid-2d-spline-3d",
       data.klass,
       data.subject,
       data.chapter,
