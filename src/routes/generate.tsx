@@ -799,20 +799,18 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
               )}
             </div>
 
-            {/* Diagram column — A4-framed image, upper/centre aligned */}
-            <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col items-center justify-start p-3 min-h-0 overflow-hidden">
-              <div className="w-full flex-1 min-h-0 flex items-center justify-center">
-                {img ? (
-                  <DiagramFrame src={img} alt={s.title} mode="presentation" />
-                ) : (
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <span className="text-[10px]">Drawing free 2D diagram…</span>
-                  </div>
-                )}
+            {/* Diagram column — 2D Mermaid + optional 3D Spline */}
+            <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col p-3 min-h-0 overflow-hidden gap-2">
+              <div className="relative w-full flex-1 min-h-0 rounded-md bg-background/80 border border-border/40 p-2 overflow-hidden">
+                <MermaidDiagram code={s.mermaid_flow || `flowchart TD\n  A["${(s.title || "NCERT concept").replace(/"/g, "'")}"] --> B["Key idea"]`} />
               </div>
+              {s.model_category && s.model_category !== "none" && resolveModelUrl(s.model_category) && (
+                <div className="relative w-full flex-1 min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden">
+                  <ThreeDViewer sceneUrl={resolveModelUrl(s.model_category)} />
+                </div>
+              )}
               {s.caption && (
-                <p className="mt-1 text-[clamp(9px,0.85vw,11px)] italic text-muted-foreground text-center line-clamp-1">{s.caption}</p>
+                <p className="text-[clamp(9px,0.85vw,11px)] italic text-muted-foreground text-center line-clamp-1">{s.caption}</p>
               )}
             </div>
           </div>
