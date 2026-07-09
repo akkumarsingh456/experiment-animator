@@ -609,6 +609,13 @@ export type SlideVerification = {
   overall_pass: boolean;
 };
 
+export type ModelCategoryKey =
+  | "physics_circuit"
+  | "chemistry_atom"
+  | "biology_cell"
+  | "math_geometry"
+  | "none";
+
 export type Slide = {
   title: string;
   bullets: string[];
@@ -619,8 +626,65 @@ export type Slide = {
   visual_prompt?: string;
   grounding?: string;
   caption?: string;
+  /** Mermaid.js flowchart source rendered as the slide's 2D diagram. */
+  mermaid_flow?: string;
+  /** Registry key mapped to a Spline scene for the slide's 3D model. */
+  model_category?: ModelCategoryKey;
   verification?: SlideVerification;
 };
+
+function mermaidLabel(text: string, max = 60) {
+  const clean = String(text || "")
+    .replace(/["`]/g, "'")
+    .replace(/[\[\]{}()<>|;]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return (clean.length > max ? `${clean.slice(0, max - 1)}…` : clean) || "NCERT idea";
+}
+
+function buildMermaidFlow(title: string, bullets: string[], slideIndex: number): string {
+  const clean = (bullets || []).map((b) => mermaidLabel(b, 55)).filter(Boolean).slice(0, 5);
+  const rootId = `N0`;
+  const root = `${rootId}["${mermaidLabel(title, 48)}"]`;
+  // Rotate layouts so no two slides share the same structure.
+  const layout = slideIndex % 4;
+  if (clean.length === 0) return `flowchart TD\n  ${root} --> N1["Refer NCERT passage"]`;
+  if (layout === 0) {
+    // Radial fan
+    const edges = clean.map((c, i) => `  ${rootId} --> N${i + 1}["${c}"]`).join("\n");
+    return `flowchart TD\n  ${root}\n${edges}`;
+  }
+  if (layout === 1) {
+    // Linear pipeline LR
+    const nodes = [root, ...clean.map((c, i) => `N${i + 1}["${c}"]`)];
+    const edges = nodes.slice(0, -1).map((_, i) => `  N${i} --> N${i + 1}`).join("\n");
+    return `flowchart LR\n  ${nodes.join("\n  ")}\n${edges}`;
+  }
+  if (layout === 2) {
+    // Two-branch split
+    const left = clean.slice(0, Math.ceil(clean.length / 2));
+    const right = clean.slice(Math.ceil(clean.length / 2));
+    const lines: string[] = [`flowchart TD`, `  ${root}`];
+    left.forEach((c, i) => lines.push(`  ${rootId} --> L${i}["${c}"]`));
+    right.forEach((c, i) => lines.push(`  ${rootId} --> R${i}["${c}"]`));
+    return lines.join("\n");
+  }
+  // Cycle
+  const nodes = clean.map((c, i) => `N${i}["${c}"]`);
+  const lines: string[] = [`flowchart LR`, `  ${root}`, `  ${nodes.join("\n  ")}`];
+  nodes.forEach((_, i) => lines.push(`  N${i} --> N${(i + 1) % nodes.length}`));
+  lines.push(`  ${rootId} --> N0`);
+  return lines.join("\n");
+}
+
+function pickModelCategory(subject: string, title: string): ModelCategoryKey {
+  const s = normalizeText(`${subject} ${title}`);
+  if (/(physics|circuit|current|voltage|force|motion|light|magnet|electric)/.test(s)) return "physics_circuit";
+  if (/(chemistry|atom|molecule|bond|reaction|acid|base|element|periodic)/.test(s)) return "chemistry_atom";
+  if (/(biology|cell|tissue|organ|plant|animal|dna|gene|photosyn|respirat)/.test(s)) return "biology_cell";
+  if (/(math|geometry|triangle|circle|polygon|angle|theorem|algebra|vector)/.test(s)) return "math_geometry";
+  return "none";
+}
 
 export type ActivityStep = { step: number; title: string; description: string };
 export type Activity = {
