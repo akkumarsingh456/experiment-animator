@@ -348,7 +348,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           slides={slides}
           images={images}
           onClose={() => setPresenting(false)}
-          onNeedImage={(idx) => ensureImage(idx)}
+          onNeedImage={() => {}}
         />
       )}
     </>
