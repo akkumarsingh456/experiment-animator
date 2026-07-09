@@ -1119,8 +1119,9 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
               .map((t) => ({ term: String(t?.term ?? ""), meaning: String(t?.meaning ?? "") }))
               .filter((t) => t.term)
           : [];
+        const title = String(v.title || fallback[index]?.title || topic);
         return {
-          title: String(v.title || fallback[index]?.title || topic),
+          title,
           bullets,
           notes,
           key_terms,
@@ -1129,6 +1130,13 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
           visual_prompt: v.visual_prompt ? String(v.visual_prompt) : fallback[index]?.visual_prompt,
           grounding: v.grounding ? String(v.grounding) : fallback[index]?.grounding,
           caption: v.caption ? String(v.caption) : fallback[index]?.caption,
+          mermaid_flow:
+            (v as { mermaid_flow?: unknown }).mermaid_flow && typeof (v as { mermaid_flow?: unknown }).mermaid_flow === "string"
+              ? String((v as { mermaid_flow: string }).mermaid_flow)
+              : buildMermaidFlow(title, bullets, index),
+          model_category:
+            ((v as { model_category?: unknown }).model_category as ModelCategoryKey) ||
+            pickModelCategory("", `${topic} ${title}`),
         };
       })
     : [];
