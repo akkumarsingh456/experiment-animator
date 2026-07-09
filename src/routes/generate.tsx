@@ -14,6 +14,9 @@ import {
   type GenerationResult,
   type Slide,
 } from "@/lib/generate.functions";
+import { MermaidDiagram } from "@/components/MermaidDiagram";
+import { ThreeDViewer } from "@/components/ThreeDViewer";
+import { resolveModelUrl } from "@/config/models";
 import {
   Atom,
   Beaker,
