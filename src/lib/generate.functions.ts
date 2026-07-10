@@ -1194,32 +1194,35 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
     ? slides.map((slide, index) => {
         const v = slide as Partial<Slide> & { key_terms?: unknown; notes?: unknown };
         const bullets =
-          Array.isArray(v.bullets) && v.bullets.length > 0 ? v.bullets.slice(0, 7).map(String) : fallback[index]?.bullets ?? [];
-        const notes = Array.isArray(v.notes) ? (v.notes as unknown[]).slice(0, 4).map(String) : fallback[index]?.notes ?? [];
+          Array.isArray(v.bullets) && v.bullets.length > 0
+            ? v.bullets.slice(0, 7).map((b) => beautifyMath(String(b)))
+            : fallback[index]?.bullets ?? [];
+        const notes = Array.isArray(v.notes)
+          ? (v.notes as unknown[]).slice(0, 4).map((n) => beautifyMath(String(n)))
+          : fallback[index]?.notes ?? [];
         const key_terms = Array.isArray(v.key_terms)
           ? (v.key_terms as Array<{ term?: unknown; meaning?: unknown }>)
               .slice(0, 4)
-              .map((t) => ({ term: String(t?.term ?? ""), meaning: String(t?.meaning ?? "") }))
+              .map((t) => ({ term: beautifyMath(String(t?.term ?? "")), meaning: beautifyMath(String(t?.meaning ?? "")) }))
               .filter((t) => t.term)
           : [];
-        const title = String(v.title || fallback[index]?.title || topic);
+        const title = beautifyMath(String(v.title || fallback[index]?.title || topic));
+        // Always regenerate the mermaid flow from the (beautified) bullets so
+        // every slide gets one of the six styled layouts and never a raw AI
+        // graph that could break the renderer.
+        const mermaid_flow = buildMermaidFlow(title, bullets, index);
         return {
           title,
           bullets,
           notes,
           key_terms,
-          ncert_quote: v.ncert_quote ? String(v.ncert_quote) : undefined,
+          ncert_quote: v.ncert_quote ? beautifyMath(String(v.ncert_quote)) : undefined,
           visual: String(v.visual || fallback[index]?.visual || "lightbulb"),
           visual_prompt: v.visual_prompt ? String(v.visual_prompt) : fallback[index]?.visual_prompt,
           grounding: v.grounding ? String(v.grounding) : fallback[index]?.grounding,
-          caption: v.caption ? String(v.caption) : fallback[index]?.caption,
-          mermaid_flow:
-            (v as { mermaid_flow?: unknown }).mermaid_flow && typeof (v as { mermaid_flow?: unknown }).mermaid_flow === "string"
-              ? String((v as { mermaid_flow: string }).mermaid_flow)
-              : buildMermaidFlow(title, bullets, index),
-          model_category:
-            ((v as { model_category?: unknown }).model_category as ModelCategoryKey) ||
-            pickModelCategory("", `${topic} ${title}`),
+          caption: v.caption ? beautifyMath(String(v.caption)) : fallback[index]?.caption,
+          mermaid_flow,
+          model_category: pickModelCategory("", `${topic} ${title}`),
         };
       })
     : [];
