@@ -633,8 +633,44 @@ export type Slide = {
   verification?: SlideVerification;
 };
 
+// ---------- Math beautifier ----------
+// NCERT PDFs frequently lose sub/superscripts during extraction: "H2O", "m2",
+// "10-19", "E = mc2". Reconstruct them into real Unicode so notes read cleanly.
+const SUP_MAP: Record<string, string> = { "-": "⁻", "+": "⁺", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
+const SUB_MAP: Record<string, string> = { "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉" };
+const toSup = (s: string) => s.split("").map((c) => SUP_MAP[c] ?? c).join("");
+const toSub = (s: string) => s.split("").map((c) => SUB_MAP[c] ?? c).join("");
+
+export function beautifyMath(input: string): string {
+  if (!input) return input;
+  let s = String(input);
+  // 10^-19, 10^19, 10 ^ 19
+  s = s.replace(/\b(10)\s*\^\s*(-?\d{1,3})\b/g, (_m, a, b) => a + toSup(b));
+  // "× 10 -19" or "x 10 19" (PDF broke the exponent onto its own token)
+  s = s.replace(/(×|x|\*)\s*10\s+(-?\d{1,3})\b/g, (_m, x, b) => `${x} 10${toSup(b)}`);
+  // "10-19" / "10-31" style (negative exponent glued on)
+  s = s.replace(/\b(10)(-\d{1,3})(?!\d)/g, (_m, a, b) => a + toSup(b));
+  // "10 to the power N"
+  s = s.replace(/\b10\s+to\s+the\s+power\s+(-?\d{1,3})\b/gi, (_m, b) => "10" + toSup(b));
+  // Variable powers: x^2, y^-3, a^n stays if n is number
+  s = s.replace(/\b([a-zA-Z])\^(-?\d{1,3})\b/g, (_m, v, n) => v + toSup(n));
+  // Common physics: mc2, v2, r2, t2 → mc², v², r², t² (single lowercase var + 2/3 word-boundary)
+  s = s.replace(/\b(mc|[vrtcefdpn])([23])\b/g, (_m, v, n) => v + toSup(n));
+  // Units squared / cubed: m2, cm3, km2, s2, kg2 etc.
+  s = s.replace(/\b(m|cm|mm|km|nm|μm|s|ms|kg|mg|N|J|W|Hz|A|V|C|K|mol|Pa|rad)([23])\b/g, (_m, u, n) => u + toSup(n));
+  // Chemistry subscripts: H2O, CO2, O2, N2, H2SO4, Fe2O3, CH4, NH3, Ca(OH)2
+  s = s.replace(/([A-Z][a-z]?)(\d)(?=[A-Z(]|\b)/g, (_m, el, n) => el + toSub(n));
+  s = s.replace(/(\))(\d)(?=[A-Z(]|\b|\s)/g, (_m, p, n) => p + toSub(n));
+  // Arrows / degrees
+  s = s.replace(/(^|[^-])-->(?!\w)/g, "$1→").replace(/(^|[^-])->(?!\w)/g, "$1→");
+  s = s.replace(/(\d)\s*deg(?:ree|rees)?\s*C\b/gi, "$1°C");
+  s = s.replace(/\balpha\b/gi, "α").replace(/\bbeta\b/gi, "β").replace(/\bgamma\b/gi, "γ").replace(/\btheta\b/gi, "θ").replace(/\blambda\b/gi, "λ").replace(/\bomega\b/gi, "ω").replace(/\bmu\b/gi, "μ");
+  // Collapse whitespace
+  return s.replace(/[ \t]+/g, " ").trim();
+}
+
 function mermaidLabel(text: string, max = 60) {
-  const clean = String(text || "")
+  const clean = beautifyMath(String(text || ""))
     .replace(/["`]/g, "'")
     .replace(/[\[\]{}()<>|;]/g, " ")
     .replace(/\s+/g, " ")
@@ -642,47 +678,93 @@ function mermaidLabel(text: string, max = 60) {
   return (clean.length > max ? `${clean.slice(0, max - 1)}…` : clean) || "NCERT idea";
 }
 
+// ---------- Napkin-AI-style Mermaid infographics ----------
+// Six distinct visual layouts with coloured classDefs so every slide feels
+// like a hand-crafted infographic instead of a plain flowchart.
+const MERMAID_STYLES = [
+  "classDef hub fill:#4f46e5,stroke:#312e81,stroke-width:2px,color:#ffffff;",
+  "classDef primary fill:#eef2ff,stroke:#4f46e5,stroke-width:1.5px,color:#1e1b4b;",
+  "classDef accent fill:#fef3c7,stroke:#b45309,stroke-width:1.5px,color:#78350f;",
+  "classDef ok fill:#dcfce7,stroke:#15803d,stroke-width:1.5px,color:#14532d;",
+  "classDef info fill:#e0f2fe,stroke:#0369a1,stroke-width:1.5px,color:#0c4a6e;",
+  "classDef warn fill:#ffe4e6,stroke:#be123c,stroke-width:1.5px,color:#881337;",
+].join(" ");
+
 function buildMermaidFlow(title: string, bullets: string[], slideIndex: number): string {
-  const clean = (bullets || []).map((b) => mermaidLabel(b, 55)).filter(Boolean).slice(0, 5);
-  const rootId = `N0`;
-  const root = `${rootId}["${mermaidLabel(title, 48)}"]`;
-  // Rotate layouts so no two slides share the same structure.
-  const layout = slideIndex % 4;
-  if (clean.length === 0) return `flowchart TD\n  ${root} --> N1["Refer NCERT passage"]`;
+  const clean = (bullets || []).map((b) => mermaidLabel(b, 52)).filter(Boolean).slice(0, 6);
+  const T = mermaidLabel(title, 44);
+  if (clean.length === 0) {
+    return `flowchart TD\n  H(("${T}")):::hub\n  H --> A["Refer the NCERT passage"]:::primary\n  ${MERMAID_STYLES}`;
+  }
+  const palette = ["primary", "accent", "ok", "info", "warn", "primary"];
+  const layout = slideIndex % 6;
+
   if (layout === 0) {
-    // Radial fan
-    const edges = clean.map((c, i) => `  ${rootId} --> N${i + 1}["${c}"]`).join("\n");
-    return `flowchart TD\n  ${root}\n${edges}`;
+    // Mind-map: central hub, radial branches with alternating colours
+    const branches = clean.map((c, i) => `  H --> N${i}["${c}"]:::${palette[i % palette.length]}`).join("\n");
+    return `flowchart TD\n  H(("${T}")):::hub\n${branches}\n  ${MERMAID_STYLES}`;
   }
+
   if (layout === 1) {
-    // Linear pipeline LR
-    const nodes = [root, ...clean.map((c, i) => `N${i + 1}["${c}"]`)];
-    const edges = nodes.slice(0, -1).map((_, i) => `  N${i} --> N${i + 1}`).join("\n");
-    return `flowchart LR\n  ${nodes.join("\n  ")}\n${edges}`;
+    // Numbered pipeline with a starter chip
+    const nodes = clean.map((c, i) => `  S${i}["${i + 1}. ${c}"]:::${i === 0 ? "primary" : i === clean.length - 1 ? "ok" : "info"}`).join("\n");
+    const edges = clean.slice(0, -1).map((_, i) => `  S${i} --> S${i + 1}`).join("\n");
+    return `flowchart LR\n  T[["${T}"]]:::hub\n  T --> S0\n${nodes}\n${edges}\n  ${MERMAID_STYLES}`;
   }
+
   if (layout === 2) {
-    // Two-branch split
-    const left = clean.slice(0, Math.ceil(clean.length / 2));
-    const right = clean.slice(Math.ceil(clean.length / 2));
-    const lines: string[] = [`flowchart TD`, `  ${root}`];
-    left.forEach((c, i) => lines.push(`  ${rootId} --> L${i}["${c}"]`));
-    right.forEach((c, i) => lines.push(`  ${rootId} --> R${i}["${c}"]`));
+    // Two-column compare / grouped ideas
+    const half = Math.ceil(clean.length / 2);
+    const L = clean.slice(0, half);
+    const R = clean.slice(half);
+    const lines: string[] = [`flowchart TB`, `  T[["${T}"]]:::hub`, `  subgraph LEFT["Key ideas"]`, `    direction TB`];
+    L.forEach((c, i) => lines.push(`    L${i}["${c}"]:::primary`));
+    lines.push(`  end`, `  subgraph RIGHT["Supporting points"]`, `    direction TB`);
+    (R.length ? R : [clean[0]]).forEach((c, i) => lines.push(`    R${i}["${c}"]:::accent`));
+    lines.push(`  end`, `  T --> LEFT`, `  T --> RIGHT`, `  ${MERMAID_STYLES}`);
     return lines.join("\n");
   }
-  // Cycle
-  const nodes = clean.map((c, i) => `N${i}["${c}"]`);
-  const lines: string[] = [`flowchart LR`, `  ${root}`, `  ${nodes.join("\n  ")}`];
-  nodes.forEach((_, i) => lines.push(`  N${i} --> N${(i + 1) % nodes.length}`));
-  lines.push(`  ${rootId} --> N0`);
+
+  if (layout === 3) {
+    // Cycle of circular nodes
+    const nodes = clean.map((c, i) => `  C${i}(("${c}")):::${palette[i % palette.length]}`).join("\n");
+    const edges = clean.map((_, i) => `  C${i} --> C${(i + 1) % clean.length}`).join("\n");
+    return `flowchart LR\n  H[["${T}"]]:::hub\n  H --> C0\n${nodes}\n${edges}\n  ${MERMAID_STYLES}`;
+  }
+
+  if (layout === 4) {
+    // Hierarchy: root → 2 branches → leaves
+    const [a, b, ...rest] = clean;
+    const mid = Math.ceil(rest.length / 2);
+    const left = rest.slice(0, mid);
+    const right = rest.slice(mid);
+    const lines: string[] = [`flowchart TD`, `  H(("${T}")):::hub`, `  H --> A["${a}"]:::primary`];
+    if (b) lines.push(`  H --> B["${b}"]:::accent`);
+    left.forEach((c, i) => lines.push(`  A --> LA${i}["${c}"]:::info`));
+    right.forEach((c, i) => lines.push(`  B --> RB${i}["${c}"]:::ok`));
+    lines.push(`  ${MERMAID_STYLES}`);
+    return lines.join("\n");
+  }
+
+  // layout 5 — Cause → Concept → Effect (three-column story)
+  const third = Math.max(1, Math.floor(clean.length / 3));
+  const causes = clean.slice(0, third);
+  const core = clean.slice(third, third * 2);
+  const effects = clean.slice(third * 2);
+  const lines: string[] = [`flowchart LR`, `  subgraph CAUSE["Because"]`, `    direction TB`];
+  (causes.length ? causes : [clean[0]]).forEach((c, i) => lines.push(`    CA${i}["${c}"]:::accent`));
+  lines.push(`  end`, `  subgraph CORE["${T}"]`, `    direction TB`);
+  (core.length ? core : [clean[Math.min(1, clean.length - 1)]]).forEach((c, i) => lines.push(`    CO${i}["${c}"]:::primary`));
+  lines.push(`  end`, `  subgraph EFFECT["So that"]`, `    direction TB`);
+  (effects.length ? effects : [clean[clean.length - 1]]).forEach((c, i) => lines.push(`    EF${i}["${c}"]:::ok`));
+  lines.push(`  end`, `  CAUSE --> CORE --> EFFECT`, `  ${MERMAID_STYLES}`);
   return lines.join("\n");
 }
 
-function pickModelCategory(subject: string, title: string): ModelCategoryKey {
-  const s = normalizeText(`${subject} ${title}`);
-  if (/(physics|circuit|current|voltage|force|motion|light|magnet|electric)/.test(s)) return "physics_circuit";
-  if (/(chemistry|atom|molecule|bond|reaction|acid|base|element|periodic)/.test(s)) return "chemistry_atom";
-  if (/(biology|cell|tissue|organ|plant|animal|dna|gene|photosyn|respirat)/.test(s)) return "biology_cell";
-  if (/(math|geometry|triangle|circle|polygon|angle|theorem|algebra|vector)/.test(s)) return "math_geometry";
+function pickModelCategory(_subject: string, _title: string): ModelCategoryKey {
+  // 3D scenes disabled by default — the shared Spline scenes rarely match the
+  // slide's actual NCERT concept, so we hide them and let the rich 2D diagram
+  // own the visual column. Re-enable per-concept when a verified scene exists.
   return "none";
 }
 
