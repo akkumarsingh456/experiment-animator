@@ -972,7 +972,7 @@ function extractKeyTerms(sentences: string[], topic: string): { term: string; me
 
 function makeSlide(title: string, source: string[], topic: string, visual: string, index: number): Slide {
   const cleaned = uniqueByNormalized(source).filter(Boolean);
-  const bullets = cleaned.slice(0, 7).map((s) => trimToWords(s, 180));
+  const bullets = cleaned.slice(0, 7).map((s) => beautifyMath(trimToWords(s, 180)));
   while (bullets.length < 5) {
     bullets.push(
       index === 0
@@ -982,18 +982,19 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
   }
   const notesSource = cleaned.slice(7, 12).length ? cleaned.slice(7, 12) : cleaned.slice(0, 4);
   const bulletsOut = bullets.slice(0, 7);
+  const prettyTitle = beautifyMath(title);
   return {
-    title,
+    title: prettyTitle,
     bullets: bulletsOut,
-    notes: notesSource.slice(0, 4).map((s) => trimToWords(s, 210)),
-    key_terms: extractKeyTerms(cleaned, topic),
-    ncert_quote: cleaned[0] ? trimToWords(cleaned[0], 180) : undefined,
+    notes: notesSource.slice(0, 4).map((s) => beautifyMath(trimToWords(s, 210))),
+    key_terms: extractKeyTerms(cleaned, topic).map((k) => ({ term: beautifyMath(k.term), meaning: beautifyMath(k.meaning) })),
+    ncert_quote: cleaned[0] ? beautifyMath(trimToWords(cleaned[0], 180)) : undefined,
     visual,
-    visual_prompt: `Draw a clean labelled 2D NCERT diagram for ${title}. Include arrows, labels, symbols/formulas, and only details supported by the grounding excerpt.`,
+    visual_prompt: `Draw a clean labelled 2D NCERT diagram for ${prettyTitle}. Include arrows, labels, symbols/formulas, and only details supported by the grounding excerpt.`,
     grounding: cleaned.slice(0, 3).join(" "),
-    caption: `NCERT-grounded visual summary for ${title}.`,
-    mermaid_flow: buildMermaidFlow(title, bulletsOut, index),
-    model_category: pickModelCategory("", `${topic} ${title}`),
+    caption: `NCERT-grounded visual summary for ${prettyTitle}.`,
+    mermaid_flow: buildMermaidFlow(prettyTitle, bulletsOut, index),
+    model_category: pickModelCategory("", `${topic} ${prettyTitle}`),
   };
 }
 
