@@ -566,26 +566,19 @@ function SlideCanvas({
                 <p className="text-[10px] italic text-muted-foreground border-l-2 border-primary/40 pl-2 line-clamp-2">“{slide.ncert_quote}”</p>
               ) : null}
             </div>
-            <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 grid grid-rows-2 p-3 border-l border-border/60 overflow-hidden gap-2">
-              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D · Mermaid</div>
-              {/* 2D — Mermaid flowchart from NCERT bullets */}
-              <div className="relative w-full h-full rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-2 min-h-0">
+            <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0">
+              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D · Napkin-style</div>
+              {/* 2D — Mermaid infographic from NCERT bullets (takes most space) */}
+              <div className={`relative w-full ${slide.model_category && slide.model_category !== "none" && resolveModelUrl(slide.model_category) ? "flex-[3]" : "flex-1"} rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-2 min-h-0`}>
                 <MermaidDiagram code={slide.mermaid_flow || `flowchart TD\n  A["${(slide.title || "NCERT concept").replace(/"/g, "'")}"] --> B["Key idea"]`} />
               </div>
-              {/* 3D — Spline scene mapped from model_category (hidden when 'none' or unmapped) */}
+              {/* Optional 3D — only when a verified scene is mapped */}
               {slide.model_category && slide.model_category !== "none" && resolveModelUrl(slide.model_category) ? (
-                <div className="relative w-full h-full rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">
+                <div className="relative w-full flex-1 rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">
                   <div className="absolute top-1 left-1 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">3D · Spline</div>
                   <ThreeDViewer sceneUrl={resolveModelUrl(slide.model_category)} />
                 </div>
-              ) : (
-                <div className="relative w-full h-full rounded-md overflow-hidden bg-card shadow-soft border border-border/50 grid place-items-center text-[10px] text-muted-foreground p-2 text-center">
-                  <div className="flex flex-col items-center gap-1">
-                    <Icon className="h-6 w-6 text-primary" />
-                    <span>No 3D model for this concept</span>
-                  </div>
-                </div>
-              )}
+              ) : null}
             </div>
           </div>
 
