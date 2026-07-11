@@ -768,11 +768,32 @@ function buildMermaidFlow(title: string, bullets: string[], slideIndex: number):
   return lines.join("\n");
 }
 
-function pickModelCategory(_subject: string, _title: string): ModelCategoryKey {
-  // 3D scenes disabled by default — the shared Spline scenes rarely match the
-  // slide's actual NCERT concept, so we hide them and let the rich 2D diagram
-  // own the visual column. Re-enable per-concept when a verified scene exists.
-  return "none";
+// Keyword → 3D scene category. Each entry lists lower-case cues we look for in
+// the slide's title, bullets and notes so the mapped 3D viewer always
+// reinforces the content the student is reading, not a generic default.
+const MODEL_CATEGORY_KEYWORDS: Array<{ key: ModelCategoryKey; cues: string[] }> = [
+  { key: "physics_circuit", cues: ["circuit", "current", "voltage", "resistor", "resistance", "ohm", "ampere", "battery", "electric", "electricity", "conductor", "electromagnet", "magnet", "magnetic", "solenoid", "coil", "bulb", "switch"] },
+  { key: "chemistry_atom", cues: ["atom", "atomic", "electron", "proton", "neutron", "nucleus", "isotope", "molecule", "bond", "ion", "acid", "base", "salt", "reaction", "equation", "oxide", "hydro", "compound", "element", "periodic"] },
+  { key: "biology_cell", cues: ["cell", "organ", "tissue", "stomata", "photosynthesis", "chloroplast", "mitochond", "nucleus of the cell", "plant", "leaf", "root", "respiration", "digest", "heart", "blood", "neuron", "gene", "dna", "life", "reproduction"] },
+  { key: "math_geometry", cues: ["triangle", "circle", "square", "rectangle", "polygon", "angle", "geometry", "theorem", "pythago", "coordinate", "graph", "axis", "vector", "area", "volume", "perimeter", "trigono", "sine", "cosine", "tangent"] },
+];
+
+function pickModelCategory(_subject: string, ...textParts: Array<string | string[] | undefined>): ModelCategoryKey {
+  const hay = textParts
+    .flat()
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  if (!hay.trim()) return "none";
+  let best: { key: ModelCategoryKey; hits: number } = { key: "none", hits: 0 };
+  for (const { key, cues } of MODEL_CATEGORY_KEYWORDS) {
+    let hits = 0;
+    for (const cue of cues) if (hay.includes(cue)) hits += 1;
+    if (hits > best.hits) best = { key, hits };
+  }
+  // Require at least two keyword hits so unrelated slides don't attach a
+  // misleading 3D scene. Otherwise the slide stays 2D-only.
+  return best.hits >= 2 ? best.key : "none";
 }
 
 export type ActivityStep = { step: number; title: string; description: string };
