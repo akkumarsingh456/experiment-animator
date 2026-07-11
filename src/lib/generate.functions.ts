@@ -616,6 +616,17 @@ export type ModelCategoryKey =
   | "math_geometry"
   | "none";
 
+export type SlideDebug = {
+  chosen_category: ModelCategoryKey;
+  reason: string;
+  threshold: number;
+  total_hits: number;
+  /** Per-category cue hits found in title/bullets/notes (lower-cased). */
+  category_hits: Array<{ key: ModelCategoryKey; hits: number; cues: string[] }>;
+  /** Which keywords were found in which source field. */
+  keyword_sources: { title: string[]; bullets: string[]; notes: string[] };
+};
+
 export type Slide = {
   title: string;
   bullets: string[];
@@ -631,6 +642,8 @@ export type Slide = {
   /** Registry key mapped to a Spline scene for the slide's 3D model. */
   model_category?: ModelCategoryKey;
   verification?: SlideVerification;
+  /** Debug breakdown of the keyword scan + 3D pick reason (per slide). */
+  debug?: SlideDebug;
 };
 
 // ---------- Math beautifier ----------
@@ -697,7 +710,7 @@ const MERMAID_STYLES = [
   "classDef warn fill:#ffe4e6,stroke:#be123c,stroke-width:1.5px,color:#881337;",
 ].join("\n  ");
 
-function buildMermaidFlow(title: string, bullets: string[], slideIndex: number): string {
+export function buildMermaidFlow(title: string, bullets: string[], slideIndex: number): string {
   const clean = (bullets || []).map((b) => mermaidLabel(b, 52)).filter(Boolean).slice(0, 6);
   const T = mermaidLabel(title, 44);
   if (clean.length === 0) {
@@ -778,22 +791,65 @@ const MODEL_CATEGORY_KEYWORDS: Array<{ key: ModelCategoryKey; cues: string[] }> 
   { key: "math_geometry", cues: ["triangle", "circle", "square", "rectangle", "polygon", "angle", "geometry", "theorem", "pythago", "coordinate", "graph", "axis", "vector", "area", "volume", "perimeter", "trigono", "sine", "cosine", "tangent"] },
 ];
 
+const MODEL_PICK_THRESHOLD = 2;
+
+/** Detailed scan: which cues hit in each source field, and which category wins. */
+export function analyzeModelSelection(
+  topic: string,
+  title: string,
+  bullets: string[] = [],
+  notes: string[] = [],
+): SlideDebug {
+  const titleTxt = String(title || "").toLowerCase();
+  const bulletsTxt = (bullets || []).join(" ").toLowerCase();
+  const notesTxt = (notes || []).join(" ").toLowerCase();
+  const hay = [topic, titleTxt, bulletsTxt, notesTxt].filter(Boolean).join(" ").toLowerCase();
+
+  const category_hits = MODEL_CATEGORY_KEYWORDS.map(({ key, cues }) => {
+    const found = cues.filter((c) => hay.includes(c));
+    return { key, hits: found.length, cues: found };
+  });
+
+  const best = category_hits.reduce(
+    (acc, c) => (c.hits > acc.hits ? c : acc),
+    { key: "none" as ModelCategoryKey, hits: 0, cues: [] as string[] },
+  );
+
+  const passed = best.hits >= MODEL_PICK_THRESHOLD && best.key !== "none";
+  const chosen_category: ModelCategoryKey = passed ? best.key : "none";
+  const reason = passed
+    ? `Picked "${best.key}" — ${best.hits} cue hit(s) ≥ threshold ${MODEL_PICK_THRESHOLD} (${best.cues.slice(0, 6).join(", ")}).`
+    : best.hits > 0
+      ? `Skipped 3D — top category "${best.key}" only had ${best.hits}/${MODEL_PICK_THRESHOLD} required cue hit(s) (${best.cues.join(", ") || "none"}).`
+      : `Skipped 3D — no NCERT keyword cues matched any known 3D category.`;
+
+  const collectField = (txt: string): string[] => {
+    const found = new Set<string>();
+    for (const { cues } of MODEL_CATEGORY_KEYWORDS) for (const c of cues) if (txt.includes(c)) found.add(c);
+    return [...found];
+  };
+
+  return {
+    chosen_category,
+    reason,
+    threshold: MODEL_PICK_THRESHOLD,
+    total_hits: best.hits,
+    category_hits,
+    keyword_sources: {
+      title: collectField(titleTxt),
+      bullets: collectField(bulletsTxt),
+      notes: collectField(notesTxt),
+    },
+  };
+}
+
 function pickModelCategory(_subject: string, ...textParts: Array<string | string[] | undefined>): ModelCategoryKey {
-  const hay = textParts
-    .flat()
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  if (!hay.trim()) return "none";
-  let best: { key: ModelCategoryKey; hits: number } = { key: "none", hits: 0 };
-  for (const { key, cues } of MODEL_CATEGORY_KEYWORDS) {
-    let hits = 0;
-    for (const cue of cues) if (hay.includes(cue)) hits += 1;
-    if (hits > best.hits) best = { key, hits };
-  }
-  // Require at least two keyword hits so unrelated slides don't attach a
-  // misleading 3D scene. Otherwise the slide stays 2D-only.
-  return best.hits >= 2 ? best.key : "none";
+  const flat = textParts.flat().filter(Boolean).map((s) => String(s));
+  // Rough split: first item = topic, second = title, rest bullets+notes.
+  const [topic = "", title = "", ...rest] = flat;
+  const bullets = rest.slice(0, Math.max(1, Math.ceil(rest.length / 2)));
+  const notes = rest.slice(bullets.length);
+  return analyzeModelSelection(topic, title, bullets, notes).chosen_category;
 }
 
 export type ActivityStep = { step: number; title: string; description: string };
@@ -1023,10 +1079,11 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
     caption: `NCERT-grounded visual summary for ${prettyTitle}.`,
     mermaid_flow: buildMermaidFlow(prettyTitle, bulletsOut, index),
     model_category: pickModelCategory("", topic, prettyTitle, bulletsOut, notesSource),
+    debug: analyzeModelSelection(topic, prettyTitle, bulletsOut, notesSource),
   };
 }
 
-function fallbackSlides(topic: string, context: string): Slide[] {
+export function fallbackSlides(topic: string, context: string): Slide[] {
   const sentences = uniqueByNormalized(splitSentences(context)).slice(0, 160);
   const visuals = ["lightbulb", "prism", "atom", "ruler", "beaker", "microscope", "bolt", "function", "brain", "sparkles", "magnet", "leaf", "dna", "planet", "heart"];
   return Array.from({ length: 10 }, (_, i) => {
@@ -1251,6 +1308,7 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
           caption: v.caption ? beautifyMath(String(v.caption)) : fallback[index]?.caption,
           mermaid_flow,
           model_category: pickModelCategory("", topic, title, bullets, notes),
+          debug: analyzeModelSelection(topic, title, bullets, notes),
         };
       })
     : [];
@@ -1309,7 +1367,7 @@ export const generateLesson = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
     const lessonKey = hashKey([
-      "lesson-v11-mermaid-fix-keyword-3d",
+      "lesson-v12-debug-panel",
       data.klass,
       data.subject,
       data.chapter,

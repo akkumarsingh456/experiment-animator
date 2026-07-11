@@ -596,6 +596,42 @@ function SlideCanvas({
             {v.missing.map((m, i) => <span key={i} className="italic">“{m}”{i < v.missing.length - 1 ? "; " : ""}</span>)}
           </div>
         )}
+
+        {/* Per-slide debug panel — shows keyword matches + 3D pick reason. */}
+        {slide.debug && (
+          <details className="px-4 py-2 border-t border-border/60 text-[11px] text-muted-foreground print:hidden bg-secondary/30">
+            <summary className="cursor-pointer font-semibold text-foreground/80">
+              🔍 Debug · 3D pick: <span className="font-mono">{slide.debug.chosen_category}</span> ({slide.debug.total_hits} hit{slide.debug.total_hits === 1 ? "" : "s"} / need {slide.debug.threshold})
+            </summary>
+            <div className="mt-2 space-y-1.5">
+              <p><span className="font-semibold">Reason:</span> {slide.debug.reason}</p>
+              <div className="grid grid-cols-3 gap-2">
+                {(["title", "bullets", "notes"] as const).map((field) => (
+                  <div key={field} className="rounded border border-border/50 bg-card/60 p-1.5">
+                    <div className="text-[9px] uppercase tracking-wider font-semibold text-primary mb-1">{field} matches</div>
+                    {slide.debug!.keyword_sources[field].length
+                      ? <div className="flex flex-wrap gap-1">
+                          {slide.debug!.keyword_sources[field].map((k) => (
+                            <span key={k} className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">{k}</span>
+                          ))}
+                        </div>
+                      : <span className="italic text-[10px]">— none —</span>}
+                  </div>
+                ))}
+              </div>
+              <div className="rounded border border-border/50 bg-card/60 p-1.5">
+                <div className="text-[9px] uppercase tracking-wider font-semibold text-primary mb-1">Per-category cue hits</div>
+                <ul className="space-y-0.5">
+                  {slide.debug.category_hits.map((c) => (
+                    <li key={c.key} className={c.key === slide.debug!.chosen_category && slide.debug!.chosen_category !== "none" ? "text-emerald-700 font-semibold" : ""}>
+                      <span className="font-mono">{c.key}</span>: {c.hits} — {c.cues.length ? c.cues.join(", ") : "—"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </details>
+        )}
       </CardContent>
     </Card>
   );
