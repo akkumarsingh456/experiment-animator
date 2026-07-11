@@ -710,7 +710,7 @@ const MERMAID_STYLES = [
   "classDef warn fill:#ffe4e6,stroke:#be123c,stroke-width:1.5px,color:#881337;",
 ].join("\n  ");
 
-function buildMermaidFlow(title: string, bullets: string[], slideIndex: number): string {
+export function buildMermaidFlow(title: string, bullets: string[], slideIndex: number): string {
   const clean = (bullets || []).map((b) => mermaidLabel(b, 52)).filter(Boolean).slice(0, 6);
   const T = mermaidLabel(title, 44);
   if (clean.length === 0) {
