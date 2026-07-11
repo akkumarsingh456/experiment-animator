@@ -1309,7 +1309,7 @@ export const generateLesson = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
     const lessonKey = hashKey([
-      "lesson-v10-napkin-diagrams-math",
+      "lesson-v11-mermaid-fix-keyword-3d",
       data.klass,
       data.subject,
       data.chapter,
