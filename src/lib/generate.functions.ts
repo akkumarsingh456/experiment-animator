@@ -1308,6 +1308,7 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
           caption: v.caption ? beautifyMath(String(v.caption)) : fallback[index]?.caption,
           mermaid_flow,
           model_category: pickModelCategory("", topic, title, bullets, notes),
+          debug: analyzeModelSelection(topic, title, bullets, notes),
         };
       })
     : [];
