@@ -791,22 +791,65 @@ const MODEL_CATEGORY_KEYWORDS: Array<{ key: ModelCategoryKey; cues: string[] }> 
   { key: "math_geometry", cues: ["triangle", "circle", "square", "rectangle", "polygon", "angle", "geometry", "theorem", "pythago", "coordinate", "graph", "axis", "vector", "area", "volume", "perimeter", "trigono", "sine", "cosine", "tangent"] },
 ];
 
+const MODEL_PICK_THRESHOLD = 2;
+
+/** Detailed scan: which cues hit in each source field, and which category wins. */
+export function analyzeModelSelection(
+  topic: string,
+  title: string,
+  bullets: string[] = [],
+  notes: string[] = [],
+): SlideDebug {
+  const titleTxt = String(title || "").toLowerCase();
+  const bulletsTxt = (bullets || []).join(" ").toLowerCase();
+  const notesTxt = (notes || []).join(" ").toLowerCase();
+  const hay = [topic, titleTxt, bulletsTxt, notesTxt].filter(Boolean).join(" ").toLowerCase();
+
+  const category_hits = MODEL_CATEGORY_KEYWORDS.map(({ key, cues }) => {
+    const found = cues.filter((c) => hay.includes(c));
+    return { key, hits: found.length, cues: found };
+  });
+
+  const best = category_hits.reduce(
+    (acc, c) => (c.hits > acc.hits ? c : acc),
+    { key: "none" as ModelCategoryKey, hits: 0, cues: [] as string[] },
+  );
+
+  const passed = best.hits >= MODEL_PICK_THRESHOLD && best.key !== "none";
+  const chosen_category: ModelCategoryKey = passed ? best.key : "none";
+  const reason = passed
+    ? `Picked "${best.key}" — ${best.hits} cue hit(s) ≥ threshold ${MODEL_PICK_THRESHOLD} (${best.cues.slice(0, 6).join(", ")}).`
+    : best.hits > 0
+      ? `Skipped 3D — top category "${best.key}" only had ${best.hits}/${MODEL_PICK_THRESHOLD} required cue hit(s) (${best.cues.join(", ") || "none"}).`
+      : `Skipped 3D — no NCERT keyword cues matched any known 3D category.`;
+
+  const collectField = (txt: string): string[] => {
+    const found = new Set<string>();
+    for (const { cues } of MODEL_CATEGORY_KEYWORDS) for (const c of cues) if (txt.includes(c)) found.add(c);
+    return [...found];
+  };
+
+  return {
+    chosen_category,
+    reason,
+    threshold: MODEL_PICK_THRESHOLD,
+    total_hits: best.hits,
+    category_hits,
+    keyword_sources: {
+      title: collectField(titleTxt),
+      bullets: collectField(bulletsTxt),
+      notes: collectField(notesTxt),
+    },
+  };
+}
+
 function pickModelCategory(_subject: string, ...textParts: Array<string | string[] | undefined>): ModelCategoryKey {
-  const hay = textParts
-    .flat()
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  if (!hay.trim()) return "none";
-  let best: { key: ModelCategoryKey; hits: number } = { key: "none", hits: 0 };
-  for (const { key, cues } of MODEL_CATEGORY_KEYWORDS) {
-    let hits = 0;
-    for (const cue of cues) if (hay.includes(cue)) hits += 1;
-    if (hits > best.hits) best = { key, hits };
-  }
-  // Require at least two keyword hits so unrelated slides don't attach a
-  // misleading 3D scene. Otherwise the slide stays 2D-only.
-  return best.hits >= 2 ? best.key : "none";
+  const flat = textParts.flat().filter(Boolean).map((s) => String(s));
+  // Rough split: first item = topic, second = title, rest bullets+notes.
+  const [topic = "", title = "", ...rest] = flat;
+  const bullets = rest.slice(0, Math.max(1, Math.ceil(rest.length / 2)));
+  const notes = rest.slice(bullets.length);
+  return analyzeModelSelection(topic, title, bullets, notes).chosen_category;
 }
 
 export type ActivityStep = { step: number; title: string; description: string };
