@@ -1079,6 +1079,7 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
     caption: `NCERT-grounded visual summary for ${prettyTitle}.`,
     mermaid_flow: buildMermaidFlow(prettyTitle, bulletsOut, index),
     model_category: pickModelCategory("", topic, prettyTitle, bulletsOut, notesSource),
+    debug: analyzeModelSelection(topic, prettyTitle, bulletsOut, notesSource),
   };
 }
 
