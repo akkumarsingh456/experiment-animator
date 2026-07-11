@@ -671,6 +671,9 @@ export function beautifyMath(input: string): string {
 
 function mermaidLabel(text: string, max = 60) {
   const clean = beautifyMath(String(text || ""))
+    // Strip Private-Use-Area glyphs left over from NCERT symbol-font extraction
+    // (e.g. \uF041\uF063\uF074 encodes bullets/decorators) so labels render text.
+    .replace(/[\uE000-\uF8FF]/g, " ")
     .replace(/["`]/g, "'")
     .replace(/[\[\]{}()<>|;]/g, " ")
     .replace(/\s+/g, " ")
@@ -681,6 +684,10 @@ function mermaidLabel(text: string, max = 60) {
 // ---------- Napkin-AI-style Mermaid infographics ----------
 // Six distinct visual layouts with coloured classDefs so every slide feels
 // like a hand-crafted infographic instead of a plain flowchart.
+// Mermaid v11 requires each classDef on its own line (or terminated with a
+// semicolon followed by a newline). Joining with a bare space produced
+// "Syntax error in text" for every slide, so every diagram fell back to the
+// error message. Keep one statement per line.
 const MERMAID_STYLES = [
   "classDef hub fill:#4f46e5,stroke:#312e81,stroke-width:2px,color:#ffffff;",
   "classDef primary fill:#eef2ff,stroke:#4f46e5,stroke-width:1.5px,color:#1e1b4b;",
@@ -688,7 +695,7 @@ const MERMAID_STYLES = [
   "classDef ok fill:#dcfce7,stroke:#15803d,stroke-width:1.5px,color:#14532d;",
   "classDef info fill:#e0f2fe,stroke:#0369a1,stroke-width:1.5px,color:#0c4a6e;",
   "classDef warn fill:#ffe4e6,stroke:#be123c,stroke-width:1.5px,color:#881337;",
-].join(" ");
+].join("\n  ");
 
 function buildMermaidFlow(title: string, bullets: string[], slideIndex: number): string {
   const clean = (bullets || []).map((b) => mermaidLabel(b, 52)).filter(Boolean).slice(0, 6);
@@ -761,11 +768,32 @@ function buildMermaidFlow(title: string, bullets: string[], slideIndex: number):
   return lines.join("\n");
 }
 
-function pickModelCategory(_subject: string, _title: string): ModelCategoryKey {
-  // 3D scenes disabled by default — the shared Spline scenes rarely match the
-  // slide's actual NCERT concept, so we hide them and let the rich 2D diagram
-  // own the visual column. Re-enable per-concept when a verified scene exists.
-  return "none";
+// Keyword → 3D scene category. Each entry lists lower-case cues we look for in
+// the slide's title, bullets and notes so the mapped 3D viewer always
+// reinforces the content the student is reading, not a generic default.
+const MODEL_CATEGORY_KEYWORDS: Array<{ key: ModelCategoryKey; cues: string[] }> = [
+  { key: "physics_circuit", cues: ["circuit", "current", "voltage", "resistor", "resistance", "ohm", "ampere", "battery", "electric", "electricity", "conductor", "electromagnet", "magnet", "magnetic", "solenoid", "coil", "bulb", "switch"] },
+  { key: "chemistry_atom", cues: ["atom", "atomic", "electron", "proton", "neutron", "nucleus", "isotope", "molecule", "bond", "ion", "acid", "base", "salt", "reaction", "equation", "oxide", "hydro", "compound", "element", "periodic"] },
+  { key: "biology_cell", cues: ["cell", "organ", "tissue", "stomata", "photosynthesis", "chloroplast", "mitochond", "nucleus of the cell", "plant", "leaf", "root", "respiration", "digest", "heart", "blood", "neuron", "gene", "dna", "life", "reproduction"] },
+  { key: "math_geometry", cues: ["triangle", "circle", "square", "rectangle", "polygon", "angle", "geometry", "theorem", "pythago", "coordinate", "graph", "axis", "vector", "area", "volume", "perimeter", "trigono", "sine", "cosine", "tangent"] },
+];
+
+function pickModelCategory(_subject: string, ...textParts: Array<string | string[] | undefined>): ModelCategoryKey {
+  const hay = textParts
+    .flat()
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  if (!hay.trim()) return "none";
+  let best: { key: ModelCategoryKey; hits: number } = { key: "none", hits: 0 };
+  for (const { key, cues } of MODEL_CATEGORY_KEYWORDS) {
+    let hits = 0;
+    for (const cue of cues) if (hay.includes(cue)) hits += 1;
+    if (hits > best.hits) best = { key, hits };
+  }
+  // Require at least two keyword hits so unrelated slides don't attach a
+  // misleading 3D scene. Otherwise the slide stays 2D-only.
+  return best.hits >= 2 ? best.key : "none";
 }
 
 export type ActivityStep = { step: number; title: string; description: string };
@@ -994,7 +1022,7 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
     grounding: cleaned.slice(0, 3).join(" "),
     caption: `NCERT-grounded visual summary for ${prettyTitle}.`,
     mermaid_flow: buildMermaidFlow(prettyTitle, bulletsOut, index),
-    model_category: pickModelCategory("", `${topic} ${prettyTitle}`),
+    model_category: pickModelCategory("", topic, prettyTitle, bulletsOut, notesSource),
   };
 }
 
@@ -1222,7 +1250,7 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
           grounding: v.grounding ? String(v.grounding) : fallback[index]?.grounding,
           caption: v.caption ? beautifyMath(String(v.caption)) : fallback[index]?.caption,
           mermaid_flow,
-          model_category: pickModelCategory("", `${topic} ${title}`),
+          model_category: pickModelCategory("", topic, title, bullets, notes),
         };
       })
     : [];
@@ -1281,7 +1309,7 @@ export const generateLesson = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
     const lessonKey = hashKey([
-      "lesson-v10-napkin-diagrams-math",
+      "lesson-v11-mermaid-fix-keyword-3d",
       data.klass,
       data.subject,
       data.chapter,
