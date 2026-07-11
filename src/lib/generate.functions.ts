@@ -1250,7 +1250,7 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
           grounding: v.grounding ? String(v.grounding) : fallback[index]?.grounding,
           caption: v.caption ? beautifyMath(String(v.caption)) : fallback[index]?.caption,
           mermaid_flow,
-          model_category: pickModelCategory("", `${topic} ${title}`),
+          model_category: pickModelCategory("", topic, title, bullets, notes),
         };
       })
     : [];
