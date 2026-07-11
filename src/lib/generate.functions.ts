@@ -671,6 +671,9 @@ export function beautifyMath(input: string): string {
 
 function mermaidLabel(text: string, max = 60) {
   const clean = beautifyMath(String(text || ""))
+    // Strip Private-Use-Area glyphs left over from NCERT symbol-font extraction
+    // (e.g. \uF041\uF063\uF074 encodes bullets/decorators) so labels render text.
+    .replace(/[\uE000-\uF8FF]/g, " ")
     .replace(/["`]/g, "'")
     .replace(/[\[\]{}()<>|;]/g, " ")
     .replace(/\s+/g, " ")
