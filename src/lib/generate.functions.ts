@@ -681,6 +681,10 @@ function mermaidLabel(text: string, max = 60) {
 // ---------- Napkin-AI-style Mermaid infographics ----------
 // Six distinct visual layouts with coloured classDefs so every slide feels
 // like a hand-crafted infographic instead of a plain flowchart.
+// Mermaid v11 requires each classDef on its own line (or terminated with a
+// semicolon followed by a newline). Joining with a bare space produced
+// "Syntax error in text" for every slide, so every diagram fell back to the
+// error message. Keep one statement per line.
 const MERMAID_STYLES = [
   "classDef hub fill:#4f46e5,stroke:#312e81,stroke-width:2px,color:#ffffff;",
   "classDef primary fill:#eef2ff,stroke:#4f46e5,stroke-width:1.5px,color:#1e1b4b;",
@@ -688,7 +692,7 @@ const MERMAID_STYLES = [
   "classDef ok fill:#dcfce7,stroke:#15803d,stroke-width:1.5px,color:#14532d;",
   "classDef info fill:#e0f2fe,stroke:#0369a1,stroke-width:1.5px,color:#0c4a6e;",
   "classDef warn fill:#ffe4e6,stroke:#be123c,stroke-width:1.5px,color:#881337;",
-].join(" ");
+].join("\n  ");
 
 function buildMermaidFlow(title: string, bullets: string[], slideIndex: number): string {
   const clean = (bullets || []).map((b) => mermaidLabel(b, 52)).filter(Boolean).slice(0, 6);
