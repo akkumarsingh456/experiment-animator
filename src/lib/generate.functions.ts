@@ -616,6 +616,17 @@ export type ModelCategoryKey =
   | "math_geometry"
   | "none";
 
+export type SlideDebug = {
+  chosen_category: ModelCategoryKey;
+  reason: string;
+  threshold: number;
+  total_hits: number;
+  /** Per-category cue hits found in title/bullets/notes (lower-cased). */
+  category_hits: Array<{ key: ModelCategoryKey; hits: number; cues: string[] }>;
+  /** Which keywords were found in which source field. */
+  keyword_sources: { title: string[]; bullets: string[]; notes: string[] };
+};
+
 export type Slide = {
   title: string;
   bullets: string[];
@@ -631,6 +642,8 @@ export type Slide = {
   /** Registry key mapped to a Spline scene for the slide's 3D model. */
   model_category?: ModelCategoryKey;
   verification?: SlideVerification;
+  /** Debug breakdown of the keyword scan + 3D pick reason (per slide). */
+  debug?: SlideDebug;
 };
 
 // ---------- Math beautifier ----------
