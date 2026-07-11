@@ -1083,7 +1083,7 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
   };
 }
 
-function fallbackSlides(topic: string, context: string): Slide[] {
+export function fallbackSlides(topic: string, context: string): Slide[] {
   const sentences = uniqueByNormalized(splitSentences(context)).slice(0, 160);
   const visuals = ["lightbulb", "prism", "atom", "ruler", "beaker", "microscope", "bolt", "function", "brain", "sparkles", "magnet", "leaf", "dna", "planet", "heart"];
   return Array.from({ length: 10 }, (_, i) => {
