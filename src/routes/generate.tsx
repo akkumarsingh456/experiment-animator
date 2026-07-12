@@ -289,16 +289,18 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               </div>
             </div>
 
-            <SlideCanvas
-              slide={slides[activeIdx]}
-              index={activeIdx}
-              total={slides.length}
-              editing={editing}
-              onChange={(patch) => updateSlide(activeIdx, patch)}
-              imageUrl={images[activeIdx]}
-              imageLoading={!!imgLoading[activeIdx]}
-              onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
-            />
+            <div key={`slide-${activeIdx}`} className="animate-in fade-in slide-in-from-right-4 duration-500 fill-mode-both">
+              <SlideCanvas
+                slide={slides[activeIdx]}
+                index={activeIdx}
+                total={slides.length}
+                editing={editing}
+                onChange={(patch) => updateSlide(activeIdx, patch)}
+                imageUrl={images[activeIdx]}
+                imageLoading={!!imgLoading[activeIdx]}
+                onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
+              />
+            </div>
 
             <div className="flex items-center justify-between mt-4 print:hidden">
               <Button variant="outline" size="sm" disabled={activeIdx === 0} onClick={() => setActiveIdx((i) => i - 1)}>
