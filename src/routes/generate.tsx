@@ -289,16 +289,18 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               </div>
             </div>
 
-            <SlideCanvas
-              slide={slides[activeIdx]}
-              index={activeIdx}
-              total={slides.length}
-              editing={editing}
-              onChange={(patch) => updateSlide(activeIdx, patch)}
-              imageUrl={images[activeIdx]}
-              imageLoading={!!imgLoading[activeIdx]}
-              onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
-            />
+            <div key={`slide-${activeIdx}`} className="animate-in fade-in slide-in-from-right-4 duration-500">
+              <SlideCanvas
+                slide={slides[activeIdx]}
+                index={activeIdx}
+                total={slides.length}
+                editing={editing}
+                onChange={(patch) => updateSlide(activeIdx, patch)}
+                imageUrl={images[activeIdx]}
+                imageLoading={!!imgLoading[activeIdx]}
+                onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
+              />
+            </div>
 
             <div className="flex items-center justify-between mt-4 print:hidden">
               <Button variant="outline" size="sm" disabled={activeIdx === 0} onClick={() => setActiveIdx((i) => i - 1)}>
@@ -785,7 +787,8 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
       {/* A4 landscape frame that scales to fit — no scroll */}
       <div className="flex-1 min-h-0 grid place-items-center p-3 sm:p-5">
         <div
-          className="w-full h-full max-w-[min(100%,calc(100vh*1.414))] max-h-[min(100%,calc(100vw/1.414))] aspect-[297/210] bg-background text-foreground rounded-xl shadow-2xl grid grid-rows-[auto_1fr_auto] overflow-hidden"
+          key={`present-${i}`}
+          className="w-full h-full max-w-[min(100%,calc(100vh*1.414))] max-h-[min(100%,calc(100vw/1.414))] aspect-[297/210] bg-background text-foreground rounded-xl shadow-2xl grid grid-rows-[auto_1fr_auto] overflow-hidden animate-in fade-in slide-in-from-right-6 duration-500"
         >
           {/* Slide header */}
           <div className="px-6 pt-4 pb-2 border-b border-border/40">
