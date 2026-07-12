@@ -41,13 +41,7 @@ export function ThreeDViewer({ sceneUrl, className }: { sceneUrl: string; classN
             </div>
           }
         >
-          <Spline
-            scene={sceneUrl}
-            style={{ width: "100%", height: "100%" }}
-            onError={(e) => {
-              console.warn("Spline onError", e);
-            }}
-          />
+          <Spline scene={sceneUrl} style={{ width: "100%", height: "100%" }} />
         </Suspense>
       </SplineErrorBoundary>
     </div>
