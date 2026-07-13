@@ -214,67 +214,6 @@ async function generateGeminiDiagram(opts: {
   }
 }
 
-/** Search Wikimedia Commons for a topic-matching diagram (SVG/PNG). Free, keyless. */
-async function fetchWikimediaDiagram(title: string, visualPrompt: string, subject: string, avoidUrls: string[] = []): Promise<string | null> {
-  const cleanedTitle = String(title || "").replace(/[—–:·|].*$/, "").trim();
-  const query = [cleanedTitle, visualPrompt, subject, "diagram"]
-    .map((s) => String(s || "").trim())
-    .filter(Boolean)
-    .join(" ")
-    .slice(0, 200);
-  if (!query) return null;
-
-  const endpoint = new URL("https://commons.wikimedia.org/w/api.php");
-  endpoint.searchParams.set("action", "query");
-  endpoint.searchParams.set("format", "json");
-  endpoint.searchParams.set("origin", "*");
-  endpoint.searchParams.set("generator", "search");
-  endpoint.searchParams.set("gsrsearch", `${query} filetype:bitmap|drawing`);
-  endpoint.searchParams.set("gsrnamespace", "6");
-  endpoint.searchParams.set("gsrlimit", "8");
-  endpoint.searchParams.set("prop", "imageinfo");
-  endpoint.searchParams.set("iiprop", "url|mime|size");
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3500);
-  let json: any;
-  try {
-    const res = await fetch(endpoint.toString(), {
-      headers: { "User-Agent": "EduPlanAI/1.0 (educational NCERT diagrams)" },
-      signal: controller.signal,
-    });
-    if (!res.ok) return null;
-    json = await res.json();
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  const pages: any[] = Object.values(json?.query?.pages || {});
-  if (!pages.length) return null;
-
-  const scored = pages
-    .map((p) => {
-      const ii = p?.imageinfo?.[0];
-      if (!ii?.url) return null;
-      const mime = String(ii.mime || "").toLowerCase();
-      const name = String(p.title || "").toLowerCase();
-      if (!/^image\/(svg\+xml|png|jpeg|jpg)$/.test(mime)) return null;
-      // Reject photos of people/logos/flags: prefer schematic content.
-      if (/\b(flag|logo|portrait|photograph|photo of|selfie|coat of arms|seal of)\b/.test(name)) return null;
-      let bonus = 0;
-      if (mime === "image/svg+xml") bonus += 40;
-      if (/diagram|schema|schematic|figure|illustration/.test(name)) bonus += 20;
-      const q = normalizeText(query);
-      const matches = q.split(" ").filter((w) => w.length > 3 && name.includes(w)).length;
-      return { url: ii.url as string, score: bonus + matches * 10 };
-    })
-    .filter((x): x is { url: string; score: number } => !!x)
-    .sort((a, b) => b.score - a.score);
-
-  return scored.find((item) => !avoidUrls.includes(item.url))?.url ?? null;
-}
 
 /** Generate SVG-based NCERT-style diagrams. A4-landscape aspect (1414:1000) so it
  *  slots into the slide's right-column frame without cropping labels. */
