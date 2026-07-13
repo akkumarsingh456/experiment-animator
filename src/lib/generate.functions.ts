@@ -41,7 +41,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     const cacheKey = hashKey([
-      "img-v4-safe-unique-a4",
+      "img-v5-gemini-napkin",
       data.klass,
       data.subject,
       String(data.slideIndex),
@@ -97,17 +97,28 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       return { url: "", cached: false, skipped: true };
     }
 
-    // 1) Try Wikimedia Commons — free, no API key, high-quality NCERT-style diagrams.
+    // 1) Primary: Gemini 2.5 Flash Image (Nano Banana) via Lovable AI Gateway —
+    //    produces Napkin-AI-style labelled infographic diagrams strictly from
+    //    the current slide's title/bullets/notes.
     let url = "";
-    let source: "wikimedia" | "local" = "local";
+    let source: "gemini" | "local" = "local";
+    let geminiError: string | undefined;
     try {
-      const wiki = await fetchWikimediaDiagram(data.title, data.visual_prompt, data.subject, data.avoidUrls);
-      if (wiki) {
-        url = wiki;
-        source = "wikimedia";
+      const gem = await generateGeminiDiagram({
+        title: data.title,
+        bullets: data.bullets,
+        notes: data.grounding,
+        visualPrompt: data.visual_prompt,
+        subject: data.subject,
+        klass: data.klass,
+      });
+      if (gem) {
+        url = gem;
+        source = "gemini";
       }
     } catch (e) {
-      console.warn("wikimedia lookup failed", e);
+      geminiError = e instanceof Error ? e.message : String(e);
+      console.warn("gemini diagram generation failed", geminiError);
     }
 
     // 2) Fallback: high-fidelity local SVG (no external call).
@@ -128,71 +139,81 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       console.warn("slide image cache write failed", e);
     }
 
-    await logAudit({ status: "success", cached: false, image_url: url, source });
+    await logAudit({ status: "success", cached: false, image_url: url, source, gemini_error: geminiError });
     return { url, cached: false, source };
   });
 
-/** Search Wikimedia Commons for a topic-matching diagram (SVG/PNG). Free, keyless. */
-async function fetchWikimediaDiagram(title: string, visualPrompt: string, subject: string, avoidUrls: string[] = []): Promise<string | null> {
-  const cleanedTitle = String(title || "").replace(/[—–:·|].*$/, "").trim();
-  const query = [cleanedTitle, visualPrompt, subject, "diagram"]
-    .map((s) => String(s || "").trim())
-    .filter(Boolean)
-    .join(" ")
-    .slice(0, 200);
-  if (!query) return null;
+/** Generate a Napkin-AI-style labelled infographic via Gemini 2.5 Flash Image
+ *  (Nano Banana) through the Lovable AI Gateway. Returns a data: URL PNG or
+ *  null when the gateway is unavailable / returns no image. */
+async function generateGeminiDiagram(opts: {
+  title: string;
+  bullets: string[];
+  notes: string;
+  visualPrompt: string;
+  subject: string;
+  klass: string;
+}): Promise<string | null> {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) return null;
 
-  const endpoint = new URL("https://commons.wikimedia.org/w/api.php");
-  endpoint.searchParams.set("action", "query");
-  endpoint.searchParams.set("format", "json");
-  endpoint.searchParams.set("origin", "*");
-  endpoint.searchParams.set("generator", "search");
-  endpoint.searchParams.set("gsrsearch", `${query} filetype:bitmap|drawing`);
-  endpoint.searchParams.set("gsrnamespace", "6");
-  endpoint.searchParams.set("gsrlimit", "8");
-  endpoint.searchParams.set("prop", "imageinfo");
-  endpoint.searchParams.set("iiprop", "url|mime|size");
+  const cleanBullets = (opts.bullets || [])
+    .map((b) => String(b || "").trim())
+    .filter(Boolean)
+    .slice(0, 6);
+  const notes = String(opts.notes || "").replace(/\s+/g, " ").trim().slice(0, 900);
+
+  const prompt = [
+    `Create a clean, Napkin-AI style 2D educational infographic diagram for an NCERT lesson.`,
+    `Class: ${opts.klass || "n/a"}. Subject: ${opts.subject || "n/a"}.`,
+    `Slide title: "${opts.title}".`,
+    cleanBullets.length ? `Bullets to visualize (each becomes a labelled node/step):\n- ${cleanBullets.join("\n- ")}` : "",
+    notes ? `Grounding notes from the textbook (use ONLY facts present here):\n${notes}` : "",
+    opts.visualPrompt ? `Extra visual direction: ${opts.visualPrompt}` : "",
+    `STYLE RULES:`,
+    `- Flat vector infographic, hand-drawn Napkin-AI aesthetic, soft pastel palette, thin dark outlines.`,
+    `- Landscape 16:9, white background, generous whitespace, no photograph, no 3D rendering.`,
+    `- Clear labelled shapes/arrows/boxes forming a real diagram (flow, cycle, parts-of, comparison, or apparatus — pick what fits the notes).`,
+    `- Render exponents/powers correctly (e.g. E = mc², H₂O, 10⁻⁹, x²) using proper superscript/subscript typography — never "mc2", "H2O", "10^-9".`,
+    `- Every label must be legible English text, spelled correctly, no gibberish glyphs.`,
+    `- Do NOT invent facts. Only depict what the title, bullets, and grounding notes support.`,
+  ].filter(Boolean).join("\n");
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3500);
-  let json: any;
+  const timeout = setTimeout(() => controller.abort(), 45_000);
   try {
-    const res = await fetch(endpoint.toString(), {
-      headers: { "User-Agent": "EduPlanAI/1.0 (educational NCERT diagrams)" },
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{ role: "user", content: prompt }],
+        modalities: ["image", "text"],
+      }),
       signal: controller.signal,
     });
-    if (!res.ok) return null;
-    json = await res.json();
-  } catch {
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`gemini image gateway [${res.status}]: ${body.slice(0, 200)}`);
+    }
+    const json: any = await res.json();
+    const msg = json?.choices?.[0]?.message;
+    const dataUrl: string | undefined =
+      msg?.images?.[0]?.image_url?.url ||
+      msg?.images?.[0]?.url ||
+      (Array.isArray(msg?.content)
+        ? msg.content.find((p: any) => p?.image_url?.url)?.image_url?.url
+        : undefined);
+    if (typeof dataUrl === "string" && dataUrl.startsWith("data:image/")) return dataUrl;
     return null;
   } finally {
     clearTimeout(timeout);
   }
-
-  const pages: any[] = Object.values(json?.query?.pages || {});
-  if (!pages.length) return null;
-
-  const scored = pages
-    .map((p) => {
-      const ii = p?.imageinfo?.[0];
-      if (!ii?.url) return null;
-      const mime = String(ii.mime || "").toLowerCase();
-      const name = String(p.title || "").toLowerCase();
-      if (!/^image\/(svg\+xml|png|jpeg|jpg)$/.test(mime)) return null;
-      // Reject photos of people/logos/flags: prefer schematic content.
-      if (/\b(flag|logo|portrait|photograph|photo of|selfie|coat of arms|seal of)\b/.test(name)) return null;
-      let bonus = 0;
-      if (mime === "image/svg+xml") bonus += 40;
-      if (/diagram|schema|schematic|figure|illustration/.test(name)) bonus += 20;
-      const q = normalizeText(query);
-      const matches = q.split(" ").filter((w) => w.length > 3 && name.includes(w)).length;
-      return { url: ii.url as string, score: bonus + matches * 10 };
-    })
-    .filter((x): x is { url: string; score: number } => !!x)
-    .sort((a, b) => b.score - a.score);
-
-  return scored.find((item) => !avoidUrls.includes(item.url))?.url ?? null;
 }
+
 
 /** Generate SVG-based NCERT-style diagrams. A4-landscape aspect (1414:1000) so it
  *  slots into the slide's right-column frame without cropping labels. */
