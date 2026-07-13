@@ -41,7 +41,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     const cacheKey = hashKey([
-      "img-v5-gemini-napkin",
+      "img-v6-napkin-rich",
       data.klass,
       data.subject,
       String(data.slideIndex),
@@ -161,26 +161,64 @@ async function generateGeminiDiagram(opts: {
     .map((b) => String(b || "").trim())
     .filter(Boolean)
     .slice(0, 6);
-  const notes = String(opts.notes || "").replace(/\s+/g, " ").trim().slice(0, 900);
+  const notes = String(opts.notes || "").replace(/\s+/g, " ").trim().slice(0, 1200);
+  const subj = (opts.subject || "").toLowerCase();
+
+  // Pick a diagram archetype from the slide semantics — Napkin-AI style shifts
+  // between flow, cycle, compare, parts-of, apparatus, timeline, hierarchy…
+  const titleLower = (opts.title || "").toLowerCase();
+  const notesLower = notes.toLowerCase();
+  const hay = `${titleLower} ${notesLower} ${(opts.visualPrompt || "").toLowerCase()}`;
+  const archetype =
+    /cycle|carbon|water cycle|nitrogen|krebs|calvin|menstrual|cell cycle/.test(hay) ? "circular cycle diagram with arrows returning to start"
+    : /step|procedure|process|method|algorithm|mechanism|flow|pathway|reaction/.test(hay) ? "left-to-right stepwise flow diagram with arrow connectors between labelled stages"
+    : /vs\.?|versus|compare|difference|contrast|ideal.*non|non.?ideal/.test(hay) ? "side-by-side comparison layout: two columns with matching labelled rows"
+    : /parts|structure|anatomy|apparatus|setup|diagram of|labelled|labeled/.test(hay) ? "central labelled illustration with callout lines pointing to named parts"
+    : /timeline|history|year|era|period/.test(hay) ? "horizontal timeline with dated milestones"
+    : /classif|type|kind|category|hierarchy|tree/.test(hay) ? "hierarchical tree branching from a root concept into typed sub-nodes"
+    : /formula|equation|law|derivation|graph|plot|curve/.test(hay) ? "annotated formula card plus a small labelled graph with axes"
+    : "clean concept map: central title node with 4-6 labelled satellite nodes each carrying a one-line explanation";
+
+  const palette =
+    subj.includes("chem") ? "muted teal + warm sand + soft coral accents"
+    : subj.includes("phys") ? "indigo + amber + slate accents"
+    : subj.includes("bio")  ? "sage green + rust + cream accents"
+    : subj.includes("math") ? "violet + mustard + off-white accents"
+    : "cool blue + peach + cream accents";
 
   const prompt = [
-    `Create a clean, Napkin-AI style 2D educational infographic diagram for an NCERT lesson.`,
-    `Class: ${opts.klass || "n/a"}. Subject: ${opts.subject || "n/a"}.`,
-    `Slide title: "${opts.title}".`,
-    cleanBullets.length ? `Bullets to visualize (each becomes a labelled node/step):\n- ${cleanBullets.join("\n- ")}` : "",
-    notes ? `Grounding notes from the textbook (use ONLY facts present here):\n${notes}` : "",
-    opts.visualPrompt ? `Extra visual direction: ${opts.visualPrompt}` : "",
-    `STYLE RULES:`,
-    `- Flat vector infographic, hand-drawn Napkin-AI aesthetic, soft pastel palette, thin dark outlines.`,
-    `- Landscape 16:9, white background, generous whitespace, no photograph, no 3D rendering.`,
-    `- Clear labelled shapes/arrows/boxes forming a real diagram (flow, cycle, parts-of, comparison, or apparatus — pick what fits the notes).`,
-    `- Render exponents/powers correctly (e.g. E = mc², H₂O, 10⁻⁹, x²) using proper superscript/subscript typography — never "mc2", "H2O", "10^-9".`,
-    `- Every label must be legible English text, spelled correctly, no gibberish glyphs.`,
-    `- Do NOT invent facts. Only depict what the title, bullets, and grounding notes support.`,
+    `Design a premium 2D educational infographic in the visual language of Napkin AI / IdeaGram — hand-drawn feel, flat vector, thin dark outlines, subtle paper texture, generous whitespace, gently rounded shapes, small illustrative icons next to labels.`,
+    ``,
+    `LESSON CONTEXT`,
+    `- Class: ${opts.klass || "n/a"} • Subject: ${opts.subject || "n/a"}`,
+    `- Slide title: "${opts.title}"`,
+    cleanBullets.length ? `- Key points (each MUST appear as a labelled element):\n  • ${cleanBullets.join("\n  • ")}` : "",
+    notes ? `- Textbook grounding (use ONLY facts contained here, do not invent):\n  """${notes}"""` : "",
+    opts.visualPrompt ? `- Extra visual direction: ${opts.visualPrompt}` : "",
+    ``,
+    `DIAGRAM ARCHETYPE (choose this exact structure): ${archetype}.`,
+    ``,
+    `COMPOSITION`,
+    `- 16:9 landscape, white/off-white background, clear focal hierarchy: title reads first, main diagram second, supporting labels third.`,
+    `- Use ${palette}. Fills soft/pastel, outlines charcoal (#1f2937), one accent for emphasis only.`,
+    `- Include tasteful vector icons (beaker, atom, arrow, gauge, graph, leaf, gear — whatever fits the concept). No emojis, no stock clipart, no photos, no 3D renders.`,
+    `- Arrows are hand-drawn with small arrowheads; use dashed lines only for "returns to" or "optional" relations.`,
+    `- Every node has: a short bold label (≤ 4 words) AND a one-line caption (≤ 10 words) drawn from the notes/bullets.`,
+    ``,
+    `TYPOGRAPHY`,
+    `- Sans-serif, crisp kerning. Title 1 line, weight 700. Node labels weight 600. Captions weight 400.`,
+    `- Render exponents / subscripts with true typography: E = mc², H₂O, CO₂, 10⁻⁹, x², ΔH, μ, θ, π — never "mc2", "H2O", "10^-9", "delta H".`,
+    `- Every glyph must be a real English/Greek character, spelled correctly. No lorem, no gibberish, no repeated letters, no fake handwriting scribbles.`,
+    ``,
+    `STRICT RULES`,
+    `- Depict ONLY what the title, bullets, and grounding notes support. If the notes describe a formula, show that exact formula. If they list types, show exactly those types.`,
+    `- Do NOT add a legend/key unless the archetype needs one.`,
+    `- Do NOT include the words "Napkin", "AI", "Gemini", watermarks, page numbers, or any branding.`,
+    `- Output ONE single image. No collage, no borders, no drop-shadow frames around the whole canvas.`,
   ].filter(Boolean).join("\n");
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 45_000);
+  const timeout = setTimeout(() => controller.abort(), 60_000);
   try {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -189,7 +227,8 @@ async function generateGeminiDiagram(opts: {
         "Authorization": `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
+        // Nano Banana 2 — pro-level image quality, fast.
+        model: "google/gemini-3.1-flash-image",
         messages: [{ role: "user", content: prompt }],
         modalities: ["image", "text"],
       }),
@@ -1412,12 +1451,17 @@ export const generateLesson = createServerFn({ method: "POST" })
     const s = supa();
     const terms = buildTerms(data);
 
-    // 1. Find matching books by the selected class and subject
+    // 1. Find matching books by the selected class and subject.
+    //    Some uploaded "Med Easy" combined books cover BOTH Class 11 and 12
+    //    for the same subject (Physics Med Easy 2.0, Chemistry Med Easy,
+    //    Complete Zoology Med Easy). Pull them in for either class.
+    const wantedClass = classNumber(data.klass);
+    const combinedFilter = "file_name.ilike.%MED EASY%,file_name.ilike.%KOHINOOR%";
     const { data: classBooks, error: bErr } = await s
       .from("ncert_books")
       .select("id, class, subject, chapter, file_name")
-      .ilike("class", `%${classNumber(data.klass)}%`)
-      .limit(100);
+      .or(`class.ilike.%${wantedClass}%,${combinedFilter}`)
+      .limit(200);
     if (bErr) throw new Error(bErr.message);
     let candidates = (classBooks ?? []).filter((book) => subjectMatches(book.subject, data.subject, data.klass));
 
