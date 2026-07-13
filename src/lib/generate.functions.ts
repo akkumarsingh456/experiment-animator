@@ -1451,12 +1451,17 @@ export const generateLesson = createServerFn({ method: "POST" })
     const s = supa();
     const terms = buildTerms(data);
 
-    // 1. Find matching books by the selected class and subject
+    // 1. Find matching books by the selected class and subject.
+    //    Some uploaded "Med Easy" combined books cover BOTH Class 11 and 12
+    //    for the same subject (Physics Med Easy 2.0, Chemistry Med Easy,
+    //    Complete Zoology Med Easy). Pull them in for either class.
+    const wantedClass = classNumber(data.klass);
+    const combinedFilter = "file_name.ilike.%MED EASY%,file_name.ilike.%KOHINOOR%";
     const { data: classBooks, error: bErr } = await s
       .from("ncert_books")
       .select("id, class, subject, chapter, file_name")
-      .ilike("class", `%${classNumber(data.klass)}%`)
-      .limit(100);
+      .or(`class.ilike.%${wantedClass}%,${combinedFilter}`)
+      .limit(200);
     if (bErr) throw new Error(bErr.message);
     let candidates = (classBooks ?? []).filter((book) => subjectMatches(book.subject, data.subject, data.klass));
 
