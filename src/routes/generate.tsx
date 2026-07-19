@@ -573,7 +573,7 @@ function SlideCanvas({
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D · Napkin-style</div>
               {/* 2D — Mermaid infographic from NCERT bullets (takes most space) */}
               <div className={`relative w-full ${slide.model_category && slide.model_category !== "none" && resolveModelUrl(slide.model_category) ? "flex-[3]" : "flex-1"} rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-2 min-h-0`}>
-                <MermaidDiagram code={slide.mermaid_flow || `flowchart TD\n  A["${(slide.title || "NCERT concept").replace(/"/g, "'")}"] --> B["Key idea"]`} />
+                <ReactFlowDiagram graph={slide.flow_graph ?? buildFlowGraph(slide.title || "NCERT concept", slide.bullets || [], 0)} />
               </div>
               {/* Optional 3D — only when a verified scene is mapped */}
               {slide.model_category && slide.model_category !== "none" && resolveModelUrl(slide.model_category) ? (
