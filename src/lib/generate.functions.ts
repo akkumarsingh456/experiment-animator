@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
+import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 
 function hashKey(parts: Array<string | undefined | null>) {
   const norm = parts
