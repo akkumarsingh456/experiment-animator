@@ -1360,6 +1360,7 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
         // every slide gets one of the six styled layouts and never a raw AI
         // graph that could break the renderer.
         const mermaid_flow = buildMermaidFlow(title, bullets, index);
+        const flow_graph = buildFlowGraph(title, bullets, index);
         return {
           title,
           bullets,
@@ -1371,6 +1372,7 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
           grounding: v.grounding ? String(v.grounding) : fallback[index]?.grounding,
           caption: v.caption ? beautifyMath(String(v.caption)) : fallback[index]?.caption,
           mermaid_flow,
+          flow_graph,
           model_category: pickModelCategory("", topic, title, bullets, notes),
           debug: analyzeModelSelection(topic, title, bullets, notes),
         };
