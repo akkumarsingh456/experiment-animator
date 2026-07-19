@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
+import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 
 function hashKey(parts: Array<string | undefined | null>) {
   const norm = parts
@@ -697,8 +698,10 @@ export type Slide = {
   visual_prompt?: string;
   grounding?: string;
   caption?: string;
-  /** Mermaid.js flowchart source rendered as the slide's 2D diagram. */
+  /** Mermaid.js source — retained for backward-compat with old cached lessons; UI no longer renders it. */
   mermaid_flow?: string;
+  /** React Flow graph (nodes + edges) rendered as the slide's 2D diagram. */
+  flow_graph?: FlowGraph;
   /** Registry key mapped to a Spline scene for the slide's 3D model. */
   model_category?: ModelCategoryKey;
   verification?: SlideVerification;
@@ -1138,6 +1141,7 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
     grounding: cleaned.slice(0, 3).join(" "),
     caption: `NCERT-grounded visual summary for ${prettyTitle}.`,
     mermaid_flow: buildMermaidFlow(prettyTitle, bulletsOut, index),
+    flow_graph: buildFlowGraph(prettyTitle, bulletsOut, index),
     model_category: pickModelCategory("", topic, prettyTitle, bulletsOut, notesSource),
     debug: analyzeModelSelection(topic, prettyTitle, bulletsOut, notesSource),
   };
@@ -1356,6 +1360,7 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
         // every slide gets one of the six styled layouts and never a raw AI
         // graph that could break the renderer.
         const mermaid_flow = buildMermaidFlow(title, bullets, index);
+        const flow_graph = buildFlowGraph(title, bullets, index);
         return {
           title,
           bullets,
@@ -1367,6 +1372,7 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
           grounding: v.grounding ? String(v.grounding) : fallback[index]?.grounding,
           caption: v.caption ? beautifyMath(String(v.caption)) : fallback[index]?.caption,
           mermaid_flow,
+          flow_graph,
           model_category: pickModelCategory("", topic, title, bullets, notes),
           debug: analyzeModelSelection(topic, title, bullets, notes),
         };
@@ -1427,7 +1433,7 @@ export const generateLesson = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
     const lessonKey = hashKey([
-      "lesson-v12-debug-panel",
+      "lesson-v13-reactflow",
       data.klass,
       data.subject,
       data.chapter,

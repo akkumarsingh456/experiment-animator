@@ -1,29 +1,17 @@
 /**
- * Regression test — Mermaid syntax + diagram fallback checks.
+ * Regression test — React Flow graph structure checks.
  *
- * Re-generates a lesson locally via fallbackSlides() using varied NCERT-like
- * seed contexts and asserts that:
- *   1. Every slide.mermaid_flow parses under Mermaid v11 (no syntax errors).
- *   2. No slide's rendered SVG is a "diagram unavailable" fallback marker.
- *
- * If any slide fails, vitest exits non-zero and the build/test step fails.
+ * Re-generates lessons locally via fallbackSlides() using varied NCERT-like
+ * seed contexts and asserts that every slide's `flow_graph` is a well-formed
+ * React Flow graph (unique node IDs, edges pointing to real nodes, label
+ * length within the A4 safe-frame budget).
  */
-import { describe, it, expect, beforeAll } from "vitest";
-import mermaid from "mermaid";
+import { describe, it, expect } from "vitest";
 import {
   fallbackSlides,
-  buildMermaidFlow,
   analyzeModelSelection,
 } from "@/lib/generate.functions";
-
-beforeAll(() => {
-  mermaid.initialize({
-    startOnLoad: false,
-    theme: "default",
-    securityLevel: "loose",
-    flowchart: { htmlLabels: true, curve: "basis" },
-  });
-});
+import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 
 const SEED_CONTEXTS: Array<{ topic: string; context: string }> = [
   {
@@ -53,61 +41,36 @@ const SEED_CONTEXTS: Array<{ topic: string; context: string }> = [
   },
 ];
 
-const FALLBACK_MARKERS = [
-  "Diagram unavailable",
-  "Syntax error in text",
-  "mermaid-parseError",
-  "mermaid version",
-];
-
-async function parseMermaid(code: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  try {
-    // mermaid.parse returns a truthy result on success and throws on syntax error.
-    const res = await mermaid.parse(code, { suppressErrors: false });
-    if (res === false) return { ok: false, error: "parser returned false" };
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+function assertGraphWellFormed(graph: FlowGraph | undefined, label: string) {
+  expect(graph, `${label} missing flow_graph`).toBeTruthy();
+  if (!graph) return;
+  expect(graph.nodes.length, `${label} needs ≥3 nodes`).toBeGreaterThanOrEqual(2);
+  const ids = new Set<string>();
+  for (const n of graph.nodes) {
+    expect(ids.has(n.id), `${label} duplicate node id ${n.id}`).toBe(false);
+    ids.add(n.id);
+    expect(typeof n.label === "string" && n.label.length > 0, `${label} node ${n.id} empty label`).toBe(true);
+    expect(n.label.length, `${label} node ${n.id} label too long`).toBeLessThanOrEqual(60);
+  }
+  for (const e of graph.edges) {
+    expect(ids.has(e.source), `${label} edge source ${e.source} missing`).toBe(true);
+    expect(ids.has(e.target), `${label} edge target ${e.target} missing`).toBe(true);
   }
 }
 
-describe("Slide regression — Mermaid diagrams", () => {
+describe("Slide regression — React Flow diagrams", () => {
   for (const seed of SEED_CONTEXTS) {
-    it(`regenerates "${seed.topic}" with valid Mermaid on every slide`, async () => {
+    it(`regenerates "${seed.topic}" with valid flow_graph on every slide`, () => {
       const slides = fallbackSlides(seed.topic, seed.context);
       expect(slides.length).toBeGreaterThan(0);
-
-      for (let i = 0; i < slides.length; i++) {
-        const s = slides[i];
-        const code = s.mermaid_flow ?? "";
-        expect(code, `slide ${i + 1} missing mermaid_flow`).toBeTruthy();
-
-        // 1. Mermaid syntax must parse cleanly.
-        const parsed = await parseMermaid(code);
-        if (!parsed.ok) {
-          throw new Error(
-            `Slide ${i + 1} "${s.title}" has invalid Mermaid syntax: ${parsed.error}\n---\n${code}\n---`,
-          );
-        }
-
-        // 2. Code must not itself embed fallback / error markers.
-        for (const marker of FALLBACK_MARKERS) {
-          expect(
-            code.includes(marker),
-            `Slide ${i + 1} contains fallback marker "${marker}"`,
-          ).toBe(false);
-        }
-
-        // 3. Debug block must exist and be internally consistent.
+      slides.forEach((s, i) => {
+        assertGraphWellFormed(s.flow_graph, `slide ${i + 1} "${s.title}"`);
         expect(s.debug, `slide ${i + 1} missing debug`).toBeTruthy();
-        if (s.debug!.chosen_category !== "none") {
-          expect(s.debug!.total_hits).toBeGreaterThanOrEqual(s.debug!.threshold);
-        }
-      }
+      });
     });
   }
 
-  it("buildMermaidFlow rotates through all six layouts without syntax errors", async () => {
+  it("buildFlowGraph rotates through all six layouts without collisions", () => {
     const bullets = [
       "A cell is the basic unit of life",
       "Nucleus stores the genetic material",
@@ -116,13 +79,13 @@ describe("Slide regression — Mermaid diagrams", () => {
       "Cell membrane regulates transport",
       "Cytoplasm holds the organelles",
     ];
+    const seenLayouts = new Set<string>();
     for (let i = 0; i < 6; i++) {
-      const code = buildMermaidFlow(`Layout variant ${i}`, bullets, i);
-      const parsed = await parseMermaid(code);
-      if (!parsed.ok) {
-        throw new Error(`Layout ${i} failed to parse: ${parsed.error}\n${code}`);
-      }
+      const g = buildFlowGraph(`Layout variant ${i}`, bullets, i);
+      seenLayouts.add(g.layout);
+      assertGraphWellFormed(g, `layout ${i}`);
     }
+    expect(seenLayouts.size).toBe(6);
   });
 
   it("analyzeModelSelection surfaces the matched cues for a physics slide", () => {

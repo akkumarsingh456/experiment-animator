@@ -14,7 +14,8 @@ import {
   type GenerationResult,
   type Slide,
 } from "@/lib/generate.functions";
-import { MermaidDiagram } from "@/components/MermaidDiagram";
+import { ReactFlowDiagram } from "@/components/ReactFlowDiagram";
+import { buildFlowGraph } from "@/lib/flow-layouts";
 import { ThreeDViewer } from "@/components/ThreeDViewer";
 import { resolveModelUrl } from "@/config/models";
 import {
@@ -84,7 +85,7 @@ function GeneratePage() {
     setLoading(true);
     setError(null);
     run({ data: search })
-      .then((r) => { if (requestIdRef.current === requestId) setResult(r); })
+      .then((r) => { if (requestIdRef.current === requestId) setResult(r as GenerationResult); })
       .catch((e) => { if (requestIdRef.current === requestId) setError(e?.message ?? String(e)); })
       .finally(() => { if (requestIdRef.current === requestId) setLoading(false); });
     // Clear the trigger without router navigation; router navigation rerenders
@@ -572,7 +573,7 @@ function SlideCanvas({
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D · Napkin-style</div>
               {/* 2D — Mermaid infographic from NCERT bullets (takes most space) */}
               <div className={`relative w-full ${slide.model_category && slide.model_category !== "none" && resolveModelUrl(slide.model_category) ? "flex-[3]" : "flex-1"} rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-2 min-h-0`}>
-                <MermaidDiagram code={slide.mermaid_flow || `flowchart TD\n  A["${(slide.title || "NCERT concept").replace(/"/g, "'")}"] --> B["Key idea"]`} />
+                <ReactFlowDiagram graph={slide.flow_graph ?? buildFlowGraph(slide.title || "NCERT concept", slide.bullets || [], 0)} />
               </div>
               {/* Optional 3D — only when a verified scene is mapped */}
               {slide.model_category && slide.model_category !== "none" && resolveModelUrl(slide.model_category) ? (
@@ -831,7 +832,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
             {/* Diagram column — 2D Mermaid + optional 3D Spline */}
             <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col p-3 min-h-0 overflow-hidden gap-2">
               <div className="relative w-full flex-1 min-h-0 rounded-md bg-background/80 border border-border/40 p-2 overflow-hidden">
-                <MermaidDiagram code={s.mermaid_flow || `flowchart TD\n  A["${(s.title || "NCERT concept").replace(/"/g, "'")}"] --> B["Key idea"]`} />
+                <ReactFlowDiagram graph={s.flow_graph ?? buildFlowGraph(s.title || "NCERT concept", s.bullets || [], 0)} />
               </div>
               {s.model_category && s.model_category !== "none" && resolveModelUrl(s.model_category) && (
                 <div className="relative w-full flex-1 min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden">
