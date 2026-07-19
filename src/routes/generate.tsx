@@ -832,7 +832,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
             {/* Diagram column — 2D Mermaid + optional 3D Spline */}
             <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col p-3 min-h-0 overflow-hidden gap-2">
               <div className="relative w-full flex-1 min-h-0 rounded-md bg-background/80 border border-border/40 p-2 overflow-hidden">
-                <MermaidDiagram code={s.mermaid_flow || `flowchart TD\n  A["${(s.title || "NCERT concept").replace(/"/g, "'")}"] --> B["Key idea"]`} />
+                <ReactFlowDiagram graph={s.flow_graph ?? buildFlowGraph(s.title || "NCERT concept", s.bullets || [], 0)} />
               </div>
               {s.model_category && s.model_category !== "none" && resolveModelUrl(s.model_category) && (
                 <div className="relative w-full flex-1 min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden">
