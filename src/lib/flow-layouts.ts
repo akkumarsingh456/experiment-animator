@@ -7,7 +7,8 @@
  */
 
 import type { Edge, Node } from "@xyflow/react";
-import { beautifyMath } from "@/lib/generate.functions.shared-math";
+// Bullets/titles passed in are already beautified upstream (beautifyMath in
+// generate.functions.ts); we only sanitize glyphs and clamp length here.
 
 export type FlowLayout =
   | "mindmap"
