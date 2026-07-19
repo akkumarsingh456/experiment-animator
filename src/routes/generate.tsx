@@ -84,7 +84,7 @@ function GeneratePage() {
     setLoading(true);
     setError(null);
     run({ data: search })
-      .then((r) => { if (requestIdRef.current === requestId) setResult(r); })
+      .then((r) => { if (requestIdRef.current === requestId) setResult(r as GenerationResult); })
       .catch((e) => { if (requestIdRef.current === requestId) setError(e?.message ?? String(e)); })
       .finally(() => { if (requestIdRef.current === requestId) setLoading(false); });
     // Clear the trigger without router navigation; router navigation rerenders
