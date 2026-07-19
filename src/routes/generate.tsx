@@ -14,7 +14,8 @@ import {
   type GenerationResult,
   type Slide,
 } from "@/lib/generate.functions";
-import { MermaidDiagram } from "@/components/MermaidDiagram";
+import { ReactFlowDiagram } from "@/components/ReactFlowDiagram";
+import { buildFlowGraph } from "@/lib/flow-layouts";
 import { ThreeDViewer } from "@/components/ThreeDViewer";
 import { resolveModelUrl } from "@/config/models";
 import {
