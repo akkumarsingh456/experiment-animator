@@ -697,8 +697,10 @@ export type Slide = {
   visual_prompt?: string;
   grounding?: string;
   caption?: string;
-  /** Mermaid.js flowchart source rendered as the slide's 2D diagram. */
+  /** Mermaid.js source — retained for backward-compat with old cached lessons; UI no longer renders it. */
   mermaid_flow?: string;
+  /** React Flow graph (nodes + edges) rendered as the slide's 2D diagram. */
+  flow_graph?: FlowGraph;
   /** Registry key mapped to a Spline scene for the slide's 3D model. */
   model_category?: ModelCategoryKey;
   verification?: SlideVerification;
