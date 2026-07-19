@@ -34,7 +34,7 @@ export type FlowGraph = {
 };
 
 function cleanLabel(text: string, max = 60): string {
-  const s = beautifyMath(String(text || ""))
+  const s = String(text || "")
     .replace(/[\uE000-\uF8FF]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
