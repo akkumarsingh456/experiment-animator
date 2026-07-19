@@ -5,10 +5,14 @@ import {
   Background,
   Handle,
   Position,
+  type Node,
+  type Edge,
   type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import type { FlowGraph, FlowNodeData, FlowNodeKind } from "@/lib/flow-layouts";
+import type { FlowGraph, FlowNode, FlowNodeKind } from "@/lib/flow-layouts";
+
+type ConceptData = { label: string; kind: FlowNodeKind; index?: number };
 
 const KIND_STYLES: Record<FlowNodeKind, { bg: string; border: string; text: string; ring?: string }> = {
   hub:     { bg: "bg-indigo-600",   border: "border-indigo-800",  text: "text-white",       ring: "ring-2 ring-indigo-300" },
@@ -21,7 +25,7 @@ const KIND_STYLES: Record<FlowNodeKind, { bg: string; border: string; text: stri
 };
 
 function ConceptNode({ data }: NodeProps) {
-  const d = data as FlowNodeData;
+  const d = data as unknown as ConceptData;
   const s = KIND_STYLES[d.kind] ?? KIND_STYLES.primary;
   const isHub = d.kind === "hub";
   return (
@@ -31,7 +35,7 @@ function ConceptNode({ data }: NodeProps) {
     >
       <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
       {typeof d.index === "number" ? (
-        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/70 text-[10px] font-bold mr-1 border border-current">
+        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/70 text-[10px] font-bold mr-1 border border-current align-middle">
           {d.index}
         </span>
       ) : null}
@@ -43,8 +47,21 @@ function ConceptNode({ data }: NodeProps) {
 
 const NODE_TYPES = { concept: ConceptNode };
 
+function toRfNode(n: FlowNode): Node {
+  return {
+    id: n.id,
+    type: "concept",
+    position: { x: n.x, y: n.y },
+    data: { label: n.label, kind: n.kind, index: n.index } as unknown as Record<string, unknown>,
+  };
+}
+
 function InnerDiagram({ graph }: { graph: FlowGraph }) {
-  const { nodes, edges } = useMemo(() => ({ nodes: graph.nodes, edges: graph.edges }), [graph]);
+  const nodes = useMemo<Node[]>(() => graph.nodes.map(toRfNode), [graph]);
+  const edges = useMemo<Edge[]>(
+    () => graph.edges.map((e) => ({ id: e.id, source: e.source, target: e.target, animated: !!e.animated, type: "smoothstep" })),
+    [graph],
+  );
   return (
     <ReactFlow
       nodes={nodes}
@@ -68,7 +85,7 @@ function InnerDiagram({ graph }: { graph: FlowGraph }) {
   );
 }
 
-export function ReactFlowDiagram({ graph, className }: { graph: FlowGraph; className?: string }) {
+export function ReactFlowDiagram({ graph, className }: { graph: FlowGraph | undefined | null; className?: string }) {
   if (!graph || !Array.isArray(graph.nodes) || graph.nodes.length === 0) {
     return (
       <div className={`grid place-items-center text-[10px] text-muted-foreground ${className ?? ""}`}>
