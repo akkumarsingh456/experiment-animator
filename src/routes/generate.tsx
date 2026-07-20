@@ -482,10 +482,10 @@ function DiagramFrame({ src, alt, mode }: { src: string; alt: string; mode: "pre
 }
 
 function SlideCanvas({
-  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage,
+  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage, subject,
 }: {
   slide: Slide; index: number; total: number; editing: boolean; onChange: (p: Partial<Slide>) => void;
-  imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void;
+  imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void; subject?: string;
 }) {
   if (!slide) return null;
   const Icon = ICONS[(slide.visual || "atom").toLowerCase()] ?? Atom;
