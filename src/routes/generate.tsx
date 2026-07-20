@@ -16,8 +16,8 @@ import {
 } from "@/lib/generate.functions";
 import { ReactFlowDiagram } from "@/components/ReactFlowDiagram";
 import { buildFlowGraph } from "@/lib/flow-layouts";
-import { ThreeDViewer } from "@/components/ThreeDViewer";
-import { resolveModelUrl } from "@/config/models";
+import { SimulationViewer } from "@/components/SimulationViewer";
+import { pickSimulations } from "@/config/simulations";
 import {
   Atom,
   Beaker,
