@@ -584,7 +584,7 @@ function SlideCanvas({
                 <SimulationViewer
                   sims={pickSimulations(
                     [slide.title, ...(slide.bullets || []), ...(slide.notes || [])].join(" "),
-                    result?.query?.subject,
+                    subject,
                     3,
                   )}
                 />
