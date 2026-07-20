@@ -570,18 +570,25 @@ function SlideCanvas({
               ) : null}
             </div>
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0">
-              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D · Napkin-style</div>
-              {/* 2D — Mermaid infographic from NCERT bullets (takes most space) */}
-              <div className={`relative w-full ${slide.model_category && slide.model_category !== "none" && resolveModelUrl(slide.model_category) ? "flex-[3]" : "flex-1"} rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-2 min-h-0`}>
-                <ReactFlowDiagram graph={slide.flow_graph ?? buildFlowGraph(slide.title || "NCERT concept", slide.bullets || [], 0)} />
+              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D · Napkin-style · pinch/scroll to zoom</div>
+              {/* 2D — React Flow infographic with zoom + PNG/SVG export */}
+              <div className="relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-2 min-h-0">
+                <ReactFlowDiagram
+                  graph={slide.flow_graph ?? buildFlowGraph(slide.title || "NCERT concept", slide.bullets || [], 0)}
+                  exportName={`${(slide.title || "flow").slice(0, 40)}`}
+                />
               </div>
-              {/* Optional 3D — only when a verified scene is mapped */}
-              {slide.model_category && slide.model_category !== "none" && resolveModelUrl(slide.model_category) ? (
-                <div className="relative w-full flex-1 rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">
-                  <div className="absolute top-1 left-1 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">3D · Spline</div>
-                  <ThreeDViewer sceneUrl={resolveModelUrl(slide.model_category)} />
-                </div>
-              ) : null}
+              {/* Interactive simulations from the free open web (PhET / GeoGebra / HHMI / …) */}
+              <div className="relative w-full flex-[2] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">
+                <div className="absolute top-1 left-1 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">Live simulation</div>
+                <SimulationViewer
+                  sims={pickSimulations(
+                    [slide.title, ...(slide.bullets || []), ...(slide.notes || [])].join(" "),
+                    result?.query?.subject,
+                    3,
+                  )}
+                />
+              </div>
             </div>
           </div>
 
