@@ -758,7 +758,7 @@ function VideoView({ video }: { video: GenerationResult["video"] }) {
   );
 }
 
-function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Slide[]; images: Record<number, string>; onClose: () => void; onNeedImage: (idx: number) => void }) {
+function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { slides: Slide[]; images: Record<number, string>; onClose: () => void; onNeedImage: (idx: number) => void; subject?: string }) {
   const [i, setI] = useState(0);
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
