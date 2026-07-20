@@ -300,6 +300,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 imageUrl={images[activeIdx]}
                 imageLoading={!!imgLoading[activeIdx]}
                 onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
+                subject={result.source_books[0]?.subject}
               />
             </div>
 
