@@ -16,8 +16,8 @@ import {
 } from "@/lib/generate.functions";
 import { ReactFlowDiagram } from "@/components/ReactFlowDiagram";
 import { buildFlowGraph } from "@/lib/flow-layouts";
-import { ThreeDViewer } from "@/components/ThreeDViewer";
-import { resolveModelUrl } from "@/config/models";
+import { SimulationViewer } from "@/components/SimulationViewer";
+import { pickSimulations } from "@/config/simulations";
 import {
   Atom,
   Beaker,
@@ -300,6 +300,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 imageUrl={images[activeIdx]}
                 imageLoading={!!imgLoading[activeIdx]}
                 onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
+                subject={result.source_books[0]?.subject}
               />
             </div>
 
@@ -331,7 +332,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
             <div className="hidden print:block">
               {slides.map((s, i) => (
                 <div key={i} className="break-after-page mb-6">
-                  <SlideCanvas slide={s} index={i} total={slides.length} editing={false} onChange={() => {}} imageUrl={images[i]} imageLoading={false} onRegenImage={() => {}} />
+                  <SlideCanvas slide={s} index={i} total={slides.length} editing={false} onChange={() => {}} imageUrl={images[i]} imageLoading={false} onRegenImage={() => {}} subject={result.source_books[0]?.subject} />
                 </div>
               ))}
             </div>
@@ -352,6 +353,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           images={images}
           onClose={() => setPresenting(false)}
           onNeedImage={() => {}}
+          subject={result.source_books[0]?.subject}
         />
       )}
     </>
@@ -482,10 +484,10 @@ function DiagramFrame({ src, alt, mode }: { src: string; alt: string; mode: "pre
 }
 
 function SlideCanvas({
-  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage,
+  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage, subject,
 }: {
   slide: Slide; index: number; total: number; editing: boolean; onChange: (p: Partial<Slide>) => void;
-  imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void;
+  imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void; subject?: string;
 }) {
   if (!slide) return null;
   const Icon = ICONS[(slide.visual || "atom").toLowerCase()] ?? Atom;
@@ -570,18 +572,25 @@ function SlideCanvas({
               ) : null}
             </div>
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0">
-              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D · Napkin-style</div>
-              {/* 2D — Mermaid infographic from NCERT bullets (takes most space) */}
-              <div className={`relative w-full ${slide.model_category && slide.model_category !== "none" && resolveModelUrl(slide.model_category) ? "flex-[3]" : "flex-1"} rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-2 min-h-0`}>
-                <ReactFlowDiagram graph={slide.flow_graph ?? buildFlowGraph(slide.title || "NCERT concept", slide.bullets || [], 0)} />
+              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D · Napkin-style · pinch/scroll to zoom</div>
+              {/* 2D — React Flow infographic with zoom + PNG/SVG export */}
+              <div className="relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-2 min-h-0">
+                <ReactFlowDiagram
+                  graph={slide.flow_graph ?? buildFlowGraph(slide.title || "NCERT concept", slide.bullets || [], 0)}
+                  exportName={`${(slide.title || "flow").slice(0, 40)}`}
+                />
               </div>
-              {/* Optional 3D — only when a verified scene is mapped */}
-              {slide.model_category && slide.model_category !== "none" && resolveModelUrl(slide.model_category) ? (
-                <div className="relative w-full flex-1 rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">
-                  <div className="absolute top-1 left-1 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">3D · Spline</div>
-                  <ThreeDViewer sceneUrl={resolveModelUrl(slide.model_category)} />
-                </div>
-              ) : null}
+              {/* Interactive simulations from the free open web (PhET / GeoGebra / HHMI / …) */}
+              <div className="relative w-full flex-[2] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">
+                <div className="absolute top-1 left-1 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">Live simulation</div>
+                <SimulationViewer
+                  sims={pickSimulations(
+                    [slide.title, ...(slide.bullets || []), ...(slide.notes || [])].join(" "),
+                    subject,
+                    3,
+                  )}
+                />
+              </div>
             </div>
           </div>
 
@@ -751,7 +760,7 @@ function VideoView({ video }: { video: GenerationResult["video"] }) {
   );
 }
 
-function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Slide[]; images: Record<number, string>; onClose: () => void; onNeedImage: (idx: number) => void }) {
+function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { slides: Slide[]; images: Record<number, string>; onClose: () => void; onNeedImage: (idx: number) => void; subject?: string }) {
   const [i, setI] = useState(0);
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -829,16 +838,23 @@ function PresentationMode({ slides, images, onClose, onNeedImage }: { slides: Sl
               )}
             </div>
 
-            {/* Diagram column — 2D Mermaid + optional 3D Spline */}
+            {/* Diagram column — 2D React Flow (zoomable, exportable) + live sim */}
             <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col p-3 min-h-0 overflow-hidden gap-2">
-              <div className="relative w-full flex-1 min-h-0 rounded-md bg-background/80 border border-border/40 p-2 overflow-hidden">
-                <ReactFlowDiagram graph={s.flow_graph ?? buildFlowGraph(s.title || "NCERT concept", s.bullets || [], 0)} />
+              <div className="relative w-full flex-[3] min-h-0 rounded-md bg-background/80 border border-border/40 p-2 overflow-hidden">
+                <ReactFlowDiagram
+                  graph={s.flow_graph ?? buildFlowGraph(s.title || "NCERT concept", s.bullets || [], 0)}
+                  exportName={`${(s.title || "flow").slice(0, 40)}`}
+                />
               </div>
-              {s.model_category && s.model_category !== "none" && resolveModelUrl(s.model_category) && (
-                <div className="relative w-full flex-1 min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden">
-                  <ThreeDViewer sceneUrl={resolveModelUrl(s.model_category)} />
-                </div>
-              )}
+              <div className="relative w-full flex-[2] min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden">
+                <SimulationViewer
+                  sims={pickSimulations(
+                    [s.title, ...(s.bullets || []), ...(s.notes || [])].join(" "),
+                    subject,
+                    3,
+                  )}
+                />
+              </div>
               {s.caption && (
                 <p className="text-[clamp(9px,0.85vw,11px)] italic text-muted-foreground text-center line-clamp-1">{s.caption}</p>
               )}
