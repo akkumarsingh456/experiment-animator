@@ -353,6 +353,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           images={images}
           onClose={() => setPresenting(false)}
           onNeedImage={() => {}}
+          subject={result.source_books[0]?.subject}
         />
       )}
     </>
