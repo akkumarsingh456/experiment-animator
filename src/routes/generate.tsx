@@ -836,16 +836,23 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
               )}
             </div>
 
-            {/* Diagram column — 2D Mermaid + optional 3D Spline */}
+            {/* Diagram column — 2D React Flow (zoomable, exportable) + live sim */}
             <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col p-3 min-h-0 overflow-hidden gap-2">
-              <div className="relative w-full flex-1 min-h-0 rounded-md bg-background/80 border border-border/40 p-2 overflow-hidden">
-                <ReactFlowDiagram graph={s.flow_graph ?? buildFlowGraph(s.title || "NCERT concept", s.bullets || [], 0)} />
+              <div className="relative w-full flex-[3] min-h-0 rounded-md bg-background/80 border border-border/40 p-2 overflow-hidden">
+                <ReactFlowDiagram
+                  graph={s.flow_graph ?? buildFlowGraph(s.title || "NCERT concept", s.bullets || [], 0)}
+                  exportName={`${(s.title || "flow").slice(0, 40)}`}
+                />
               </div>
-              {s.model_category && s.model_category !== "none" && resolveModelUrl(s.model_category) && (
-                <div className="relative w-full flex-1 min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden">
-                  <ThreeDViewer sceneUrl={resolveModelUrl(s.model_category)} />
-                </div>
-              )}
+              <div className="relative w-full flex-[2] min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden">
+                <SimulationViewer
+                  sims={pickSimulations(
+                    [s.title, ...(s.bullets || []), ...(s.notes || [])].join(" "),
+                    subject,
+                    3,
+                  )}
+                />
+              </div>
               {s.caption && (
                 <p className="text-[clamp(9px,0.85vw,11px)] italic text-muted-foreground text-center line-clamp-1">{s.caption}</p>
               )}
