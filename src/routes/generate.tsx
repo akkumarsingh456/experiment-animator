@@ -332,7 +332,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
             <div className="hidden print:block">
               {slides.map((s, i) => (
                 <div key={i} className="break-after-page mb-6">
-                  <SlideCanvas slide={s} index={i} total={slides.length} editing={false} onChange={() => {}} imageUrl={images[i]} imageLoading={false} onRegenImage={() => {}} />
+                  <SlideCanvas slide={s} index={i} total={slides.length} editing={false} onChange={() => {}} imageUrl={images[i]} imageLoading={false} onRegenImage={() => {}} subject={result.source_books[0]?.subject} />
                 </div>
               ))}
             </div>
