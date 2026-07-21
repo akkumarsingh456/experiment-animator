@@ -874,3 +874,34 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
     </div>
   );
 }
+
+/**
+ * Resolves auto-picked simulations for a slide, layers any per-slide
+ * teacher overrides on top (persisted via useSimOverride), and — when
+ * `editable` — exposes the reorder/add/remove popover.
+ */
+function SimPanel({ slide, index, subject, editable }: { slide: Slide; index: number; subject?: string; editable?: boolean }) {
+  const auto = useMemo(
+    () => pickSimulations(
+      [slide.title, ...(slide.bullets || []), ...(slide.notes || [])].join(" "),
+      subject,
+      3,
+    ),
+    [slide, subject],
+  );
+  const key = slideKey(subject, index, slide.title || "");
+  const { sims, isOverridden, save, reset } = useSimOverride(key, auto);
+  return (
+    <div className="relative w-full h-full">
+      {editable && (
+        <SimulationOverrideEditor
+          sims={sims}
+          onChange={save}
+          onReset={reset}
+          isOverridden={isOverridden}
+        />
+      )}
+      <SimulationViewer sims={sims} />
+    </div>
+  );
+}
