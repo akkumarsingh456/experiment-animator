@@ -17,7 +17,9 @@ import {
 import { ReactFlowDiagram } from "@/components/ReactFlowDiagram";
 import { buildFlowGraph } from "@/lib/flow-layouts";
 import { SimulationViewer } from "@/components/SimulationViewer";
+import { SimulationOverrideEditor } from "@/components/SimulationOverrideEditor";
 import { pickSimulations } from "@/config/simulations";
+import { slideKey, useSimOverride } from "@/lib/sim-overrides";
 import {
   Atom,
   Beaker,
