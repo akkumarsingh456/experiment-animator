@@ -843,13 +843,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
                 />
               </div>
               <div className="relative w-full flex-[2] min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden">
-                <SimulationViewer
-                  sims={pickSimulations(
-                    [s.title, ...(s.bullets || []), ...(s.notes || [])].join(" "),
-                    subject,
-                    3,
-                  )}
-                />
+                <SimPanel slide={s} index={i} subject={subject} />
               </div>
               {s.caption && (
                 <p className="text-[clamp(9px,0.85vw,11px)] italic text-muted-foreground text-center line-clamp-1">{s.caption}</p>
