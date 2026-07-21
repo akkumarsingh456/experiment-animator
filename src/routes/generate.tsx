@@ -17,7 +17,9 @@ import {
 import { ReactFlowDiagram } from "@/components/ReactFlowDiagram";
 import { buildFlowGraph } from "@/lib/flow-layouts";
 import { SimulationViewer } from "@/components/SimulationViewer";
+import { SimulationOverrideEditor } from "@/components/SimulationOverrideEditor";
 import { pickSimulations } from "@/config/simulations";
+import { slideKey, useSimOverride } from "@/lib/sim-overrides";
 import {
   Atom,
   Beaker,
@@ -583,13 +585,7 @@ function SlideCanvas({
               {/* Interactive simulations from the free open web (PhET / GeoGebra / HHMI / …) */}
               <div className="relative w-full flex-[2] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">
                 <div className="absolute top-1 left-1 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">Live simulation</div>
-                <SimulationViewer
-                  sims={pickSimulations(
-                    [slide.title, ...(slide.bullets || []), ...(slide.notes || [])].join(" "),
-                    subject,
-                    3,
-                  )}
-                />
+                <SimPanel slide={slide} index={index} subject={subject} editable />
               </div>
             </div>
           </div>
@@ -847,13 +843,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
                 />
               </div>
               <div className="relative w-full flex-[2] min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden">
-                <SimulationViewer
-                  sims={pickSimulations(
-                    [s.title, ...(s.bullets || []), ...(s.notes || [])].join(" "),
-                    subject,
-                    3,
-                  )}
-                />
+                <SimPanel slide={s} index={i} subject={subject} />
               </div>
               {s.caption && (
                 <p className="text-[clamp(9px,0.85vw,11px)] italic text-muted-foreground text-center line-clamp-1">{s.caption}</p>
@@ -881,6 +871,37 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Resolves auto-picked simulations for a slide, layers any per-slide
+ * teacher overrides on top (persisted via useSimOverride), and — when
+ * `editable` — exposes the reorder/add/remove popover.
+ */
+function SimPanel({ slide, index, subject, editable }: { slide: Slide; index: number; subject?: string; editable?: boolean }) {
+  const auto = useMemo(
+    () => pickSimulations(
+      [slide.title, ...(slide.bullets || []), ...(slide.notes || [])].join(" "),
+      subject,
+      3,
+    ),
+    [slide, subject],
+  );
+  const key = slideKey(subject, index, slide.title || "");
+  const { sims, isOverridden, save, reset } = useSimOverride(key, auto);
+  return (
+    <div className="relative w-full h-full">
+      {editable && (
+        <SimulationOverrideEditor
+          sims={sims}
+          onChange={save}
+          onReset={reset}
+          isOverridden={isOverridden}
+        />
+      )}
+      <SimulationViewer sims={sims} />
     </div>
   );
 }
