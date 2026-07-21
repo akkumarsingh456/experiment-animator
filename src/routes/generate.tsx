@@ -585,13 +585,7 @@ function SlideCanvas({
               {/* Interactive simulations from the free open web (PhET / GeoGebra / HHMI / …) */}
               <div className="relative w-full flex-[2] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">
                 <div className="absolute top-1 left-1 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">Live simulation</div>
-                <SimulationViewer
-                  sims={pickSimulations(
-                    [slide.title, ...(slide.bullets || []), ...(slide.notes || [])].join(" "),
-                    subject,
-                    3,
-                  )}
-                />
+                <SimPanel slide={slide} index={index} subject={subject} editable />
               </div>
             </div>
           </div>
