@@ -656,8 +656,51 @@ const Input = z.object({
   klass: z.coerce.string().min(1),
   subject: z.coerce.string().min(1),
   chapter: z.coerce.string().optional().default(""),
+  mode: z.enum(["topic", "chapter"]).optional().default("topic"),
   nocache: z.coerce.boolean().optional().default(false),
 });
+
+// Language subjects: no 3D, no subtopics, generate the FULL chapter verbatim in
+// batches of 10 slides with a "break time" slide between batches.
+export const LANGUAGE_SUBJECTS = ["english", "hindi", "sanskrit"];
+export function isLanguageSubject(subject: string): boolean {
+  const s = (subject || "").toLowerCase();
+  return LANGUAGE_SUBJECTS.some((l) => s.includes(l));
+}
+
+// Boilerplate / branding / legal noise commonly extracted from publisher PDFs
+// (ALLEN, private-use symbols, copyright notices). We strip these before the
+// slide builder ever sees them so notes stay strictly NCERT-relevant.
+const JUNK_PATTERNS: RegExp[] = [
+  /\ballen\b/i,
+  /career institute/i,
+  /trademark|copyright|all rights|any breach|prosecut|propriety rights|punishable|retrieval system|jurisdiction/i,
+  /this (publication|work) is/i,
+  /kota,?\s*rajasthan/i,
+  /pre.?medical|enthusiast\s*\|\s*leader|study material/i,
+  /^\s*(page|pg|chapter)\s*\d+\s*$/i,
+  /^\s*\d+\s*$/,
+  /^\s*®?\s*$/,
+];
+export function filterJunkSentences(sentences: string[]): string[] {
+  return sentences.filter((s) => {
+    const t = String(s || "").trim();
+    if (t.length < 30) return false;
+    if (JUNK_PATTERNS.some((r) => r.test(t))) return false;
+    // Strip any PUA glyphs left in the text
+    if (/[\uE000-\uF8FF]{2,}/.test(t)) return false;
+    return true;
+  });
+}
+
+// Extract NCERT figure references (e.g. "Fig. 12.3", "figure 2.1")
+export function extractFigureRefs(text: string): string[] {
+  const out = new Set<string>();
+  const re = /\b(?:fig(?:ure)?\.?\s*\d+(?:\.\d+)?[a-z]?)/gi;
+  const matches = text.match(re) || [];
+  for (const m of matches) out.add(m.replace(/\s+/g, " ").trim());
+  return [...out].slice(0, 6);
+}
 
 export type SlideVerification = {
   coverage: number;
