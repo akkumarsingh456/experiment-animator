@@ -1813,10 +1813,19 @@ export const generateLesson = createServerFn({ method: "POST" })
     }
 
     // 4. Build slides + activity + storyboard locally from saved NCERT text.
-    // This is intentionally AI-free so it is fast, repeatable, and never spends credits on page load.
-    const slidesRaw = buildLocalSlides(data.topic, data.subtopics, context);
+    // For English/Hindi/Sanskrit (or explicit chapter mode) we paginate the full
+    // chapter text verbatim with break slides every 10 pages.
+    const lessonMode = isLanguageSubject(data.subject) ? "chapter" : data.mode;
+    const slidesRaw = buildLocalSlides(data.topic, data.subtopics, context, data.subject, lessonMode);
     const contextNorm = normalizeText(context);
-    const slides = slidesRaw.map((sl, i) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm, i) }));
+    const contentSlides = slidesRaw.map((sl, i) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm, i) }));
+
+    // Append 10 MCQ slides (unique per generation — pool is shuffled from the
+    // current NCERT sentences, so re-running produces different questions).
+    const mcqSource = splitSentences(context);
+    const mcqs = buildMcqsFromContext(data.topic, mcqSource, data.subject, 10);
+    const mcqSlides: Slide[] = mcqs.map((m, i) => makeMcqSlide(m, i, mcqs.length, data.topic));
+    const slides = [...contentSlides, ...mcqSlides];
     const activities = normalizeActivities(buildLocalActivities(data.topic, context), data.topic, context);
     const video = fallbackVideo(data.topic, activities);
 
