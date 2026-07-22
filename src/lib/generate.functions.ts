@@ -1177,19 +1177,21 @@ function extractKeyTerms(sentences: string[], topic: string): { term: string; me
   }).slice(0, 4);
 }
 
-function makeSlide(title: string, source: string[], topic: string, visual: string, index: number): Slide {
-  const cleaned = uniqueByNormalized(source).filter(Boolean);
-  const bullets = cleaned.slice(0, 7).map((s) => beautifyMath(trimToWords(s, 180)));
-  while (bullets.length < 5) {
+function makeSlide(title: string, source: string[], topic: string, visual: string, index: number, subject = ""): Slide {
+  const cleaned = uniqueByNormalized(filterJunkSentences(source)).filter(Boolean);
+  const bullets = cleaned.slice(0, 6).map((s) => beautifyMath(trimToWords(s, 180)));
+  while (bullets.length < 4) {
     bullets.push(
       index === 0
         ? `This point is grounded in the uploaded NCERT chapter passage for ${topic}.`
-        : `Revise this idea with the matching NCERT excerpt and classroom examples for ${topic}.`,
+        : `Revise this idea with the matching NCERT excerpt for ${topic}.`,
     );
   }
-  const notesSource = cleaned.slice(7, 12).length ? cleaned.slice(7, 12) : cleaned.slice(0, 4);
-  const bulletsOut = bullets.slice(0, 7);
+  const notesSource = cleaned.slice(6, 12).length ? cleaned.slice(6, 12) : cleaned.slice(0, 4);
+  const bulletsOut = bullets.slice(0, 6);
   const prettyTitle = beautifyMath(title);
+  const figures = extractFigureRefs(cleaned.join(" "));
+  const isLang = isLanguageSubject(subject);
   return {
     title: prettyTitle,
     bullets: bulletsOut,
@@ -1199,16 +1201,128 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
     visual,
     visual_prompt: `Draw a clean labelled 2D NCERT diagram for ${prettyTitle}. Include arrows, labels, symbols/formulas, and only details supported by the grounding excerpt.`,
     grounding: cleaned.slice(0, 3).join(" "),
-    caption: `NCERT-grounded visual summary for ${prettyTitle}.`,
+    caption: figures.length ? `Refer NCERT ${figures.join(", ")}` : `NCERT-grounded summary for ${prettyTitle}.`,
+    kind: "content",
+    figures,
     mermaid_flow: buildMermaidFlow(prettyTitle, bulletsOut, index),
     flow_graph: buildFlowGraph(prettyTitle, bulletsOut, index),
-    model_category: pickModelCategory("", topic, prettyTitle, bulletsOut, notesSource),
+    model_category: isLang ? "none" : pickModelCategory("", topic, prettyTitle, bulletsOut, notesSource),
     debug: analyzeModelSelection(topic, prettyTitle, bulletsOut, notesSource),
   };
 }
 
+function makeBreakSlide(afterIndex: number): Slide {
+  const title = `Break time — recap slides ${afterIndex - 9}–${afterIndex}`;
+  return {
+    title,
+    bullets: [
+      "Stretch, breathe and revise the last 10 slides.",
+      "Ask one doubt aloud before we continue.",
+      "Recall two key ideas without looking at the notes.",
+    ],
+    notes: [],
+    key_terms: [],
+    visual: "sparkles",
+    kind: "break",
+    caption: "Short 2-minute break before the next 10 slides.",
+    flow_graph: buildFlowGraph(title, ["Stretch", "Recall", "Doubt", "Resume"], afterIndex),
+    model_category: "none",
+  };
+}
+
+// ---------- MCQ builder ----------
+function pickAnswerKey(seed: number): "A" | "B" | "C" | "D" {
+  return (["A", "B", "C", "D"] as const)[seed % 4];
+}
+
+function buildMcqsFromContext(topic: string, sentences: string[], subject: string, count = 10): Mcq[] {
+  const pool = uniqueByNormalized(filterJunkSentences(sentences)).filter((s) => s.length > 40 && s.length < 260);
+  const defs = pool.filter((s) => /\bis\b|\bare\b|defined as|called|known as|means|refers to/i.test(s));
+  const lang = isLanguageSubject(subject);
+  const rand = Date.now() % 997; // varies across regenerations
+  const source = [...defs, ...pool];
+  const mcqs: Mcq[] = [];
+  const usedQ = new Set<string>();
+
+  for (let i = 0; i < source.length && mcqs.length < count; i++) {
+    const s = source[(i + rand) % source.length];
+    // Prefer "X is Y" cloze: hide the subject.
+    const m = s.match(/^\s*([A-Z][A-Za-z][A-Za-z\s\-]{2,40})\s+(is|are|means|refers to|is defined as|is called)\s+(.{20,180})$/);
+    let question = "";
+    let correct = "";
+    if (m) {
+      correct = m[1].trim();
+      question = `Which of the following ${m[2]} ${trimToWords(m[3], 140)}?`;
+    } else {
+      // Fallback cloze on the longest content word
+      const words = s.split(/\s+/).filter((w) => w.length > 5 && /^[A-Za-z][A-Za-z-]+$/.test(w));
+      if (words.length === 0) continue;
+      correct = words[Math.floor((i + rand) % words.length)];
+      question = `Fill in the blank (${lang ? "from the chapter" : "NCERT"}): ${beautifyMath(s.replace(correct, "_____"))}`;
+    }
+    const qKey = normalizeText(question).slice(0, 80);
+    if (!qKey || usedQ.has(qKey)) continue;
+    usedQ.add(qKey);
+
+    // Distractors: pick other prominent nouns from the pool
+    const distractorPool = uniqueByNormalized(
+      source.flatMap((x) => x.split(/\s+/))
+        .filter((w) => w.length > 4 && /^[A-Za-z][A-Za-z-]+$/.test(w) && w.toLowerCase() !== correct.toLowerCase())
+        .map((w) => w.replace(/[.,;:]$/g, "")),
+    );
+    const distractors: string[] = [];
+    for (let k = 0; distractors.length < 3 && k < distractorPool.length; k++) {
+      const cand = distractorPool[(k + i + rand) % distractorPool.length];
+      if (cand && !distractors.includes(cand) && cand.toLowerCase() !== correct.toLowerCase()) distractors.push(cand);
+    }
+    while (distractors.length < 3) distractors.push(`Option ${distractors.length + 1}`);
+
+    const answerKey = pickAnswerKey(i + rand);
+    const answerIdx = ["A", "B", "C", "D"].indexOf(answerKey);
+    const opts = [...distractors];
+    opts.splice(answerIdx, 0, correct);
+    mcqs.push({
+      question: beautifyMath(question),
+      options: (["A", "B", "C", "D"] as const).map((k, idx) => ({ key: k, text: beautifyMath(trimToWords(opts[idx], 90)) })),
+      answer: answerKey,
+      explanation: beautifyMath(trimToWords(s, 200)),
+    });
+  }
+
+  // Pad if we couldn't extract enough
+  while (mcqs.length < count) {
+    const idx = mcqs.length;
+    mcqs.push({
+      question: `${topic}: revise NCERT concept #${idx + 1} — which option matches the chapter?`,
+      options: [
+        { key: "A", text: `Concept from ${topic}` },
+        { key: "B", text: "Unrelated topic" },
+        { key: "C", text: "Not in NCERT" },
+        { key: "D", text: "None of the above" },
+      ],
+      answer: "A",
+      explanation: `Refer the ${topic} NCERT chapter for the exact statement.`,
+    });
+  }
+  return mcqs.slice(0, count);
+}
+
+function makeMcqSlide(mcq: Mcq, index: number, total: number, topic: string): Slide {
+  return {
+    title: `MCQ ${index + 1} / ${total} — ${topic}`,
+    bullets: [mcq.question],
+    notes: [],
+    key_terms: [],
+    visual: "brain",
+    kind: "mcq",
+    mcq,
+    caption: "Tap Show Answer to reveal the correct option.",
+    model_category: "none",
+  };
+}
+
 export function fallbackSlides(topic: string, context: string): Slide[] {
-  const sentences = uniqueByNormalized(splitSentences(context)).slice(0, 160);
+  const sentences = uniqueByNormalized(filterJunkSentences(splitSentences(context))).slice(0, 160);
   const visuals = ["lightbulb", "prism", "atom", "ruler", "beaker", "microscope", "bolt", "function", "brain", "sparkles", "magnet", "leaf", "dna", "planet", "heart"];
   return Array.from({ length: 10 }, (_, i) => {
     const bs = sentences.slice(i * 7, i * 7 + 12);
