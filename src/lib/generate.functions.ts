@@ -1676,7 +1676,22 @@ export const generateLesson = createServerFn({ method: "POST" })
           .select("result")
           .eq("cache_key", lessonKey)
           .maybeSingle();
-        if (hit?.result) return hit.result as GenerationResult;
+        if (hit?.result) {
+          // Strip cached MCQ slides and regenerate a fresh unique set every time
+          // so the student never sees the exact same 10 questions twice.
+          const cached = hit.result as GenerationResult;
+          const contentOnly = (cached.slides || []).filter((sl) => sl.kind !== "mcq");
+          const seedSentences: string[] = [];
+          for (const sl of contentOnly) {
+            if (sl.chapter_text) seedSentences.push(...splitSentences(sl.chapter_text));
+            if (sl.grounding) seedSentences.push(...splitSentences(sl.grounding));
+            if (sl.bullets) seedSentences.push(...sl.bullets);
+            if (sl.notes) seedSentences.push(...sl.notes);
+          }
+          const freshMcqs = buildMcqsFromContext(data.topic, seedSentences, data.subject, 10);
+          const mcqSlides: Slide[] = freshMcqs.map((m, i) => makeMcqSlide(m, i, freshMcqs.length, data.topic));
+          return { ...cached, slides: [...contentOnly, ...mcqSlides] };
+        }
       } catch {
         /* miss */
       }
