@@ -1657,14 +1657,16 @@ function fallbackVideo(topic: string, activities: Activity[]): { title: string; 
 export const generateLesson = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }): Promise<GenerationResult> => {
-    // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
+    // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
+    // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v13-reactflow",
+      "lesson-v14-langchapter-mcq",
       data.klass,
       data.subject,
       data.chapter,
       data.topic,
       data.subtopics,
+      data.mode,
     ]);
     const cdb = cacheSupa();
     if (!data.nocache) {
