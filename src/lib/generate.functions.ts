@@ -731,6 +731,16 @@ export type SlideDebug = {
   keyword_sources: { title: string[]; bullets: string[]; notes: string[] };
 };
 
+export type SlideKind = "content" | "break" | "mcq" | "chapter";
+
+export type McqOption = { key: "A" | "B" | "C" | "D"; text: string };
+export type Mcq = {
+  question: string;
+  options: McqOption[];
+  answer: "A" | "B" | "C" | "D";
+  explanation?: string;
+};
+
 export type Slide = {
   title: string;
   bullets: string[];
@@ -741,14 +751,21 @@ export type Slide = {
   visual_prompt?: string;
   grounding?: string;
   caption?: string;
-  /** Mermaid.js source — retained for backward-compat with old cached lessons; UI no longer renders it. */
+  /** Slide kind — controls rendering (content vs break vs MCQ vs full chapter text). */
+  kind?: SlideKind;
+  /** Full verbatim NCERT chapter text (used by chapter-mode language slides). */
+  chapter_text?: string;
+  /** Referenced NCERT figures on this slide (e.g. "Fig. 12.3"). */
+  figures?: string[];
+  /** Single MCQ payload for kind === "mcq". */
+  mcq?: Mcq;
+  /** Mermaid.js source — retained for backward-compat. */
   mermaid_flow?: string;
-  /** React Flow graph (nodes + edges) rendered as the slide's 2D diagram. */
+  /** React Flow graph rendered as the slide's 2D diagram. */
   flow_graph?: FlowGraph;
-  /** Registry key mapped to a Spline scene for the slide's 3D model. */
+  /** Registry key mapped to a Spline scene — cleared for language subjects. */
   model_category?: ModelCategoryKey;
   verification?: SlideVerification;
-  /** Debug breakdown of the keyword scan + 3D pick reason (per slide). */
   debug?: SlideDebug;
 };
 
