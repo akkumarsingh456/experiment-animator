@@ -492,6 +492,68 @@ function DiagramFrame({ src, alt, mode }: { src: string; alt: string; mode: "pre
   );
 }
 
+function McqSlideBody({ slide }: { slide: Slide }) {
+  const [reveal, setReveal] = useState(false);
+  useEffect(() => { setReveal(false); }, [slide]);
+  const mcq = slide.mcq;
+  if (!mcq) return null;
+  return (
+    <div className="p-6 flex flex-col gap-3 min-h-0 overflow-auto">
+      <p className="font-display text-base sm:text-lg font-semibold leading-snug">{mcq.question}</p>
+      <ol className="grid sm:grid-cols-2 gap-2">
+        {mcq.options.map((o) => {
+          const isCorrect = reveal && o.key === mcq.answer;
+          return (
+            <li key={o.key}
+              className={`rounded-md border p-2.5 text-sm flex gap-2 ${isCorrect ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-border/60 bg-card"}`}
+            >
+              <span className="font-mono font-bold">{o.key}.</span>
+              <span>{o.text}</span>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="flex flex-wrap items-center gap-2 mt-1">
+        <Button size="sm" variant={reveal ? "outline" : "default"} onClick={() => setReveal((v) => !v)}>
+          {reveal ? "Hide answer" : "Show answer"}
+        </Button>
+        {reveal && (
+          <Badge className="rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-500/30">
+            Correct: {mcq.answer}
+          </Badge>
+        )}
+      </div>
+      {reveal && mcq.explanation && (
+        <p className="text-xs text-muted-foreground italic border-l-2 border-primary/40 pl-2">{mcq.explanation}</p>
+      )}
+    </div>
+  );
+}
+
+function ChapterSlideBody({ slide }: { slide: Slide }) {
+  return (
+    <div className="p-6 flex flex-col gap-2 min-h-0 overflow-auto">
+      <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{slide.chapter_text}</p>
+      {slide.figures?.length ? (
+        <p className="text-[11px] text-muted-foreground italic">Referenced NCERT figures: {slide.figures.join(", ")}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function BreakSlideBody({ slide }: { slide: Slide }) {
+  return (
+    <div className="p-8 grid place-items-center text-center gap-3">
+      <div className="text-4xl">☕</div>
+      <h3 className="font-display text-2xl font-bold">Break Time</h3>
+      <p className="text-sm text-muted-foreground max-w-md">{slide.caption}</p>
+      <ul className="text-sm space-y-1">
+        {(slide.bullets || []).map((b, i) => <li key={i}>• {b}</li>)}
+      </ul>
+    </div>
+  );
+}
+
 function SlideCanvas({
   slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage, subject,
 }: {
@@ -499,19 +561,46 @@ function SlideCanvas({
   imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void; subject?: string;
 }) {
   if (!slide) return null;
-  const Icon = ICONS[(slide.visual || "atom").toLowerCase()] ?? Atom;
+  const kind = slide.kind || "content";
+  const lang = isLanguageSubject(subject);
   const v = slide.verification;
   const vTone = !v ? "" :
     v.coverage >= 80 ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" :
     v.coverage >= 55 ? "bg-amber-500/10 text-amber-700 border-amber-500/30" :
     "bg-rose-500/10 text-rose-700 border-rose-500/30";
+
+  // Break / MCQ / chapter slides use single-column layout.
+  if (kind === "break" || kind === "mcq" || kind === "chapter") {
+    return (
+      <Card className="overflow-hidden border-border/60 shadow-soft">
+        <CardContent className="p-0">
+          <div className="relative w-full aspect-[297/210] overflow-hidden bg-card grid grid-rows-[auto_1fr_auto]">
+            <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
+              <span className="font-mono">Slide {index + 1} / {total}</span>
+              <Badge variant="outline" className={`rounded-full text-[10px] ${kind === "mcq" ? "bg-primary/10 text-primary border-primary/30" : kind === "break" ? "bg-amber-500/10 text-amber-700 border-amber-500/30" : "bg-sky-500/10 text-sky-700 border-sky-500/30"}`}>
+                {kind === "mcq" ? "MCQ" : kind === "break" ? "Break" : "Chapter page"}
+              </Badge>
+            </div>
+            <div className="min-h-0 overflow-hidden">
+              <h3 className="px-6 pt-3 font-display text-lg sm:text-xl font-bold tracking-tight leading-tight line-clamp-2">{slide.title}</h3>
+              {kind === "mcq" && <McqSlideBody slide={slide} />}
+              {kind === "chapter" && <ChapterSlideBody slide={slide} />}
+              {kind === "break" && <BreakSlideBody slide={slide} />}
+            </div>
+            <div className="px-4 sm:px-6 py-2 border-t border-border/60 bg-secondary/40 flex items-center justify-between text-[10px] text-muted-foreground">
+              <span className="truncate max-w-[70%] italic">{slide.caption || slide.title}</span>
+              <span className="font-mono shrink-0">EduPlan AI · A4</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="overflow-hidden border-border/60 shadow-soft">
       <CardContent className="p-0">
-        {/* A4 landscape aspect (297:210 ≈ 1.414). Everything inside is clipped so
-            no content spills off the smart-board projection. */}
         <div className="relative w-full aspect-[297/210] overflow-hidden bg-card grid grid-rows-[auto_1fr_auto]">
-          {/* Header band (fixed height) */}
           <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
             <span className="font-mono">Slide {index + 1} / {total}</span>
             <div className="flex items-center gap-2">
@@ -526,7 +615,6 @@ function SlideCanvas({
             </div>
           </div>
 
-          {/* Body — 2-column, clipped */}
           <div className="grid grid-cols-[1.35fr_1fr] min-h-0 overflow-hidden">
             <div className="p-4 sm:p-5 flex flex-col gap-2 min-h-0 overflow-hidden">
               {editing ? (
@@ -576,76 +664,42 @@ function SlideCanvas({
                   </dl>
                 </div>
               ) : null}
+              {slide.figures?.length ? (
+                <p className="text-[10px] text-muted-foreground">📖 Refer NCERT {slide.figures.join(", ")}</p>
+              ) : null}
               {slide.ncert_quote ? (
                 <p className="text-[10px] italic text-muted-foreground border-l-2 border-primary/40 pl-2 line-clamp-2">“{slide.ncert_quote}”</p>
               ) : null}
             </div>
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0">
-              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D · Napkin-style · pinch/scroll to zoom</div>
-              {/* 2D — React Flow infographic with zoom + PNG/SVG export */}
+              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D flow · summary</div>
               <div className="relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-2 min-h-0">
                 <ReactFlowDiagram
                   graph={slide.flow_graph ?? buildFlowGraph(slide.title || "NCERT concept", slide.bullets || [], 0)}
                   exportName={`${(slide.title || "flow").slice(0, 40)}`}
                 />
               </div>
-              {/* Interactive simulations from the free open web (PhET / GeoGebra / HHMI / …) */}
-              <div className="relative w-full flex-[2] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">
-                <div className="absolute top-1 left-1 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">Live simulation</div>
-                <SimPanel slide={slide} index={index} subject={subject} editable />
-              </div>
+              {/* Hide the 3D / simulation panel entirely for language subjects. */}
+              {!lang && (
+                <div className="relative w-full flex-[2] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">
+                  <div className="absolute top-1 left-1 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">Live simulation</div>
+                  <SimPanel slide={slide} index={index} subject={subject} editable />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Footer band (fixed height) */}
           <div className="px-4 sm:px-6 py-2 border-t border-border/60 bg-secondary/40 flex items-center justify-between text-[10px] text-muted-foreground">
             <span className="truncate max-w-[70%] italic">{slide.caption || `NCERT-grounded summary — ${slide.title}`}</span>
             <span className="font-mono shrink-0">EduPlan AI · A4</span>
           </div>
         </div>
 
-        {/* Verification detail (outside A4 frame, visible on scroll — not printed) */}
         {v && v.missing.length > 0 && (
           <div className="px-4 py-2 border-t border-border/60 text-[11px] text-muted-foreground print:hidden">
             <span className="font-semibold text-rose-700">Flagged as not directly matched in NCERT text:</span>{" "}
             {v.missing.map((m, i) => <span key={i} className="italic">“{m}”{i < v.missing.length - 1 ? "; " : ""}</span>)}
           </div>
-        )}
-
-        {/* Per-slide debug panel — shows keyword matches + 3D pick reason. */}
-        {slide.debug && (
-          <details className="px-4 py-2 border-t border-border/60 text-[11px] text-muted-foreground print:hidden bg-secondary/30">
-            <summary className="cursor-pointer font-semibold text-foreground/80">
-              🔍 Debug · 3D pick: <span className="font-mono">{slide.debug.chosen_category}</span> ({slide.debug.total_hits} hit{slide.debug.total_hits === 1 ? "" : "s"} / need {slide.debug.threshold})
-            </summary>
-            <div className="mt-2 space-y-1.5">
-              <p><span className="font-semibold">Reason:</span> {slide.debug.reason}</p>
-              <div className="grid grid-cols-3 gap-2">
-                {(["title", "bullets", "notes"] as const).map((field) => (
-                  <div key={field} className="rounded border border-border/50 bg-card/60 p-1.5">
-                    <div className="text-[9px] uppercase tracking-wider font-semibold text-primary mb-1">{field} matches</div>
-                    {slide.debug!.keyword_sources[field].length
-                      ? <div className="flex flex-wrap gap-1">
-                          {slide.debug!.keyword_sources[field].map((k) => (
-                            <span key={k} className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">{k}</span>
-                          ))}
-                        </div>
-                      : <span className="italic text-[10px]">— none —</span>}
-                  </div>
-                ))}
-              </div>
-              <div className="rounded border border-border/50 bg-card/60 p-1.5">
-                <div className="text-[9px] uppercase tracking-wider font-semibold text-primary mb-1">Per-category cue hits</div>
-                <ul className="space-y-0.5">
-                  {slide.debug.category_hits.map((c) => (
-                    <li key={c.key} className={c.key === slide.debug!.chosen_category && slide.debug!.chosen_category !== "none" ? "text-emerald-700 font-semibold" : ""}>
-                      <span className="font-mono">{c.key}</span>: {c.hits} — {c.cues.length ? c.cues.join(", ") : "—"}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </details>
         )}
       </CardContent>
     </Card>
