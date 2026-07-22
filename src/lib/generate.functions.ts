@@ -1384,9 +1384,65 @@ function validateSlideAgainstContext(slide: Slide, contextNorm: string, slideInd
   };
 }
 
-function buildLocalSlides(topic: string, subtopics: string, context: string): Slide[] {
-  const sentences = uniqueByNormalized(splitSentences(context)).slice(0, 220);
+function buildLocalSlides(topic: string, subtopics: string, context: string, subject = "", mode: "topic" | "chapter" = "topic"): Slide[] {
+  const rawSentences = uniqueByNormalized(splitSentences(context));
+  const sentences = filterJunkSentences(rawSentences).slice(0, 260);
   if (sentences.length === 0) return fallbackSlides(topic, context);
+  const lang = isLanguageSubject(subject);
+
+  // ---------- LANGUAGE / CHAPTER MODE ----------
+  // English / Hindi / Sanskrit (or any explicit chapter mode): paginate the
+  // FULL chapter text verbatim, ~180 words per slide, with a break slide
+  // after every 10 content slides.
+  if (lang || mode === "chapter") {
+    const paragraphs = sentences.join(" ").split(/(?<=[.!?])\s+/).filter((p) => p.trim().length > 0);
+    const wordsPerSlide = 160;
+    const pages: string[] = [];
+    let buf: string[] = [];
+    let count = 0;
+    for (const p of paragraphs) {
+      const w = p.split(/\s+/).length;
+      if (count + w > wordsPerSlide && buf.length) {
+        pages.push(buf.join(" "));
+        buf = [p];
+        count = w;
+      } else {
+        buf.push(p);
+        count += w;
+      }
+    }
+    if (buf.length) pages.push(buf.join(" "));
+
+    const contentSlides: Slide[] = pages.map((text, i) => {
+      const figures = extractFigureRefs(text);
+      const s: Slide = {
+        title: `${topic} — Page ${i + 1}`,
+        bullets: [],
+        notes: [],
+        key_terms: [],
+        visual: "lightbulb",
+        kind: "chapter",
+        chapter_text: beautifyMath(text),
+        figures,
+        caption: figures.length ? `Refer NCERT ${figures.join(", ")}` : `Chapter page ${i + 1}`,
+        flow_graph: buildFlowGraph(topic, text.split(/(?<=[.!?])\s+/).slice(0, 6), i),
+        model_category: "none",
+      };
+      return s;
+    });
+
+    // Interleave a break every 10 content slides.
+    const withBreaks: Slide[] = [];
+    contentSlides.forEach((s, idx) => {
+      withBreaks.push(s);
+      if ((idx + 1) % 10 === 0 && idx !== contentSlides.length - 1) {
+        withBreaks.push(makeBreakSlide(idx + 1));
+      }
+    });
+    return withBreaks;
+  }
+
+  // ---------- TOPIC MODE (science / math / social) ----------
   const subtopicList = (subtopics || "")
     .split(/[,;\n]/)
     .map((s) => s.trim())
@@ -1413,11 +1469,10 @@ function buildLocalSlides(topic: string, subtopics: string, context: string): Sl
     { title: `${topic}: final revision`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 14, 100) },
   ];
 
-  // Global dedupe: no sentence appears on more than one slide.
   const usedSentences = new Set<string>();
   const filterUnused = (arr: string[]) => {
     const out: string[] = [];
-    for (const s of uniqueByNormalized(arr)) {
+    for (const s of uniqueByNormalized(filterJunkSentences(arr))) {
       const key = normalizeText(s).slice(0, 140);
       if (!key || usedSentences.has(key)) continue;
       usedSentences.add(key);
@@ -1442,20 +1497,17 @@ function buildLocalSlides(topic: string, subtopics: string, context: string): Sl
   for (let index = 0; index < plan.length && slides.length < 10; index++) {
     const item = plan[index];
     let src = filterUnused(item.source);
-    if (src.length < 3) {
-      src = filterUnused([...src, ...pickSentences(sentences, item.terms, 14, index * 9)]);
-    }
-    if (src.length < 3) continue; // skip empty slide rather than duplicate one
-    slides.push(makeSlide(makeUniqueTitle(item.title), src, topic, visuals[index] ?? "lightbulb", index));
+    if (src.length < 3) src = filterUnused([...src, ...pickSentences(sentences, item.terms, 14, index * 9)]);
+    if (src.length < 3) continue;
+    slides.push(makeSlide(makeUniqueTitle(item.title), src, topic, visuals[index] ?? "lightbulb", index, subject));
   }
-  // Top up with residual sentences if the plan produced fewer than 10 unique slides.
   let offset = 0;
   while (slides.length < 10 && offset < sentences.length) {
     const src = filterUnused(sentences.slice(offset, offset + 14));
     offset += 14;
     if (src.length < 3) continue;
     const idx = slides.length;
-    slides.push(makeSlide(makeUniqueTitle(`${topic} — NCERT point ${idx + 1}`), src, topic, visuals[idx] ?? "lightbulb", idx));
+    slides.push(makeSlide(makeUniqueTitle(`${topic} — NCERT point ${idx + 1}`), src, topic, visuals[idx] ?? "lightbulb", idx, subject));
   }
   return slides.slice(0, 10);
 }
