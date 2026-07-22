@@ -54,6 +54,9 @@ const steps = [
   { icon: PlayCircle, title: "Learn & Share", desc: "Stream in class, download MP4, or share a link with classmates." },
 ];
 
+const LANGUAGE_SUBJECTS = ["English", "Hindi", "Sanskrit"];
+function isLang(s: string) { return LANGUAGE_SUBJECTS.includes(s); }
+
 function GeneratorBlock() {
   const nav = useNavigate();
   const [topic, setTopic] = useState("");
@@ -61,12 +64,23 @@ function GeneratorBlock() {
   const [klass, setKlass] = useState("10");
   const [subject, setSubject] = useState("Science");
   const [chapter, setChapter] = useState("");
+  const lang = isLang(subject);
 
   function go() {
-    if (!topic.trim()) return;
+    // For languages, the "topic" is the chapter name itself.
+    const finalTopic = lang ? (chapter || topic).trim() : topic.trim();
+    if (!finalTopic) return;
     nav({
       to: "/generate",
-      search: { topic, subtopics, klass, subject, chapter, go: "1" },
+      search: {
+        topic: finalTopic,
+        subtopics: lang ? "" : subtopics,
+        klass,
+        subject,
+        chapter: lang ? finalTopic : chapter,
+        mode: lang ? "chapter" : "topic",
+        go: "1",
+      },
     });
   }
 
@@ -79,29 +93,15 @@ function GeneratorBlock() {
           </div>
           <div>
             <h3 className="font-semibold text-lg leading-tight">Advanced NCERT Topic Generator</h3>
-            <p className="text-xs text-muted-foreground">RAG-filtered to your exact Class · Subject · Chapter</p>
+            <p className="text-xs text-muted-foreground">
+              {lang
+                ? "Language mode · full chapter, verbatim NCERT text with break slides + MCQs"
+                : "RAG-filtered to your exact Class · Subject · Chapter, with 10 MCQs at the end"}
+            </p>
           </div>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-3">
-          <div className="sm:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground">Topic name</label>
-            <Input
-              placeholder='e.g. "Acids, Bases and Salts" or "Electromagnetic Induction"'
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground">Subtopics (comma separated)</label>
-            <Input
-              placeholder="pH scale, indicators, neutralisation"
-              value={subtopics}
-              onChange={(e) => setSubtopics(e.target.value)}
-              className="mt-1"
-            />
-          </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Class</label>
             <Select value={klass} onValueChange={setKlass}>
@@ -120,25 +120,61 @@ function GeneratorBlock() {
               </SelectContent>
             </Select>
           </div>
-          <div className="sm:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground">Chapter name or number (optional)</label>
-            <Input
-              placeholder='e.g. "Chapter 2" or "Acids Bases and Salts"'
-              value={chapter}
-              onChange={(e) => setChapter(e.target.value)}
-              className="mt-1"
-            />
-          </div>
+
+          {lang ? (
+            <div className="sm:col-span-2">
+              <label className="text-xs font-medium text-muted-foreground">Chapter name</label>
+              <Input
+                placeholder='e.g. "The Fun They Had" or "पर्वत प्रदेश में पावस"'
+                value={chapter}
+                onChange={(e) => setChapter(e.target.value)}
+                className="mt-1"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                The full chapter text will be presented verbatim in 10-page batches with a break slide between batches.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground">Topic name</label>
+                <Input
+                  placeholder='e.g. "Acids, Bases and Salts" or "Electromagnetic Induction"'
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground">Subtopics (comma separated)</label>
+                <Input
+                  placeholder="pH scale, indicators, neutralisation"
+                  value={subtopics}
+                  onChange={(e) => setSubtopics(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground">Chapter name or number (optional)</label>
+                <Input
+                  placeholder='e.g. "Chapter 2" or "Acids Bases and Salts"'
+                  value={chapter}
+                  onChange={(e) => setChapter(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </>
+          )}
         </div>
 
         <Button
           onClick={go}
-          disabled={!topic.trim()}
+          disabled={lang ? !chapter.trim() : !topic.trim()}
           size="lg"
           className="w-full mt-5 rounded-xl h-12 shadow-glow"
         >
           <Wand2 className="h-4 w-4" />
-          Generate Lesson &amp; 3D Experiment
+          {lang ? "Generate full chapter PPT + MCQs" : "Generate Lesson & 3D Experiment"}
         </Button>
 
         <p className="mt-3 text-xs text-muted-foreground text-center">

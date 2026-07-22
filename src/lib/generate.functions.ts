@@ -656,8 +656,51 @@ const Input = z.object({
   klass: z.coerce.string().min(1),
   subject: z.coerce.string().min(1),
   chapter: z.coerce.string().optional().default(""),
+  mode: z.enum(["topic", "chapter"]).optional().default("topic"),
   nocache: z.coerce.boolean().optional().default(false),
 });
+
+// Language subjects: no 3D, no subtopics, generate the FULL chapter verbatim in
+// batches of 10 slides with a "break time" slide between batches.
+export const LANGUAGE_SUBJECTS = ["english", "hindi", "sanskrit"];
+export function isLanguageSubject(subject: string): boolean {
+  const s = (subject || "").toLowerCase();
+  return LANGUAGE_SUBJECTS.some((l) => s.includes(l));
+}
+
+// Boilerplate / branding / legal noise commonly extracted from publisher PDFs
+// (ALLEN, private-use symbols, copyright notices). We strip these before the
+// slide builder ever sees them so notes stay strictly NCERT-relevant.
+const JUNK_PATTERNS: RegExp[] = [
+  /\ballen\b/i,
+  /career institute/i,
+  /trademark|copyright|all rights|any breach|prosecut|propriety rights|punishable|retrieval system|jurisdiction/i,
+  /this (publication|work) is/i,
+  /kota,?\s*rajasthan/i,
+  /pre.?medical|enthusiast\s*\|\s*leader|study material/i,
+  /^\s*(page|pg|chapter)\s*\d+\s*$/i,
+  /^\s*\d+\s*$/,
+  /^\s*®?\s*$/,
+];
+export function filterJunkSentences(sentences: string[]): string[] {
+  return sentences.filter((s) => {
+    const t = String(s || "").trim();
+    if (t.length < 30) return false;
+    if (JUNK_PATTERNS.some((r) => r.test(t))) return false;
+    // Strip any PUA glyphs left in the text
+    if (/[\uE000-\uF8FF]{2,}/.test(t)) return false;
+    return true;
+  });
+}
+
+// Extract NCERT figure references (e.g. "Fig. 12.3", "figure 2.1")
+export function extractFigureRefs(text: string): string[] {
+  const out = new Set<string>();
+  const re = /\b(?:fig(?:ure)?\.?\s*\d+(?:\.\d+)?[a-z]?)/gi;
+  const matches = text.match(re) || [];
+  for (const m of matches) out.add(m.replace(/\s+/g, " ").trim());
+  return [...out].slice(0, 6);
+}
 
 export type SlideVerification = {
   coverage: number;
@@ -688,6 +731,16 @@ export type SlideDebug = {
   keyword_sources: { title: string[]; bullets: string[]; notes: string[] };
 };
 
+export type SlideKind = "content" | "break" | "mcq" | "chapter";
+
+export type McqOption = { key: "A" | "B" | "C" | "D"; text: string };
+export type Mcq = {
+  question: string;
+  options: McqOption[];
+  answer: "A" | "B" | "C" | "D";
+  explanation?: string;
+};
+
 export type Slide = {
   title: string;
   bullets: string[];
@@ -698,14 +751,21 @@ export type Slide = {
   visual_prompt?: string;
   grounding?: string;
   caption?: string;
-  /** Mermaid.js source — retained for backward-compat with old cached lessons; UI no longer renders it. */
+  /** Slide kind — controls rendering (content vs break vs MCQ vs full chapter text). */
+  kind?: SlideKind;
+  /** Full verbatim NCERT chapter text (used by chapter-mode language slides). */
+  chapter_text?: string;
+  /** Referenced NCERT figures on this slide (e.g. "Fig. 12.3"). */
+  figures?: string[];
+  /** Single MCQ payload for kind === "mcq". */
+  mcq?: Mcq;
+  /** Mermaid.js source — retained for backward-compat. */
   mermaid_flow?: string;
-  /** React Flow graph (nodes + edges) rendered as the slide's 2D diagram. */
+  /** React Flow graph rendered as the slide's 2D diagram. */
   flow_graph?: FlowGraph;
-  /** Registry key mapped to a Spline scene for the slide's 3D model. */
+  /** Registry key mapped to a Spline scene — cleared for language subjects. */
   model_category?: ModelCategoryKey;
   verification?: SlideVerification;
-  /** Debug breakdown of the keyword scan + 3D pick reason (per slide). */
   debug?: SlideDebug;
 };
 
@@ -1117,19 +1177,21 @@ function extractKeyTerms(sentences: string[], topic: string): { term: string; me
   }).slice(0, 4);
 }
 
-function makeSlide(title: string, source: string[], topic: string, visual: string, index: number): Slide {
-  const cleaned = uniqueByNormalized(source).filter(Boolean);
-  const bullets = cleaned.slice(0, 7).map((s) => beautifyMath(trimToWords(s, 180)));
-  while (bullets.length < 5) {
+function makeSlide(title: string, source: string[], topic: string, visual: string, index: number, subject = ""): Slide {
+  const cleaned = uniqueByNormalized(filterJunkSentences(source)).filter(Boolean);
+  const bullets = cleaned.slice(0, 6).map((s) => beautifyMath(trimToWords(s, 180)));
+  while (bullets.length < 4) {
     bullets.push(
       index === 0
         ? `This point is grounded in the uploaded NCERT chapter passage for ${topic}.`
-        : `Revise this idea with the matching NCERT excerpt and classroom examples for ${topic}.`,
+        : `Revise this idea with the matching NCERT excerpt for ${topic}.`,
     );
   }
-  const notesSource = cleaned.slice(7, 12).length ? cleaned.slice(7, 12) : cleaned.slice(0, 4);
-  const bulletsOut = bullets.slice(0, 7);
+  const notesSource = cleaned.slice(6, 12).length ? cleaned.slice(6, 12) : cleaned.slice(0, 4);
+  const bulletsOut = bullets.slice(0, 6);
   const prettyTitle = beautifyMath(title);
+  const figures = extractFigureRefs(cleaned.join(" "));
+  const isLang = isLanguageSubject(subject);
   return {
     title: prettyTitle,
     bullets: bulletsOut,
@@ -1139,16 +1201,128 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
     visual,
     visual_prompt: `Draw a clean labelled 2D NCERT diagram for ${prettyTitle}. Include arrows, labels, symbols/formulas, and only details supported by the grounding excerpt.`,
     grounding: cleaned.slice(0, 3).join(" "),
-    caption: `NCERT-grounded visual summary for ${prettyTitle}.`,
+    caption: figures.length ? `Refer NCERT ${figures.join(", ")}` : `NCERT-grounded summary for ${prettyTitle}.`,
+    kind: "content",
+    figures,
     mermaid_flow: buildMermaidFlow(prettyTitle, bulletsOut, index),
     flow_graph: buildFlowGraph(prettyTitle, bulletsOut, index),
-    model_category: pickModelCategory("", topic, prettyTitle, bulletsOut, notesSource),
+    model_category: isLang ? "none" : pickModelCategory("", topic, prettyTitle, bulletsOut, notesSource),
     debug: analyzeModelSelection(topic, prettyTitle, bulletsOut, notesSource),
   };
 }
 
+function makeBreakSlide(afterIndex: number): Slide {
+  const title = `Break time — recap slides ${afterIndex - 9}–${afterIndex}`;
+  return {
+    title,
+    bullets: [
+      "Stretch, breathe and revise the last 10 slides.",
+      "Ask one doubt aloud before we continue.",
+      "Recall two key ideas without looking at the notes.",
+    ],
+    notes: [],
+    key_terms: [],
+    visual: "sparkles",
+    kind: "break",
+    caption: "Short 2-minute break before the next 10 slides.",
+    flow_graph: buildFlowGraph(title, ["Stretch", "Recall", "Doubt", "Resume"], afterIndex),
+    model_category: "none",
+  };
+}
+
+// ---------- MCQ builder ----------
+function pickAnswerKey(seed: number): "A" | "B" | "C" | "D" {
+  return (["A", "B", "C", "D"] as const)[seed % 4];
+}
+
+function buildMcqsFromContext(topic: string, sentences: string[], subject: string, count = 10): Mcq[] {
+  const pool = uniqueByNormalized(filterJunkSentences(sentences)).filter((s) => s.length > 40 && s.length < 260);
+  const defs = pool.filter((s) => /\bis\b|\bare\b|defined as|called|known as|means|refers to/i.test(s));
+  const lang = isLanguageSubject(subject);
+  const rand = Date.now() % 997; // varies across regenerations
+  const source = [...defs, ...pool];
+  const mcqs: Mcq[] = [];
+  const usedQ = new Set<string>();
+
+  for (let i = 0; i < source.length && mcqs.length < count; i++) {
+    const s = source[(i + rand) % source.length];
+    // Prefer "X is Y" cloze: hide the subject.
+    const m = s.match(/^\s*([A-Z][A-Za-z][A-Za-z\s\-]{2,40})\s+(is|are|means|refers to|is defined as|is called)\s+(.{20,180})$/);
+    let question = "";
+    let correct = "";
+    if (m) {
+      correct = m[1].trim();
+      question = `Which of the following ${m[2]} ${trimToWords(m[3], 140)}?`;
+    } else {
+      // Fallback cloze on the longest content word
+      const words = s.split(/\s+/).filter((w) => w.length > 5 && /^[A-Za-z][A-Za-z-]+$/.test(w));
+      if (words.length === 0) continue;
+      correct = words[Math.floor((i + rand) % words.length)];
+      question = `Fill in the blank (${lang ? "from the chapter" : "NCERT"}): ${beautifyMath(s.replace(correct, "_____"))}`;
+    }
+    const qKey = normalizeText(question).slice(0, 80);
+    if (!qKey || usedQ.has(qKey)) continue;
+    usedQ.add(qKey);
+
+    // Distractors: pick other prominent nouns from the pool
+    const distractorPool = uniqueByNormalized(
+      source.flatMap((x) => x.split(/\s+/))
+        .filter((w) => w.length > 4 && /^[A-Za-z][A-Za-z-]+$/.test(w) && w.toLowerCase() !== correct.toLowerCase())
+        .map((w) => w.replace(/[.,;:]$/g, "")),
+    );
+    const distractors: string[] = [];
+    for (let k = 0; distractors.length < 3 && k < distractorPool.length; k++) {
+      const cand = distractorPool[(k + i + rand) % distractorPool.length];
+      if (cand && !distractors.includes(cand) && cand.toLowerCase() !== correct.toLowerCase()) distractors.push(cand);
+    }
+    while (distractors.length < 3) distractors.push(`Option ${distractors.length + 1}`);
+
+    const answerKey = pickAnswerKey(i + rand);
+    const answerIdx = ["A", "B", "C", "D"].indexOf(answerKey);
+    const opts = [...distractors];
+    opts.splice(answerIdx, 0, correct);
+    mcqs.push({
+      question: beautifyMath(question),
+      options: (["A", "B", "C", "D"] as const).map((k, idx) => ({ key: k, text: beautifyMath(trimToWords(opts[idx], 90)) })),
+      answer: answerKey,
+      explanation: beautifyMath(trimToWords(s, 200)),
+    });
+  }
+
+  // Pad if we couldn't extract enough
+  while (mcqs.length < count) {
+    const idx = mcqs.length;
+    mcqs.push({
+      question: `${topic}: revise NCERT concept #${idx + 1} — which option matches the chapter?`,
+      options: [
+        { key: "A", text: `Concept from ${topic}` },
+        { key: "B", text: "Unrelated topic" },
+        { key: "C", text: "Not in NCERT" },
+        { key: "D", text: "None of the above" },
+      ],
+      answer: "A",
+      explanation: `Refer the ${topic} NCERT chapter for the exact statement.`,
+    });
+  }
+  return mcqs.slice(0, count);
+}
+
+function makeMcqSlide(mcq: Mcq, index: number, total: number, topic: string): Slide {
+  return {
+    title: `MCQ ${index + 1} / ${total} — ${topic}`,
+    bullets: [mcq.question],
+    notes: [],
+    key_terms: [],
+    visual: "brain",
+    kind: "mcq",
+    mcq,
+    caption: "Tap Show Answer to reveal the correct option.",
+    model_category: "none",
+  };
+}
+
 export function fallbackSlides(topic: string, context: string): Slide[] {
-  const sentences = uniqueByNormalized(splitSentences(context)).slice(0, 160);
+  const sentences = uniqueByNormalized(filterJunkSentences(splitSentences(context))).slice(0, 160);
   const visuals = ["lightbulb", "prism", "atom", "ruler", "beaker", "microscope", "bolt", "function", "brain", "sparkles", "magnet", "leaf", "dna", "planet", "heart"];
   return Array.from({ length: 10 }, (_, i) => {
     const bs = sentences.slice(i * 7, i * 7 + 12);
@@ -1210,9 +1384,65 @@ function validateSlideAgainstContext(slide: Slide, contextNorm: string, slideInd
   };
 }
 
-function buildLocalSlides(topic: string, subtopics: string, context: string): Slide[] {
-  const sentences = uniqueByNormalized(splitSentences(context)).slice(0, 220);
+function buildLocalSlides(topic: string, subtopics: string, context: string, subject = "", mode: "topic" | "chapter" = "topic"): Slide[] {
+  const rawSentences = uniqueByNormalized(splitSentences(context));
+  const sentences = filterJunkSentences(rawSentences).slice(0, 260);
   if (sentences.length === 0) return fallbackSlides(topic, context);
+  const lang = isLanguageSubject(subject);
+
+  // ---------- LANGUAGE / CHAPTER MODE ----------
+  // English / Hindi / Sanskrit (or any explicit chapter mode): paginate the
+  // FULL chapter text verbatim, ~180 words per slide, with a break slide
+  // after every 10 content slides.
+  if (lang || mode === "chapter") {
+    const paragraphs = sentences.join(" ").split(/(?<=[.!?])\s+/).filter((p) => p.trim().length > 0);
+    const wordsPerSlide = 160;
+    const pages: string[] = [];
+    let buf: string[] = [];
+    let count = 0;
+    for (const p of paragraphs) {
+      const w = p.split(/\s+/).length;
+      if (count + w > wordsPerSlide && buf.length) {
+        pages.push(buf.join(" "));
+        buf = [p];
+        count = w;
+      } else {
+        buf.push(p);
+        count += w;
+      }
+    }
+    if (buf.length) pages.push(buf.join(" "));
+
+    const contentSlides: Slide[] = pages.map((text, i) => {
+      const figures = extractFigureRefs(text);
+      const s: Slide = {
+        title: `${topic} — Page ${i + 1}`,
+        bullets: [],
+        notes: [],
+        key_terms: [],
+        visual: "lightbulb",
+        kind: "chapter",
+        chapter_text: beautifyMath(text),
+        figures,
+        caption: figures.length ? `Refer NCERT ${figures.join(", ")}` : `Chapter page ${i + 1}`,
+        flow_graph: buildFlowGraph(topic, text.split(/(?<=[.!?])\s+/).slice(0, 6), i),
+        model_category: "none",
+      };
+      return s;
+    });
+
+    // Interleave a break every 10 content slides.
+    const withBreaks: Slide[] = [];
+    contentSlides.forEach((s, idx) => {
+      withBreaks.push(s);
+      if ((idx + 1) % 10 === 0 && idx !== contentSlides.length - 1) {
+        withBreaks.push(makeBreakSlide(idx + 1));
+      }
+    });
+    return withBreaks;
+  }
+
+  // ---------- TOPIC MODE (science / math / social) ----------
   const subtopicList = (subtopics || "")
     .split(/[,;\n]/)
     .map((s) => s.trim())
@@ -1239,11 +1469,10 @@ function buildLocalSlides(topic: string, subtopics: string, context: string): Sl
     { title: `${topic}: final revision`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 14, 100) },
   ];
 
-  // Global dedupe: no sentence appears on more than one slide.
   const usedSentences = new Set<string>();
   const filterUnused = (arr: string[]) => {
     const out: string[] = [];
-    for (const s of uniqueByNormalized(arr)) {
+    for (const s of uniqueByNormalized(filterJunkSentences(arr))) {
       const key = normalizeText(s).slice(0, 140);
       if (!key || usedSentences.has(key)) continue;
       usedSentences.add(key);
@@ -1268,20 +1497,17 @@ function buildLocalSlides(topic: string, subtopics: string, context: string): Sl
   for (let index = 0; index < plan.length && slides.length < 10; index++) {
     const item = plan[index];
     let src = filterUnused(item.source);
-    if (src.length < 3) {
-      src = filterUnused([...src, ...pickSentences(sentences, item.terms, 14, index * 9)]);
-    }
-    if (src.length < 3) continue; // skip empty slide rather than duplicate one
-    slides.push(makeSlide(makeUniqueTitle(item.title), src, topic, visuals[index] ?? "lightbulb", index));
+    if (src.length < 3) src = filterUnused([...src, ...pickSentences(sentences, item.terms, 14, index * 9)]);
+    if (src.length < 3) continue;
+    slides.push(makeSlide(makeUniqueTitle(item.title), src, topic, visuals[index] ?? "lightbulb", index, subject));
   }
-  // Top up with residual sentences if the plan produced fewer than 10 unique slides.
   let offset = 0;
   while (slides.length < 10 && offset < sentences.length) {
     const src = filterUnused(sentences.slice(offset, offset + 14));
     offset += 14;
     if (src.length < 3) continue;
     const idx = slides.length;
-    slides.push(makeSlide(makeUniqueTitle(`${topic} — NCERT point ${idx + 1}`), src, topic, visuals[idx] ?? "lightbulb", idx));
+    slides.push(makeSlide(makeUniqueTitle(`${topic} — NCERT point ${idx + 1}`), src, topic, visuals[idx] ?? "lightbulb", idx, subject));
   }
   return slides.slice(0, 10);
 }
@@ -1431,14 +1657,16 @@ function fallbackVideo(topic: string, activities: Activity[]): { title: string; 
 export const generateLesson = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }): Promise<GenerationResult> => {
-    // Lesson cache — same (class, subject, chapter, topic, subtopics) returns instantly.
+    // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
+    // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v13-reactflow",
+      "lesson-v14-langchapter-mcq",
       data.klass,
       data.subject,
       data.chapter,
       data.topic,
       data.subtopics,
+      data.mode,
     ]);
     const cdb = cacheSupa();
     if (!data.nocache) {
@@ -1448,7 +1676,22 @@ export const generateLesson = createServerFn({ method: "POST" })
           .select("result")
           .eq("cache_key", lessonKey)
           .maybeSingle();
-        if (hit?.result) return hit.result as GenerationResult;
+        if (hit?.result) {
+          // Strip cached MCQ slides and regenerate a fresh unique set every time
+          // so the student never sees the exact same 10 questions twice.
+          const cached = hit.result as GenerationResult;
+          const contentOnly = (cached.slides || []).filter((sl) => sl.kind !== "mcq");
+          const seedSentences: string[] = [];
+          for (const sl of contentOnly) {
+            if (sl.chapter_text) seedSentences.push(...splitSentences(sl.chapter_text));
+            if (sl.grounding) seedSentences.push(...splitSentences(sl.grounding));
+            if (sl.bullets) seedSentences.push(...sl.bullets);
+            if (sl.notes) seedSentences.push(...sl.notes);
+          }
+          const freshMcqs = buildMcqsFromContext(data.topic, seedSentences, data.subject, 10);
+          const mcqSlides: Slide[] = freshMcqs.map((m, i) => makeMcqSlide(m, i, freshMcqs.length, data.topic));
+          return { ...cached, slides: [...contentOnly, ...mcqSlides] };
+        }
       } catch {
         /* miss */
       }
@@ -1585,10 +1828,19 @@ export const generateLesson = createServerFn({ method: "POST" })
     }
 
     // 4. Build slides + activity + storyboard locally from saved NCERT text.
-    // This is intentionally AI-free so it is fast, repeatable, and never spends credits on page load.
-    const slidesRaw = buildLocalSlides(data.topic, data.subtopics, context);
+    // For English/Hindi/Sanskrit (or explicit chapter mode) we paginate the full
+    // chapter text verbatim with break slides every 10 pages.
+    const lessonMode = isLanguageSubject(data.subject) ? "chapter" : data.mode;
+    const slidesRaw = buildLocalSlides(data.topic, data.subtopics, context, data.subject, lessonMode);
     const contextNorm = normalizeText(context);
-    const slides = slidesRaw.map((sl, i) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm, i) }));
+    const contentSlides = slidesRaw.map((sl, i) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm, i) }));
+
+    // Append 10 MCQ slides (unique per generation — pool is shuffled from the
+    // current NCERT sentences, so re-running produces different questions).
+    const mcqSource = splitSentences(context);
+    const mcqs = buildMcqsFromContext(data.topic, mcqSource, data.subject, 10);
+    const mcqSlides: Slide[] = mcqs.map((m, i) => makeMcqSlide(m, i, mcqs.length, data.topic));
+    const slides = [...contentSlides, ...mcqSlides];
     const activities = normalizeActivities(buildLocalActivities(data.topic, context), data.topic, context);
     const video = fallbackVideo(data.topic, activities);
 
