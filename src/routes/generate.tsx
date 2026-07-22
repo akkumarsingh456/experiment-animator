@@ -55,8 +55,15 @@ const SearchSchema = z.object({
   klass: z.coerce.string().default("10"),
   subject: z.coerce.string().default("Science"),
   chapter: z.coerce.string().default(""),
+  mode: z.enum(["topic", "chapter"]).default("topic"),
   go: z.coerce.string().default(""),
 });
+
+const LANGUAGE_SUBJECTS = ["english", "hindi", "sanskrit"];
+function isLanguageSubject(subject?: string) {
+  const s = (subject || "").toLowerCase();
+  return LANGUAGE_SUBJECTS.some((l) => s.includes(l));
+}
 
 export const Route = createFileRoute("/generate")({
   validateSearch: SearchSchema,
