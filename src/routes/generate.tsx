@@ -206,8 +206,21 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     }
   }
 
-  // 2D diagrams are now client-rendered with Mermaid.js and 3D via Spline.
-  // No server image generation is triggered per slide.
+  // Auto-prefetch server-rendered slide images (cheap local SVGs) so PPTX / PDF /
+  // Presentation Mode always ship with visuals — no per-slide click required.
+  useEffect(() => {
+    if (!verified) return;
+    let cancelled = false;
+    (async () => {
+      for (let i = 0; i < slides.length; i++) {
+        if (cancelled) return;
+        await ensureImage(i, { cacheOnly: true });
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verified, slides.length]);
+
 
 
   async function downloadPDF() {
