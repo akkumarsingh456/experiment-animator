@@ -1980,6 +1980,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       activities,
       activity_matches,
       video,
+      figures_report: figCheck.report,
     };
 
     // Save lesson cache (best-effort)
