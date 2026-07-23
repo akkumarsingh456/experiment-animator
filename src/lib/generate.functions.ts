@@ -1410,6 +1410,78 @@ function validateSlideAgainstContext(slide: Slide, contextNorm: string, slideInd
   };
 }
 
+/** Normalize a figure ref like "Fig. 12.3", "figure 12.3", "Fig 12.3a" → "fig 12.3a". */
+function normalizeFigureRef(ref: string): string {
+  return String(ref || "")
+    .toLowerCase()
+    .replace(/figure/g, "fig")
+    .replace(/[.\s]+/g, " ")
+    .replace(/^fig\s+/, "fig ")
+    .trim();
+}
+
+/**
+ * Cross-check every NCERT figure reference against the slide it was placed on.
+ * A slide "correctly places" a figure iff that figure ref appears in the
+ * slide's own source text (grounding + bullets + notes + chapter_text +
+ * ncert_quote + caption). Figures found in the full context but placed on no
+ * slide are flagged as `unplaced`.
+ */
+export function validateFigurePlacement(slides: Slide[], context: string): { report: FiguresReport; perSlide: FigurePlacementCheck[] } {
+  const allInContext = extractFigureRefs(context);
+  const contextSet = new Set(allInContext.map(normalizeFigureRef));
+
+  const perSlide: FigurePlacementCheck[] = slides.map((s) => {
+    const ownText = [
+      s.title,
+      s.caption || "",
+      s.ncert_quote || "",
+      s.grounding || "",
+      s.chapter_text || "",
+      ...(s.bullets || []),
+      ...(s.notes || []),
+    ].join(" ");
+    const expected = extractFigureRefs(ownText);
+    const expectedNorm = new Set(expected.map(normalizeFigureRef));
+    const placed = (s.figures || []).slice();
+    const placedNorm = placed.map(normalizeFigureRef);
+
+    const correct = placed.filter((_, i) => expectedNorm.has(placedNorm[i]));
+    const swapped = placed.filter((_, i) => !expectedNorm.has(placedNorm[i]));
+    const missing = expected.filter((e) => !placedNorm.includes(normalizeFigureRef(e)));
+
+    return {
+      expected,
+      placed,
+      correct,
+      swapped,
+      missing,
+      pass: swapped.length === 0 && missing.length === 0,
+    };
+  });
+
+  const placedAcross = new Set<string>();
+  slides.forEach((s) => (s.figures || []).forEach((f) => placedAcross.add(normalizeFigureRef(f))));
+  const unplaced = allInContext.filter((f) => !placedAcross.has(normalizeFigureRef(f)));
+
+  const failing_slide_indices = perSlide.reduce<number[]>((acc, c, i) => {
+    if (!c.pass) acc.push(i);
+    return acc;
+  }, []);
+
+  return {
+    perSlide,
+    report: {
+      context_figures: allInContext,
+      unplaced,
+      failing_slide_indices,
+      pass: unplaced.length === 0 && failing_slide_indices.length === 0,
+    },
+  };
+}
+
+
+
 function buildLocalSlides(topic: string, subtopics: string, context: string, subject = "", mode: "topic" | "chapter" = "topic"): Slide[] {
   const rawSentences = uniqueByNormalized(splitSentences(context));
   const sentences = filterJunkSentences(rawSentences).slice(0, 260);
