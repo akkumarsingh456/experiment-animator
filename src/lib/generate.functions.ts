@@ -1035,6 +1035,7 @@ export type GenerationResult = {
   activities: Activity[];
   activity_matches: ActivityMatch[];
   video: { title: string; scenes: VideoScene[] };
+  figures_report?: FiguresReport;
 };
 
 function supa() {
