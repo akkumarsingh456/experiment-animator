@@ -702,6 +702,20 @@ export function extractFigureRefs(text: string): string[] {
   return [...out].slice(0, 6);
 }
 
+export type FigurePlacementCheck = {
+  /** Figures whose refs actually appear in this slide's own source text. */
+  expected: string[];
+  /** Figures the slide claims to reference (from `slide.figures`). */
+  placed: string[];
+  /** Placed figures that match the slide's own text. */
+  correct: string[];
+  /** Placed figures NOT in this slide's text — likely swapped from another slide. */
+  swapped: string[];
+  /** Expected figures that the slide never lists. */
+  missing: string[];
+  pass: boolean;
+};
+
 export type SlideVerification = {
   coverage: number;
   matched: number;
@@ -710,7 +724,18 @@ export type SlideVerification = {
   diagram_match: number;
   diagram_label_fit: "pass" | "adjusted";
   diagram_issues: string[];
+  figures_check?: FigurePlacementCheck;
   overall_pass: boolean;
+};
+
+export type FiguresReport = {
+  /** Every unique figure ref present anywhere in the NCERT context. */
+  context_figures: string[];
+  /** Figures referenced in context but not placed on any slide. */
+  unplaced: string[];
+  /** Slide indices with a failing figure-placement check. */
+  failing_slide_indices: number[];
+  pass: boolean;
 };
 
 export type ModelCategoryKey =
@@ -1010,6 +1035,7 @@ export type GenerationResult = {
   activities: Activity[];
   activity_matches: ActivityMatch[];
   video: { title: string; scenes: VideoScene[] };
+  figures_report?: FiguresReport;
 };
 
 function supa() {
@@ -1383,6 +1409,78 @@ function validateSlideAgainstContext(slide: Slide, contextNorm: string, slideInd
     overall_pass,
   };
 }
+
+/** Normalize a figure ref like "Fig. 12.3", "figure 12.3", "Fig 12.3a" → "fig 12.3a". */
+function normalizeFigureRef(ref: string): string {
+  return String(ref || "")
+    .toLowerCase()
+    .replace(/figure/g, "fig")
+    .replace(/[.\s]+/g, " ")
+    .replace(/^fig\s+/, "fig ")
+    .trim();
+}
+
+/**
+ * Cross-check every NCERT figure reference against the slide it was placed on.
+ * A slide "correctly places" a figure iff that figure ref appears in the
+ * slide's own source text (grounding + bullets + notes + chapter_text +
+ * ncert_quote + caption). Figures found in the full context but placed on no
+ * slide are flagged as `unplaced`.
+ */
+export function validateFigurePlacement(slides: Slide[], context: string): { report: FiguresReport; perSlide: FigurePlacementCheck[] } {
+  const allInContext = extractFigureRefs(context);
+  const contextSet = new Set(allInContext.map(normalizeFigureRef));
+
+  const perSlide: FigurePlacementCheck[] = slides.map((s) => {
+    const ownText = [
+      s.title,
+      s.caption || "",
+      s.ncert_quote || "",
+      s.grounding || "",
+      s.chapter_text || "",
+      ...(s.bullets || []),
+      ...(s.notes || []),
+    ].join(" ");
+    const expected = extractFigureRefs(ownText);
+    const expectedNorm = new Set(expected.map(normalizeFigureRef));
+    const placed = (s.figures || []).slice();
+    const placedNorm = placed.map(normalizeFigureRef);
+
+    const correct = placed.filter((_, i) => expectedNorm.has(placedNorm[i]));
+    const swapped = placed.filter((_, i) => !expectedNorm.has(placedNorm[i]));
+    const missing = expected.filter((e) => !placedNorm.includes(normalizeFigureRef(e)));
+
+    return {
+      expected,
+      placed,
+      correct,
+      swapped,
+      missing,
+      pass: swapped.length === 0 && missing.length === 0,
+    };
+  });
+
+  const placedAcross = new Set<string>();
+  slides.forEach((s) => (s.figures || []).forEach((f) => placedAcross.add(normalizeFigureRef(f))));
+  const unplaced = allInContext.filter((f) => !placedAcross.has(normalizeFigureRef(f)));
+
+  const failing_slide_indices = perSlide.reduce<number[]>((acc, c, i) => {
+    if (!c.pass) acc.push(i);
+    return acc;
+  }, []);
+
+  return {
+    perSlide,
+    report: {
+      context_figures: allInContext,
+      unplaced,
+      failing_slide_indices,
+      pass: unplaced.length === 0 && failing_slide_indices.length === 0,
+    },
+  };
+}
+
+
 
 function buildLocalSlides(topic: string, subtopics: string, context: string, subject = "", mode: "topic" | "chapter" = "topic"): Slide[] {
   const rawSentences = uniqueByNormalized(splitSentences(context));
@@ -1833,7 +1931,15 @@ export const generateLesson = createServerFn({ method: "POST" })
     const lessonMode = isLanguageSubject(data.subject) ? "chapter" : data.mode;
     const slidesRaw = buildLocalSlides(data.topic, data.subtopics, context, data.subject, lessonMode);
     const contextNorm = normalizeText(context);
-    const contentSlides = slidesRaw.map((sl, i) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm, i) }));
+    const preSlides = slidesRaw.map((sl, i) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm, i) }));
+
+    // Figure-placement validation: verify every NCERT figure ref extracted
+    // from the PDF is on the correct slide (no swaps, no missing).
+    const figCheck = validateFigurePlacement(preSlides, context);
+    const contentSlides = preSlides.map((sl, i) => ({
+      ...sl,
+      verification: { ...(sl.verification as SlideVerification), figures_check: figCheck.perSlide[i], overall_pass: (sl.verification?.overall_pass ?? false) && figCheck.perSlide[i].pass },
+    }));
 
     // Append 10 MCQ slides (unique per generation — pool is shuffled from the
     // current NCERT sentences, so re-running produces different questions).
@@ -1874,6 +1980,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       activities,
       activity_matches,
       video,
+      figures_report: figCheck.report,
     };
 
     // Save lesson cache (best-effort)
