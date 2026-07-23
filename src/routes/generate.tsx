@@ -609,6 +609,19 @@ function SlideCanvas({
                   Notes {v.coverage}% · Diagram {v.diagram_match}% · Labels {v.diagram_label_fit}
                 </Badge>
               )}
+              {v?.figures_check && (v.figures_check.expected.length > 0 || v.figures_check.placed.length > 0) && (
+                <Badge
+                  variant="outline"
+                  className={`rounded-full text-[10px] ${v.figures_check.pass ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" : "bg-rose-500/10 text-rose-700 border-rose-500/30"}`}
+                  title={
+                    v.figures_check.pass
+                      ? `Figures OK: ${v.figures_check.correct.join(", ") || "none"}`
+                      : `Swapped: ${v.figures_check.swapped.join(", ") || "—"} · Missing: ${v.figures_check.missing.join(", ") || "—"}`
+                  }
+                >
+                  Figures {v.figures_check.pass ? "✓" : "⚠"} {v.figures_check.correct.length}/{v.figures_check.expected.length}
+                </Badge>
+              )}
               <Badge variant="outline" className="rounded-full text-[10px]">
                 {v?.overall_pass ? "NCERT ✓ verified" : "NCERT-grounded"}
               </Badge>
