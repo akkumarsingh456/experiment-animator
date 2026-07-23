@@ -1931,7 +1931,15 @@ export const generateLesson = createServerFn({ method: "POST" })
     const lessonMode = isLanguageSubject(data.subject) ? "chapter" : data.mode;
     const slidesRaw = buildLocalSlides(data.topic, data.subtopics, context, data.subject, lessonMode);
     const contextNorm = normalizeText(context);
-    const contentSlides = slidesRaw.map((sl, i) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm, i) }));
+    const preSlides = slidesRaw.map((sl, i) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm, i) }));
+
+    // Figure-placement validation: verify every NCERT figure ref extracted
+    // from the PDF is on the correct slide (no swaps, no missing).
+    const figCheck = validateFigurePlacement(preSlides, context);
+    const contentSlides = preSlides.map((sl, i) => ({
+      ...sl,
+      verification: { ...(sl.verification as SlideVerification), figures_check: figCheck.perSlide[i], overall_pass: (sl.verification?.overall_pass ?? false) && figCheck.perSlide[i].pass },
+    }));
 
     // Append 10 MCQ slides (unique per generation — pool is shuffled from the
     // current NCERT sentences, so re-running produces different questions).
