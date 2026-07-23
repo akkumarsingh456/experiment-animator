@@ -702,6 +702,20 @@ export function extractFigureRefs(text: string): string[] {
   return [...out].slice(0, 6);
 }
 
+export type FigurePlacementCheck = {
+  /** Figures whose refs actually appear in this slide's own source text. */
+  expected: string[];
+  /** Figures the slide claims to reference (from `slide.figures`). */
+  placed: string[];
+  /** Placed figures that match the slide's own text. */
+  correct: string[];
+  /** Placed figures NOT in this slide's text — likely swapped from another slide. */
+  swapped: string[];
+  /** Expected figures that the slide never lists. */
+  missing: string[];
+  pass: boolean;
+};
+
 export type SlideVerification = {
   coverage: number;
   matched: number;
@@ -710,7 +724,18 @@ export type SlideVerification = {
   diagram_match: number;
   diagram_label_fit: "pass" | "adjusted";
   diagram_issues: string[];
+  figures_check?: FigurePlacementCheck;
   overall_pass: boolean;
+};
+
+export type FiguresReport = {
+  /** Every unique figure ref present anywhere in the NCERT context. */
+  context_figures: string[];
+  /** Figures referenced in context but not placed on any slide. */
+  unplaced: string[];
+  /** Slide indices with a failing figure-placement check. */
+  failing_slide_indices: number[];
+  pass: boolean;
 };
 
 export type ModelCategoryKey =
