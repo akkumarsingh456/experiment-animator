@@ -206,8 +206,21 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     }
   }
 
-  // 2D diagrams are now client-rendered with Mermaid.js and 3D via Spline.
-  // No server image generation is triggered per slide.
+  // Auto-prefetch server-rendered slide images (cheap local SVGs) so PPTX / PDF /
+  // Presentation Mode always ship with visuals — no per-slide click required.
+  useEffect(() => {
+    if (!verified) return;
+    let cancelled = false;
+    (async () => {
+      for (let i = 0; i < slides.length; i++) {
+        if (cancelled) return;
+        await ensureImage(i, { cacheOnly: true });
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verified, slides.length]);
+
 
 
   async function downloadPDF() {
@@ -670,7 +683,7 @@ function SlideCanvas({
                 <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight leading-tight line-clamp-2">{slide.title}</h3>
               )}
               <ul className="space-y-1 overflow-hidden">
-                {(slide.bullets || []).slice(0, 5).map((b, i) => (
+                {(slide.bullets || []).map((b, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <span className="mt-1.5 h-1 w-1 rounded-full bg-primary shrink-0" />
                     {editing ? (
@@ -684,7 +697,7 @@ function SlideCanvas({
                         className="min-h-[32px] resize-none text-xs"
                       />
                     ) : (
-                      <p className="text-[12px] leading-snug line-clamp-2">{b}</p>
+                      <p className="text-[12px] leading-snug">{b}</p>
                     )}
                   </li>
                 ))}
@@ -693,7 +706,7 @@ function SlideCanvas({
                 <div className="rounded-md bg-secondary/50 border border-border/50 p-2 overflow-hidden">
                   <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-1">NCERT notes</div>
                   <ol className="space-y-0.5 list-decimal list-inside text-[11px] leading-snug text-foreground/85">
-                    {slide.notes.slice(0, 3).map((n, i) => <li key={i} className="line-clamp-2">{n}</li>)}
+                    {slide.notes.map((n, i) => <li key={i}>{n}</li>)}
                   </ol>
                 </div>
               ) : null}
@@ -701,12 +714,20 @@ function SlideCanvas({
                 <div className="rounded-md bg-accent/20 border border-border/50 p-2 overflow-hidden">
                   <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-1">Key terms</div>
                   <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] leading-snug">
-                    {slide.key_terms.slice(0, 4).map((t, i) => (
-                      <div key={i} className="line-clamp-2"><dt className="font-semibold inline">{t.term}: </dt><dd className="inline text-muted-foreground">{t.meaning}</dd></div>
+                    {slide.key_terms.map((t, i) => (
+                      <div key={i}><dt className="font-semibold inline">{t.term}: </dt><dd className="inline text-muted-foreground">{t.meaning}</dd></div>
                     ))}
                   </dl>
                 </div>
               ) : null}
+              {editing && (
+                <Input
+                  value={slide.caption ?? ""}
+                  placeholder="Caption (optional)"
+                  onChange={(e) => onChange({ caption: e.target.value })}
+                  className="text-[11px] h-8"
+                />
+              )}
               {slide.figures?.length ? (
                 <p className="text-[10px] text-muted-foreground">📖 Refer NCERT {slide.figures.join(", ")}</p>
               ) : null}
