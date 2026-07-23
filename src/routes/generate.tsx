@@ -299,6 +299,36 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               </div>
             </div>
 
+            {result.figures_report && result.figures_report.context_figures.length > 0 && (
+              <div
+                className={`mb-3 rounded-lg border px-3 py-2 text-xs print:hidden ${
+                  result.figures_report.pass
+                    ? "bg-emerald-500/5 border-emerald-500/30 text-emerald-800"
+                    : "bg-amber-500/5 border-amber-500/40 text-amber-900"
+                }`}
+              >
+                <div className="font-semibold">
+                  Figure placement {result.figures_report.pass ? "✓ verified" : "⚠ needs review"} —
+                  {" "}{result.figures_report.context_figures.length} NCERT figure ref
+                  {result.figures_report.context_figures.length === 1 ? "" : "s"} found in source.
+                </div>
+                {!result.figures_report.pass && (
+                  <div className="mt-1 space-y-0.5">
+                    {result.figures_report.unplaced.length > 0 && (
+                      <div>Unplaced (not on any slide): {result.figures_report.unplaced.join(", ")}</div>
+                    )}
+                    {result.figures_report.failing_slide_indices.length > 0 && (
+                      <div>
+                        Slides needing a fix:{" "}
+                        {result.figures_report.failing_slide_indices.map((i) => i + 1).join(", ")}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+
             <div key={`slide-${activeIdx}`} className="animate-in fade-in slide-in-from-right-4 duration-500">
               <SlideCanvas
                 slide={slides[activeIdx]}
