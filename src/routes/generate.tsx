@@ -206,15 +206,16 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     }
   }
 
-  // Auto-prefetch server-rendered slide images (cheap local SVGs) so PPTX / PDF /
-  // Presentation Mode always ship with visuals — no per-slide click required.
+  // Auto-generate the Gemini 2D flowchart infographic for EVERY slide once
+  // verification passes. Results are cached in `slide_image_cache` so repeat
+  // runs of the same lesson return instantly with zero extra credit cost.
   useEffect(() => {
     if (!verified) return;
     let cancelled = false;
     (async () => {
       for (let i = 0; i < slides.length; i++) {
         if (cancelled) return;
-        await ensureImage(i, { cacheOnly: true });
+        await ensureImage(i, { cacheOnly: false });
       }
     })();
     return () => { cancelled = true; };
