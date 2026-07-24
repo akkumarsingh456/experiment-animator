@@ -929,33 +929,41 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
           </div>
 
           {/* Body: text left, diagram right — both clipped to A4 area */}
-          <div className="grid grid-cols-[1.3fr_1fr] min-h-0 overflow-hidden">
-            <div className="p-5 min-h-0 overflow-hidden flex flex-col gap-2">
-              <ul className="space-y-1.5 overflow-hidden">
-                {(s.bullets || []).slice(0, 6).map((b, k) => (
-                  <li key={k} className="flex gap-2 text-[clamp(11px,1.15vw,16px)] leading-snug">
-                    <span className="opacity-50 shrink-0">{k + 1}.</span>
-                    <span className="line-clamp-2">{b}</span>
-                  </li>
-                ))}
-              </ul>
-              {s.notes?.length ? (
-                <div className="rounded-md bg-secondary/60 border border-border/40 p-2 overflow-hidden">
-                  <div className="text-[9px] font-semibold uppercase tracking-wider opacity-70 mb-1">NCERT notes</div>
-                  <ol className="space-y-0.5 list-decimal list-inside text-[clamp(10px,1vw,13px)] leading-snug">
-                    {s.notes.slice(0, 3).map((n, k) => <li key={k} className="line-clamp-2">{n}</li>)}
-                  </ol>
-                </div>
-              ) : null}
-              {s.key_terms?.length ? (
-                <div className="text-[clamp(10px,1vw,13px)] leading-snug overflow-hidden">
-                  {s.key_terms.slice(0, 3).map((t, k) => (
-                    <div key={k} className="line-clamp-1"><span className="font-semibold">{t.term}:</span> <span className="opacity-80">{t.meaning}</span></div>
-                  ))}
-                </div>
-              ) : null}
-              {s.ncert_quote && (
-                <p className="italic opacity-70 border-l-2 border-primary/40 pl-2 text-[clamp(10px,0.95vw,12px)] line-clamp-2">"{s.ncert_quote}"</p>
+          <div className="grid grid-cols-[1.35fr_1fr] min-h-0 overflow-hidden">
+            <div className="p-5 min-h-0 overflow-auto flex flex-col gap-2">
+              {s.kind === "chapter" && s.chapter_text ? (
+                <p className="text-[clamp(11px,1.05vw,15px)] leading-relaxed whitespace-pre-wrap">
+                  {s.chapter_text}
+                </p>
+              ) : (
+                <>
+                  <ul className="space-y-1.5">
+                    {(s.bullets || []).map((b, k) => (
+                      <li key={k} className="flex gap-2 text-[clamp(11px,1.1vw,15px)] leading-snug">
+                        <span className="opacity-50 shrink-0">{k + 1}.</span>
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {s.notes?.length ? (
+                    <div className="rounded-md bg-secondary/60 border border-border/40 p-2">
+                      <div className="text-[9px] font-semibold uppercase tracking-wider opacity-70 mb-1">NCERT notes</div>
+                      <ol className="space-y-0.5 list-decimal list-inside text-[clamp(10px,0.95vw,13px)] leading-snug">
+                        {s.notes.map((n, k) => <li key={k}>{n}</li>)}
+                      </ol>
+                    </div>
+                  ) : null}
+                  {s.key_terms?.length ? (
+                    <div className="text-[clamp(10px,0.95vw,13px)] leading-snug space-y-0.5">
+                      {s.key_terms.map((t, k) => (
+                        <div key={k}><span className="font-semibold">{t.term}:</span> <span className="opacity-80">{t.meaning}</span></div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {s.ncert_quote && (
+                    <p className="italic opacity-70 border-l-2 border-primary/40 pl-2 text-[clamp(10px,0.9vw,12px)]">"{s.ncert_quote}"</p>
+                  )}
+                </>
               )}
             </div>
 
