@@ -672,7 +672,7 @@ function SlideCanvas({
           </div>
 
           <div className="grid grid-cols-[1.35fr_1fr] min-h-0 overflow-hidden">
-            <div className="p-4 sm:p-5 flex flex-col gap-2 min-h-0 overflow-hidden">
+            <div className="p-4 sm:p-5 flex flex-col gap-2 min-h-0 overflow-auto">
               {editing ? (
                 <Input
                   value={slide.title}
@@ -680,9 +680,9 @@ function SlideCanvas({
                   className="font-display text-lg sm:text-xl font-bold border-0 px-0 shadow-none focus-visible:ring-0 h-auto"
                 />
               ) : (
-                <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight leading-tight line-clamp-2">{slide.title}</h3>
+                <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight leading-tight">{slide.title}</h3>
               )}
-              <ul className="space-y-1 overflow-hidden">
+              <ul className="space-y-1">
                 {(slide.bullets || []).map((b, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <span className="mt-1.5 h-1 w-1 rounded-full bg-primary shrink-0" />
