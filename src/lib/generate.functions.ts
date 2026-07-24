@@ -42,7 +42,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     const cacheKey = hashKey([
-      "img-v6-napkin-rich",
+      "img-v7-infographic-flow",
       data.klass,
       data.subject,
       String(data.slideIndex),
