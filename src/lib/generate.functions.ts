@@ -168,15 +168,30 @@ async function generateGeminiDiagram(opts: {
   const titleLower = (opts.title || "").toLowerCase();
   const notesLower = notes.toLowerCase();
   const hay = `${titleLower} ${notesLower} ${(opts.visualPrompt || "").toLowerCase()}`;
-  const archetype =
-    /cycle|carbon|water cycle|nitrogen|krebs|calvin|menstrual|cell cycle/.test(hay) ? "circular cycle diagram with arrows returning to start"
-    : /step|procedure|process|method|algorithm|mechanism|flow|pathway|reaction/.test(hay) ? "left-to-right stepwise flow diagram with arrow connectors between labelled stages"
-    : /vs\.?|versus|compare|difference|contrast|ideal.*non|non.?ideal/.test(hay) ? "side-by-side comparison layout: two columns with matching labelled rows"
-    : /parts|structure|anatomy|apparatus|setup|diagram of|labelled|labeled/.test(hay) ? "central labelled illustration with callout lines pointing to named parts"
-    : /timeline|history|year|era|period/.test(hay) ? "horizontal timeline with dated milestones"
-    : /classif|type|kind|category|hierarchy|tree/.test(hay) ? "hierarchical tree branching from a root concept into typed sub-nodes"
-    : /formula|equation|law|derivation|graph|plot|curve/.test(hay) ? "annotated formula card plus a small labelled graph with axes"
-    : "clean concept map: central title node with 4-6 labelled satellite nodes each carrying a one-line explanation";
+  // Rotate through 8 distinct archetypes by slideIndex so no two of the next 9
+  // slides share the same structure, even when the topic keywords overlap.
+  const archetypes = [
+    "clean radial concept map: central title node with 5-6 labelled satellite nodes each with a one-line explanation",
+    "left-to-right stepwise flow diagram with arrow connectors between labelled stages",
+    "circular cycle diagram with 5-6 stages and arrows returning to the start",
+    "hierarchical tree branching from a root concept into typed sub-nodes",
+    "side-by-side comparison layout: two columns with matching labelled rows",
+    "central labelled illustration with callout lines pointing to named parts",
+    "horizontal timeline with dated milestones and short captions",
+    "annotated formula card plus a small labelled graph with axes",
+  ];
+  const semanticIndex =
+    /cycle|carbon|water cycle|nitrogen|krebs|calvin|menstrual|cell cycle/.test(hay) ? 2
+    : /step|procedure|process|method|algorithm|mechanism|flow|pathway|reaction/.test(hay) ? 1
+    : /vs\.?|versus|compare|difference|contrast|ideal.*non|non.?ideal/.test(hay) ? 4
+    : /parts|structure|anatomy|apparatus|setup|diagram of|labelled|labeled/.test(hay) ? 5
+    : /timeline|history|year|era|period/.test(hay) ? 6
+    : /classif|type|kind|category|hierarchy|tree/.test(hay) ? 3
+    : /formula|equation|law|derivation|graph|plot|curve/.test(hay) ? 7
+    : 0;
+  // Blend semantic match with slideIndex rotation so identical topics still vary.
+  const idx = ((opts.slideIndex ?? 0) + semanticIndex) % archetypes.length;
+  const archetype = archetypes[idx];
 
   const palette =
     subj.includes("chem") ? "muted teal + warm sand + soft coral accents"
