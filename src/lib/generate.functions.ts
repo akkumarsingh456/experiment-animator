@@ -151,6 +151,7 @@ async function generateGeminiDiagram(opts: {
   visualPrompt: string;
   subject: string;
   klass: string;
+  slideIndex?: number;
 }): Promise<string | null> {
   const key = process.env.LOVABLE_API_KEY;
   if (!key) return null;
