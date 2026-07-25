@@ -14,8 +14,6 @@ import {
   type GenerationResult,
   type Slide,
 } from "@/lib/generate.functions";
-import { ReactFlowDiagram } from "@/components/ReactFlowDiagram";
-import { buildFlowGraph } from "@/lib/flow-layouts";
 import { SimulationViewer } from "@/components/SimulationViewer";
 import { SimulationOverrideEditor } from "@/components/SimulationOverrideEditor";
 import { pickSimulations } from "@/config/simulations";
