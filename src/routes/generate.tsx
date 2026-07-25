@@ -974,13 +974,17 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
               )}
             </div>
 
-            {/* Diagram column — 2D React Flow (zoomable, exportable) + live sim */}
+            {/* Diagram column — Gemini 2D infographic + live sim */}
             <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col p-3 min-h-0 overflow-hidden gap-2">
-              <div className="relative w-full flex-[3] min-h-0 rounded-md bg-background/80 border border-border/40 p-2 overflow-hidden">
-                <ReactFlowDiagram
-                  graph={s.flow_graph ?? buildFlowGraph(s.title || "NCERT concept", s.bullets || [], 0)}
-                  exportName={`${(s.title || "flow").slice(0, 40)}`}
-                />
+              <div className="relative w-full flex-[3] min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden grid place-items-center">
+                {img ? (
+                  <img src={img} alt={`${s.title} — NCERT 2D infographic`} className="w-full h-full object-contain" />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-[10px] text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    Drawing 2D infographic…
+                  </div>
+                )}
               </div>
               <div className="relative w-full flex-[2] min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden">
                 <SimPanel slide={s} index={i} subject={subject} />
