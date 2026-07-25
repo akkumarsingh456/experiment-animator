@@ -41,8 +41,9 @@ export const generateSlideImage = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
+    // v8: Gemini-only pipeline. Local SVG fallback removed per user request.
     const cacheKey = hashKey([
-      "img-v7-infographic-flow",
+      "img-v8-gemini-only",
       data.klass,
       data.subject,
       String(data.slideIndex),
@@ -98,11 +99,8 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       return { url: "", cached: false, skipped: true };
     }
 
-    // 1) Primary: Gemini 2.5 Flash Image (Nano Banana) via Lovable AI Gateway —
-    //    produces Napkin-AI-style labelled infographic diagrams strictly from
-    //    the current slide's title/bullets/notes.
+    // Gemini 2.5 Flash Image (Nano Banana) — the ONLY 2D generator.
     let url = "";
-    let source: "gemini" | "local" = "local";
     let geminiError: string | undefined;
     try {
       const gem = await generateGeminiDiagram({
@@ -112,19 +110,18 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         visualPrompt: data.visual_prompt,
         subject: data.subject,
         klass: data.klass,
+        slideIndex: data.slideIndex,
       });
-      if (gem) {
-        url = gem;
-        source = "gemini";
-      }
+      if (gem) url = gem;
     } catch (e) {
       geminiError = e instanceof Error ? e.message : String(e);
       console.warn("gemini diagram generation failed", geminiError);
     }
 
-    // 2) Fallback: high-fidelity local SVG (no external call).
     if (!url) {
-      url = generateDiagramSVG(data.title, data.bullets, data.visual_prompt, data.subject, data.grounding, data.slideIndex);
+      // No local SVG fallback — return empty so the UI shows a retry state.
+      await logAudit({ status: "gemini_failed", cached: false, gemini_error: geminiError });
+      return { url: "", cached: false, error: geminiError || "gemini_no_image" };
     }
 
     try {
@@ -140,8 +137,8 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       console.warn("slide image cache write failed", e);
     }
 
-    await logAudit({ status: "success", cached: false, image_url: url, source, gemini_error: geminiError });
-    return { url, cached: false, source };
+    await logAudit({ status: "success", cached: false, image_url: url, source: "gemini" });
+    return { url, cached: false, source: "gemini" as const };
   });
 
 /** Generate a Napkin-AI-style labelled infographic via Gemini 2.5 Flash Image
