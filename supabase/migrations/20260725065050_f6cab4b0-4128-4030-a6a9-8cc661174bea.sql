@@ -1,0 +1,1 @@
+TRUNCATE TABLE public.slide_image_cache; TRUNCATE TABLE public.slide_image_audit;

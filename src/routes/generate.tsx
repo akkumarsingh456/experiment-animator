@@ -14,8 +14,6 @@ import {
   type GenerationResult,
   type Slide,
 } from "@/lib/generate.functions";
-import { ReactFlowDiagram } from "@/components/ReactFlowDiagram";
-import { buildFlowGraph } from "@/lib/flow-layouts";
 import { SimulationViewer } from "@/components/SimulationViewer";
 import { SimulationOverrideEditor } from "@/components/SimulationOverrideEditor";
 import { pickSimulations } from "@/config/simulations";
@@ -737,12 +735,20 @@ function SlideCanvas({
               ) : null}
             </div>
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0">
-              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D flow · summary</div>
-              <div className="relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 p-2 min-h-0">
-                <ReactFlowDiagram
-                  graph={slide.flow_graph ?? buildFlowGraph(slide.title || "NCERT concept", slide.bullets || [], 0)}
-                  exportName={`${(slide.title || "flow").slice(0, 40)}`}
-                />
+              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · Gemini</div>
+              <div className="relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 grid place-items-center">
+                {imageUrl ? (
+                  <img src={imageUrl} alt={`${slide.title} — NCERT 2D infographic`} className="w-full h-full object-contain" />
+                ) : imageLoading ? (
+                  <div className="flex flex-col items-center gap-2 text-[10px] text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    Drawing 2D infographic from NCERT notes…
+                  </div>
+                ) : (
+                  <button onClick={onRegenImage} className="text-[10px] text-primary underline hover:no-underline">
+                    Generate 2D infographic
+                  </button>
+                )}
               </div>
               {/* Hide the 3D / simulation panel entirely for language subjects. */}
               {!lang && (
@@ -968,13 +974,17 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
               )}
             </div>
 
-            {/* Diagram column — 2D React Flow (zoomable, exportable) + live sim */}
+            {/* Diagram column — Gemini 2D infographic + live sim */}
             <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col p-3 min-h-0 overflow-hidden gap-2">
-              <div className="relative w-full flex-[3] min-h-0 rounded-md bg-background/80 border border-border/40 p-2 overflow-hidden">
-                <ReactFlowDiagram
-                  graph={s.flow_graph ?? buildFlowGraph(s.title || "NCERT concept", s.bullets || [], 0)}
-                  exportName={`${(s.title || "flow").slice(0, 40)}`}
-                />
+              <div className="relative w-full flex-[3] min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden grid place-items-center">
+                {img ? (
+                  <img src={img} alt={`${s.title} — NCERT 2D infographic`} className="w-full h-full object-contain" />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-[10px] text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    Drawing 2D infographic…
+                  </div>
+                )}
               </div>
               <div className="relative w-full flex-[2] min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden">
                 <SimPanel slide={s} index={i} subject={subject} />

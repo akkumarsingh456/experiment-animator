@@ -41,8 +41,9 @@ export const generateSlideImage = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
+    // v8: Gemini-only pipeline. Local SVG fallback removed per user request.
     const cacheKey = hashKey([
-      "img-v7-infographic-flow",
+      "img-v8-gemini-only",
       data.klass,
       data.subject,
       String(data.slideIndex),
@@ -98,11 +99,8 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       return { url: "", cached: false, skipped: true };
     }
 
-    // 1) Primary: Gemini 2.5 Flash Image (Nano Banana) via Lovable AI Gateway —
-    //    produces Napkin-AI-style labelled infographic diagrams strictly from
-    //    the current slide's title/bullets/notes.
+    // Gemini 2.5 Flash Image (Nano Banana) — the ONLY 2D generator.
     let url = "";
-    let source: "gemini" | "local" = "local";
     let geminiError: string | undefined;
     try {
       const gem = await generateGeminiDiagram({
@@ -112,19 +110,18 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         visualPrompt: data.visual_prompt,
         subject: data.subject,
         klass: data.klass,
+        slideIndex: data.slideIndex,
       });
-      if (gem) {
-        url = gem;
-        source = "gemini";
-      }
+      if (gem) url = gem;
     } catch (e) {
       geminiError = e instanceof Error ? e.message : String(e);
       console.warn("gemini diagram generation failed", geminiError);
     }
 
-    // 2) Fallback: high-fidelity local SVG (no external call).
     if (!url) {
-      url = generateDiagramSVG(data.title, data.bullets, data.visual_prompt, data.subject, data.grounding, data.slideIndex);
+      // No local SVG fallback — return empty so the UI shows a retry state.
+      await logAudit({ status: "gemini_failed", cached: false, gemini_error: geminiError });
+      return { url: "", cached: false, error: geminiError || "gemini_no_image" };
     }
 
     try {
@@ -140,8 +137,8 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       console.warn("slide image cache write failed", e);
     }
 
-    await logAudit({ status: "success", cached: false, image_url: url, source, gemini_error: geminiError });
-    return { url, cached: false, source };
+    await logAudit({ status: "success", cached: false, image_url: url, source: "gemini" });
+    return { url, cached: false, source: "gemini" as const };
   });
 
 /** Generate a Napkin-AI-style labelled infographic via Gemini 2.5 Flash Image
@@ -154,6 +151,7 @@ async function generateGeminiDiagram(opts: {
   visualPrompt: string;
   subject: string;
   klass: string;
+  slideIndex?: number;
 }): Promise<string | null> {
   const key = process.env.LOVABLE_API_KEY;
   if (!key) return null;
@@ -170,15 +168,30 @@ async function generateGeminiDiagram(opts: {
   const titleLower = (opts.title || "").toLowerCase();
   const notesLower = notes.toLowerCase();
   const hay = `${titleLower} ${notesLower} ${(opts.visualPrompt || "").toLowerCase()}`;
-  const archetype =
-    /cycle|carbon|water cycle|nitrogen|krebs|calvin|menstrual|cell cycle/.test(hay) ? "circular cycle diagram with arrows returning to start"
-    : /step|procedure|process|method|algorithm|mechanism|flow|pathway|reaction/.test(hay) ? "left-to-right stepwise flow diagram with arrow connectors between labelled stages"
-    : /vs\.?|versus|compare|difference|contrast|ideal.*non|non.?ideal/.test(hay) ? "side-by-side comparison layout: two columns with matching labelled rows"
-    : /parts|structure|anatomy|apparatus|setup|diagram of|labelled|labeled/.test(hay) ? "central labelled illustration with callout lines pointing to named parts"
-    : /timeline|history|year|era|period/.test(hay) ? "horizontal timeline with dated milestones"
-    : /classif|type|kind|category|hierarchy|tree/.test(hay) ? "hierarchical tree branching from a root concept into typed sub-nodes"
-    : /formula|equation|law|derivation|graph|plot|curve/.test(hay) ? "annotated formula card plus a small labelled graph with axes"
-    : "clean concept map: central title node with 4-6 labelled satellite nodes each carrying a one-line explanation";
+  // Rotate through 8 distinct archetypes by slideIndex so no two of the next 9
+  // slides share the same structure, even when the topic keywords overlap.
+  const archetypes = [
+    "clean radial concept map: central title node with 5-6 labelled satellite nodes each with a one-line explanation",
+    "left-to-right stepwise flow diagram with arrow connectors between labelled stages",
+    "circular cycle diagram with 5-6 stages and arrows returning to the start",
+    "hierarchical tree branching from a root concept into typed sub-nodes",
+    "side-by-side comparison layout: two columns with matching labelled rows",
+    "central labelled illustration with callout lines pointing to named parts",
+    "horizontal timeline with dated milestones and short captions",
+    "annotated formula card plus a small labelled graph with axes",
+  ];
+  const semanticIndex =
+    /cycle|carbon|water cycle|nitrogen|krebs|calvin|menstrual|cell cycle/.test(hay) ? 2
+    : /step|procedure|process|method|algorithm|mechanism|flow|pathway|reaction/.test(hay) ? 1
+    : /vs\.?|versus|compare|difference|contrast|ideal.*non|non.?ideal/.test(hay) ? 4
+    : /parts|structure|anatomy|apparatus|setup|diagram of|labelled|labeled/.test(hay) ? 5
+    : /timeline|history|year|era|period/.test(hay) ? 6
+    : /classif|type|kind|category|hierarchy|tree/.test(hay) ? 3
+    : /formula|equation|law|derivation|graph|plot|curve/.test(hay) ? 7
+    : 0;
+  // Blend semantic match with slideIndex rotation so identical topics still vary.
+  const idx = ((opts.slideIndex ?? 0) + semanticIndex) % archetypes.length;
+  const archetype = archetypes[idx];
 
   const palette =
     subj.includes("chem") ? "muted teal + warm sand + soft coral accents"
