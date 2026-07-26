@@ -1,9 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -25,7 +28,11 @@ import {
   CheckCircle2,
   BookOpen,
   Search,
+  Loader2,
+  Plus,
+  X,
 } from "lucide-react";
+import { listChapters, listSubtopics } from "@/lib/catalog.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
