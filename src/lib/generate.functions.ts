@@ -99,29 +99,54 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       return { url: "", cached: false, skipped: true };
     }
 
-    // Gemini 2.5 Flash Image (Nano Banana) — the ONLY 2D generator.
+    // Try Gemini first (best quality). If credits are exhausted (402) or the
+    // gateway errors, fall back to a locally-rendered NCERT-style SVG so the
+    // 2D auto-generation ALWAYS produces an image — no blank retry state.
     let url = "";
+    let source: "gemini" | "svg" = "svg";
     let geminiError: string | undefined;
-    try {
-      const gem = await generateGeminiDiagram({
-        title: data.title,
-        bullets: data.bullets,
-        notes: data.grounding,
-        visualPrompt: data.visual_prompt,
-        subject: data.subject,
-        klass: data.klass,
-        slideIndex: data.slideIndex,
-      });
-      if (gem) url = gem;
-    } catch (e) {
-      geminiError = e instanceof Error ? e.message : String(e);
-      console.warn("gemini diagram generation failed", geminiError);
+    if (!geminiSoftDisabled()) {
+      try {
+        const gem = await generateGeminiDiagram({
+          title: data.title,
+          bullets: data.bullets,
+          notes: data.grounding,
+          visualPrompt: data.visual_prompt,
+          subject: data.subject,
+          klass: data.klass,
+          slideIndex: data.slideIndex,
+        });
+        if (gem) { url = gem; source = "gemini"; }
+      } catch (e) {
+        geminiError = e instanceof Error ? e.message : String(e);
+        if (/\b402\b|payment_required|Not enough credits/i.test(geminiError)) {
+          softDisableGemini();
+        }
+        console.warn("gemini diagram generation failed", geminiError);
+      }
+    } else {
+      geminiError = "gemini_soft_disabled_no_credits";
     }
 
     if (!url) {
-      // No local SVG fallback — return empty so the UI shows a retry state.
-      await logAudit({ status: "gemini_failed", cached: false, gemini_error: geminiError });
-      return { url: "", cached: false, error: geminiError || "gemini_no_image" };
+      try {
+        url = generateDiagramSVG(
+          data.title,
+          data.bullets || [],
+          data.visual_prompt || "",
+          data.subject || "",
+          data.grounding || "",
+          data.slideIndex,
+        );
+        source = "svg";
+      } catch (e) {
+        console.warn("svg fallback failed", e);
+      }
+    }
+
+    if (!url) {
+      await logAudit({ status: "no_image", cached: false, gemini_error: geminiError });
+      return { url: "", cached: false, error: geminiError || "no_image" };
     }
 
     try {
@@ -137,8 +162,8 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       console.warn("slide image cache write failed", e);
     }
 
-    await logAudit({ status: "success", cached: false, image_url: url, source: "gemini" });
-    return { url, cached: false, source: "gemini" as const };
+    await logAudit({ status: "success", cached: false, image_url: url.slice(0, 200), source, gemini_error: geminiError });
+    return { url, cached: false, source };
   });
 
 /** Generate a Napkin-AI-style labelled infographic via Gemini 2.5 Flash Image
