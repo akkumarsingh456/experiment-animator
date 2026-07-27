@@ -12,6 +12,14 @@ function hashKey(parts: Array<string | undefined | null>) {
   return createHash("sha256").update(norm).digest("hex").slice(0, 40);
 }
 
+
+// Soft-disable Gemini image gen for the rest of the process once we see a
+// hard credit failure — avoids hammering the gateway with dozens of 402s and
+// lets SVG fallback serve subsequent slides instantly.
+let _geminiDisabledUntil = 0;
+function geminiSoftDisabled() { return Date.now() < _geminiDisabledUntil; }
+function softDisableGemini() { _geminiDisabledUntil = Date.now() + 10 * 60_000; }
+
 function cacheSupa() {
   return createClient<Database>(
     process.env.SUPABASE_URL!,
