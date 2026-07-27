@@ -204,21 +204,42 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     }
   }
 
-  // Auto-generate the Gemini 2D flowchart infographic for EVERY slide once
-  // verification passes. Results are cached in `slide_image_cache` so repeat
-  // runs of the same lesson return instantly with zero extra credit cost.
+  // Auto-generate the Gemini 2D infographic for EVERY slide once verification
+  // passes — regardless of subject (Physics, Chem, Bio, Math, Economics,
+  // History, Geography, Political Science, and language chapters alike).
+  // Results are cached in `slide_image_cache` keyed by class+subject+slide
+  // metadata so repeat runs of the same lesson return instantly. We run 3
+  // slides in parallel to keep the queue fast without hammering the gateway.
   useEffect(() => {
     if (!verified) return;
     let cancelled = false;
+    const CONCURRENCY = 3;
+    const indices = slides.map((_, i) => i);
     (async () => {
-      for (let i = 0; i < slides.length; i++) {
-        if (cancelled) return;
-        await ensureImage(i, { cacheOnly: false });
-      }
+      // First pass: instant cache lookup for every slide (no API call).
+      await Promise.all(indices.map((i) => ensureImage(i, { cacheOnly: true })));
+      if (cancelled) return;
+      // Second pass: generate fresh infographics for slides still missing one.
+      let cursor = 0;
+      const workers = Array.from({ length: CONCURRENCY }, async () => {
+        while (!cancelled) {
+          const i = cursor++;
+          if (i >= indices.length) return;
+          // Skip slides where the first pass already populated an image.
+          if (images[i]) continue;
+          await ensureImage(i, { cacheOnly: false });
+        }
+      });
+      await Promise.all(workers);
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verified, slides.length]);
+
+  // Live progress indicator so the teacher can verify every subject/slide is
+  // getting its 2D infographic auto-generated.
+  const generatedCount = Object.values(images).filter(Boolean).length;
+  const inFlightCount = Object.values(imgLoading).filter(Boolean).length;
 
 
 
