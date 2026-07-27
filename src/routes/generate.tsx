@@ -778,8 +778,9 @@ function SlideCanvas({
                     Drawing 2D infographic from NCERT notes…
                   </div>
                 ) : (
-                  <button onClick={onRegenImage} className="text-[10px] text-primary underline hover:no-underline">
-                    Generate 2D infographic
+                  <button onClick={onRegenImage} className="flex flex-col items-center gap-1 text-[10px] text-primary underline hover:no-underline">
+                    <span>Retry 2D infographic</span>
+                    <span className="text-muted-foreground no-underline">(Gemini · auto-cached)</span>
                   </button>
                 )}
               </div>
