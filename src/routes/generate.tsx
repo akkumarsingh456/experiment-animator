@@ -254,6 +254,20 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   // getting its 2D infographic auto-generated.
   const generatedCount = Object.values(images).filter(Boolean).length;
   const inFlightCount = Object.values(imgLoading).filter(Boolean).length;
+  const cachedCount = Object.values(imgStatus).filter((s) => s.state === "cached").length;
+  const freshCount = Object.values(imgStatus).filter((s) => s.state === "fresh").length;
+  const failedCount = Object.values(imgStatus).filter((s) => s.state === "failed").length;
+
+  async function retryAllFailed() {
+    const failedIdxs = Object.entries(imgStatus)
+      .filter(([, s]) => s.state === "failed")
+      .map(([k]) => Number(k));
+    for (const i of failedIdxs) {
+      // eslint-disable-next-line no-await-in-loop
+      await ensureImage(i, { force: true });
+    }
+  }
+
 
 
 
