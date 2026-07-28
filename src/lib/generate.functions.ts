@@ -104,13 +104,13 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       return { url: "", cached: false, skipped: true };
     }
 
-    // Try Gemini first (best quality). If credits are exhausted (402) or the
-    // gateway errors, fall back to a locally-rendered NCERT-style SVG so the
-    // 2D auto-generation ALWAYS produces an image — no blank retry state.
+    // Gemini-only: retry the image gateway up to 3 times with backoff. If
+    // every attempt fails, return an explicit error so the client queue can
+    // re-request later. No SVG/local fallback ever.
     let url = "";
-    let source: "gemini" | "svg" = "svg";
+    const source: "gemini" = "gemini";
     let geminiError: string | undefined;
-    if (!geminiSoftDisabled()) {
+    for (let attempt = 0; attempt < 3 && !url; attempt++) {
       try {
         const gem = await generateGeminiDiagram({
           title: data.title,
@@ -121,38 +121,21 @@ export const generateSlideImage = createServerFn({ method: "POST" })
           klass: data.klass,
           slideIndex: data.slideIndex,
         });
-        if (gem) { url = gem; source = "gemini"; }
+        if (gem) { url = gem; break; }
       } catch (e) {
         geminiError = e instanceof Error ? e.message : String(e);
-        if (/\b402\b|payment_required|Not enough credits/i.test(geminiError)) {
-          softDisableGemini();
-        }
-        console.warn("gemini diagram generation failed", geminiError);
+        console.warn(`gemini image attempt ${attempt + 1} failed`, geminiError);
+        // Don't retry on 402 (no credits) — surface immediately.
+        if (/\b402\b|payment_required|Not enough credits/i.test(geminiError)) break;
       }
-    } else {
-      geminiError = "gemini_soft_disabled_no_credits";
-    }
-
-    if (!url) {
-      try {
-        url = generateDiagramSVG(
-          data.title,
-          data.bullets || [],
-          data.visual_prompt || "",
-          data.subject || "",
-          data.grounding || "",
-          data.slideIndex,
-        );
-        source = "svg";
-      } catch (e) {
-        console.warn("svg fallback failed", e);
-      }
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
     }
 
     if (!url) {
       await logAudit({ status: "no_image", cached: false, gemini_error: geminiError });
-      return { url: "", cached: false, error: geminiError || "no_image" };
+      return { url: "", cached: false, error: geminiError || "gemini_no_image" };
     }
+
 
     try {
       await (db as any).from("slide_image_cache").upsert({
