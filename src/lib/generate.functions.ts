@@ -13,12 +13,9 @@ function hashKey(parts: Array<string | undefined | null>) {
 }
 
 
-// Soft-disable Gemini image gen for the rest of the process once we see a
-// hard credit failure — avoids hammering the gateway with dozens of 402s and
-// lets SVG fallback serve subsequent slides instantly.
-let _geminiDisabledUntil = 0;
-function geminiSoftDisabled() { return Date.now() < _geminiDisabledUntil; }
-function softDisableGemini() { _geminiDisabledUntil = Date.now() + 10 * 60_000; }
+// Gemini-only pipeline. No soft-disable, no SVG fallback — every request
+// attempts the Gemini image gateway; failures surface to the UI so the
+// auto-generation queue can retry.
 
 function cacheSupa() {
   return createClient<Database>(
