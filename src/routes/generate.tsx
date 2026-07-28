@@ -168,8 +168,10 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const [verified, setVerified] = useState(false);
   const [images, setImages] = useState<Record<number, string>>({});
   const [imgLoading, setImgLoading] = useState<Record<number, boolean>>({});
+  type ImgStatus = { state: "pending" | "loading" | "cached" | "fresh" | "failed"; error?: string; at?: number };
+  const [imgStatus, setImgStatus] = useState<Record<number, ImgStatus>>({});
 
-  useEffect(() => { setSlides(result.slides); setVerified(false); setActiveIdx(0); setImages({}); setImgLoading({}); }, [result]);
+  useEffect(() => { setSlides(result.slides); setVerified(false); setActiveIdx(0); setImages({}); setImgLoading({}); setImgStatus({}); }, [result]);
 
   function updateSlide(idx: number, patch: Partial<Slide>) {
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
@@ -181,6 +183,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     const s = slides[idx];
     if (!s) return;
     setImgLoading((m) => ({ ...m, [idx]: true }));
+    setImgStatus((m) => ({ ...m, [idx]: { state: "loading" } }));
     try {
       const r = await genImage({ data: {
         title: s.title,
@@ -195,14 +198,25 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         nocache: force,
         cacheOnly,
       } });
-      if (r.url) setImages((m) => ({ ...m, [idx]: r.url }));
+      if (r.url) {
+        setImages((m) => ({ ...m, [idx]: r.url }));
+        setImgStatus((m) => ({ ...m, [idx]: { state: r.cached ? "cached" : "fresh", at: Date.now() } }));
+      } else if (cacheOnly) {
+        // First-pass cache miss — leave as pending so second pass generates.
+        setImgStatus((m) => ({ ...m, [idx]: { state: "pending" } }));
+      } else {
+        setImgStatus((m) => ({ ...m, [idx]: { state: "failed", error: r.error || "no_image", at: Date.now() } }));
+      }
     } catch (e) {
       console.error("slide image failed", idx, e);
-      if (!cacheOnly) toast.error("Image generation failed — try again.");
+      const msg = e instanceof Error ? e.message : String(e);
+      setImgStatus((m) => ({ ...m, [idx]: { state: "failed", error: msg, at: Date.now() } }));
+      if (!cacheOnly) toast.error("Image generation failed — will retry.");
     } finally {
       setImgLoading((m) => ({ ...m, [idx]: false }));
     }
   }
+
 
   // Auto-generate the Gemini 2D infographic for EVERY slide once verification
   // passes — regardless of subject (Physics, Chem, Bio, Math, Economics,
