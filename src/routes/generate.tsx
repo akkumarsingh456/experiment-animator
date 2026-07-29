@@ -521,11 +521,14 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                           <td className="py-1 pr-2">
                             {err ? (
                               <span className="text-rose-700 truncate inline-block max-w-[260px]" title={err}>{err}</span>
+                            ) : imgStatus[i]?.regenerated ? (
+                              <span className="text-amber-700">duplicate layout detected → redrawn</span>
                             ) : st === "cached" ? (
-                              <span className="text-muted-foreground">served from library</span>
+                              <span className="text-muted-foreground">served from library · unique layout</span>
                             ) : st === "fresh" ? (
-                              <span className="text-muted-foreground">new render · cached</span>
+                              <span className="text-muted-foreground">new render · unique layout · cached</span>
                             ) : null}
+
                             {(st === "failed" || st === "cached" || st === "fresh") && (
                               <button
                                 type="button"
