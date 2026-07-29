@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,12 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import { listChapters, listSubtopics } from "@/lib/catalog.functions";
+import {
+  SYLLABUS_CLASSES,
+  subjectsForClass,
+  chaptersFor,
+  subtopicsFor,
+} from "@/lib/ncert-syllabus";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,8 +49,8 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-const CLASSES = ["9", "10", "11", "12"];
-const SUBJECTS = ["Physics", "Chemistry", "Biology", "Mathematics", "Science", "Economics", "History", "Geography", "English", "Hindi"];
+const CLASSES = SYLLABUS_CLASSES;
+
 
 const subjectCards = [
   { name: "Chemistry", icon: FlaskConical, color: "var(--chemistry)", desc: "Reactions, bonds & molecular zoom-ins" },
@@ -66,8 +71,6 @@ function isLang(s: string) { return LANGUAGE_SUBJECTS.includes(s); }
 
 function GeneratorBlock() {
   const nav = useNavigate();
-  const fetchChapters = useServerFn(listChapters);
-  const fetchSubtopics = useServerFn(listSubtopics);
 
   const [topic, setTopic] = useState("");
   const [klass, setKlass] = useState("10");
@@ -76,49 +79,42 @@ function GeneratorBlock() {
   const [customTopic, setCustomTopic] = useState("");
   const lang = isLang(subject);
 
-  const [chapters, setChapters] = useState<Array<{ label: string; raw: string }>>([]);
-  const [chaptersLoading, setChaptersLoading] = useState(false);
+  // Every dropdown is driven strictly by the built-in NCERT syllabus.
+  const subjects = useMemo(() => subjectsForClass(klass), [klass]);
+  const chapters = useMemo(() => chaptersFor(klass, subject), [klass, subject]);
+  const subOptions = useMemo(
+    () => (chapter ? subtopicsFor(klass, subject, chapter) : []),
+    [klass, subject, chapter],
+  );
+  const chaptersLoading = false;
+  const subLoading = false;
 
-  const [subOptions, setSubOptions] = useState<string[]>([]);
-  const [subLoading, setSubLoading] = useState(false);
   const [selectedSubs, setSelectedSubs] = useState<string[]>([]);
   const [customSub, setCustomSub] = useState("");
 
-  // Fetch chapter list when class/subject changes.
+  // Keep the subject valid for the selected class.
   useEffect(() => {
-    let cancelled = false;
-    setChaptersLoading(true);
-    setChapters([]);
-    setTopic("");
-    setChapter("");
-    setSelectedSubs([]);
-    setSubOptions([]);
-    fetchChapters({ data: { klass, subject } })
-      .then((r) => { if (!cancelled) setChapters(r.chapters || []); })
-      .catch(() => { if (!cancelled) setChapters([]); })
-      .finally(() => { if (!cancelled) setChaptersLoading(false); });
-    return () => { cancelled = true; };
-  }, [klass, subject, fetchChapters]);
+    if (!subjects.includes(subject)) setSubject(subjects[0] ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [klass, subjects]);
 
-  // Fetch subtopic suggestions when chapter/topic changes (non-language mode).
+  // Reset chapter/topic/subtopics whenever class or subject changes.
   useEffect(() => {
-    if (lang) return;
-    let cancelled = false;
-    setSubLoading(true);
-    setSubOptions([]);
+    setChapter("");
+    setTopic("");
     setSelectedSubs([]);
-    const key = chapter || topic;
-    fetchSubtopics({ data: { klass, subject, chapter: key } })
-      .then((r) => { if (!cancelled) setSubOptions(r.subtopics || []); })
-      .catch(() => { if (!cancelled) setSubOptions([]); })
-      .finally(() => { if (!cancelled) setSubLoading(false); });
-    return () => { cancelled = true; };
-  }, [klass, subject, chapter, topic, lang, fetchSubtopics]);
+  }, [klass, subject]);
+
+  // Reset subtopic ticks when the chapter changes.
+  useEffect(() => { setSelectedSubs([]); }, [chapter]);
+
 
   const finalTopic = useMemo(() => {
     if (lang) return (chapter || customTopic).trim();
-    return (topic || customTopic).trim();
+    // Chapter alone is enough — the topic field only narrows it further.
+    return (topic || chapter || customTopic).trim();
   }, [lang, topic, chapter, customTopic]);
+
 
   function toggleSub(v: string) {
     setSelectedSubs((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
@@ -178,28 +174,29 @@ function GeneratorBlock() {
             <Select value={subject} onValueChange={setSubject}>
               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {SUBJECTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {subjects.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Chapter dropdown — populated from uploaded NCERT library */}
+          {/* Chapter dropdown — from the built-in NCERT syllabus */}
           <div className="sm:col-span-2">
             <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
               Chapter {chaptersLoading && <Loader2 className="h-3 w-3 animate-spin" />}
               <span className="text-[10px] text-muted-foreground/70">
-                ({chapters.length} available for Class {klass} · {subject})
+                ({chapters.length} in the NCERT syllabus for Class {klass} · {subject})
               </span>
             </label>
             {chapters.length > 0 ? (
               <Select value={chapter} onValueChange={setChapter}>
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select a chapter from your library" />
+                  <SelectValue placeholder="Select a chapter from the NCERT syllabus" />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
                   {chapters.map((c) => (
-                    <SelectItem key={c.raw} value={c.label}>{c.label}</SelectItem>
+                    <SelectItem key={c.chapter} value={c.chapter}>{c.chapter}</SelectItem>
                   ))}
+
                 </SelectContent>
               </Select>
             ) : (
@@ -261,7 +258,7 @@ function GeneratorBlock() {
                   </ScrollArea>
                 ) : (
                   <p className="mt-1 text-xs text-muted-foreground italic">
-                    {subLoading ? "Scanning NCERT chunks…" : "No subtopic headings detected — add your own below."}
+                    {chapter ? "No subtopics listed for this chapter — add your own below." : "Select a chapter to see its NCERT subtopics."}
                   </p>
                 )}
 
