@@ -460,6 +460,10 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               {failedCount > 0 && (
                 <Badge variant="outline" className="rounded-full bg-rose-500/10 text-rose-700 border-rose-500/30">Failed: {failedCount}</Badge>
               )}
+              {dupFixedCount > 0 && (
+                <Badge variant="outline" className="rounded-full bg-amber-500/10 text-amber-700 border-amber-500/30">Duplicates redrawn: {dupFixedCount}</Badge>
+              )}
+
               <span className="text-muted-foreground">
                 Subject: {result.source_books[0]?.subject || search.subject || "—"} · Class {search.klass || "—"}
               </span>
