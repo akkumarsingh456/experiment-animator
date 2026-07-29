@@ -188,6 +188,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       const r = await genImage({ data: {
         title: s.title,
         bullets: s.bullets || [],
+        notes: s.notes || [],
+        key_terms: s.key_terms || [],
         caption: s.caption || "",
         subject: search.subject,
         klass: search.klass,
@@ -239,8 +241,11 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         while (!cancelled) {
           const i = cursor++;
           if (i >= indices.length) return;
-          // Skip slides where the first pass already populated an image.
-          if (images[i]) continue;
+      // Skip slides where the first pass already populated an image. Read the
+      // latest state through status instead of the stale closure so cached hits
+      // do not also trigger duplicate Gemini calls.
+      const currentState = imgStatus[i]?.state;
+      if (currentState === "cached" || currentState === "fresh") continue;
           await ensureImage(i, { cacheOnly: false });
         }
       });
@@ -1051,7 +1056,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
     };
   }, [slides.length, onClose]);
 
-  // Auto-generate the free local 2D SVG for the active slide (and next one, prefetch)
+  // Active slide asks for its Gemini 2D image if missing.
   useEffect(() => {
     if (!images[i]) onNeedImage(i);
   }, [i, images, onNeedImage, slides.length]);
