@@ -345,6 +345,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const cachedCount = Object.values(imgStatus).filter((s) => s.state === "cached").length;
   const freshCount = Object.values(imgStatus).filter((s) => s.state === "fresh").length;
   const failedCount = Object.values(imgStatus).filter((s) => s.state === "failed").length;
+  const dupFixedCount = Object.values(imgStatus).filter((s) => s.regenerated).length;
+
 
   async function retryAllFailed() {
     const failedIdxs = Object.entries(imgStatus)
