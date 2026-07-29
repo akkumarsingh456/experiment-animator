@@ -142,7 +142,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     }
 
     if (!url) {
-      await logAudit({ status: "no_image", cached: false, gemini_error: geminiError });
+      await logAudit({ status: "no_image", cached: false, error: geminiError || "gemini_no_image" });
       return { url: "", cached: false, error: geminiError || "gemini_no_image" };
     }
 
@@ -160,7 +160,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       console.warn("slide image cache write failed", e);
     }
 
-    await logAudit({ status: "success", cached: false, image_url: url.slice(0, 200), source, gemini_error: geminiError });
+    await logAudit({ status: "success", cached: false, image_url: url.slice(0, 200), error: geminiError });
     return { url, cached: false, source };
   });
 
