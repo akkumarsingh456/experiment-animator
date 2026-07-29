@@ -165,7 +165,11 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [verified, setVerified] = useState(false);
+  // English / Hindi / Sanskrit chapters have no experiment to verify —
+  // the full chapter text is rendered straight away.
+  const skipVerify = isLanguageSubject(String(search.subject || "")) || search.mode === "chapter";
+  const [verified, setVerified] = useState(skipVerify);
+
   const [images, setImages] = useState<Record<number, string>>({});
   const [imgLoading, setImgLoading] = useState<Record<number, boolean>>({});
   type ImgStatus = { state: "pending" | "loading" | "cached" | "fresh" | "failed"; error?: string; at?: number; duplicateOf?: number; regenerated?: boolean };
@@ -412,17 +416,20 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
   return (
     <>
-      {/* Step 1 — Activity verification (always first) */}
-      <ActivityVerification
-        matches={result.activity_matches}
-        activities={result.activities}
-        verified={verified}
-        onConfirm={() => setVerified(true)}
-        onReject={() => {
-          toast.message("Refine your Topic / Chapter / Subtopics and run Generate again.");
-          setVerified(false);
-        }}
-      />
+      {/* Step 1 — Activity verification (skipped for language chapters) */}
+      {!skipVerify && (
+        <ActivityVerification
+          matches={result.activity_matches}
+          activities={result.activities}
+          verified={verified}
+          onConfirm={() => setVerified(true)}
+          onReject={() => {
+            toast.message("Refine your Topic / Chapter / Subtopics and run Generate again.");
+            setVerified(false);
+          }}
+        />
+      )}
+
 
       {!verified ? (
         <p className="text-xs text-muted-foreground mt-6">

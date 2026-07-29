@@ -1158,7 +1158,10 @@ function subjectAliases(subject: string, klass?: string) {
     english: ["english"],
     hindi: ["hindi"],
     sanskrit: ["sanskrit"],
+    "computer science": ["computer", "computer science", "informatics", "information technology", "python", "it"],
+    "information technology": ["computer", "computer science", "informatics", "information technology", "it"],
   };
+
   return map[normalized] ?? [normalized];
 }
 
@@ -1167,18 +1170,43 @@ function subjectMatches(actual: string, requested: string, klass?: string) {
   return subjectAliases(requested, klass).some((alias) => a.includes(alias) || alias.includes(a));
 }
 
+/**
+ * Syllabus dropdown labels look like "Chapter 7: Motion (Physics)".
+ * Strip the numbering prefix and the trailing subject tag so the RAG search
+ * ranks on the real chapter name ("motion") instead of "physics"/"chapter".
+ */
+export function cleanSyllabusLabel(label: string) {
+  return (label || "")
+    .replace(/^\s*(chapter|ch\.?|unit|lesson|paath|path)\s*\d+\s*[:.\-–]?\s*/i, "")
+    .replace(/\s*\([^)]*\)\s*$/g, " ")
+    .trim();
+}
+
+// Subject words are useless as ranking terms — every chunk in the book has them.
+const NOISE_TERMS = new Set([
+  "physics", "chemistry", "biology", "science", "mathematics", "math",
+  "chapter", "ncert", "class", "computer", "english", "hindi", "sanskrit",
+]);
+
 function buildTerms(data: z.infer<typeof Input>) {
-  const raw = [data.topic, data.chapter, ...(data.subtopics || "").split(/[,;\n]/)];
+  const raw = [
+    cleanSyllabusLabel(data.topic),
+    cleanSyllabusLabel(data.chapter),
+    ...(data.subtopics || "").split(/[,;\n]/),
+  ];
   const terms = new Set<string>();
   for (const item of raw) {
     const n = normalizeText(item || "");
     if (!n) continue;
     terms.add(n);
-    for (const word of n.split(" ")) if (word.length > 3 && !/^\d+$/.test(word)) terms.add(word);
+    for (const word of n.split(" ")) {
+      if (word.length > 3 && !/^\d+$/.test(word) && !NOISE_TERMS.has(word)) terms.add(word);
+    }
   }
   terms.add("activity");
   terms.add("experiment");
   return [...terms];
+
 }
 
 function splitSentences(context: string) {
@@ -1814,7 +1842,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v14-langchapter-mcq",
+      "lesson-v18-syllabus",
       data.klass,
       data.subject,
       data.chapter,
@@ -1885,7 +1913,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     }
 
     // 2. Pre-rank by metadata
-    const chapterTermsPre = data.chapter ? [normalizeText(data.chapter), ...normalizeText(data.chapter).split(" ")] : [];
+    const chapterTermsPre = data.chapter ? [normalizeText(cleanSyllabusLabel(data.chapter)), ...normalizeText(cleanSyllabusLabel(data.chapter)).split(" ")] : [];
     const preRanked = candidates
       .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject} ${b.class}`, [...terms, ...chapterTermsPre]) }))
       .sort((a, z) => z.m - a.m);
@@ -1893,22 +1921,40 @@ export const generateLesson = createServerFn({ method: "POST" })
     const topCandidates = preRanked.slice(0, cap).map((x) => x.b);
     candidates = topCandidates;
 
-    // 3. Fetch chunks PER BOOK in parallel (bounded for speed)
+    // 3. Fetch chunks PER BOOK in parallel: a baseline window plus a
+    //    keyword-targeted fetch so chapters deep inside a large book are found.
+    const keywordTerms = terms
+      .filter((t) => t !== "activity" && t !== "experiment" && t.length > 3)
+      .slice(0, 6);
+    const keywordFilter = keywordTerms.map((t) => `content.ilike.%${t.replace(/[,%]/g, " ")}%`).join(",");
     const perBookChunks = await Promise.all(
-      topCandidates.map((b) =>
-        s
+      topCandidates.flatMap((b) => {
+        const base = s
           .from("ncert_chunks")
           .select("book_id, chunk_index, content")
           .eq("book_id", b.id)
           .order("chunk_index", { ascending: true })
           .limit(300)
-          .then((r) => r.data ?? []),
-      ),
+          .then((r) => r.data ?? []);
+        if (!keywordFilter) return [base];
+        const targeted = s
+          .from("ncert_chunks")
+          .select("book_id, chunk_index, content")
+          .eq("book_id", b.id)
+          .or(keywordFilter)
+          .order("chunk_index", { ascending: true })
+          .limit(400)
+          .then((r) => r.data ?? []);
+        return [base, targeted];
+      }),
     );
-    const chunks = perBookChunks.flat();
+    const chunkMap = new Map<string, { book_id: string; chunk_index: number; content: string }>();
+    for (const row of perBookChunks.flat()) chunkMap.set(`${row.book_id}:${row.chunk_index}`, row as any);
+    const chunks = [...chunkMap.values()];
 
 
-    const chapterTerms = data.chapter ? [normalizeText(data.chapter), ...normalizeText(data.chapter).split(" ")] : [];
+
+    const chapterTerms = data.chapter ? [normalizeText(cleanSyllabusLabel(data.chapter)), ...normalizeText(cleanSyllabusLabel(data.chapter)).split(" ")] : [];
     const bookScores = candidates
       .map((book) => {
         const metadataScore = score(`${book.chapter} ${book.file_name}`, [...terms, ...chapterTerms]);
@@ -1965,11 +2011,19 @@ export const generateLesson = createServerFn({ method: "POST" })
       .map((c) => ({ ...c, _s: score(c.content, terms) }))
       .sort((a, b) => b._s - a._s)
       .filter((c) => c._s > 0);
+    // Activity candidates must be topic-relevant first, then activity-flavoured.
+    const topicTerms = terms.filter((t) => t !== "activity" && t !== "experiment");
     const activityChunks = selectedChunks
-      .map((c) => ({ ...c, _s: score(c.content, ["activity", "experiment", data.topic]) }))
+      .map((c) => {
+        const topical = score(c.content, topicTerms);
+        const activityish = score(c.content, ["activity", "experiment"]);
+        return { ...c, _s: topical * 3 + (topical > 0 ? activityish : 0) };
+      })
+      .filter((c) => c._s > 0)
       .sort((a, b) => b._s - a._s)
       .filter((c) => normalizeText(c.content).includes("activity") || c._s > 12)
       .slice(0, 12);
+
 
     const pickedMap = new Map<string, string>();
     for (const chunk of [...ranked.slice(0, 28), ...activityChunks]) {
@@ -2011,6 +2065,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     const bookMeta = new Map(selectedBooks.map((b) => [b.id, b]));
     const maxRaw = Math.max(1, ...activityChunks.map((c) => c._s));
     const matchPool = activityChunks.length > 0 ? activityChunks : ranked.slice(0, 5).map((c) => ({ ...c, _s: c._s }));
+
     const activity_matches: ActivityMatch[] = matchPool.slice(0, 6).map((c) => {
       const text = String(c.content || "");
       const idMatch = text.match(/Activity\s+\d+(?:\.\d+)?/i);
