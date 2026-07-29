@@ -25,7 +25,7 @@ function cacheSupa() {
   );
 }
 
-/** Generate slide images locally as deterministic SVG data URIs — no AI/image API call. */
+/** Generate and cache Gemini 2D slide infographics from the exact slide notes. */
 export const generateSlideImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
