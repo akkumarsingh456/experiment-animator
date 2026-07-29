@@ -177,17 +177,19 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
   }
 
-  async function ensureImage(idx: number, opts: { force?: boolean; cacheOnly?: boolean } = {}) {
+  async function ensureImage(idx: number, opts: { force?: boolean; cacheOnly?: boolean } = {}): Promise<{ hasImage: boolean; state: ImgStatus["state"] }> {
     const { force = false, cacheOnly = false } = opts;
-    if (!force && (images[idx] || imgLoading[idx])) return;
+    if (!force && (images[idx] || imgLoading[idx])) return { hasImage: true, state: imgStatus[idx]?.state ?? "cached" };
     const s = slides[idx];
-    if (!s) return;
+    if (!s) return { hasImage: false, state: "failed" };
     setImgLoading((m) => ({ ...m, [idx]: true }));
     setImgStatus((m) => ({ ...m, [idx]: { state: "loading" } }));
     try {
       const r = await genImage({ data: {
         title: s.title,
         bullets: s.bullets || [],
+        notes: s.notes || [],
+        key_terms: s.key_terms || [],
         caption: s.caption || "",
         subject: search.subject,
         klass: search.klass,
@@ -201,17 +203,21 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       if (r.url) {
         setImages((m) => ({ ...m, [idx]: r.url }));
         setImgStatus((m) => ({ ...m, [idx]: { state: r.cached ? "cached" : "fresh", at: Date.now() } }));
+        return { hasImage: true, state: r.cached ? "cached" : "fresh" };
       } else if (cacheOnly) {
         // First-pass cache miss — leave as pending so second pass generates.
         setImgStatus((m) => ({ ...m, [idx]: { state: "pending" } }));
+        return { hasImage: false, state: "pending" };
       } else {
         setImgStatus((m) => ({ ...m, [idx]: { state: "failed", error: r.error || "no_image", at: Date.now() } }));
+        return { hasImage: false, state: "failed" };
       }
     } catch (e) {
       console.error("slide image failed", idx, e);
       const msg = e instanceof Error ? e.message : String(e);
       setImgStatus((m) => ({ ...m, [idx]: { state: "failed", error: msg, at: Date.now() } }));
       if (!cacheOnly) toast.error("Image generation failed — will retry.");
+      return { hasImage: false, state: "failed" };
     } finally {
       setImgLoading((m) => ({ ...m, [idx]: false }));
     }
@@ -231,7 +237,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     const indices = slides.map((_, i) => i);
     (async () => {
       // First pass: instant cache lookup for every slide (no API call).
-      await Promise.all(indices.map((i) => ensureImage(i, { cacheOnly: true })));
+      const cacheResults = await Promise.all(indices.map((i) => ensureImage(i, { cacheOnly: true })));
+      const cacheReady = new Set(cacheResults.map((r, i) => (r.hasImage ? indices[i] : -1)).filter((i) => i >= 0));
       if (cancelled) return;
       // Second pass: generate fresh infographics for slides still missing one.
       let cursor = 0;
@@ -240,7 +247,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           const i = cursor++;
           if (i >= indices.length) return;
           // Skip slides where the first pass already populated an image.
-          if (images[i]) continue;
+          if (cacheReady.has(i)) continue;
           await ensureImage(i, { cacheOnly: false });
         }
       });
@@ -1051,7 +1058,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
     };
   }, [slides.length, onClose]);
 
-  // Auto-generate the free local 2D SVG for the active slide (and next one, prefetch)
+  // Active slide asks for its Gemini 2D image if missing.
   useEffect(() => {
     if (!images[i]) onNeedImage(i);
   }, [i, images, onNeedImage, slides.length]);

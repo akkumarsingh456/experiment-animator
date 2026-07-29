@@ -25,7 +25,7 @@ function cacheSupa() {
   );
 }
 
-/** Generate slide images locally as deterministic SVG data URIs — no AI/image API call. */
+/** Generate and cache Gemini 2D slide infographics from the exact slide notes. */
 export const generateSlideImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
@@ -35,6 +35,8 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         caption: z.string().optional().default(""),
         subject: z.string().optional().default(""),
         klass: z.string().optional().default(""),
+        notes: z.array(z.string()).optional().default([]),
+        key_terms: z.array(z.object({ term: z.string().default(""), meaning: z.string().default("") })).optional().default([]),
         visual_prompt: z.string().optional().default(""),
         grounding: z.string().optional().default(""),
         slideIndex: z.number().int().min(0).max(50).optional().default(0),
@@ -56,6 +58,8 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       data.visual_prompt,
       data.grounding.slice(0, 500),
       (data.bullets || []).join(" "),
+      (data.notes || []).join(" "),
+      (data.key_terms || []).map((t) => `${t.term}:${t.meaning}`).join(" "),
     ]);
     const db = cacheSupa();
     const startedAt = Date.now();
@@ -65,7 +69,11 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       subject: String(data.subject || ""),
       title: String(data.title || ""),
       visual_prompt: String(data.visual_prompt || ""),
-      grounding: String(data.grounding || "").slice(0, 4000),
+      grounding: [
+        String(data.grounding || ""),
+        (data.notes || []).length ? `Slide notes: ${(data.notes || []).join(" | ")}` : "",
+        (data.key_terms || []).length ? `Key terms: ${(data.key_terms || []).map((t) => `${t.term}: ${t.meaning}`).join(" | ")}` : "",
+      ].filter(Boolean).join("\n").slice(0, 4000),
       bullets: (data.bullets || []).join(" | ").slice(0, 2000),
       caption: String(data.caption || "").slice(0, 1000),
       slide_index: data.slideIndex,
@@ -116,6 +124,8 @@ export const generateSlideImage = createServerFn({ method: "POST" })
           title: data.title,
           bullets: data.bullets,
           notes: data.grounding,
+          slideNotes: data.notes,
+          keyTerms: data.key_terms,
           visualPrompt: data.visual_prompt,
           subject: data.subject,
           klass: data.klass,
@@ -132,7 +142,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     }
 
     if (!url) {
-      await logAudit({ status: "no_image", cached: false, gemini_error: geminiError });
+      await logAudit({ status: "no_image", cached: false, error: geminiError || "gemini_no_image" });
       return { url: "", cached: false, error: geminiError || "gemini_no_image" };
     }
 
@@ -150,17 +160,19 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       console.warn("slide image cache write failed", e);
     }
 
-    await logAudit({ status: "success", cached: false, image_url: url.slice(0, 200), source, gemini_error: geminiError });
+    await logAudit({ status: "success", cached: false, image_url: url.slice(0, 200), error: geminiError });
     return { url, cached: false, source };
   });
 
-/** Generate a Napkin-AI-style labelled infographic via Gemini 2.5 Flash Image
- *  (Nano Banana) through the Lovable AI Gateway. Returns a data: URL PNG or
- *  null when the gateway is unavailable / returns no image. */
+/** Generate a Napkin-AI-style labelled infographic via Gemini Image through
+ *  the dedicated Lovable AI image endpoint. Returns a data: URL PNG or null
+ *  when the gateway is unavailable / returns no image. */
 async function generateGeminiDiagram(opts: {
   title: string;
   bullets: string[];
   notes: string;
+  slideNotes: string[];
+  keyTerms: Array<{ term: string; meaning: string }>;
   visualPrompt: string;
   subject: string;
   klass: string;
@@ -172,7 +184,20 @@ async function generateGeminiDiagram(opts: {
   const cleanBullets = (opts.bullets || [])
     .map((b) => String(b || "").trim())
     .filter(Boolean)
-    .slice(0, 6);
+    .slice(0, 5);
+  const cleanSlideNotes = (opts.slideNotes || [])
+    .map((n) => String(n || "").replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 5);
+  const cleanKeyTerms = (opts.keyTerms || [])
+    .map((t) => `${String(t.term || "").trim()}: ${String(t.meaning || "").replace(/\s+/g, " ").trim()}`)
+    .filter((t) => t.replace(/[:\s]/g, "").length > 0)
+    .slice(0, 4);
+  const requiredFacts = uniqueByNormalized([
+    ...cleanBullets,
+    ...cleanSlideNotes,
+    ...cleanKeyTerms,
+  ]).slice(0, 8);
   const notes = String(opts.notes || "").replace(/\s+/g, " ").trim().slice(0, 1200);
   const subj = (opts.subject || "").toLowerCase();
 
@@ -214,11 +239,11 @@ async function generateGeminiDiagram(opts: {
     : "cool blue + peach + cream accents";
 
   const prompt = [
-    `Design a premium NCERT-style 2D infographic flowchart in the exact visual language of a polished textbook overview poster.`,
+    `Design ONE premium NCERT-style 2D educational infographic for this single slide. It must look like a polished textbook overview poster / professional concept-map poster, not a simple circle diagram.`,
     ``,
     `REFERENCE STYLE (match precisely)`,
     `- A bold rectangular TITLE BANNER pinned across the top of the canvas, dark navy fill, white uppercase title, thin gold underline.`,
-    `- Below the banner: a network of ROUNDED-RECTANGLE and PILL-SHAPED nodes connected by smooth CURVED ARROWS with clear arrowheads.`,
+    `- Below the banner: a dense but readable network of ROUNDED-RECTANGLE and PILL-SHAPED nodes connected by smooth CURVED ARROWS with clear arrowheads.`,
     `- Node fills use soft gradient pastels (teal, sky, coral, amber, mint, lavender) with a 2px darker outline of the same hue; label text is dark charcoal, bold, centered inside.`,
     `- 2-3 small flat vector spot-icons floated near key nodes (atom, gears, magnet, wave, molecule, spiral galaxy — pick what fits the concept).`,
     `- Subtle off-white/cream background with faint watermark swooshes in the corners. Generous whitespace.`,
@@ -226,11 +251,12 @@ async function generateGeminiDiagram(opts: {
     `LESSON CONTEXT`,
     `- Class: ${opts.klass || "n/a"} • Subject: ${opts.subject || "n/a"}`,
     `- Slide title (use verbatim inside the banner): "${opts.title}"`,
-    cleanBullets.length ? `- Each of these key points MUST appear as its own labelled node (short 2-5 word label):\n  • ${cleanBullets.join("\n  • ")}` : "",
-    notes ? `- Textbook grounding (use ONLY facts contained here, do not invent):\n  """${notes}"""` : "",
+    requiredFacts.length ? `- REQUIRED SLIDE FACTS: every item below must appear visually as a distinct node/callout/mini-cluster, rewritten as a short correct label plus optional tiny caption. Do not add facts outside these items.\n  • ${requiredFacts.join("\n  • ")}` : "",
+    notes ? `- EXTRA NCERT GROUNDING: use this only to verify terms, symbols, and relationships; do not introduce unrelated content.\n  """${notes}"""` : "",
     opts.visualPrompt ? `- Extra visual direction: ${opts.visualPrompt}` : "",
     ``,
     `DIAGRAM ARCHETYPE (choose this exact structure): ${archetype}.`,
+    `UNIQUE VARIANT: this is slide #${(opts.slideIndex ?? 0) + 1}; make its layout visibly different from adjacent slides by changing node grouping, connector rhythm, icon placement, and branch orientation while preserving the requested archetype.`,
     ``,
     `COMPOSITION`,
     `- 16:9 landscape. Focal hierarchy: banner title reads first, hub/root node second, branch nodes third, captions last.`,
@@ -244,7 +270,9 @@ async function generateGeminiDiagram(opts: {
     `- Every glyph must be a real correctly-spelled English/Greek character. No lorem, no gibberish, no fake handwriting scribbles.`,
     ``,
     `STRICT RULES`,
-    `- Depict ONLY what the title, bullets, and grounding notes support. If notes describe a formula, show that exact formula; if they list types, show exactly those types.`,
+    `- Depict ONLY the REQUIRED SLIDE FACTS and NCERT grounding for this slide. Nothing from other slides, no generic filler, no unrelated examples.`,
+    `- If the notes describe a formula/symbol, show that exact formula/symbol. If they list types/steps, show exactly those types/steps.`,
+    `- Make all text readable at presentation size: short labels, no tiny paragraphs, no clipped labels, no overlapping arrows, no cropped title.`,
     `- No emojis, no photos, no 3D renders, no stock clipart, no legend/key unless the archetype requires it.`,
     `- No watermarks, no page numbers, no "Napkin", "Gemini", or any branding text.`,
     `- Output ONE single flat infographic image filling the canvas edge-to-edge, no outer frame or drop-shadow.`,
@@ -253,17 +281,17 @@ async function generateGeminiDiagram(opts: {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60_000);
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${key}`,
       },
       body: JSON.stringify({
-        // Nano Banana 2 — pro-level image quality, fast.
         model: "google/gemini-3.1-flash-image",
         messages: [{ role: "user", content: prompt }],
         modalities: ["image", "text"],
+        stream: false,
       }),
       signal: controller.signal,
     });
@@ -272,14 +300,18 @@ async function generateGeminiDiagram(opts: {
       throw new Error(`gemini image gateway [${res.status}]: ${body.slice(0, 200)}`);
     }
     const json: any = await res.json();
+    const b64: string | undefined = json?.data?.[0]?.b64_json;
+    if (typeof b64 === "string" && b64.length > 100) return `data:image/png;base64,${b64}`;
     const msg = json?.choices?.[0]?.message;
     const dataUrl: string | undefined =
+      json?.data?.[0]?.url ||
       msg?.images?.[0]?.image_url?.url ||
       msg?.images?.[0]?.url ||
       (Array.isArray(msg?.content)
         ? msg.content.find((p: any) => p?.image_url?.url)?.image_url?.url
         : undefined);
     if (typeof dataUrl === "string" && dataUrl.startsWith("data:image/")) return dataUrl;
+    if (typeof dataUrl === "string" && /^https?:\/\//.test(dataUrl)) return dataUrl;
     return null;
   } finally {
     clearTimeout(timeout);
@@ -1411,23 +1443,15 @@ function validateSlideAgainstContext(slide: Slide, contextNorm: string, slideInd
   }
   const coverage = parts.length === 0 ? 0 : Math.round((matched / parts.length) * 100);
 
-  // Diagram validation: (a) does the visual prompt/title match NCERT source text,
-  // and (b) does the auto-generated SVG keep every label inside the safe frame?
+  // Diagram validation: verify the requested visual content is grounded in the
+  // same NCERT context. The actual image is generated by Gemini only; we do not
+  // use local SVG fallback generation for validation or display.
   const diagramText = [slide.title, slide.visual_prompt || "", slide.caption || ""].join(" ").trim();
   const diagram_match = diagramText ? Math.round(matchRatio(diagramText) * 100) : 0;
 
   let diagram_label_fit: "pass" | "adjusted" = "pass";
   const diagram_issues: string[] = [];
-  try {
-    const svgDataUrl = generateDiagramSVG(slide.title, slide.bullets || [], slide.visual_prompt || "", "", slide.grounding || "", slideIndex);
-    const b64 = svgDataUrl.split(",")[1] || "";
-    const svg = b64 ? Buffer.from(b64, "base64").toString("utf8") : "";
-    const fit = inspectSvgTextSafety(svg, 1414, 1000, 52);
-    diagram_label_fit = fit.safe ? "pass" : "adjusted";
-    if (!fit.safe) diagram_issues.push(...fit.issues.slice(0, 3));
-  } catch {
-    /* keep defaults */
-  }
+  void slideIndex;
 
   const overall_pass = coverage >= 60 && diagram_match >= 40 && diagram_label_fit === "pass";
   return {
