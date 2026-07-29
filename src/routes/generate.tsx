@@ -168,13 +168,73 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const [verified, setVerified] = useState(false);
   const [images, setImages] = useState<Record<number, string>>({});
   const [imgLoading, setImgLoading] = useState<Record<number, boolean>>({});
-  type ImgStatus = { state: "pending" | "loading" | "cached" | "fresh" | "failed"; error?: string; at?: number };
+  type ImgStatus = { state: "pending" | "loading" | "cached" | "fresh" | "failed"; error?: string; at?: number; duplicateOf?: number; regenerated?: boolean };
   const [imgStatus, setImgStatus] = useState<Record<number, ImgStatus>>({});
+  // Perceptual signatures (8x8 grayscale bit-hash) per slide, used to detect
+  // repeated / near-identical 2D layouts across adjacent slides.
+  const imgHashRef = useRef<Record<number, string>>({});
+  const dupRetryRef = useRef<Record<number, number>>({});
 
-  useEffect(() => { setSlides(result.slides); setVerified(false); setActiveIdx(0); setImages({}); setImgLoading({}); setImgStatus({}); }, [result]);
+  useEffect(() => { setSlides(result.slides); setVerified(false); setActiveIdx(0); setImages({}); setImgLoading({}); setImgStatus({}); imgHashRef.current = {}; dupRetryRef.current = {}; }, [result]);
 
   function updateSlide(idx: number, patch: Partial<Slide>) {
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
+  }
+
+  /** Downscale an image to 8x8 grayscale and return a 64-bit average hash. */
+  async function perceptualHash(url: string): Promise<string | null> {
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      const loaded = new Promise<void>((res, rej) => {
+        img.onload = () => res();
+        img.onerror = () => rej(new Error("load"));
+      });
+      img.src = url;
+      await loaded;
+      const N = 8;
+      const canvas = document.createElement("canvas");
+      canvas.width = N; canvas.height = N;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.drawImage(img, 0, 0, N, N);
+      const { data } = ctx.getImageData(0, 0, N, N);
+      const grays: number[] = [];
+      for (let i = 0; i < data.length; i += 4) {
+        grays.push(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+      }
+      const avg = grays.reduce((a, b) => a + b, 0) / grays.length;
+      return grays.map((g) => (g >= avg ? "1" : "0")).join("");
+    } catch {
+      return null;
+    }
+  }
+
+  function hamming(a: string, b: string) {
+    if (a.length !== b.length) return Infinity;
+    let d = 0;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++;
+    return d;
+  }
+
+  /**
+   * Returns the index of an earlier slide whose 2D layout is too close to
+   * this one (identical URL, or perceptual hash within 6 bits of 64).
+   */
+  function findDuplicate(idx: number, url: string, hash: string | null): number | null {
+    for (const [k, u] of Object.entries(images)) {
+      const other = Number(k);
+      if (other === idx) continue;
+      if (u === url) return other;
+    }
+    if (!hash) return null;
+    const neighbours = Object.entries(imgHashRef.current)
+      .map(([k, h]) => [Number(k), h] as const)
+      .filter(([other]) => other !== idx);
+    for (const [other, h] of neighbours) {
+      if (hamming(hash, h) <= 6) return other;
+    }
+    return null;
   }
 
   async function ensureImage(idx: number, opts: { force?: boolean; cacheOnly?: boolean } = {}): Promise<{ hasImage: boolean; state: ImgStatus["state"] }> {
@@ -201,8 +261,28 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         cacheOnly,
       } });
       if (r.url) {
+        // Duplicate-layout verification: compare against every other slide.
+        const hash = await perceptualHash(r.url);
+        const dup = findDuplicate(idx, r.url, hash);
+        const tries = dupRetryRef.current[idx] ?? 0;
+        if (dup !== null && tries < 2) {
+          dupRetryRef.current[idx] = tries + 1;
+          setImgStatus((m) => ({ ...m, [idx]: { state: "loading", duplicateOf: dup } }));
+          setImgLoading((m) => ({ ...m, [idx]: false }));
+          // Force a fresh, uncached render so the layout differs.
+          return await ensureImage(idx, { force: true });
+        }
+        if (hash) imgHashRef.current[idx] = hash;
         setImages((m) => ({ ...m, [idx]: r.url }));
-        setImgStatus((m) => ({ ...m, [idx]: { state: r.cached ? "cached" : "fresh", at: Date.now() } }));
+        setImgStatus((m) => ({
+          ...m,
+          [idx]: {
+            state: r.cached ? "cached" : "fresh",
+            at: Date.now(),
+            regenerated: (dupRetryRef.current[idx] ?? 0) > 0,
+            duplicateOf: dup !== null ? dup : undefined,
+          },
+        }));
         return { hasImage: true, state: r.cached ? "cached" : "fresh" };
       } else if (cacheOnly) {
         // First-pass cache miss — leave as pending so second pass generates.
@@ -222,6 +302,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       setImgLoading((m) => ({ ...m, [idx]: false }));
     }
   }
+
 
 
   // Auto-generate the Gemini 2D infographic for EVERY slide once verification
@@ -264,6 +345,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const cachedCount = Object.values(imgStatus).filter((s) => s.state === "cached").length;
   const freshCount = Object.values(imgStatus).filter((s) => s.state === "fresh").length;
   const failedCount = Object.values(imgStatus).filter((s) => s.state === "failed").length;
+  const dupFixedCount = Object.values(imgStatus).filter((s) => s.regenerated).length;
+
 
   async function retryAllFailed() {
     const failedIdxs = Object.entries(imgStatus)
@@ -379,6 +462,10 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               {failedCount > 0 && (
                 <Badge variant="outline" className="rounded-full bg-rose-500/10 text-rose-700 border-rose-500/30">Failed: {failedCount}</Badge>
               )}
+              {dupFixedCount > 0 && (
+                <Badge variant="outline" className="rounded-full bg-amber-500/10 text-amber-700 border-amber-500/30">Duplicates redrawn: {dupFixedCount}</Badge>
+              )}
+
               <span className="text-muted-foreground">
                 Subject: {result.source_books[0]?.subject || search.subject || "—"} · Class {search.klass || "—"}
               </span>
@@ -440,11 +527,14 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                           <td className="py-1 pr-2">
                             {err ? (
                               <span className="text-rose-700 truncate inline-block max-w-[260px]" title={err}>{err}</span>
+                            ) : imgStatus[i]?.regenerated ? (
+                              <span className="text-amber-700">duplicate layout detected → redrawn</span>
                             ) : st === "cached" ? (
-                              <span className="text-muted-foreground">served from library</span>
+                              <span className="text-muted-foreground">served from library · unique layout</span>
                             ) : st === "fresh" ? (
-                              <span className="text-muted-foreground">new render · cached</span>
+                              <span className="text-muted-foreground">new render · unique layout · cached</span>
                             ) : null}
+
                             {(st === "failed" || st === "cached" || st === "fresh") && (
                               <button
                                 type="button"
