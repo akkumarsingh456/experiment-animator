@@ -4,6 +4,8 @@ import { createHash } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
+import { renderNapkinInfographicDataUrl } from "@/lib/napkin-infographic";
+
 
 function hashKey(parts: Array<string | undefined | null>) {
   const norm = parts
@@ -48,9 +50,9 @@ export const generateSlideImage = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
-    // v8: Gemini-only pipeline. Local SVG fallback removed per user request.
+    // v9: free local Napkin-style renderer (zero credits, never fails).
     const cacheKey = hashKey([
-      "img-v8-gemini-only",
+      "img-v9-free-napkin",
       data.klass,
       data.subject,
       String(data.slideIndex),
@@ -61,6 +63,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       (data.notes || []).join(" "),
       (data.key_terms || []).map((t) => `${t.term}:${t.meaning}`).join(" "),
     ]);
+
     const db = cacheSupa();
     const startedAt = Date.now();
     const auditBase = {
@@ -112,39 +115,29 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       return { url: "", cached: false, skipped: true };
     }
 
-    // Gemini-only: retry the image gateway up to 3 times with backoff. If
-    // every attempt fails, return an explicit error so the client queue can
-    // re-request later. No SVG/local fallback ever.
+    // FREE pipeline: render the reference-style infographic locally from the
+    // exact slide notes. No AI gateway, no credits, no 402 failures.
     let url = "";
-    const source: "gemini" = "gemini";
+    const source: "local" = "local";
     let geminiError: string | undefined;
-    for (let attempt = 0; attempt < 3 && !url; attempt++) {
-      try {
-        const gem = await generateGeminiDiagram({
-          title: data.title,
-          bullets: data.bullets,
-          notes: data.grounding,
-          slideNotes: data.notes,
-          keyTerms: data.key_terms,
-          visualPrompt: data.visual_prompt,
-          subject: data.subject,
-          klass: data.klass,
-          slideIndex: data.slideIndex,
-        });
-        if (gem) { url = gem; break; }
-      } catch (e) {
-        geminiError = e instanceof Error ? e.message : String(e);
-        console.warn(`gemini image attempt ${attempt + 1} failed`, geminiError);
-        // Don't retry on 402 (no credits) — surface immediately.
-        if (/\b402\b|payment_required|Not enough credits/i.test(geminiError)) break;
-      }
-      if (attempt < 2) await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+    try {
+      url = renderNapkinInfographicDataUrl({
+        title: data.title,
+        bullets: data.bullets,
+        notes: data.notes,
+        keyTerms: data.key_terms,
+        subject: data.subject,
+        slideIndex: data.slideIndex,
+      });
+    } catch (e) {
+      geminiError = e instanceof Error ? e.message : String(e);
     }
 
     if (!url) {
-      await logAudit({ status: "no_image", cached: false, error: geminiError || "gemini_no_image" });
-      return { url: "", cached: false, error: geminiError || "gemini_no_image" };
+      await logAudit({ status: "no_image", cached: false, error: geminiError || "render_failed" });
+      return { url: "", cached: false, error: geminiError || "render_failed" };
     }
+
 
 
     try {

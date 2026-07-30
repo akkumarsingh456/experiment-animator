@@ -236,8 +236,11 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       .map(([k, h]) => [Number(k), h] as const)
       .filter(([other]) => other !== idx);
     for (const [other, h] of neighbours) {
-      if (hamming(hash, h) <= 6) return other;
+      // Local renders share a banner + paper background, so only a near-exact
+      // bit match (<=2 of 64) counts as a repeated layout.
+      if (hamming(hash, h) <= 2) return other;
     }
+
     return null;
   }
 
@@ -465,7 +468,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 {inFlightCount > 0 ? ` · ${inFlightCount} drawing…` : ""}
               </Badge>
               <Badge variant="outline" className="rounded-full bg-sky-500/10 text-sky-700 border-sky-500/30">Cached: {cachedCount}</Badge>
-              <Badge variant="outline" className="rounded-full bg-emerald-500/10 text-emerald-700 border-emerald-500/30">Fresh (Gemini): {freshCount}</Badge>
+              <Badge variant="outline" className="rounded-full bg-emerald-500/10 text-emerald-700 border-emerald-500/30">Fresh (auto-drawn): {freshCount}</Badge>
               {failedCount > 0 && (
                 <Badge variant="outline" className="rounded-full bg-rose-500/10 text-rose-700 border-rose-500/30">Failed: {failedCount}</Badge>
               )}
@@ -488,7 +491,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 slide_image_cache. */}
             <details className="mb-3 rounded-lg border border-border/60 bg-card/50 print:hidden" open={failedCount > 0}>
               <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold flex items-center gap-2">
-                <span>Gemini 2D verification panel</span>
+                <span>2D infographic verification panel</span>
                 <span className="text-muted-foreground font-normal">
                   ({cachedCount} cached · {freshCount} fresh · {failedCount} failed · {inFlightCount} in flight)
                 </span>
@@ -522,7 +525,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                         : "· pending";
                       const source =
                         st === "cached" ? "slide_image_cache"
-                        : st === "fresh" ? "Gemini API"
+                        : st === "fresh" ? "Auto-render"
                         : st === "failed" ? "—"
                         : "";
                       return (
@@ -985,7 +988,7 @@ function SlideCanvas({
               ) : null}
             </div>
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0">
-              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · Gemini</div>
+              <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
               <div className="relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 grid place-items-center">
                 {imageUrl ? (
                   <img src={imageUrl} alt={`${slide.title} — NCERT 2D infographic`} className="w-full h-full object-contain" />
@@ -997,7 +1000,7 @@ function SlideCanvas({
                 ) : (
                   <button onClick={onRegenImage} className="flex flex-col items-center gap-1 text-[10px] text-primary underline hover:no-underline">
                     <span>Retry 2D infographic</span>
-                    <span className="text-muted-foreground no-underline">(Gemini · auto-cached)</span>
+                    <span className="text-muted-foreground no-underline">(free auto-render · cached)</span>
                   </button>
                 )}
               </div>
