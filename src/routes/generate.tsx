@@ -236,8 +236,11 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       .map(([k, h]) => [Number(k), h] as const)
       .filter(([other]) => other !== idx);
     for (const [other, h] of neighbours) {
-      if (hamming(hash, h) <= 6) return other;
+      // Local renders share a banner + paper background, so only a near-exact
+      // bit match (<=2 of 64) counts as a repeated layout.
+      if (hamming(hash, h) <= 2) return other;
     }
+
     return null;
   }
 
