@@ -290,6 +290,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         bullets: s.bullets || [],
         notes: s.notes || [],
         key_terms: s.key_terms || [],
+        sections: (s as any).sections || undefined,
         caption: s.caption || "",
         subject: search.subject,
         klass: search.klass,
