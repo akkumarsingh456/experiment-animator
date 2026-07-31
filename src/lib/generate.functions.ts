@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 import { renderNapkinInfographicDataUrl } from "@/lib/napkin-infographic";
+import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
 
 
 function hashKey(parts: Array<string | undefined | null>) {
@@ -847,6 +848,8 @@ export type Slide = {
   flow_graph?: FlowGraph;
   /** Registry key mapped to a Spline scene — cleared for language subjects. */
   model_category?: ModelCategoryKey;
+  /** Structured NCERT teacher notes (Definition → Formula → ... → Memory trick). */
+  sections?: NoteSection[];
   verification?: SlideVerification;
   debug?: SlideDebug;
 };
@@ -1835,7 +1838,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v18-syllabus",
+      "lesson-v19-teacher-notes",
       data.klass,
       data.subject,
       data.chapter,
@@ -2049,7 +2052,20 @@ export const generateLesson = createServerFn({ method: "POST" })
     const mcqSource = splitSentences(context);
     const mcqs = buildMcqsFromContext(data.topic, mcqSource, data.subject, 10);
     const mcqSlides: Slide[] = mcqs.map((m, i) => makeMcqSlide(m, i, mcqs.length, data.topic));
-    const slides = [...contentSlides, ...mcqSlides];
+
+    // Structured teacher notes: Gemini rewrites the retrieved NCERT excerpts into
+    // Definition / Formula / SI unit / Properties / Example / Important points /
+    // Memory trick sections. Any line not supported by the NCERT context is
+    // dropped, and if the gateway is unavailable the deterministic local
+    // sectioniser is used, so notes are always present and always NCERT-only.
+    const notedSlides = await attachTeacherNotes(contentSlides, {
+      apiKey: process.env.LOVABLE_API_KEY,
+      klass: String(data.klass || ""),
+      subject: String(data.subject || ""),
+      chapter: String(data.chapter || data.topic || ""),
+      context,
+    });
+    const slides = [...notedSlides, ...mcqSlides];
     const activities = normalizeActivities(buildLocalActivities(data.topic, context), data.topic, context);
     const video = fallbackVideo(data.topic, activities);
 
