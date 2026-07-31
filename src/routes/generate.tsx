@@ -20,6 +20,34 @@ import { pickSimulations } from "@/config/simulations";
 import { slideKey, useSimOverride } from "@/lib/sim-overrides";
 import {
 
+  Atom,
+  Beaker,
+  Brain,
+  Cpu,
+  Dna,
+  FlaskConical,
+  Sigma,
+  Heart,
+  Leaf,
+  Lightbulb,
+  Magnet,
+  Microscope,
+  Orbit,
+  Triangle,
+  Ruler,
+  Zap,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Maximize2,
+  Pencil,
+  Loader2,
+  ArrowLeft,
+  Sparkles,
+  Play,
+  GraduationCap,
+} from "lucide-react";
+
 type NoteSectionUI = { heading: string; kind: string; lines: string[] };
 
 /** NCERT teacher-note sections (Definition → Formula → … → Memory trick). */
@@ -51,33 +79,6 @@ function NoteSections({ sections, scale }: { sections?: NoteSectionUI[]; scale?:
   );
 }
 
-  Atom,
-  Beaker,
-  Brain,
-  Cpu,
-  Dna,
-  FlaskConical,
-  Sigma,
-  Heart,
-  Leaf,
-  Lightbulb,
-  Magnet,
-  Microscope,
-  Orbit,
-  Triangle,
-  Ruler,
-  Zap,
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  Maximize2,
-  Pencil,
-  Loader2,
-  ArrowLeft,
-  Sparkles,
-  Play,
-  GraduationCap,
-} from "lucide-react";
 
 const SearchSchema = z.object({
   topic: z.coerce.string().default(""),
