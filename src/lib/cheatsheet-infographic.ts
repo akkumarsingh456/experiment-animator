@@ -257,7 +257,8 @@ function formulaBlock(x: number, y: number, w: number, n: number, formulas: stri
   rows.forEach((f, i) => {
     const by = y + 58 + i * (boxH + 12);
     const parts = f.split(/[—–:]| gives | where /i);
-    const main = clean(parts[0]).slice(0, 46) || clean(f).slice(0, 46);
+    const head = clean(parts[0]) || clean(f);
+    const main = wrapText(head, w - 96, 24, 1)[0] ?? head;
     const note = clean(parts.slice(1).join(" "));
     body.push(
       `<rect x="${x + 22}" y="${by}" width="${w - 44}" height="${boxH}" rx="10" fill="#ffffff" stroke="${c.edge}" stroke-width="2"/>`,
@@ -482,7 +483,8 @@ export function renderCheatSheet(input: CheatSheetInput): string {
 
   // ---- tip bubble across the full width, always inside the page
   if (p.tip) {
-    const tip = tipBubble(leftX, Math.max(ly, ry, H - bottomReserve + 4), W - 120, p.tip, pal);
+    const ty = Math.min(Math.max(ly, ry) + 6, H - bottomReserve + 4);
+    const tip = tipBubble(leftX, ty, W - 120, p.tip, pal);
     out.push(tip.svg);
   }
 
