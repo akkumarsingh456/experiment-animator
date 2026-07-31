@@ -19,6 +19,38 @@ import { SimulationOverrideEditor } from "@/components/SimulationOverrideEditor"
 import { pickSimulations } from "@/config/simulations";
 import { slideKey, useSimOverride } from "@/lib/sim-overrides";
 import {
+
+type NoteSectionUI = { heading: string; kind: string; lines: string[] };
+
+/** NCERT teacher-note sections (Definition → Formula → … → Memory trick). */
+function NoteSections({ sections, scale }: { sections?: NoteSectionUI[]; scale?: "card" | "present" }) {
+  if (!sections?.length) return null;
+  const base = scale === "present" ? "text-[clamp(10px,0.95vw,14px)]" : "text-[11px]";
+  return (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+      {sections.map((sec, i) => (
+        <div
+          key={i}
+          className={`rounded-md border border-border/50 bg-secondary/40 px-2 py-1.5 ${sec.kind === "formula" || sec.kind === "tip" ? "col-span-2 bg-accent/20" : ""}`}
+        >
+          <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-0.5">{sec.heading}</div>
+          {sec.kind === "text" ? (
+            <p className={`${base} leading-snug text-foreground/90`}>{sec.lines.join(" ")}</p>
+          ) : (
+            <ul className={`${base} leading-snug space-y-0.5 text-foreground/90`}>
+              {sec.lines.map((l, k) => (
+                <li key={k} className={sec.kind === "formula" ? "font-mono" : ""}>
+                  {sec.kind === "formula" || sec.kind === "tip" ? l : `• ${l}`}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
   Atom,
   Beaker,
   Brain,
@@ -389,8 +421,15 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         const leftW = 6.6;
         slide.addText((s.bullets || []).map((b) => ({ text: b, options: { bullet: true } })),
           { x: 0.5, y: 1.5, w: leftW, h: 3.6, fontSize: 14, color: "33415C", fontFace: "Calibri", valign: "top", paraSpaceAfter: 4 });
-        // NCERT notes
-        if (s.notes?.length) {
+        // Structured teacher-note sections (NCERT-only)
+        const secs = (s as any).sections as NoteSectionUI[] | undefined;
+        if (secs?.length) {
+          const text = secs.flatMap((sec) => [
+            { text: sec.heading, options: { bold: true, color: "1F2A4A", fontSize: 12, breakLine: true } },
+            ...sec.lines.map((l) => ({ text: l, options: { fontSize: 11, color: "475569", bullet: sec.kind !== "text" && sec.kind !== "tip", breakLine: true } })),
+          ]);
+          slide.addText(text as any, { x: 0.5, y: 5.05, w: leftW, h: 2.4, fontFace: "Calibri", valign: "top" });
+        } else if (s.notes?.length) {
           slide.addText("NCERT Notes", { x: 0.5, y: 5.2, w: leftW, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
           slide.addText((s.notes).map((n) => ({ text: n, options: { bullet: { type: "number" } } })),
             { x: 0.5, y: 5.55, w: leftW, h: 1.8, fontSize: 11, color: "475569", paraSpaceAfter: 3 });
@@ -954,7 +993,8 @@ function SlideCanvas({
                   </li>
                 ))}
               </ul>
-              {slide.notes?.length ? (
+              <NoteSections sections={(slide as any).sections} />
+              {slide.notes?.length && !(slide as any).sections?.length ? (
                 <div className="rounded-md bg-secondary/50 border border-border/50 p-2 overflow-hidden">
                   <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-1">NCERT notes</div>
                   <ol className="space-y-0.5 list-decimal list-inside text-[11px] leading-snug text-foreground/85">
@@ -962,7 +1002,7 @@ function SlideCanvas({
                   </ol>
                 </div>
               ) : null}
-              {slide.key_terms?.length ? (
+              {slide.key_terms?.length && !(slide as any).sections?.length ? (
                 <div className="rounded-md bg-accent/20 border border-border/50 p-2 overflow-hidden">
                   <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-1">Key terms</div>
                   <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] leading-snug">
@@ -1206,7 +1246,8 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
                       </li>
                     ))}
                   </ul>
-                  {s.notes?.length ? (
+                  <NoteSections sections={(s as any).sections} scale="present" />
+                  {s.notes?.length && !(s as any).sections?.length ? (
                     <div className="rounded-md bg-secondary/60 border border-border/40 p-2">
                       <div className="text-[9px] font-semibold uppercase tracking-wider opacity-70 mb-1">NCERT notes</div>
                       <ol className="space-y-0.5 list-decimal list-inside text-[clamp(10px,0.95vw,13px)] leading-snug">
@@ -1214,7 +1255,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
                       </ol>
                     </div>
                   ) : null}
-                  {s.key_terms?.length ? (
+                  {s.key_terms?.length && !(s as any).sections?.length ? (
                     <div className="text-[clamp(10px,0.95vw,13px)] leading-snug space-y-0.5">
                       {s.key_terms.map((t, k) => (
                         <div key={k}><span className="font-semibold">{t.term}:</span> <span className="opacity-80">{t.meaning}</span></div>
