@@ -147,17 +147,17 @@ function collect(input: CheatSheetInput): Pick {
 
 /* -------------------------------- chrome ---------------------------------- */
 
-function paper(seedIcon: number) {
+function paper(seedIcon: number, h: number) {
   const ruled: string[] = [];
-  for (let y = 190; y < H - 60; y += 42) {
+  for (let y = 190; y < h - 60; y += 42) {
     ruled.push(`<line x1="60" y1="${y}" x2="${W - 60}" y2="${y}" stroke="#1d5c96" stroke-width="1" opacity="0.045"/>`);
   }
   return [
-    `<rect width="${W}" height="${H}" fill="${PAPER}"/>`,
-    `<rect x="18" y="18" width="${W - 36}" height="${H - 36}" rx="10" fill="none" stroke="#c9b98f" stroke-width="2" opacity="0.55"/>`,
-    `<rect x="30" y="30" width="${W - 60}" height="${H - 60}" rx="8" fill="none" stroke="#c9b98f" stroke-width="1" stroke-dasharray="2 7" opacity="0.5"/>`,
+    `<rect width="${W}" height="${h}" fill="${PAPER}"/>`,
+    `<rect x="18" y="18" width="${W - 36}" height="${h - 36}" rx="10" fill="none" stroke="#c9b98f" stroke-width="2" opacity="0.55"/>`,
+    `<rect x="30" y="30" width="${W - 60}" height="${h - 60}" rx="8" fill="none" stroke="#c9b98f" stroke-width="1" stroke-dasharray="2 7" opacity="0.5"/>`,
     ruled.join(""),
-    `<circle cx="${W - 96}" cy="${H - 96}" r="52" fill="${PASTELS[seedIcon % 4].fill}" opacity="0.5"/>`,
+    `<circle cx="${W - 96}" cy="${h - 96}" r="52" fill="${PASTELS[seedIcon % 4].fill}" opacity="0.4"/>`,
   ].join("");
 }
 
@@ -416,7 +416,7 @@ export function renderCheatSheet(input: CheatSheetInput): string {
   ).join("")}</defs>`;
 
   const head = header(clean(input.title) || "NCERT Overview", input.subject || "", seed);
-  const out: string[] = [paper(seed), head.svg];
+  const out: string[] = [head.svg];
 
   const gap = 22;
   const leftX = 60;
@@ -482,15 +482,19 @@ export function renderCheatSheet(input: CheatSheetInput): string {
   }
 
   // ---- tip bubble across the full width, always inside the page
+  let bottom = Math.max(ly, ry);
   if (p.tip) {
-    const ty = Math.min(Math.max(ly, ry) + 6, H - bottomReserve + 4);
+    const ty = Math.min(bottom + 6, H - bottomReserve + 4);
     const tip = tipBubble(leftX, ty, W - 120, p.tip, pal);
     out.push(tip.svg);
+    bottom = ty + tip.h;
   }
 
-  out.push(text(W - 60, H - 26, "NCERT · self-made study sheet", { size: 14, fill: INK_SOFT, anchor: "end" }));
+  // Crop the sheet to its content so the poster never carries a dead band.
+  const finalH = Math.max(680, Math.min(H, Math.round(bottom + 52)));
+  out.push(text(W - 60, finalH - 24, "NCERT · self-made study sheet", { size: 14, fill: INK_SOFT, anchor: "end" }));
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${defs}${out.join("")}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${finalH}" width="${W}" height="${finalH}">${defs}${paper(seed, finalH)}${out.join("")}</svg>`;
 }
 
 export function renderCheatSheetDataUrl(input: CheatSheetInput): string {
