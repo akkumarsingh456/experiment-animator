@@ -37,7 +37,7 @@ const NIB = '"Segoe Print","Bradley Hand","Chalkboard SE","Comic Sans MS",cursiv
 const MATH = '"Cambria Math","Latin Modern Math",Georgia,"Times New Roman",serif';
 
 const INK = "#22303c";
-const INK_SOFT = "#465a६b".replace("६", "6");
+const INK_SOFT = "#465a6b";
 const PAPER = "#FFFDF6";
 
 const PASTELS = [
@@ -287,10 +287,15 @@ function tipBubble(x: number, y: number, w: number, tip: string, pal: number): B
 
 /* ------------------------------- diagrams --------------------------------- */
 
+const ARROW_COLORS = Array.from(
+  new Set([INK, INK_SOFT, "#8A6B18", "#9A4763", ...PASTELS.map((p) => p.tab), ...PASTELS.map((p) => p.edge)]),
+);
+const markerId = (c: string) => `ar${ARROW_COLORS.indexOf(c) >= 0 ? ARROW_COLORS.indexOf(c) : 0}`;
+
 function arrow(x1: number, y1: number, x2: number, y2: number, c: string, label?: string, dash = false) {
   const mid = { x: (x1 + x2) / 2, y: (y1 + y2) / 2 };
   return [
-    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="3" stroke-linecap="round"${dash ? ' stroke-dasharray="6 6"' : ""} marker-end="url(#ar)"/>`,
+    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="3" stroke-linecap="round"${dash ? ' stroke-dasharray="6 6"' : ""} marker-end="url(#${markerId(c)})"/>`,
     label ? text(mid.x + 8, mid.y - 8, label, { size: 16, weight: 700, fill: c, font: MATH, italic: true }) : "",
   ].join("");
 }
@@ -402,7 +407,10 @@ export function renderCheatSheet(input: CheatSheetInput): string {
   const pal = seed % 4;
   const p = collect(input);
 
-  const defs = `<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker></defs>`;
+  const defs = `<defs>${ARROW_COLORS.map(
+    (col, i) =>
+      `<marker id="ar${i}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${col}"/></marker>`,
+  ).join("")}</defs>`;
 
   const head = header(clean(input.title) || "NCERT Overview", input.subject || "", seed);
   const out: string[] = [paper(seed), head.svg];
