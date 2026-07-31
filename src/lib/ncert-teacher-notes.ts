@@ -54,6 +54,18 @@ function dedupe(lines: string[]): string[] {
   return out;
 }
 
+const HEADING_ORDER = [
+  "1. Definition",
+  "2. Formula",
+  "3. SI Unit & Measurement",
+  "4. Key Properties",
+  "5. NCERT Example / Activity",
+  "6. Real-life Use (NCERT)",
+  "7. Important Points",
+  "8. Key Terms",
+  "9. Memory Trick",
+];
+
 const isDefinition = (s: string) => /\bis defined as\b|\bis called\b|\bis known as\b|\brefers to\b|\bmeans\b|\bis the\b|\bare the\b/i.test(s);
 const isFormula = (s: string) => /[A-Za-zΔ]\s*=\s*[^=]/.test(s) || /\bformula\b|\bequation\b/i.test(s);
 const isUnit = (s: string) => /\bSI unit\b|\bunit of\b|\bmeasured in\b|\bN\/C\b|\bV\/m\b|\bjoule\b|\bnewton\b|\bvolt\b|\bfarad\b|\bcoulomb\b|\bmetre\b|\bkg\b/i.test(s);
@@ -87,8 +99,10 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
   };
 
   push("1. Definition", "text", take(isDefinition, 2));
+  // Units first: a line like "1 V = 1 J/C" matches both tests and belongs here.
+  const units = take(isUnit, 2);
   push("2. Formula", "formula", take(isFormula, 3));
-  push("3. SI Unit & Measurement", "bullets", take(isUnit, 2));
+  push("3. SI Unit & Measurement", "bullets", units);
   push("4. Key Properties", "bullets", take(isProperty, 4));
   push("5. NCERT Example / Activity", "text", take(isExample, 2));
   push("6. Real-life Use (NCERT)", "bullets", take(isApplication, 3));
@@ -104,6 +118,8 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
     push("9. Memory Trick", "tip", [`Remember: ${first.term} → ${first.meaning.split(/[,.;]/)[0]}.`]);
   }
 
+  const order = HEADING_ORDER;
+  sections.sort((a, b) => order.indexOf(a.heading) - order.indexOf(b.heading));
   return sections;
 }
 

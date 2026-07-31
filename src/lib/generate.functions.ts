@@ -4,7 +4,7 @@ import { createHash } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
-import { renderNapkinInfographicDataUrl } from "@/lib/napkin-infographic";
+import { renderCheatSheetDataUrl } from "@/lib/cheatsheet-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
 
 
@@ -43,6 +43,9 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         visual_prompt: z.string().optional().default(""),
         grounding: z.string().optional().default(""),
         slideIndex: z.number().int().min(0).max(50).optional().default(0),
+        sections: z
+          .array(z.object({ heading: z.string().default(""), kind: z.string().default("bullets"), lines: z.array(z.string()).default([]) }))
+          .optional(),
         avoidUrls: z.array(z.string()).optional().default([]),
         nocache: z.boolean().optional().default(false),
         cacheOnly: z.boolean().optional().default(false),
@@ -53,7 +56,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     // v9: free local Napkin-style renderer (zero credits, never fails).
     const cacheKey = hashKey([
-      "img-v9-free-napkin",
+      "img-v10-cheatsheet",
       data.klass,
       data.subject,
       String(data.slideIndex),
@@ -122,11 +125,13 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     const source: "local" = "local";
     let geminiError: string | undefined;
     try {
-      url = renderNapkinInfographicDataUrl({
+      url = renderCheatSheetDataUrl({
         title: data.title,
         bullets: data.bullets,
         notes: data.notes,
         keyTerms: data.key_terms,
+        grounding: data.grounding,
+        sections: data.sections as any,
         subject: data.subject,
         slideIndex: data.slideIndex,
       });
