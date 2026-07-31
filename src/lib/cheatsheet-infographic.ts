@@ -32,9 +32,11 @@ export type CheatSheetInput = {
 const W = 1600;
 const H = 1000;
 
-const PEN = '"Segoe Print","Bradley Hand","Chalkboard SE","Comic Sans MS","Comic Neue",cursive';
-const NIB = '"Segoe Print","Bradley Hand","Chalkboard SE","Comic Sans MS",cursive';
-const MATH = '"Cambria Math","Latin Modern Math",Georgia,"Times New Roman",serif';
+// Single-quoted family names only: these strings go straight into an SVG
+// double-quoted attribute, so embedded double quotes would break the XML.
+const PEN = "'Segoe Print','Bradley Hand','Chalkboard SE','Comic Sans MS','Comic Neue',cursive";
+const NIB = PEN;
+const MATH = "'Cambria Math','Latin Modern Math',Georgia,'Times New Roman',serif";
 
 const INK = "#22303c";
 const INK_SOFT = "#465a6b";
@@ -88,7 +90,7 @@ function text(
   opts: { size?: number; weight?: number; fill?: string; anchor?: string; font?: string; italic?: boolean } = {},
 ) {
   const { size = 20, weight = 400, fill = INK, anchor = "start", font = PEN, italic = false } = opts;
-  return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-family=${JSON.stringify(font)} font-size="${size}" font-weight="${weight}"${italic ? ' font-style="italic"' : ""} fill="${fill}">${esc(body)}</text>`;
+  return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-family="${font}" font-size="${size}" font-weight="${weight}"${italic ? ' font-style="italic"' : ""} fill="${fill}">${esc(body)}</text>`;
 }
 
 /* ------------------------------ section model ----------------------------- */
