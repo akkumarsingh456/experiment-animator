@@ -131,7 +131,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         notes: data.notes,
         keyTerms: data.key_terms,
         grounding: data.grounding,
-        sections: data.sections,
+        sections: data.sections as any,
         subject: data.subject,
         slideIndex: data.slideIndex,
       });
