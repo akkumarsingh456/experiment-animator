@@ -173,7 +173,7 @@ export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
       lines.push(/^\*\*/.test(raw) ? raw : `**${label}:** ${l}`);
     }
   }
-  const finalLines = dedupe(lines).slice(0, 12);
+  const finalLines = dedupeLabelled(lines).slice(0, 12);
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
 
