@@ -116,18 +116,25 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
     for (const it of items) lines.push(`**${label}:** ${it}`);
   };
 
+  // Order matters: earlier labels claim a sentence first, so the same sentence
+  // can never surface twice under two different labels on one slide.
   add("Definition", take(isDefinition, 2));
   const units = take(isUnit, 1);
   add("Formula", take(isFormula, 2));
   add("SI unit", units);
-  add("Property", take(isProperty, 2));
+  add("Derivation", take(isDerivation, 2));
+  add("Important point", take(isProperty, 2));
   add("Example", take(isExample, 1));
   add("Use", take(isApplication, 1));
   add("Key point", take(() => true, 3));
 
+  const termSeen = new Set(lines.map((l) => norm(l.replace(/^\*\*[^*]+:\*\*\s*/, "")).slice(0, 70)));
   for (const t of (slide.key_terms || []).slice(0, 3)) {
     const meaning = cleanNcertLine(t.meaning);
-    if (t.term && meaning) lines.push(`**${t.term}:** ${meaning}`);
+    const key = norm(meaning).slice(0, 70);
+    if (!t.term || !meaning || termSeen.has(key)) continue;
+    termSeen.add(key);
+    lines.push(`**Key term — ${t.term}:** ${meaning}`);
   }
 
   const first = (slide.key_terms || [])[0];
@@ -136,7 +143,8 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
     if (hook) lines.push(`**Memory trick:** ${first.term} → ${hook}.`);
   }
 
-  const finalLines = dedupe(lines).slice(0, 12);
+  const finalLines = dedupeLabelled(lines).slice(0, 12);
+
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
 
