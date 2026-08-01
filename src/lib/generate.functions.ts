@@ -56,7 +56,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     // v9: free local Napkin-style renderer (zero credits, never fails).
     const cacheKey = hashKey([
-      "img-v10-cheatsheet",
+      "img-v11-napkin",
       data.klass,
       data.subject,
       String(data.slideIndex),
