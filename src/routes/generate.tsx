@@ -435,7 +435,14 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         if (secs?.length) {
           const text = secs.flatMap((sec) => [
             { text: sec.heading, options: { bold: true, color: "1F2A4A", fontSize: 12, breakLine: true } },
-            ...sec.lines.map((l) => ({ text: l, options: { fontSize: 11, color: "475569", bullet: sec.kind !== "text" && sec.kind !== "tip", breakLine: true } })),
+            ...sec.lines.flatMap((l) => {
+              const m = /^\*\*([^*]+)\*\*\s*(.*)$/.exec(l);
+              if (!m) return [{ text: l, options: { fontSize: 11, color: "475569", bullet: true, breakLine: true } }];
+              return [
+                { text: m[1], options: { fontSize: 11, bold: true, color: "1F2A4A", bullet: true } },
+                { text: ` ${m[2]}`, options: { fontSize: 11, color: "475569", breakLine: true } },
+              ];
+            }),
           ]);
           slide.addText(text as any, { x: 0.5, y: 5.05, w: leftW, h: 2.4, fontFace: "Calibri", valign: "top" });
         } else if (s.notes?.length) {
