@@ -286,6 +286,13 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
   slides: T[],
   opts: { apiKey?: string; klass: string; subject: string; chapter: string; context: string },
 ): Promise<T[]> {
+  // Clean print noise (edition years, Fig./page refs) out of the visible
+  // bullets too, so slides never show "2019-20" or "FIGURE 2.11".
+  slides = slides.map((s) =>
+    (s.kind ?? "content") === "content"
+      ? { ...s, bullets: dedupe((s.bullets || []).map(cleanNcertLine).filter(Boolean)) }
+      : s,
+  );
   const targets = slides.map((s, i) => ({ s, i })).filter(({ s }) => (s.kind ?? "content") === "content");
   const withLocal = slides.map((s) =>
     (s.kind ?? "content") === "content" ? { ...s, sections: buildLocalSections(s) } : s,
