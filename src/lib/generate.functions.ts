@@ -125,13 +125,11 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     const source: "local" = "local";
     let geminiError: string | undefined;
     try {
-      url = renderCheatSheetDataUrl({
+      url = renderNapkinInfographicDataUrl({
         title: data.title,
         bullets: data.bullets,
         notes: data.notes,
         keyTerms: data.key_terms,
-        grounding: data.grounding,
-        sections: data.sections as any,
         subject: data.subject,
         slideIndex: data.slideIndex,
       });
