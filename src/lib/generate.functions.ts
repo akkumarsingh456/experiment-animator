@@ -4,7 +4,7 @@ import { createHash } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
-import { renderCheatSheetDataUrl } from "@/lib/cheatsheet-infographic";
+import { renderNapkinInfographicDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
 
 
@@ -56,7 +56,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     // v9: free local Napkin-style renderer (zero credits, never fails).
     const cacheKey = hashKey([
-      "img-v10-cheatsheet",
+      "img-v11-napkin",
       data.klass,
       data.subject,
       String(data.slideIndex),
@@ -125,13 +125,11 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     const source: "local" = "local";
     let geminiError: string | undefined;
     try {
-      url = renderCheatSheetDataUrl({
+      url = renderNapkinInfographicDataUrl({
         title: data.title,
         bullets: data.bullets,
         notes: data.notes,
         keyTerms: data.key_terms,
-        grounding: data.grounding,
-        sections: data.sections as any,
         subject: data.subject,
         slideIndex: data.slideIndex,
       });
@@ -1843,7 +1841,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v19-teacher-notes",
+      "lesson-v20-single-notes",
       data.klass,
       data.subject,
       data.chapter,

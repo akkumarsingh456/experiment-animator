@@ -50,29 +50,36 @@ import {
 
 type NoteSectionUI = { heading: string; kind: string; lines: string[] };
 
-/** NCERT teacher-note sections (Definition → Formula → … → Memory trick). */
+/** Render inline **bold** labels inside a note line. */
+function BoldLine({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.startsWith("**") && p.endsWith("**") ? (
+          <strong key={i} className="font-semibold text-foreground">{p.slice(2, -2)}</strong>
+        ) : (
+          <span key={i}>{p}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+/** NCERT teacher notes — one single block, labels in bold (no repeated sections). */
 function NoteSections({ sections, scale }: { sections?: NoteSectionUI[]; scale?: "card" | "present" }) {
   if (!sections?.length) return null;
   const base = scale === "present" ? "text-[clamp(10px,0.95vw,14px)]" : "text-[11px]";
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+    <div className="space-y-1.5">
       {sections.map((sec, i) => (
-        <div
-          key={i}
-          className={`rounded-md border border-border/50 bg-secondary/40 px-2 py-1.5 ${sec.kind === "formula" || sec.kind === "tip" ? "col-span-2 bg-accent/20" : ""}`}
-        >
-          <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-0.5">{sec.heading}</div>
-          {sec.kind === "text" ? (
-            <p className={`${base} leading-snug text-foreground/90`}>{sec.lines.join(" ")}</p>
-          ) : (
-            <ul className={`${base} leading-snug space-y-0.5 text-foreground/90`}>
-              {sec.lines.map((l, k) => (
-                <li key={k} className={sec.kind === "formula" ? "font-mono" : ""}>
-                  {sec.kind === "formula" || sec.kind === "tip" ? l : `• ${l}`}
-                </li>
-              ))}
-            </ul>
-          )}
+        <div key={i} className="rounded-md border border-border/50 bg-secondary/40 px-2.5 py-2">
+          <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-1">{sec.heading}</div>
+          <ul className={`${base} leading-snug space-y-1 text-foreground/90`}>
+            {sec.lines.map((l, k) => (
+              <li key={k}>• <BoldLine text={l} /></li>
+            ))}
+          </ul>
         </div>
       ))}
     </div>
@@ -428,7 +435,14 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         if (secs?.length) {
           const text = secs.flatMap((sec) => [
             { text: sec.heading, options: { bold: true, color: "1F2A4A", fontSize: 12, breakLine: true } },
-            ...sec.lines.map((l) => ({ text: l, options: { fontSize: 11, color: "475569", bullet: sec.kind !== "text" && sec.kind !== "tip", breakLine: true } })),
+            ...sec.lines.flatMap((l): any[] => {
+              const m = /^\*\*([^*]+)\*\*\s*(.*)$/.exec(l);
+              if (!m) return [{ text: l, options: { fontSize: 11, color: "475569", bullet: true, breakLine: true } }];
+              return [
+                { text: m[1], options: { fontSize: 11, bold: true, color: "1F2A4A", bullet: true } },
+                { text: ` ${m[2]}`, options: { fontSize: 11, color: "475569", breakLine: true } },
+              ];
+            }),
           ]);
           slide.addText(text as any, { x: 0.5, y: 5.05, w: leftW, h: 2.4, fontFace: "Calibri", valign: "top" });
         } else if (s.notes?.length) {
