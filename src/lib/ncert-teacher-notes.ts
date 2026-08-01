@@ -74,7 +74,21 @@ function dedupe(lines: string[]): string[] {
   return out;
 }
 
+/** Dedupe label-prefixed lines by their content, ignoring the bold label. */
+function dedupeLabelled(lines: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const l of lines) {
+    const k = norm(l.replace(/^\*\*[^*]+:\*\*\s*/, "")).slice(0, 70);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(l.trim());
+  }
+  return out;
+}
+
 const NOTE_HEADING = "Teacher Notes";
+
 
 const isDefinition = (s: string) => /\bis defined as\b|\bis called\b|\bis known as\b|\brefers to\b|\bmeans\b|\bis the\b|\bare the\b/i.test(s);
 const isFormula = (s: string) => /[A-Za-zΔ]\s*=\s*[^=]/.test(s) || /\bformula\b|\bequation\b/i.test(s);
