@@ -4,7 +4,7 @@ import { createHash } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
-import { renderCheatSheetDataUrl } from "@/lib/cheatsheet-infographic";
+import { renderNapkinInfographicDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
 
 
