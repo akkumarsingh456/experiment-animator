@@ -435,7 +435,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         if (secs?.length) {
           const text = secs.flatMap((sec) => [
             { text: sec.heading, options: { bold: true, color: "1F2A4A", fontSize: 12, breakLine: true } },
-            ...sec.lines.flatMap((l) => {
+            ...sec.lines.flatMap((l): any[] => {
               const m = /^\*\*([^*]+)\*\*\s*(.*)$/.exec(l);
               if (!m) return [{ text: l, options: { fontSize: 11, color: "475569", bullet: true, breakLine: true } }];
               return [
