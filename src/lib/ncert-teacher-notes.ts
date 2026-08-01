@@ -238,6 +238,8 @@ export async function geminiTeacherNotes(opts: {
     `Use only these headings, in order, omitting any you cannot support: ${HEADINGS.join(" | ")}`,
     'Each section: { "heading": string, "kind": "text"|"bullets"|"formula"|"terms"|"tip", "lines": string[] }.',
     "Lines must be short (max 22 words), exam-ready, and free of filler.",
+    "NEVER include edition years (e.g. 2019-20), figure/table numbers, page numbers or 'Fig.' references.",
+    "Do not repeat the same fact under two headings — every fact appears exactly once.",
     "",
     "Return STRICT JSON only, no markdown fence:",
     '{"slides":[{"index":0,"sections":[...]}]}',
@@ -271,7 +273,7 @@ export async function geminiTeacherNotes(opts: {
       const idx = Number(s?.index);
       if (!Number.isFinite(idx)) continue;
       const sections = sanitizeSections((s as any)?.sections, contextNorm);
-      if (sections.length >= 2) result.set(idx, sections);
+      if (sections.length && sections[0].lines.length >= 3) result.set(idx, sections);
     }
   } catch (e) {
     console.warn("teacher-notes failed", e);
@@ -310,7 +312,7 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
   for (const { batch, map } of results) {
     batch.forEach(({ i }, localIdx) => {
       const sections = map.get(localIdx);
-      if (sections && sections.length >= 2) withLocal[i] = { ...withLocal[i], sections };
+      if (sections?.length && sections[0].lines.length >= 3) withLocal[i] = { ...withLocal[i], sections };
     });
   }
   return withLocal;
