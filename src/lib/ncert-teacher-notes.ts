@@ -74,14 +74,30 @@ function dedupe(lines: string[]): string[] {
   return out;
 }
 
+/** Dedupe label-prefixed lines by their content, ignoring the bold label. */
+function dedupeLabelled(lines: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const l of lines) {
+    const k = norm(l.replace(/^\*\*[^*]+:\*\*\s*/, "")).slice(0, 70);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(l.trim());
+  }
+  return out;
+}
+
 const NOTE_HEADING = "Teacher Notes";
+
 
 const isDefinition = (s: string) => /\bis defined as\b|\bis called\b|\bis known as\b|\brefers to\b|\bmeans\b|\bis the\b|\bare the\b/i.test(s);
 const isFormula = (s: string) => /[A-Za-zΔ]\s*=\s*[^=]/.test(s) || /\bformula\b|\bequation\b/i.test(s);
 const isUnit = (s: string) => /\bSI unit\b|\bunit of\b|\bmeasured in\b|\bN\/C\b|\bV\/m\b|\bjoule\b|\bnewton\b|\bvolt\b|\bfarad\b|\bcoulomb\b/i.test(s);
+const isDerivation = (s: string) => /\bderiv(e|ed|ation|ing)\b|\bsubstitut(e|ing)\b|\bwe get\b|\bwe obtain\b|\btherefore\b|\bhence\b|\bon simplif/i.test(s);
 const isProperty = (s: string) => /\bproperty\b|\bproperties\b|\bnever\b|\balways\b|\bcannot\b|\bdepends\b|\bproportional\b|\bincreases\b|\bdecreases\b/i.test(s);
 const isExample = (s: string) => /\bexample\b|\bfor instance\b|\bactivity\b|\bexperiment\b|\bcalculate\b|\bsuppose\b/i.test(s);
 const isApplication = (s: string) => /\bused in\b|\bapplication\b|\bin daily life\b|\bpractical\b|\bdevice\b|\bmachine\b|\btechnolog/i.test(s);
+
 
 /**
  * Deterministic, zero-cost note builder — one single section where each line is
@@ -114,18 +130,25 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
     for (const it of items) lines.push(`**${label}:** ${it}`);
   };
 
+  // Order matters: earlier labels claim a sentence first, so the same sentence
+  // can never surface twice under two different labels on one slide.
   add("Definition", take(isDefinition, 2));
   const units = take(isUnit, 1);
   add("Formula", take(isFormula, 2));
   add("SI unit", units);
-  add("Property", take(isProperty, 2));
+  add("Derivation", take(isDerivation, 2));
+  add("Important point", take(isProperty, 2));
   add("Example", take(isExample, 1));
   add("Use", take(isApplication, 1));
   add("Key point", take(() => true, 3));
 
+  const termSeen = new Set(lines.map((l) => norm(l.replace(/^\*\*[^*]+:\*\*\s*/, "")).slice(0, 70)));
   for (const t of (slide.key_terms || []).slice(0, 3)) {
     const meaning = cleanNcertLine(t.meaning);
-    if (t.term && meaning) lines.push(`**${t.term}:** ${meaning}`);
+    const key = norm(meaning).slice(0, 70);
+    if (!t.term || !meaning || termSeen.has(key)) continue;
+    termSeen.add(key);
+    lines.push(`**Key term — ${t.term}:** ${meaning}`);
   }
 
   const first = (slide.key_terms || [])[0];
@@ -134,7 +157,8 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
     if (hook) lines.push(`**Memory trick:** ${first.term} → ${hook}.`);
   }
 
-  const finalLines = dedupe(lines).slice(0, 12);
+  const finalLines = dedupeLabelled(lines).slice(0, 12);
+
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
 
@@ -149,7 +173,7 @@ export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
       lines.push(/^\*\*/.test(raw) ? raw : `**${label}:** ${l}`);
     }
   }
-  const finalLines = dedupe(lines).slice(0, 12);
+  const finalLines = dedupeLabelled(lines).slice(0, 12);
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
 
