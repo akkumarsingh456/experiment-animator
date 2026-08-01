@@ -34,19 +34,39 @@ const norm = (s: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
+/** Strip NCERT print noise: edition years, figure/page refs, watermarks. */
+export function cleanNcertLine(raw: string): string {
+  let s = String(raw || "")
+    .replace(/\s+/g, " ")
+    .replace(/\b(19|20)\d{2}\s*[-–]\s*\d{2}\b/g, " ")
+    .replace(/\brationalised\b/gi, " ")
+    .replace(/\breprint\b/gi, " ")
+    .replace(/\(?\s*(see\s+)?(fig(ure)?s?\.?|table)\s*[\d.]*\s*[a-z]?\)?/gi, " ")
+    .replace(/\bchapter\s+\d+\b/gi, " ")
+    .replace(/\bpage\s*\d+\b/gi, " ")
+    .replace(/\b\d{2,4}\s+(?=[A-Z][a-z])/g, " ")
+    .replace(/\s*[,;]\s*(?=[,;.])/g, " ")
+    .replace(/\s+([,.;:])/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  s = s.replace(/^[^A-Za-z0-9(]+/, "").replace(/\s*[,;:]$/, "");
+  if (s && !/[.?!)]$/.test(s)) s += ".";
+  return s.length > 3 ? s : "";
+}
+
 function sentences(text: string): string[] {
   return String(text || "")
     .replace(/\s+/g, " ")
     .split(/(?<=[.?!])\s+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 25);
+    .map((s) => cleanNcertLine(s))
+    .filter((s) => s.length > 30 && /[a-z]/.test(s));
 }
 
 function dedupe(lines: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const l of lines) {
-    const k = norm(l).slice(0, 90);
+    const k = norm(l).slice(0, 70);
     if (!k || seen.has(k)) continue;
     seen.add(k);
     out.push(l.trim());
@@ -54,32 +74,28 @@ function dedupe(lines: string[]): string[] {
   return out;
 }
 
-const HEADING_ORDER = [
-  "1. Definition",
-  "2. Formula",
-  "3. SI Unit & Measurement",
-  "4. Key Properties",
-  "5. NCERT Example / Activity",
-  "6. Real-life Use (NCERT)",
-  "7. Important Points",
-  "8. Key Terms",
-  "9. Memory Trick",
-];
+const NOTE_HEADING = "Teacher Notes";
 
 const isDefinition = (s: string) => /\bis defined as\b|\bis called\b|\bis known as\b|\brefers to\b|\bmeans\b|\bis the\b|\bare the\b/i.test(s);
 const isFormula = (s: string) => /[A-Za-zΔ]\s*=\s*[^=]/.test(s) || /\bformula\b|\bequation\b/i.test(s);
-const isUnit = (s: string) => /\bSI unit\b|\bunit of\b|\bmeasured in\b|\bN\/C\b|\bV\/m\b|\bjoule\b|\bnewton\b|\bvolt\b|\bfarad\b|\bcoulomb\b|\bmetre\b|\bkg\b/i.test(s);
+const isUnit = (s: string) => /\bSI unit\b|\bunit of\b|\bmeasured in\b|\bN\/C\b|\bV\/m\b|\bjoule\b|\bnewton\b|\bvolt\b|\bfarad\b|\bcoulomb\b/i.test(s);
 const isProperty = (s: string) => /\bproperty\b|\bproperties\b|\bnever\b|\balways\b|\bcannot\b|\bdepends\b|\bproportional\b|\bincreases\b|\bdecreases\b/i.test(s);
 const isExample = (s: string) => /\bexample\b|\bfor instance\b|\bactivity\b|\bexperiment\b|\bcalculate\b|\bsuppose\b/i.test(s);
 const isApplication = (s: string) => /\bused in\b|\bapplication\b|\bin daily life\b|\bpractical\b|\bdevice\b|\bmachine\b|\btechnolog/i.test(s);
 
-/** Deterministic, zero-cost sectioniser — always produces usable notes. */
+/**
+ * Deterministic, zero-cost note builder — one single section where each line is
+ * label-prefixed with inline bold (`**Definition:** …`) instead of separate
+ * boxes, so nothing is duplicated across headings.
+ */
 export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
+  // Slide bullets are already shown above the notes — exclude them here so the
+  // same sentence never appears twice on one slide.
+  const shown = new Set((slide.bullets || []).map((b) => norm(cleanNcertLine(b)).slice(0, 70)));
   const pool = dedupe([
-    ...(slide.bullets || []),
-    ...(slide.notes || []),
+    ...(slide.notes || []).map(cleanNcertLine),
     ...sentences(slide.grounding || ""),
-  ]).filter(Boolean);
+  ]).filter((l) => l && !shown.has(norm(l).slice(0, 70)));
 
   const used = new Set<string>();
   const take = (pred: (s: string) => boolean, max: number) => {
@@ -93,35 +109,50 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
     return out;
   };
 
-  const sections: NoteSection[] = [];
-  const push = (heading: string, kind: NoteSectionKind, lines: string[]) => {
-    if (lines.length) sections.push({ heading, kind, lines });
+  const lines: string[] = [];
+  const add = (label: string, items: string[]) => {
+    for (const it of items) lines.push(`**${label}:** ${it}`);
   };
 
-  push("1. Definition", "text", take(isDefinition, 2));
-  // Units first: a line like "1 V = 1 J/C" matches both tests and belongs here.
-  const units = take(isUnit, 2);
-  push("2. Formula", "formula", take(isFormula, 3));
-  push("3. SI Unit & Measurement", "bullets", units);
-  push("4. Key Properties", "bullets", take(isProperty, 4));
-  push("5. NCERT Example / Activity", "text", take(isExample, 2));
-  push("6. Real-life Use (NCERT)", "bullets", take(isApplication, 3));
-  push("7. Important Points", "bullets", take(() => true, 4));
+  add("Definition", take(isDefinition, 2));
+  const units = take(isUnit, 1);
+  add("Formula", take(isFormula, 2));
+  add("SI unit", units);
+  add("Property", take(isProperty, 2));
+  add("Example", take(isExample, 1));
+  add("Use", take(isApplication, 1));
+  add("Key point", take(() => true, 3));
 
-  if (slide.key_terms?.length) {
-    push(
-      "8. Key Terms",
-      "terms",
-      slide.key_terms.slice(0, 4).map((t) => `${t.term} — ${t.meaning}`),
-    );
-    const first = slide.key_terms[0];
-    push("9. Memory Trick", "tip", [`Remember: ${first.term} → ${first.meaning.split(/[,.;]/)[0]}.`]);
+  for (const t of (slide.key_terms || []).slice(0, 3)) {
+    const meaning = cleanNcertLine(t.meaning);
+    if (t.term && meaning) lines.push(`**${t.term}:** ${meaning}`);
   }
 
-  const order = HEADING_ORDER;
-  sections.sort((a, b) => order.indexOf(a.heading) - order.indexOf(b.heading));
-  return sections;
+  const first = (slide.key_terms || [])[0];
+  if (first) {
+    const hook = cleanNcertLine(first.meaning).split(/[,.;]/)[0];
+    if (hook) lines.push(`**Memory trick:** ${first.term} → ${hook}.`);
+  }
+
+  const finalLines = dedupe(lines).slice(0, 12);
+  return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
+
+/** Collapse any multi-section output into the one label-prefixed section. */
+export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
+  const lines: string[] = [];
+  for (const sec of sections) {
+    const label = sec.heading.replace(/^\d+\.\s*/, "").replace(/\s*\(NCERT\)\s*/i, "").trim();
+    for (const raw of sec.lines) {
+      const l = cleanNcertLine(raw);
+      if (!l) continue;
+      lines.push(/^\*\*/.test(raw) ? raw : `**${label}:** ${l}`);
+    }
+  }
+  const finalLines = dedupe(lines).slice(0, 12);
+  return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
+}
+
 
 /* ---------------- Gemini rewrite pass (strict NCERT grounding) ---------------- */
 
