@@ -41,7 +41,7 @@ export function cleanNcertLine(raw: string): string {
     .replace(/\b(19|20)\d{2}\s*[-–]\s*\d{2}\b/g, " ")
     .replace(/\brationalised\b/gi, " ")
     .replace(/\breprint\b/gi, " ")
-    .replace(/\(?\s*(see\s+)?(fig(ure)?s?\.?|table)\s*[\d.]*\s*[a-z]?\)?/gi, " ")
+    .replace(/\(?\s*(see\s+)?(fig(ure)?s?\.?|table)\s*[\d.]*\s*(\([a-z]\))?\s*\)?/gi, " ")
     .replace(/\bchapter\s+\d+\b/gi, " ")
     .replace(/\bpage\s*\d+\b/gi, " ")
     .replace(/\b\d{2,4}\s+(?=[A-Z][a-z])/g, " ")
@@ -59,7 +59,7 @@ function sentences(text: string): string[] {
     .replace(/\s+/g, " ")
     .split(/(?<=[.?!])\s+/)
     .map((s) => cleanNcertLine(s))
-    .filter((s) => s.length > 30 && /[a-z]/.test(s));
+    .filter((s) => s.length > 20 && /[a-z]/.test(s));
 }
 
 function dedupe(lines: string[]): string[] {
