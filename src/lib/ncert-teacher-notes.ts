@@ -192,12 +192,12 @@ function sanitizeSections(raw: unknown, contextNorm: string): NoteSection[] {
       : "bullets";
     const lines = dedupe(
       (Array.isArray((s as any)?.lines) ? (s as any).lines : [])
-        .map((l: unknown) => String(l || "").replace(/\s+/g, " ").trim())
-        .filter((l: string) => l.length > 2 && l.length < 320),
+        .map((l: unknown) => cleanNcertLine(String(l || "")))
+        .filter((l: string) => l.length > 5 && l.length < 300),
     ).filter((l) => kind === "formula" || kind === "tip" || ncertSupported(l, contextNorm));
     if (heading && lines.length) out.push({ heading, kind, lines: lines.slice(0, 6) });
   }
-  return out.slice(0, 9);
+  return mergeToSingleSection(out);
 }
 
 /**
