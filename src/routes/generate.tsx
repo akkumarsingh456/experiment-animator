@@ -1258,14 +1258,16 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
                 </p>
               ) : (
                 <>
-                  <ul className="space-y-1.5">
-                    {(s.bullets || []).map((b, k) => (
-                      <li key={k} className="flex gap-2 text-[clamp(11px,1.1vw,15px)] leading-snug">
-                        <span className="opacity-50 shrink-0">{k + 1}.</span>
-                        <span>{b}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {!(s as any).sections?.length ? (
+                    <ul className="space-y-1.5">
+                      {(s.bullets || []).map((b, k) => (
+                        <li key={k} className="flex gap-2 text-[clamp(11px,1.1vw,15px)] leading-snug">
+                          <span className="opacity-50 shrink-0">{k + 1}.</span>
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                   <NoteSections sections={(s as any).sections} scale="present" />
                   {s.notes?.length && !(s as any).sections?.length ? (
                     <div className="rounded-md bg-secondary/60 border border-border/40 p-2">
@@ -1282,10 +1284,11 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
                       ))}
                     </div>
                   ) : null}
-                  {s.ncert_quote && (
+                  {s.ncert_quote && !(s as any).sections?.length && (
                     <p className="italic opacity-70 border-l-2 border-primary/40 pl-2 text-[clamp(10px,0.9vw,12px)]">"{s.ncert_quote}"</p>
                   )}
                 </>
+
               )}
             </div>
 
