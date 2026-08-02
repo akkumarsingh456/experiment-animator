@@ -1039,12 +1039,13 @@ function SlideCanvas({
                   className="text-[11px] h-8"
                 />
               )}
-              {slide.figures?.length ? (
+              {slide.figures?.length && !(slide as any).sections?.length ? (
                 <p className="text-[10px] text-muted-foreground">📖 Refer NCERT {slide.figures.join(", ")}</p>
               ) : null}
-              {slide.ncert_quote ? (
+              {slide.ncert_quote && !(slide as any).sections?.length ? (
                 <p className="text-[10px] italic text-muted-foreground border-l-2 border-primary/40 pl-2 line-clamp-2">“{slide.ncert_quote}”</p>
               ) : null}
+
             </div>
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0">
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
