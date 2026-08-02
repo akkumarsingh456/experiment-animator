@@ -38,7 +38,7 @@ const norm = (s: string) =>
 
 /** Strip NCERT print noise: edition years, figure/page refs, watermarks. */
 export function cleanNcertLine(raw: string): string {
-  let s = String(raw || "")
+  let s = repairNotation(String(raw || ""))
     .replace(/\s+/g, " ")
     .replace(/\b(19|20)\d{2}\s*[-–]\s*\d{2}\b/g, " ")
     .replace(/\brationalised\b/gi, " ")
@@ -53,8 +53,11 @@ export function cleanNcertLine(raw: string): string {
     .trim();
   s = s.replace(/^[^A-Za-z0-9(]+/, "").replace(/\s*[,;:]$/, "");
   if (s && !/[.?!)]$/.test(s)) s += ".";
-  return s.length > 3 ? s : "";
+  if (s.length <= 3) return "";
+  // Reject lines whose maths is unrecoverable extraction garbage.
+  return cleanFormulaLine(s);
 }
+
 
 function sentences(text: string): string[] {
   return String(text || "")
