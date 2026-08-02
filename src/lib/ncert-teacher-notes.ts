@@ -351,5 +351,87 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
       if (sections?.length && sections[0].lines.length >= 3) withLocal[i] = { ...withLocal[i], sections };
     });
   }
-  return withLocal;
+
+  return await repairSlideFormulas(withLocal, opts);
 }
+
+/**
+ * Final notation pass: every slide, every subject, every chapter. Broken maths
+ * in bullets and Teacher Notes is rewritten with correct symbols/notation by
+ * the AI; anything it cannot reconstruct is dropped instead of shown.
+ */
+async function repairSlideFormulas<T extends NoteSourceSlide & { kind?: string; sections?: NoteSection[] }>(
+  slides: T[],
+  opts: { apiKey?: string; klass: string; subject: string; chapter: string },
+): Promise<T[]> {
+  type Ref = { slide: number; sec: number | null; line: number; label: string };
+  const refs: Ref[] = [];
+  const texts: string[] = [];
+
+  slides.forEach((s, si) => {
+    (s.bullets || []).forEach((b, li) => {
+      if (!needsFormulaAI(b)) return;
+      refs.push({ slide: si, sec: null, line: li, label: "" });
+      texts.push(b);
+    });
+    (s.sections || []).forEach((sec, sxi) => {
+      sec.lines.forEach((l, li) => {
+        if (!needsFormulaAI(l)) return;
+        const m = l.match(/^(\*\*[^*]+:\*\*\s*)/);
+        refs.push({ slide: si, sec: sxi, line: li, label: m ? m[1] : "" });
+        texts.push(m ? l.slice(m[1].length) : l);
+      });
+    });
+  });
+
+  if (texts.length === 0) return slides;
+
+  const CHUNK = 20;
+  const chunks: Array<{ start: number; items: string[] }> = [];
+  for (let i = 0; i < texts.length; i += CHUNK) chunks.push({ start: i, items: texts.slice(i, i + CHUNK) });
+
+  const fixes = new Map<number, string>();
+  const maps = await Promise.all(
+    chunks.map((c) =>
+      aiFixFormulas({ ...opts, lines: c.items }).then((m) => ({ start: c.start, m })),
+    ),
+  );
+  for (const { start, m } of maps) for (const [k, v] of m) fixes.set(start + k, v);
+
+  const out = slides.map((s) => ({ ...s }));
+  // Apply in reverse so index-based removals stay valid.
+  for (let r = refs.length - 1; r >= 0; r--) {
+    const ref = refs[r];
+    const fixed = fixes.get(r);
+    if (fixed === undefined) {
+      // No AI answer: keep only if deterministic cleanup rescues it.
+      const src =
+        ref.sec === null
+          ? (out[ref.slide].bullets || [])[ref.line]
+          : (out[ref.slide].sections || [])[ref.sec].lines[ref.line];
+      const det = cleanFormulaLine(String(src || "").replace(/^\*\*[^*]+:\*\*\s*/, ""));
+      if (det) continue;
+      applyLine(out[ref.slide], ref, null);
+      continue;
+    }
+    applyLine(out[ref.slide], ref, fixed ? `${ref.label}${fixed}` : null);
+  }
+  return out as T[];
+
+  function applyLine(slide: any, ref: Ref, value: string | null) {
+    if (ref.sec === null) {
+      const arr = [...(slide.bullets || [])];
+      if (value === null) arr.splice(ref.line, 1);
+      else arr[ref.line] = value;
+      slide.bullets = arr;
+    } else {
+      const secs = [...(slide.sections || [])];
+      const sec = { ...secs[ref.sec], lines: [...secs[ref.sec].lines] };
+      if (value === null) sec.lines.splice(ref.line, 1);
+      else sec.lines[ref.line] = value;
+      secs[ref.sec] = sec;
+      slide.sections = secs;
+    }
+  }
+}
+
