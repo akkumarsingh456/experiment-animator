@@ -989,27 +989,30 @@ function SlideCanvas({
               ) : (
                 <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight leading-tight">{slide.title}</h3>
               )}
-              <ul className="space-y-1">
-                {(slide.bullets || []).map((b, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1 w-1 rounded-full bg-primary shrink-0" />
-                    {editing ? (
-                      <Textarea
-                        value={b}
-                        onChange={(e) => {
-                          const next = [...slide.bullets];
-                          next[i] = e.target.value;
-                          onChange({ bullets: next });
-                        }}
-                        className="min-h-[32px] resize-none text-xs"
-                      />
-                    ) : (
-                      <p className="text-[12px] leading-snug">{b}</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              {!(slide as any).sections?.length || editing ? (
+                <ul className="space-y-1">
+                  {(slide.bullets || []).map((b, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1 w-1 rounded-full bg-primary shrink-0" />
+                      {editing ? (
+                        <Textarea
+                          value={b}
+                          onChange={(e) => {
+                            const next = [...slide.bullets];
+                            next[i] = e.target.value;
+                            onChange({ bullets: next });
+                          }}
+                          className="min-h-[32px] resize-none text-xs"
+                        />
+                      ) : (
+                        <p className="text-[12px] leading-snug">{b}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               <NoteSections sections={(slide as any).sections} />
+
               {slide.notes?.length && !(slide as any).sections?.length ? (
                 <div className="rounded-md bg-secondary/50 border border-border/50 p-2 overflow-hidden">
                   <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-1">NCERT notes</div>
