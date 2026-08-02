@@ -111,26 +111,29 @@ function node(
   stroke: string,
   pill = false,
 ) {
-  const labelLines = wrap(fact.label, Math.floor(w / 9.2), 2);
-  const capLines = fact.caption ? wrap(fact.caption, Math.floor(w / 7.4), 2) : [];
-  const total = labelLines.length * 22 + capLines.length * 16;
-  let ty = y + h / 2 - total / 2 + 16;
+  const labelLines = wrap(fact.label, Math.max(12, Math.floor(w / 13.5)), 2);
+  const capLines = fact.caption ? wrap(fact.caption, Math.max(14, Math.floor(w / 10.8)), 2) : [];
+  const LH_L = 31;
+  const LH_C = 24;
+  const total = labelLines.length * LH_L + capLines.length * LH_C;
+  let ty = y + h / 2 - total / 2 + 22;
   const parts: string[] = [
-    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${pill ? h / 2 : 16}" fill="url(#${fillId})" stroke="${stroke}" stroke-width="2.5"/>`,
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${pill ? h / 2 : 18}" fill="url(#${fillId})" stroke="${stroke}" stroke-width="2.5"/>`,
   ];
   for (const l of labelLines) {
     parts.push(
-      `<text x="${x + w / 2}" y="${ty}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#12212e">${esc(l)}</text>`,
+      `<text x="${x + w / 2}" y="${ty}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#0d1b26">${esc(l)}</text>`,
     );
-    ty += 22;
+    ty += LH_L;
   }
   for (const l of capLines) {
     parts.push(
-      `<text x="${x + w / 2}" y="${ty}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#33475b">${esc(l)}</text>`,
+      `<text x="${x + w / 2}" y="${ty}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="500" fill="#27414f">${esc(l)}</text>`,
     );
-    ty += 16;
+    ty += LH_C;
   }
   return parts.join("");
+
 }
 
 function curve(x1: number, y1: number, x2: number, y2: number, bend = 0.22, color = "#2b6d87") {
