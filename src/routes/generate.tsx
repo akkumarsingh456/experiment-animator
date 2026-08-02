@@ -69,7 +69,7 @@ function BoldLine({ text }: { text: string }) {
 /** NCERT teacher notes — one single block, labels in bold (no repeated sections). */
 function NoteSections({ sections, scale }: { sections?: NoteSectionUI[]; scale?: "card" | "present" }) {
   if (!sections?.length) return null;
-  const base = scale === "present" ? "text-[clamp(10px,0.95vw,14px)]" : "text-[11px]";
+  const base = scale === "present" ? "text-[clamp(12px,1.2vw,18px)]" : "text-[12.5px]";
   return (
     <div className="space-y-1.5">
       {sections.map((sec, i) => (
