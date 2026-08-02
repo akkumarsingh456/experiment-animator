@@ -69,7 +69,7 @@ function BoldLine({ text }: { text: string }) {
 /** NCERT teacher notes — one single block, labels in bold (no repeated sections). */
 function NoteSections({ sections, scale }: { sections?: NoteSectionUI[]; scale?: "card" | "present" }) {
   if (!sections?.length) return null;
-  const base = scale === "present" ? "text-[clamp(10px,0.95vw,14px)]" : "text-[11px]";
+  const base = scale === "present" ? "text-[clamp(12px,1.2vw,18px)]" : "text-[12.5px]";
   return (
     <div className="space-y-1.5">
       {sections.map((sec, i) => (
@@ -426,41 +426,42 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         slide.background = { color: "F7F8FC" };
         slide.addText(`Slide ${i + 1} / ${slides.length}`, { x: 0.3, y: 0.2, w: 4, h: 0.3, fontSize: 10, color: "8090B0", fontFace: "Calibri" });
         slide.addText(s.title || "", { x: 0.4, y: 0.55, w: W - 0.8, h: 0.85, fontSize: 26, bold: true, color: "1F2A4A", fontFace: "Calibri" });
-        // Left column: bullets
+        // Left column: NCERT teacher notes only (bullets shown only when no notes exist)
         const leftW = 6.6;
-        slide.addText((s.bullets || []).map((b) => ({ text: b, options: { bullet: true } })),
-          { x: 0.5, y: 1.5, w: leftW, h: 3.6, fontSize: 14, color: "33415C", fontFace: "Calibri", valign: "top", paraSpaceAfter: 4 });
-        // Structured teacher-note sections (NCERT-only)
         const secs = (s as any).sections as NoteSectionUI[] | undefined;
         if (secs?.length) {
-          const text = secs.flatMap((sec) => [
-            { text: sec.heading, options: { bold: true, color: "1F2A4A", fontSize: 12, breakLine: true } },
-            ...sec.lines.flatMap((l): any[] => {
+          const text = secs.flatMap((sec) =>
+            sec.lines.flatMap((l): any[] => {
               const m = /^\*\*([^*]+)\*\*\s*(.*)$/.exec(l);
-              if (!m) return [{ text: l, options: { fontSize: 11, color: "475569", bullet: true, breakLine: true } }];
+              if (!m) return [{ text: l, options: { fontSize: 14, color: "33415C", bullet: true, breakLine: true } }];
               return [
-                { text: m[1], options: { fontSize: 11, bold: true, color: "1F2A4A", bullet: true } },
-                { text: ` ${m[2]}`, options: { fontSize: 11, color: "475569", breakLine: true } },
+                { text: m[1], options: { fontSize: 14, bold: true, color: "1F2A4A", bullet: true } },
+                { text: ` ${m[2]}`, options: { fontSize: 14, color: "33415C", breakLine: true } },
               ];
             }),
-          ]);
-          slide.addText(text as any, { x: 0.5, y: 5.05, w: leftW, h: 2.4, fontFace: "Calibri", valign: "top" });
+          );
+          slide.addText("Teacher Notes", { x: 0.5, y: 1.5, w: leftW, h: 0.32, fontSize: 13, bold: true, color: "1F2A4A", fontFace: "Calibri" });
+          slide.addText(text as any, { x: 0.5, y: 1.9, w: leftW, h: 5.5, fontFace: "Calibri", valign: "top", paraSpaceAfter: 5 });
         } else if (s.notes?.length) {
-          slide.addText("NCERT Notes", { x: 0.5, y: 5.2, w: leftW, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
+          slide.addText("NCERT Notes", { x: 0.5, y: 1.5, w: leftW, h: 0.3, fontSize: 13, bold: true, color: "1F2A4A" });
           slide.addText((s.notes).map((n) => ({ text: n, options: { bullet: { type: "number" } } })),
-            { x: 0.5, y: 5.55, w: leftW, h: 1.8, fontSize: 11, color: "475569", paraSpaceAfter: 3 });
+            { x: 0.5, y: 1.9, w: leftW, h: 5.5, fontSize: 14, color: "475569", paraSpaceAfter: 4 });
+        } else {
+          slide.addText((s.bullets || []).map((b) => ({ text: b, options: { bullet: true } })),
+            { x: 0.5, y: 1.5, w: leftW, h: 5.9, fontSize: 14, color: "33415C", fontFace: "Calibri", valign: "top", paraSpaceAfter: 4 });
         }
         // Right column: image + key terms + quote
         const rightX = leftW + 0.7;
         const rightW = W - rightX - 0.4;
         const img = images[i];
         if (img) slide.addImage({ data: img, x: rightX, y: 1.5, w: rightW, h: 3.2 });
-        if (s.key_terms?.length) {
+        if (s.key_terms?.length && !secs?.length) {
           slide.addText("Key terms", { x: rightX, y: 4.85, w: rightW, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
           slide.addText(s.key_terms.map((t) => ({ text: `${t.term}: ${t.meaning}`, options: { bullet: true } })),
             { x: rightX, y: 5.2, w: rightW, h: 1.8, fontSize: 11, color: "475569", paraSpaceAfter: 3 });
         }
-        if (s.ncert_quote) slide.addText(`“${s.ncert_quote}”`, { x: rightX, y: 7.1, w: rightW, h: 0.6, fontSize: 10, italic: true, color: "5A6B91" });
+        if (s.ncert_quote && !secs?.length) slide.addText(`“${s.ncert_quote}”`, { x: rightX, y: 7.1, w: rightW, h: 0.6, fontSize: 10, italic: true, color: "5A6B91" });
+
         if (s.caption) slide.addText(s.caption, { x: 0.5, y: 7.5, w: leftW, h: 0.4, fontSize: 10, italic: true, color: "5A6B91" });
         slide.addText("EduPlan AI · NCERT-grounded", { x: W - 3, y: H - 0.4, w: 2.8, h: 0.3, fontSize: 9, color: "8090B0", align: "right" });
       });
@@ -989,27 +990,30 @@ function SlideCanvas({
               ) : (
                 <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight leading-tight">{slide.title}</h3>
               )}
-              <ul className="space-y-1">
-                {(slide.bullets || []).map((b, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1 w-1 rounded-full bg-primary shrink-0" />
-                    {editing ? (
-                      <Textarea
-                        value={b}
-                        onChange={(e) => {
-                          const next = [...slide.bullets];
-                          next[i] = e.target.value;
-                          onChange({ bullets: next });
-                        }}
-                        className="min-h-[32px] resize-none text-xs"
-                      />
-                    ) : (
-                      <p className="text-[12px] leading-snug">{b}</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              {!(slide as any).sections?.length || editing ? (
+                <ul className="space-y-1">
+                  {(slide.bullets || []).map((b, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1 w-1 rounded-full bg-primary shrink-0" />
+                      {editing ? (
+                        <Textarea
+                          value={b}
+                          onChange={(e) => {
+                            const next = [...slide.bullets];
+                            next[i] = e.target.value;
+                            onChange({ bullets: next });
+                          }}
+                          className="min-h-[32px] resize-none text-xs"
+                        />
+                      ) : (
+                        <p className="text-[12px] leading-snug">{b}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               <NoteSections sections={(slide as any).sections} />
+
               {slide.notes?.length && !(slide as any).sections?.length ? (
                 <div className="rounded-md bg-secondary/50 border border-border/50 p-2 overflow-hidden">
                   <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-1">NCERT notes</div>
@@ -1036,12 +1040,13 @@ function SlideCanvas({
                   className="text-[11px] h-8"
                 />
               )}
-              {slide.figures?.length ? (
+              {slide.figures?.length && !(slide as any).sections?.length ? (
                 <p className="text-[10px] text-muted-foreground">📖 Refer NCERT {slide.figures.join(", ")}</p>
               ) : null}
-              {slide.ncert_quote ? (
+              {slide.ncert_quote && !(slide as any).sections?.length ? (
                 <p className="text-[10px] italic text-muted-foreground border-l-2 border-primary/40 pl-2 line-clamp-2">“{slide.ncert_quote}”</p>
               ) : null}
+
             </div>
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0">
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
@@ -1254,14 +1259,16 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
                 </p>
               ) : (
                 <>
-                  <ul className="space-y-1.5">
-                    {(s.bullets || []).map((b, k) => (
-                      <li key={k} className="flex gap-2 text-[clamp(11px,1.1vw,15px)] leading-snug">
-                        <span className="opacity-50 shrink-0">{k + 1}.</span>
-                        <span>{b}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {!(s as any).sections?.length ? (
+                    <ul className="space-y-1.5">
+                      {(s.bullets || []).map((b, k) => (
+                        <li key={k} className="flex gap-2 text-[clamp(11px,1.1vw,15px)] leading-snug">
+                          <span className="opacity-50 shrink-0">{k + 1}.</span>
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                   <NoteSections sections={(s as any).sections} scale="present" />
                   {s.notes?.length && !(s as any).sections?.length ? (
                     <div className="rounded-md bg-secondary/60 border border-border/40 p-2">
@@ -1278,10 +1285,11 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
                       ))}
                     </div>
                   ) : null}
-                  {s.ncert_quote && (
+                  {s.ncert_quote && !(s as any).sections?.length && (
                     <p className="italic opacity-70 border-l-2 border-primary/40 pl-2 text-[clamp(10px,0.9vw,12px)]">"{s.ncert_quote}"</p>
                   )}
                 </>
+
               )}
             </div>
 

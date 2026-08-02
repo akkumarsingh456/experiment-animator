@@ -91,10 +91,11 @@ function toFacts(input: FactInput): Fact[] {
     if (!k || seen.has(k)) continue;
     seen.add(k);
     out.push({
-      label: wrap(f.label, 26, 2).join(" "),
-      caption: f.caption ? wrap(f.caption, 30, 2).join(" ") : "",
+      label: wrap(f.label, 30, 1).join(" "),
+      caption: f.caption ? wrap(f.caption, 34, 2).join(" ") : "",
     });
-    if (out.length >= 6) break;
+    if (out.length >= 5) break;
+
   }
   return out;
 }
@@ -111,26 +112,29 @@ function node(
   stroke: string,
   pill = false,
 ) {
-  const labelLines = wrap(fact.label, Math.floor(w / 9.2), 2);
-  const capLines = fact.caption ? wrap(fact.caption, Math.floor(w / 7.4), 2) : [];
-  const total = labelLines.length * 22 + capLines.length * 16;
-  let ty = y + h / 2 - total / 2 + 16;
+  const labelLines = wrap(fact.label, Math.max(12, Math.floor(w / 13.5)), 2);
+  const capLines = fact.caption ? wrap(fact.caption, Math.max(14, Math.floor(w / 10.8)), 2) : [];
+  const LH_L = 31;
+  const LH_C = 24;
+  const total = labelLines.length * LH_L + capLines.length * LH_C;
+  let ty = y + h / 2 - total / 2 + 22;
   const parts: string[] = [
-    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${pill ? h / 2 : 16}" fill="url(#${fillId})" stroke="${stroke}" stroke-width="2.5"/>`,
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${pill ? h / 2 : 18}" fill="url(#${fillId})" stroke="${stroke}" stroke-width="2.5"/>`,
   ];
   for (const l of labelLines) {
     parts.push(
-      `<text x="${x + w / 2}" y="${ty}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#12212e">${esc(l)}</text>`,
+      `<text x="${x + w / 2}" y="${ty}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#0d1b26">${esc(l)}</text>`,
     );
-    ty += 22;
+    ty += LH_L;
   }
   for (const l of capLines) {
     parts.push(
-      `<text x="${x + w / 2}" y="${ty}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#33475b">${esc(l)}</text>`,
+      `<text x="${x + w / 2}" y="${ty}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="500" fill="#27414f">${esc(l)}</text>`,
     );
-    ty += 16;
+    ty += LH_C;
   }
   return parts.join("");
+
 }
 
 function curve(x1: number, y1: number, x2: number, y2: number, bend = 0.22, color = "#2b6d87") {
@@ -165,19 +169,19 @@ function layoutRadial(facts: Fact[], pal: string[][]) {
   const n = facts.length;
   const positions: Array<{ x: number; y: number; w: number; h: number }> = [];
   const cols = [
-    { x: 90, y: 250 },
-    { x: 90, y: 470 },
-    { x: 90, y: 690 },
-    { x: 1210, y: 250 },
-    { x: 1210, y: 470 },
-    { x: 1210, y: 690 },
+    { x: 70, y: 210 },
+    { x: 70, y: 445 },
+    { x: 70, y: 680 },
+    { x: 1170, y: 210 },
+    { x: 1170, y: 445 },
+    { x: 1170, y: 680 },
   ];
   for (let i = 0; i < n; i++) {
     const p = cols[i % cols.length];
-    positions.push({ x: p.x, y: p.y, w: 300, h: 104 });
+    positions.push({ x: p.x, y: p.y, w: 360, h: 152 });
   }
-  const hubW = 340;
-  const hubH = 120;
+  const hubW = 380;
+  const hubH = 158;
   for (let i = 0; i < n; i++) {
     const p = positions[i];
     const left = p.x < cx;
@@ -203,8 +207,8 @@ function layoutFlow(facts: Fact[]) {
   const n = Math.min(facts.length, 6);
   const perRow = n <= 3 ? n : 3;
   const rows = Math.ceil(n / perRow);
-  const w = 400;
-  const h = 118;
+  const w = 430;
+  const h = 158;
   const gapX = (W - perRow * w) / (perRow + 1);
   for (let i = 0; i < n; i++) {
     const r = Math.floor(i / perRow);
@@ -221,8 +225,8 @@ function layoutCycle(facts: Fact[]) {
   const ry = 255;
   const cx = W / 2;
   const cy = 545;
-  const w = 280;
-  const h = 104;
+  const w = 340;
+  const h = 148;
   const angles: number[] = [];
   for (let i = 0; i < n; i++) {
     const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
@@ -278,9 +282,9 @@ export function renderNapkinInfographic(input: FactInput): string {
     const { pre, positions, hub } = layoutRadial(safeFacts, pal);
     body.push(...pre);
     body.push(
-      ...wrap(clean(input.title), 24, 2).map(
+      ...wrap(clean(input.title), 20, 2).map(
         (l, i, arr) =>
-          `<text x="${hub.x + hub.w / 2}" y="${hub.y + hub.h / 2 - (arr.length - 1) * 13 + i * 26 + 8}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="21" font-weight="800" fill="#0d2a45">${esc(l)}</text>`,
+          `<text x="${hub.x + hub.w / 2}" y="${hub.y + hub.h / 2 - (arr.length - 1) * 16 + i * 32 + 9}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="26" font-weight="800" fill="#0d2a45">${esc(l)}</text>`,
       ),
     );
     safeFacts.forEach((f, i) => {
@@ -309,7 +313,7 @@ export function renderNapkinInfographic(input: FactInput): string {
     positions.forEach((p, i) => {
       body.push(node(p.x, p.y, p.w, p.h, safeFacts[i], `g${i % pal.length}`, pal[i % pal.length][1], true));
       body.push(
-        `<circle cx="${p.x + 24}" cy="${p.y + 24}" r="15" fill="${pal[i % pal.length][1]}"/><text x="${p.x + 24}" y="${p.y + 29}" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#fff">${i + 1}</text>`,
+        `<circle cx="${p.x + 26}" cy="${p.y + 26}" r="17" fill="${pal[i % pal.length][1]}"/><text x="${p.x + 26}" y="${p.y + 32}" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="800" fill="#fff">${i + 1}</text>`,
       );
     });
   } else {
@@ -333,10 +337,10 @@ export function renderNapkinInfographic(input: FactInput): string {
       );
     });
     body.push(
-      `<circle cx="${cx}" cy="${cy}" r="86" fill="url(#g0)" stroke="${pal[0][1]}" stroke-width="3"/>`,
-      ...wrap(clean(input.title), 16, 3).map(
+      `<circle cx="${cx}" cy="${cy}" r="100" fill="url(#g0)" stroke="${pal[0][1]}" stroke-width="3"/>`,
+      ...wrap(clean(input.title), 14, 3).map(
         (l, i, arr) =>
-          `<text x="${cx}" y="${cy - (arr.length - 1) * 11 + i * 22 + 6}" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="800" fill="#0d2a45">${esc(l)}</text>`,
+          `<text x="${cx}" y="${cy - (arr.length - 1) * 13 + i * 26 + 7}" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="800" fill="#0d2a45">${esc(l)}</text>`,
       ),
     );
     positions.forEach((p, i) => {
