@@ -91,10 +91,11 @@ function toFacts(input: FactInput): Fact[] {
     if (!k || seen.has(k)) continue;
     seen.add(k);
     out.push({
-      label: wrap(f.label, 26, 2).join(" "),
-      caption: f.caption ? wrap(f.caption, 30, 2).join(" ") : "",
+      label: wrap(f.label, 30, 1).join(" "),
+      caption: f.caption ? wrap(f.caption, 34, 2).join(" ") : "",
     });
-    if (out.length >= 6) break;
+    if (out.length >= 5) break;
+
   }
   return out;
 }
