@@ -178,36 +178,42 @@ export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
       lines.push(/^\*\*/.test(raw) ? raw : `**${label}:** ${l}`);
     }
   }
-  const finalLines = dedupeLabelled(lines).slice(0, 12);
+  const finalLines = dedupeLabelled(lines).slice(0, 22);
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
 
 
-/* ---------------- Gemini rewrite pass (strict NCERT grounding) ---------------- */
+/* ---------------- Gemini rewrite pass (NCERT + reference-book grounding) ---------------- */
 
 type GeminiSlideOut = { index: number; sections: NoteSection[] };
 
 const HEADINGS = [
-  "1. Definition",
-  "2. Formula",
-  "3. SI Unit & Measurement",
-  "4. Key Properties",
-  "5. NCERT Example / Activity",
-  "6. Real-life Use (NCERT)",
-  "7. Important Points",
-  "8. Key Terms",
-  "9. Memory Trick",
+  "1. Analogy",
+  "2. Definition",
+  "3. Formula",
+  "4. SI Unit & Nature",
+  "5. Derivation",
+  "6. Key Properties",
+  "7. NCERT Example / Activity",
+  "8. Real-life Use",
+  "9. Important Points",
+  "10. Key Terms",
+  "11. Exam tip",
+  "12. Memory Trick",
 ];
+
+/** Labels whose lines are maths/pedagogy and must not be filtered by lexical overlap. */
+const FREEFORM_LABEL = /^(formula|si unit|derivation|derivation step|analogy|memory trick|exam tip)\b/i;
 
 /**
  * Drop any AI line that is not lexically supported by the NCERT context.
- * Requires >= 60% of the line's content words (len > 3) to appear in context.
+ * Requires >= 45% of the line's content words (len > 3) to appear in context.
  */
 function ncertSupported(line: string, contextNorm: string): boolean {
   const words = norm(line).split(" ").filter((w) => w.length > 3);
   if (words.length === 0) return false;
   const hits = words.filter((w) => contextNorm.includes(w)).length;
-  return hits / words.length >= 0.6;
+  return hits / words.length >= 0.45;
 }
 
 function sanitizeSections(raw: unknown, contextNorm: string): NoteSection[] {
@@ -219,12 +225,15 @@ function sanitizeSections(raw: unknown, contextNorm: string): NoteSection[] {
     const kind: NoteSectionKind = (["text", "bullets", "formula", "terms", "tip"] as const).includes(kindRaw as NoteSectionKind)
       ? (kindRaw as NoteSectionKind)
       : "bullets";
+    // Maths / pedagogy headings keep light repair only, so correct notation
+    // (integrals, fractions, ε₀, superscripts) is never mistaken for garbage.
+    const freeform = kind === "formula" || kind === "tip" || FREEFORM_LABEL.test(heading.replace(/^\d+\.\s*/, ""));
     const lines = dedupe(
       (Array.isArray((s as any)?.lines) ? (s as any).lines : [])
-        .map((l: unknown) => cleanNcertLine(String(l || "")))
-        .filter((l: string) => l.length > 5 && l.length < 300),
-    ).filter((l) => kind === "formula" || kind === "tip" || ncertSupported(l, contextNorm));
-    if (heading && lines.length) out.push({ heading, kind, lines: lines.slice(0, 6) });
+        .map((l: unknown) => (freeform ? repairNotation(String(l || "")) : cleanNcertLine(String(l || ""))))
+        .filter((l: string) => l.length > 4 && l.length < 320),
+    ).filter((l) => freeform || ncertSupported(l, contextNorm));
+    if (heading && lines.length) out.push({ heading, kind, lines: lines.slice(0, 8) });
   }
   return mergeToSingleSection(out);
 }
