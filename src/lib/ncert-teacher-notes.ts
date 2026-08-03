@@ -11,7 +11,7 @@
  * lexical support in the NCERT context, that line is dropped.
  */
 
-import { aiFixFormulas, cleanFormulaLine, needsFormulaAI, repairNotation } from "@/lib/formula-notation";
+import { aiFixFormulas, aiFormulaSheet, cleanFormulaLine, needsFormulaAI, repairNotation } from "@/lib/formula-notation";
 
 export type NoteSectionKind = "text" | "bullets" | "formula" | "terms" | "tip";
 
