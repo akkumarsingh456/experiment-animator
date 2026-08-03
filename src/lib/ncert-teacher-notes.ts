@@ -138,17 +138,17 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
   // Order matters: earlier labels claim a sentence first, so the same sentence
   // can never surface twice under two different labels on one slide.
   add("Definition", take(isDefinition, 2));
-  const units = take(isUnit, 1);
-  add("Formula", take(isFormula, 2));
+  const units = take(isUnit, 2);
+  add("Formula", take(isFormula, 3));
   add("SI unit", units);
-  add("Derivation", take(isDerivation, 2));
-  add("Important point", take(isProperty, 2));
-  add("Example", take(isExample, 1));
-  add("Use", take(isApplication, 1));
-  add("Key point", take(() => true, 3));
+  add("Derivation step", take(isDerivation, 4));
+  add("Important point", take(isProperty, 3));
+  add("Example", take(isExample, 2));
+  add("Use", take(isApplication, 2));
+  add("Key point", take(() => true, 4));
 
   const termSeen = new Set(lines.map((l) => norm(l.replace(/^\*\*[^*]+:\*\*\s*/, "")).slice(0, 70)));
-  for (const t of (slide.key_terms || []).slice(0, 3)) {
+  for (const t of (slide.key_terms || []).slice(0, 5)) {
     const meaning = cleanNcertLine(t.meaning);
     const key = norm(meaning).slice(0, 70);
     if (!t.term || !meaning || termSeen.has(key)) continue;
@@ -162,7 +162,7 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
     if (hook) lines.push(`**Memory trick:** ${first.term} → ${hook}.`);
   }
 
-  const finalLines = dedupeLabelled(lines).slice(0, 12);
+  const finalLines = dedupeLabelled(lines).slice(0, 20);
 
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
@@ -178,36 +178,42 @@ export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
       lines.push(/^\*\*/.test(raw) ? raw : `**${label}:** ${l}`);
     }
   }
-  const finalLines = dedupeLabelled(lines).slice(0, 12);
+  const finalLines = dedupeLabelled(lines).slice(0, 22);
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
 
 
-/* ---------------- Gemini rewrite pass (strict NCERT grounding) ---------------- */
+/* ---------------- Gemini rewrite pass (NCERT + reference-book grounding) ---------------- */
 
 type GeminiSlideOut = { index: number; sections: NoteSection[] };
 
 const HEADINGS = [
-  "1. Definition",
-  "2. Formula",
-  "3. SI Unit & Measurement",
-  "4. Key Properties",
-  "5. NCERT Example / Activity",
-  "6. Real-life Use (NCERT)",
-  "7. Important Points",
-  "8. Key Terms",
-  "9. Memory Trick",
+  "1. Analogy",
+  "2. Definition",
+  "3. Formula",
+  "4. SI Unit & Nature",
+  "5. Derivation",
+  "6. Key Properties",
+  "7. NCERT Example / Activity",
+  "8. Real-life Use",
+  "9. Important Points",
+  "10. Key Terms",
+  "11. Exam tip",
+  "12. Memory Trick",
 ];
+
+/** Labels whose lines are maths/pedagogy and must not be filtered by lexical overlap. */
+const FREEFORM_LABEL = /^(formula|si unit|derivation|derivation step|analogy|memory trick|exam tip)\b/i;
 
 /**
  * Drop any AI line that is not lexically supported by the NCERT context.
- * Requires >= 60% of the line's content words (len > 3) to appear in context.
+ * Requires >= 45% of the line's content words (len > 3) to appear in context.
  */
 function ncertSupported(line: string, contextNorm: string): boolean {
   const words = norm(line).split(" ").filter((w) => w.length > 3);
   if (words.length === 0) return false;
   const hits = words.filter((w) => contextNorm.includes(w)).length;
-  return hits / words.length >= 0.6;
+  return hits / words.length >= 0.45;
 }
 
 function sanitizeSections(raw: unknown, contextNorm: string): NoteSection[] {
@@ -219,12 +225,15 @@ function sanitizeSections(raw: unknown, contextNorm: string): NoteSection[] {
     const kind: NoteSectionKind = (["text", "bullets", "formula", "terms", "tip"] as const).includes(kindRaw as NoteSectionKind)
       ? (kindRaw as NoteSectionKind)
       : "bullets";
+    // Maths / pedagogy headings keep light repair only, so correct notation
+    // (integrals, fractions, ε₀, superscripts) is never mistaken for garbage.
+    const freeform = kind === "formula" || kind === "tip" || FREEFORM_LABEL.test(heading.replace(/^\d+\.\s*/, ""));
     const lines = dedupe(
       (Array.isArray((s as any)?.lines) ? (s as any).lines : [])
-        .map((l: unknown) => cleanNcertLine(String(l || "")))
-        .filter((l: string) => l.length > 5 && l.length < 300),
-    ).filter((l) => kind === "formula" || kind === "tip" || ncertSupported(l, contextNorm));
-    if (heading && lines.length) out.push({ heading, kind, lines: lines.slice(0, 6) });
+        .map((l: unknown) => (freeform ? repairNotation(String(l || "")) : cleanNcertLine(String(l || ""))))
+        .filter((l: string) => l.length > 4 && l.length < 320),
+    ).filter((l) => freeform || ncertSupported(l, contextNorm));
+    if (heading && lines.length) out.push({ heading, kind, lines: lines.slice(0, 8) });
   }
   return mergeToSingleSection(out);
 }
@@ -249,24 +258,34 @@ export async function geminiTeacherNotes(opts: {
   const payload = opts.slides.map((s, i) => ({
     index: i,
     title: s.title,
-    ncert_excerpts: dedupe([...(s.bullets || []), ...(s.notes || []), ...sentences(s.grounding || "")]).slice(0, 12),
+    ncert_excerpts: dedupe([...(s.bullets || []), ...(s.notes || []), ...sentences(s.grounding || "")]).slice(0, 16),
   }));
 
   const prompt = [
-    "You are an expert NCERT teacher preparing premium study notes for a smart-board presentation.",
+    "You are a master NCERT teacher writing a pedagogical masterclass note block for students meeting this topic for the FIRST time.",
     `Class: ${opts.klass} | Subject: ${opts.subject} | Chapter: ${opts.chapter}`,
     "",
-    "NON-NEGOTIABLE RULES:",
-    "- The NCERT excerpts supplied below are the ONLY source of truth.",
-    "- Never add facts, formulas, definitions, examples or numbers that are absent from those excerpts.",
-    "- No outside knowledge, no coaching notes, no internet content, no assumptions, no hallucination.",
-    "- Never copy long paragraphs verbatim: read, understand, rewrite crisply in teacher language, keep the exact meaning.",
+    "SOURCE RULES:",
+    "- The NCERT excerpts below (plus the standard reference books already ingested for this class/subject) are the source of truth for every FACT, number, example and application.",
+    "- Never invent facts, data, examples or numbers that contradict or go beyond this chapter's scope.",
+    "- Rewrite in crisp teacher language; never copy long paragraphs verbatim.",
     "- Clean OCR damage (broken words, stray page numbers, headers/footers) before writing.",
-    "- Stay inside this chapter only. If a section cannot be supported by the excerpts, omit that section entirely.",
+    "",
+    "TEACHING STYLE (mandatory):",
+    "- Start with one short intuitive ANALOGY that makes the concept click (everyday comparison only, no new physics claims).",
+    "- Give the precise textbook DEFINITION, then the FORMULA, then its SI UNIT and whether the quantity is scalar or vector.",
+    "- Where the chapter contains a standard relation, give a numbered STEP-BY-STEP DERIVATION (one short step per line, e.g. 'Step 1: V = -∫E·dr from ∞ to r').",
+    "- Add KEY PROPERTIES, an NCERT EXAMPLE/ACTIVITY, a REAL-LIFE USE, exam-ready IMPORTANT POINTS, KEY TERMS with one-line meanings, an EXAM TIP and a MEMORY TRICK.",
+    "",
+    "NOTATION RULES (very important):",
+    "- Write every formula with correct symbols and Unicode notation: ε₀, π, Δ, θ, σ, ∫, ∞, →, ×, ÷, ≈, ≤, ≥, ∝, √, superscripts (², ³, ⁻¹, ⁻²) and subscripts (₀, ₁, ₂).",
+    "- Example style: V = (1/4πε₀)(Q/r), E = −dV/dl, C = ε₀A/d, U = ½CV².",
+    "- Never output bracket soup like '(((())))', repeated '=' runs or stray page digits.",
     "",
     `Use only these headings, in order, omitting any you cannot support: ${HEADINGS.join(" | ")}`,
     'Each section: { "heading": string, "kind": "text"|"bullets"|"formula"|"terms"|"tip", "lines": string[] }.',
-    "Lines must be short (max 22 words), exam-ready, and free of filler.",
+    "Use kind 'formula' for Formula/SI Unit/Derivation sections and 'tip' for Analogy/Exam tip/Memory Trick.",
+    "Lines must be short (max 24 words), exam-ready, dense, and free of filler. Aim for 12-18 lines total per slide.",
     "NEVER include edition years (e.g. 2019-20), figure/table numbers, page numbers or 'Fig.' references.",
     "Do not repeat the same fact under two headings — every fact appears exactly once.",
     "",
