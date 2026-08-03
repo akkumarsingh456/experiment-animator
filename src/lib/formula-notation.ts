@@ -170,3 +170,94 @@ export async function aiFixFormulas(opts: {
   }
   return out;
 }
+
+/* ---------------- guaranteed formula / SI unit / derivation sheet ---------------- */
+
+export type FormulaBlock = {
+  /** Correctly typeset formulas, e.g. "V = (1/4πε₀)(Q/r)". */
+  formula: string[];
+  /** SI unit lines, e.g. "Potential V → volt (V) = J C⁻¹, scalar." */
+  unit: string[];
+  /** Numbered derivation steps, one short step per line. */
+  derivation: string[];
+};
+
+/**
+ * Ask the AI for the formulas, SI units and step-by-step derivations of a slide,
+ * written with correct notation. Subject-agnostic: physics, chemistry, biology,
+ * maths and economics all use the same call. Returns an empty map on failure so
+ * the deck never breaks.
+ */
+export async function aiFormulaSheet(opts: {
+  apiKey?: string;
+  klass: string;
+  subject: string;
+  chapter: string;
+  slides: Array<{ index: number; title: string; excerpts: string[] }>;
+}): Promise<Map<number, FormulaBlock>> {
+  const out = new Map<number, FormulaBlock>();
+  if (!opts.apiKey || opts.slides.length === 0) return out;
+
+  const prompt = [
+    "You are a master teacher writing the formula sheet for NCERT slides.",
+    `Class ${opts.klass} | Subject ${opts.subject} | Chapter ${opts.chapter}.`,
+    "",
+    "For EACH slide return, when the topic genuinely has quantitative content:",
+    '- "formula": every relevant relation of that slide, correctly typeset (max 4).',
+    '- "unit": the SI unit of each quantity with its symbol, base-unit form and scalar/vector nature (max 3).',
+    '- "derivation": a numbered step-by-step derivation of the main formula, one short step per line, starting from the defining relation and ending at the result (3-6 steps).',
+    "",
+    "NOTATION RULES (never break these):",
+    "- Use correct Unicode symbols: ε₀, μ₀, π, Δ, θ, φ, σ, ρ, λ, ω, ∫, ∮, ∑, ∞, ∝, √, →, ⇌, ×, ÷, ≈, ≤, ≥, ±, °.",
+    "- Use real superscripts/subscripts: x², r³, s⁻¹, m s⁻², C₁, V₀, q₁q₂, H₂SO₄, CO₂.",
+    "- Write fractions inline with brackets: (1/4πε₀)(q₁q₂/r²), not stacked or LaTeX.",
+    "- No LaTeX commands, no $ signs, no markdown, no bracket soup, no repeated '=' runs.",
+    "- Chemistry: balanced equations with → or ⇌ and state symbols (s), (l), (g), (aq).",
+    "- Maths/Biology/Economics: use the standard notation of that subject (e.g. dy/dx, nCr, %, Elasticity = (ΔQ/Q)÷(ΔP/P)).",
+    "- Every formula must be dimensionally correct and standard for this class; if a slide has no formula, return empty arrays for it.",
+    "",
+    'Return STRICT JSON only: {"slides":[{"index":0,"formula":["..."],"unit":["..."],"derivation":["Step 1: ...","Step 2: ..."]}]}',
+    "",
+    "SLIDES:",
+    JSON.stringify(opts.slides.map((s) => ({ index: s.index, title: s.title, ncert: s.excerpts.slice(0, 8) }))).slice(0, 16000),
+  ].join("\n");
+
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": opts.apiKey },
+      body: JSON.stringify({
+        model: "google/gemini-3.6-flash",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!res.ok) {
+      console.warn("formula-sheet gateway", res.status, (await res.text()).slice(0, 180));
+      return out;
+    }
+    const json = (await res.json()) as any;
+    const raw = String(json?.choices?.[0]?.message?.content ?? "")
+      .replace(/^```(?:json)?/i, "")
+      .replace(/```$/, "")
+      .trim();
+    const parsed = JSON.parse(raw) as { slides?: Array<Record<string, unknown>> };
+    const clean = (arr: unknown, max: number) =>
+      (Array.isArray(arr) ? arr : [])
+        .map((l) => repairNotation(String(l || "")))
+        .filter((l) => l.length > 2 && l.length < 220)
+        .slice(0, max);
+    for (const s of parsed.slides || []) {
+      const i = Number((s as any)?.index);
+      if (!Number.isFinite(i)) continue;
+      out.set(i, {
+        formula: clean((s as any).formula, 4),
+        unit: clean((s as any).unit, 3),
+        derivation: clean((s as any).derivation, 6),
+      });
+    }
+  } catch (e) {
+    console.warn("formula-sheet failed", e);
+  }
+  return out;
+}
