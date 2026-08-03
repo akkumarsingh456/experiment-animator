@@ -371,7 +371,68 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
     });
   }
 
-  return await repairSlideFormulas(withLocal, opts);
+  return await repairSlideFormulas(await ensureFormulaBlocks(withLocal, opts), opts);
+}
+
+/**
+ * Guarantee that every quantitative slide carries correctly typeset Formula,
+ * SI unit and step-by-step Derivation lines. Works for every subject: slides
+ * whose notes lack those labels get them from a dedicated formula-sheet AI
+ * pass, inserted right after the Definition lines.
+ */
+async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; sections?: NoteSection[] }>(
+  slides: T[],
+  opts: { apiKey?: string; klass: string; subject: string; chapter: string },
+): Promise<T[]> {
+  if (!opts.apiKey) return slides;
+
+  const has = (lines: string[], label: RegExp) => lines.some((l) => label.test(l.replace(/^\*\*/, "")));
+  const targets: Array<{ index: number; title: string; excerpts: string[] }> = [];
+  slides.forEach((s, i) => {
+    if ((s.kind ?? "content") !== "content") return;
+    const lines = s.sections?.[0]?.lines || [];
+    const missing =
+      !has(lines, /^formula/i) || !has(lines, /^si unit/i) || !has(lines, /^derivation/i);
+    if (!missing) return;
+    targets.push({
+      index: i,
+      title: s.title,
+      excerpts: dedupe([...(s.bullets || []), ...(s.notes || []), ...sentences(s.grounding || "")]).slice(0, 8),
+    });
+  });
+  if (targets.length === 0) return slides;
+
+  const CHUNK = 5;
+  const chunks: Array<typeof targets> = [];
+  for (let i = 0; i < targets.length; i += CHUNK) chunks.push(targets.slice(i, i + CHUNK));
+  const maps = await Promise.all(chunks.map((c) => aiFormulaSheet({ ...opts, slides: c })));
+
+  const out = slides.map((s) => ({ ...s }));
+  for (const map of maps) {
+    for (const [i, block] of map) {
+      const slide = out[i];
+      if (!slide) continue;
+      const existing = slide.sections?.[0]?.lines || [];
+      const add: string[] = [];
+      if (!has(existing, /^formula/i)) for (const f of block.formula) add.push(`**Formula:** ${f}`);
+      if (!has(existing, /^si unit/i)) for (const u of block.unit) add.push(`**SI unit:** ${u}`);
+      if (!has(existing, /^derivation/i))
+        block.derivation.forEach((d, n) =>
+          add.push(`**Derivation step ${n + 1}:** ${d.replace(/^step\s*\d+\s*[:.\-]\s*/i, "")}`),
+        );
+      if (!add.length) continue;
+
+      // Insert straight after the Definition lines so the block reads
+      // Definition → Formula → SI unit → Derivation → rest.
+      const lines = [...existing];
+      let at = 0;
+      while (at < lines.length && /^\*\*(analogy|definition)/i.test(lines[at])) at++;
+      lines.splice(at, 0, ...add);
+      const merged = dedupeLabelled(lines).slice(0, 26);
+      slide.sections = [{ heading: NOTE_HEADING, kind: "bullets", lines: merged }];
+    }
+  }
+  return out as T[];
 }
 
 /**
