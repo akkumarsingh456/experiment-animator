@@ -148,7 +148,7 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
   add("Key point", take(() => true, 4));
 
   const termSeen = new Set(lines.map((l) => norm(l.replace(/^\*\*[^*]+:\*\*\s*/, "")).slice(0, 70)));
-  for (const t of (slide.key_terms || []).slice(0, 3)) {
+  for (const t of (slide.key_terms || []).slice(0, 5)) {
     const meaning = cleanNcertLine(t.meaning);
     const key = norm(meaning).slice(0, 70);
     if (!t.term || !meaning || termSeen.has(key)) continue;
@@ -162,7 +162,7 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
     if (hook) lines.push(`**Memory trick:** ${first.term} → ${hook}.`);
   }
 
-  const finalLines = dedupeLabelled(lines).slice(0, 12);
+  const finalLines = dedupeLabelled(lines).slice(0, 20);
 
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
