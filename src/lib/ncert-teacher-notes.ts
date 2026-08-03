@@ -138,14 +138,14 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
   // Order matters: earlier labels claim a sentence first, so the same sentence
   // can never surface twice under two different labels on one slide.
   add("Definition", take(isDefinition, 2));
-  const units = take(isUnit, 1);
-  add("Formula", take(isFormula, 2));
+  const units = take(isUnit, 2);
+  add("Formula", take(isFormula, 3));
   add("SI unit", units);
-  add("Derivation", take(isDerivation, 2));
-  add("Important point", take(isProperty, 2));
-  add("Example", take(isExample, 1));
-  add("Use", take(isApplication, 1));
-  add("Key point", take(() => true, 3));
+  add("Derivation step", take(isDerivation, 4));
+  add("Important point", take(isProperty, 3));
+  add("Example", take(isExample, 2));
+  add("Use", take(isApplication, 2));
+  add("Key point", take(() => true, 4));
 
   const termSeen = new Set(lines.map((l) => norm(l.replace(/^\*\*[^*]+:\*\*\s*/, "")).slice(0, 70)));
   for (const t of (slide.key_terms || []).slice(0, 3)) {
