@@ -29,7 +29,7 @@ const SYMBOL_MAP: Array<[RegExp, string]> = [
   [/\bpi\b/g, "π"],
   [/\bsqrt\s*/gi, "√"],
   [/\bdegrees?\b/gi, "°"],
-  [/\s*\*\s*/g, " × "],
+  [/(?<!\*)\s*\*\s*(?!\*)/g, " × "],
   [/(\d)\s*x\s*10\s*\^?\s*(-?\d+)/gi, "$1 × 10^$2"],
   [/\s*<=\s*/g, " ≤ "],
   [/\s*>=\s*/g, " ≥ "],
