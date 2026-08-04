@@ -41,6 +41,11 @@ const SYMBOL_MAP: Array<[RegExp, string]> = [
 
 /** Light, always-safe cleanup of math punctuation and symbols. */
 export function repairNotation(raw: string): string {
+  // LaTeX spans ($...$ / $$...$$) are authored notation — never touch them.
+  return mapOutsideMath(String(raw || ""), repairPlainNotation);
+}
+
+function repairPlainNotation(raw: string): string {
   let s = String(raw || "");
 
   // Kill empty bracket runs: "( ( ( ( ) ) ) )" and "()" leftovers.
