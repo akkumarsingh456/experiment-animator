@@ -12,6 +12,7 @@
  */
 
 import { aiFixFormulas, aiFormulaSheet, cleanFormulaLine, needsFormulaAI, repairNotation } from "@/lib/formula-notation";
+import { mapOutsideMath, splitMath } from "@/lib/latex-notation";
 
 export type NoteSectionKind = "text" | "bullets" | "formula" | "terms" | "tip";
 
@@ -38,7 +39,7 @@ const norm = (s: string) =>
 
 /** Strip NCERT print noise: edition years, figure/page refs, watermarks. */
 export function cleanNcertLine(raw: string): string {
-  let s = repairNotation(String(raw || ""))
+  let s = mapOutsideMath(repairNotation(String(raw || "")), (t) => t
     .replace(/\s+/g, " ")
     .replace(/\b(19|20)\d{2}\s*[-–]\s*\d{2}\b/g, " ")
     .replace(/\brationalised\b/gi, " ")
@@ -49,9 +50,9 @@ export function cleanNcertLine(raw: string): string {
     .replace(/\b\d{2,4}\s+(?=[A-Z][a-z])/g, " ")
     .replace(/\s*[,;]\s*(?=[,;.])/g, " ")
     .replace(/\s+([,.;:])/g, "$1")
-    .replace(/\s{2,}/g, " ")
+    .replace(/\s{2,}/g, " "))
     .trim();
-  s = s.replace(/^[^A-Za-z0-9(]+/, "").replace(/\s*[,;:]$/, "");
+  s = s.replace(/^[^A-Za-z0-9($\\]+/, "").replace(/\s*[,;:]$/, "");
   if (s && !/[.?!)]$/.test(s)) s += ".";
   if (s.length <= 3) return "";
   // Reject lines whose maths is unrecoverable extraction garbage.
@@ -191,27 +192,33 @@ const HEADINGS = [
   "1. Analogy",
   "2. Definition",
   "3. Formula",
-  "4. SI Unit & Nature",
-  "5. Derivation",
-  "6. Key Properties",
-  "7. NCERT Example / Activity",
-  "8. Real-life Use",
-  "9. Important Points",
-  "10. Key Terms",
-  "11. Exam tip",
-  "12. Memory Trick",
+  "4. Variable Breakdown",
+  "5. SI Unit & Nature",
+  "6. Derivation",
+  "7. Key Properties",
+  "8. NCERT Example / Activity",
+  "9. Real-life Use",
+  "10. Important Points",
+  "11. Key Terms",
+  "12. Exam tip",
+  "13. Memory Trick",
 ];
 
 /** Labels whose lines are maths/pedagogy and must not be filtered by lexical overlap. */
-const FREEFORM_LABEL = /^(formula|si unit|derivation|derivation step|analogy|memory trick|exam tip)\b/i;
+const FREEFORM_LABEL = /^(formula|variable|variable breakdown|si unit|derivation|derivation step|analogy|memory trick|exam tip)\b/i;
 
 /**
  * Drop any AI line that is not lexically supported by the NCERT context.
  * Requires >= 45% of the line's content words (len > 3) to appear in context.
  */
 function ncertSupported(line: string, contextNorm: string): boolean {
-  const words = norm(line).split(" ").filter((w) => w.length > 3);
-  if (words.length === 0) return false;
+  // Judge prose only — LaTeX spans are notation, not claims to ground.
+  const prose = splitMath(line)
+    .filter((seg) => seg.type === "text")
+    .map((seg) => seg.value)
+    .join(" ");
+  const words = norm(prose).split(" ").filter((w) => w.length > 3);
+  if (words.length === 0) return true;
   const hits = words.filter((w) => contextNorm.includes(w)).length;
   return hits / words.length >= 0.45;
 }
@@ -277,10 +284,15 @@ export async function geminiTeacherNotes(opts: {
     "- Where the chapter contains a standard relation, give a numbered STEP-BY-STEP DERIVATION (one short step per line, e.g. 'Step 1: V = -∫E·dr from ∞ to r').",
     "- Add KEY PROPERTIES, an NCERT EXAMPLE/ACTIVITY, a REAL-LIFE USE, exam-ready IMPORTANT POINTS, KEY TERMS with one-line meanings, an EXAM TIP and a MEMORY TRICK.",
     "",
-    "NOTATION RULES (very important):",
-    "- Write every formula with correct symbols and Unicode notation: ε₀, π, Δ, θ, σ, ∫, ∞, →, ×, ÷, ≈, ≤, ≥, ∝, √, superscripts (², ³, ⁻¹, ⁻²) and subscripts (₀, ₁, ₂).",
-    "- Example style: V = (1/4πε₀)(Q/r), E = −dV/dl, C = ε₀A/d, U = ½CV².",
-    "- Never output bracket soup like '(((())))', repeated '=' runs or stray page digits.",
+    "NOTATION RULES (very important — LaTeX is mandatory):",
+    "- Every variable, expression, equation and chemical species must be LaTeX: inline $...$, standalone equations $$...$$. Prose stays outside the delimiters.",
+    "- Never write a fraction linearly: use $\\frac{a}{b}$, not a/b. Use \\int, \\oint, \\sum, \\lim, \\sqrt and \\begin{bmatrix} ... \\end{bmatrix} where the chapter needs them.",
+    "- Example style: $$V = \\frac{1}{4\\pi\\varepsilon_0}\\frac{Q}{r}$$, $E = -\\frac{dV}{dl}$, $C = \\frac{\\varepsilon_0 A}{d}$, $U = \\frac{1}{2}CV^2$.",
+    "- Chemistry: never plain text — write $H_2O$, $CO_2$, $H_2SO_4$, $SO_4^{2-}$, and balance equations as $$\\mathrm{CH_4 + 2O_2 \\rightarrow CO_2 + 2H_2O}$$ with states $(s)$, $(l)$, $(g)$, $(aq)$.",
+    "- Maths: state theorems precisely and give proof outlines in LaTeX ($\\frac{dy}{dx}$, $^nC_r$, $\\lim_{x \\to 0}$).",
+    "- Biology: bold headers for taxonomic/anatomical terms and sequential bullet steps for pathways; no fake formulas.",
+    "- After each formula give a VARIABLE BREAKDOWN line per symbol, then the SI unit, then a derivation with NO skipped intermediate step.",
+    "- Never output bracket soup like '(((())))', repeated '=' runs, unbalanced braces or stray page digits.",
     "",
     `Use only these headings, in order, omitting any you cannot support: ${HEADINGS.join(" | ")}`,
     'Each section: { "heading": string, "kind": "text"|"bullets"|"formula"|"terms"|"tip", "lines": string[] }.',
@@ -415,6 +427,7 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       const existing = slide.sections?.[0]?.lines || [];
       const add: string[] = [];
       if (!has(existing, /^formula/i)) for (const f of block.formula) add.push(`**Formula:** ${f}`);
+      if (!has(existing, /^variable/i)) for (const v of block.variables) add.push(`**Variable:** ${v}`);
       if (!has(existing, /^si unit/i)) for (const u of block.unit) add.push(`**SI unit:** ${u}`);
       if (!has(existing, /^derivation/i))
         block.derivation.forEach((d, n) =>
