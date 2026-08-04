@@ -48,6 +48,9 @@ import {
   GraduationCap,
 } from "lucide-react";
 
+import { MathText } from "@/components/MathText";
+import { plainMathText } from "@/lib/latex-notation";
+
 type NoteSectionUI = { heading: string; kind: string; lines: string[] };
 
 /** Render inline **bold** labels inside a note line. */
@@ -77,7 +80,7 @@ function NoteSections({ sections, scale }: { sections?: NoteSectionUI[]; scale?:
           <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-1">{sec.heading}</div>
           <ul className={`${base} leading-snug space-y-1 text-foreground/90`}>
             {sec.lines.map((l, k) => (
-              <li key={k}>• <BoldLine text={l} /></li>
+              <li key={k}>• <MathText text={l} /></li>
             ))}
           </ul>
         </div>
@@ -432,8 +435,9 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         if (secs?.length) {
           const text = secs.flatMap((sec) =>
             sec.lines.flatMap((l): any[] => {
-              const m = /^\*\*([^*]+)\*\*\s*(.*)$/.exec(l);
-              if (!m) return [{ text: l, options: { fontSize: 14, color: "33415C", bullet: true, breakLine: true } }];
+              const flat = plainMathText(l);
+              const m = /^\*\*([^*]+)\*\*\s*(.*)$/.exec(flat);
+              if (!m) return [{ text: flat, options: { fontSize: 14, color: "33415C", bullet: true, breakLine: true } }];
               return [
                 { text: m[1], options: { fontSize: 14, bold: true, color: "1F2A4A", bullet: true } },
                 { text: ` ${m[2]}`, options: { fontSize: 14, color: "33415C", breakLine: true } },

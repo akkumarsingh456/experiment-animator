@@ -12,7 +12,7 @@
  */
 
 import { aiFixFormulas, aiFormulaSheet, cleanFormulaLine, needsFormulaAI, repairNotation } from "@/lib/formula-notation";
-import { splitMath } from "@/lib/latex-notation";
+import { mapOutsideMath, splitMath } from "@/lib/latex-notation";
 
 export type NoteSectionKind = "text" | "bullets" | "formula" | "terms" | "tip";
 
@@ -39,7 +39,7 @@ const norm = (s: string) =>
 
 /** Strip NCERT print noise: edition years, figure/page refs, watermarks. */
 export function cleanNcertLine(raw: string): string {
-  let s = repairNotation(String(raw || ""))
+  let s = mapOutsideMath(repairNotation(String(raw || "")), (t) => t
     .replace(/\s+/g, " ")
     .replace(/\b(19|20)\d{2}\s*[-–]\s*\d{2}\b/g, " ")
     .replace(/\brationalised\b/gi, " ")
@@ -50,9 +50,9 @@ export function cleanNcertLine(raw: string): string {
     .replace(/\b\d{2,4}\s+(?=[A-Z][a-z])/g, " ")
     .replace(/\s*[,;]\s*(?=[,;.])/g, " ")
     .replace(/\s+([,.;:])/g, "$1")
-    .replace(/\s{2,}/g, " ")
+    .replace(/\s{2,}/g, " "))
     .trim();
-  s = s.replace(/^[^A-Za-z0-9(]+/, "").replace(/\s*[,;:]$/, "");
+  s = s.replace(/^[^A-Za-z0-9($\\]+/, "").replace(/\s*[,;:]$/, "");
   if (s && !/[.?!)]$/.test(s)) s += ".";
   if (s.length <= 3) return "";
   // Reject lines whose maths is unrecoverable extraction garbage.
