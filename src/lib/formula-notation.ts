@@ -44,7 +44,12 @@ const SYMBOL_MAP: Array<[RegExp, string]> = [
 /** Light, always-safe cleanup of math punctuation and symbols. */
 export function repairNotation(raw: string): string {
   // LaTeX spans ($...$ / $$...$$) are authored notation — never touch them.
-  return mapOutsideMath(String(raw || ""), repairPlainNotation);
+  return mapOutsideMath(String(raw || ""), (t) => {
+    const lead = /^\s/.test(t) ? " " : "";
+    const tail = /\s$/.test(t) ? " " : "";
+    const body = repairPlainNotation(t);
+    return body ? `${lead}${body}${tail}` : t.trim() ? body : t.length ? " " : "";
+  }).replace(/^\s+|\s+$/g, "");
 }
 
 function repairPlainNotation(raw: string): string {
