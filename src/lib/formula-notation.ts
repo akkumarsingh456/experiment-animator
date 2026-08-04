@@ -10,6 +10,8 @@
  *      sentence it came from. Works for every subject and every chapter.
  */
 
+import { hasMath, mapOutsideMath } from "@/lib/latex-notation";
+
 /* ---------------- deterministic layer ---------------- */
 
 const SYMBOL_MAP: Array<[RegExp, string]> = [
