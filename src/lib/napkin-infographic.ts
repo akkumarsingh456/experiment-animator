@@ -1,3 +1,4 @@
+import { plainMathText } from "@/lib/latex-notation";
 /**
  * Zero-cost NCERT infographic renderer.
  *
