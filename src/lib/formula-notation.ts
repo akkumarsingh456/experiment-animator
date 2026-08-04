@@ -185,19 +185,21 @@ export async function aiFixFormulas(opts: {
 /* ---------------- guaranteed formula / SI unit / derivation sheet ---------------- */
 
 export type FormulaBlock = {
-  /** Correctly typeset formulas, e.g. "V = (1/4πε₀)(Q/r)". */
+  /** Correctly typeset LaTeX formulas, e.g. "$V = \\frac{1}{4\\pi\\varepsilon_0}\\frac{Q}{r}$". */
   formula: string[];
-  /** SI unit lines, e.g. "Potential V → volt (V) = J C⁻¹, scalar." */
+  /** Variable breakdown lines, e.g. "$\\varepsilon_0$: permittivity of free space". */
+  variables: string[];
+  /** SI unit lines, e.g. "Potential $V$ → volt (V) $= \\mathrm{J\\,C^{-1}}$, scalar." */
   unit: string[];
   /** Numbered derivation steps, one short step per line. */
   derivation: string[];
 };
 
 /**
- * Ask the AI for the formulas, SI units and step-by-step derivations of a slide,
- * written with correct notation. Subject-agnostic: physics, chemistry, biology,
- * maths and economics all use the same call. Returns an empty map on failure so
- * the deck never breaks.
+ * Ask the AI for the formulas, variable definitions, SI units and step-by-step
+ * derivations of a slide, written in correct LaTeX. Subject-agnostic: physics,
+ * chemistry, biology, maths and economics all use the same call. Returns an
+ * empty map on failure so the deck never breaks.
  */
 export async function aiFormulaSheet(opts: {
   apiKey?: string;
@@ -214,20 +216,21 @@ export async function aiFormulaSheet(opts: {
     `Class ${opts.klass} | Subject ${opts.subject} | Chapter ${opts.chapter}.`,
     "",
     "For EACH slide return, when the topic genuinely has quantitative content:",
-    '- "formula": every relevant relation of that slide, correctly typeset (max 4).',
-    '- "unit": the SI unit of each quantity with its symbol, base-unit form and scalar/vector nature (max 3).',
-    '- "derivation": a numbered step-by-step derivation of the main formula, one short step per line, starting from the defining relation and ending at the result (3-6 steps).',
+    '- "formula": every relevant relation of that slide in LaTeX (max 4), each with a short name, e.g. "Gauss law: $$\\\\Phi_E = \\\\oint \\\\mathbf{E}\\\\cdot d\\\\mathbf{A} = \\\\frac{Q}{\\\\varepsilon_0}$$".',
+    '- "variables": one line per symbol used, e.g. "$\\\\varepsilon_0$: permittivity of free space" (max 6).',
+    '- "unit": the SI unit of each quantity with symbol, base-unit form and scalar/vector nature (max 3).',
+    '- "derivation": a numbered step-by-step derivation of the main formula, one short step per line, no skipped intermediate step, starting from the defining relation and ending at the result (3-6 steps).',
     "",
     "NOTATION RULES (never break these):",
-    "- Use correct Unicode symbols: ε₀, μ₀, π, Δ, θ, φ, σ, ρ, λ, ω, ∫, ∮, ∑, ∞, ∝, √, →, ⇌, ×, ÷, ≈, ≤, ≥, ±, °.",
-    "- Use real superscripts/subscripts: x², r³, s⁻¹, m s⁻², C₁, V₀, q₁q₂, H₂SO₄, CO₂.",
-    "- Write fractions inline with brackets: (1/4πε₀)(q₁q₂/r²), not stacked or LaTeX.",
-    "- No LaTeX commands, no $ signs, no markdown, no bracket soup, no repeated '=' runs.",
-    "- Chemistry: balanced equations with → or ⇌ and state symbols (s), (l), (g), (aq).",
-    "- Maths/Biology/Economics: use the standard notation of that subject (e.g. dy/dx, nCr, %, Elasticity = (ΔQ/Q)÷(ΔP/P)).",
-    "- Every formula must be dimensionally correct and standard for this class; if a slide has no formula, return empty arrays for it.",
+    "- ALL maths must be LaTeX: inline $...$, standalone equations $$...$$. Prose sits outside the delimiters.",
+    "- Never write a fraction linearly: use $\\frac{a}{b}$. Use \\int, \\oint, \\sum, \\lim, \\sqrt, \\begin{bmatrix} ... \\end{bmatrix} as appropriate.",
+    "- Real subscripts/superscripts: $x^2$, $r^3$, $\\mathrm{m\\,s^{-2}}$, $C_1$, $V_0$, $q_1q_2$, $H_2SO_4$, $CO_2$, $SO_4^{2-}$.",
+    "- Chemistry: balanced equations with \\rightarrow or \\rightleftharpoons and states $(s)$, $(l)$, $(g)$, $(aq)$, e.g. $$\\mathrm{CH_4 + 2O_2 \\rightarrow CO_2 + 2H_2O}$$.",
+    "- Maths/Biology/Economics: standard notation of that subject in LaTeX (e.g. $\\frac{dy}{dx}$, $^nC_r$, $E_d = \\frac{\\Delta Q/Q}{\\Delta P/P}$).",
+    "- No markdown fences, no bracket soup, no repeated '=' runs, no unbalanced braces.",
+    "- Every formula must be dimensionally correct and within this class's NCERT scope; if a slide has no formula, return empty arrays for it.",
     "",
-    'Return STRICT JSON only: {"slides":[{"index":0,"formula":["..."],"unit":["..."],"derivation":["Step 1: ...","Step 2: ..."]}]}',
+    'Return STRICT JSON only: {"slides":[{"index":0,"formula":["..."],"variables":["..."],"unit":["..."],"derivation":["Step 1: ...","Step 2: ..."]}]}',
     "",
     "SLIDES:",
     JSON.stringify(opts.slides.map((s) => ({ index: s.index, title: s.title, ncert: s.excerpts.slice(0, 8) }))).slice(0, 16000),
