@@ -266,6 +266,7 @@ export async function aiFormulaSheet(opts: {
       if (!Number.isFinite(i)) continue;
       out.set(i, {
         formula: clean((s as any).formula, 4),
+        variables: clean((s as any).variables, 6),
         unit: clean((s as any).unit, 3),
         derivation: clean((s as any).derivation, 6),
       });
