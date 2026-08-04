@@ -415,6 +415,7 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       const existing = slide.sections?.[0]?.lines || [];
       const add: string[] = [];
       if (!has(existing, /^formula/i)) for (const f of block.formula) add.push(`**Formula:** ${f}`);
+      if (!has(existing, /^variable/i)) for (const v of block.variables) add.push(`**Variable:** ${v}`);
       if (!has(existing, /^si unit/i)) for (const u of block.unit) add.push(`**SI unit:** ${u}`);
       if (!has(existing, /^derivation/i))
         block.derivation.forEach((d, n) =>
