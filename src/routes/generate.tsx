@@ -53,22 +53,6 @@ import { plainMathText } from "@/lib/latex-notation";
 
 type NoteSectionUI = { heading: string; kind: string; lines: string[] };
 
-/** Render inline **bold** labels inside a note line. */
-function BoldLine({ text }: { text: string }) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
-  return (
-    <>
-      {parts.map((p, i) =>
-        p.startsWith("**") && p.endsWith("**") ? (
-          <strong key={i} className="font-semibold text-foreground">{p.slice(2, -2)}</strong>
-        ) : (
-          <span key={i}>{p}</span>
-        ),
-      )}
-    </>
-  );
-}
-
 /** NCERT teacher notes — one single block, labels in bold (no repeated sections). */
 function NoteSections({ sections, scale }: { sections?: NoteSectionUI[]; scale?: "card" | "present" }) {
   if (!sections?.length) return null;
