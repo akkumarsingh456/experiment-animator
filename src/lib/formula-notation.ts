@@ -76,6 +76,8 @@ function repairPlainNotation(raw: string): string {
 export function isGarbledMath(raw: string): boolean {
   const s = String(raw || "");
   if (!s) return false;
+  // Properly authored LaTeX is never garbage — only its prose is inspected.
+  if (hasMath(s)) return false;
   const letters = (s.match(/[A-Za-z]/g) || []).length;
   const digitsSym = (s.match(/[0-9=+\-–—×÷^_/()[\]{}<>|]/g) || []).length;
   const words = s.split(/\s+/).filter(Boolean);
