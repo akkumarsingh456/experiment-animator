@@ -41,7 +41,8 @@ function esc(s: string) {
 }
 
 function clean(s: string) {
-  return String(s || "")
+  // Flatten LaTeX to readable Unicode — SVG labels cannot render math markup.
+  return plainMathText(String(s || ""))
     .replace(/\s+/g, " ")
     .replace(/^[-•*\d.\s)]+/, "")
     .trim();
