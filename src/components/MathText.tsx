@@ -1,5 +1,5 @@
 import katex from "katex";
-import { autoLatex, splitMath } from "@/lib/latex-notation";
+import { autoLatex, splitMath, normalizeLatex, latexToUnicode } from "@/lib/latex-notation";
 
 /**
  * Renders a note line containing **bold** labels and LaTeX math
@@ -25,16 +25,18 @@ export function MathText({ text }: { text: string }) {
             </span>
           );
         }
+        const body = normalizeLatex(seg.value);
+        if (!body) return <span key={i}>{latexToUnicode(seg.value)}</span>;
         let html = "";
         try {
-          html = katex.renderToString(seg.value, {
+          html = katex.renderToString(body, {
             displayMode: seg.type === "block",
             throwOnError: false,
             strict: false,
             output: "html",
           });
         } catch {
-          return <span key={i} className="font-mono">{seg.value}</span>;
+          return <span key={i}>{latexToUnicode(seg.value)}</span>;
         }
         return (
           <span

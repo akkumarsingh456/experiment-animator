@@ -10,7 +10,7 @@
  *      sentence it came from. Works for every subject and every chapter.
  */
 
-import { hasMath, mapOutsideMath } from "@/lib/latex-notation";
+import { hasMath, mapOutsideMath, normalizeLine } from "@/lib/latex-notation";
 
 /* ---------------- deterministic layer ---------------- */
 
@@ -50,6 +50,11 @@ export function repairNotation(raw: string): string {
     const body = repairPlainNotation(t);
     return body ? `${lead}${body}${tail}` : t.trim() ? body : t.length ? " " : "";
   }).replace(/^\s+|\s+$/g, "");
+}
+
+/** Repair + strict LaTeX normalisation, used on every AI-authored line. */
+export function normalizeFormulaLine(raw: string): string {
+  return normalizeLine(repairNotation(raw));
 }
 
 function repairPlainNotation(raw: string): string {
@@ -178,7 +183,7 @@ export async function aiFixFormulas(opts: {
     for (const l of parsed.lines || []) {
       const i = Number(l?.index);
       if (!Number.isFinite(i)) continue;
-      const fixed = repairNotation(String(l?.text || ""));
+      const fixed = normalizeFormulaLine(String(l?.text || ""));
       out.set(i, isGarbledMath(fixed) ? "" : fixed);
     }
   } catch (e) {
@@ -263,7 +268,7 @@ export async function aiFormulaSheet(opts: {
     const parsed = JSON.parse(raw) as { slides?: Array<Record<string, unknown>> };
     const clean = (arr: unknown, max: number) =>
       (Array.isArray(arr) ? arr : [])
-        .map((l) => repairNotation(String(l || "")))
+        .map((l) => normalizeFormulaLine(String(l || "")))
         .filter((l) => l.length > 2 && l.length < 220)
         .slice(0, max);
     for (const s of parsed.slides || []) {
