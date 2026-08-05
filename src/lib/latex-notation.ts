@@ -7,6 +7,8 @@
  * Unicode when a plain-text surface is needed (PPTX export, SVG diagrams).
  */
 
+import katex from "katex";
+
 export type MathSegment = { type: "text" | "inline" | "block"; value: string };
 
 /** Split a line into text / inline-math / display-math segments. */
@@ -165,8 +167,6 @@ export function isValidLatex(body: string): boolean {
   if (hit !== undefined) return hit;
   let ok = false;
   try {
-    // Lazy require keeps this module usable on the server too.
-    const katex = require("katex");
     katex.renderToString(body, { throwOnError: true, strict: false, output: "html" });
     ok = true;
   } catch {
