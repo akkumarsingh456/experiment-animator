@@ -1,5 +1,5 @@
 import katex from "katex";
-import { splitMath } from "@/lib/latex-notation";
+import { autoLatex, splitMath } from "@/lib/latex-notation";
 
 /**
  * Renders a note line containing **bold** labels and LaTeX math
@@ -7,7 +7,7 @@ import { splitMath } from "@/lib/latex-notation";
  * source text when a fragment fails to parse, so notes never break.
  */
 export function MathText({ text }: { text: string }) {
-  const segments = splitMath(text);
+  const segments = splitMath(autoLatex(text));
   return (
     <>
       {segments.map((seg, i) => {
