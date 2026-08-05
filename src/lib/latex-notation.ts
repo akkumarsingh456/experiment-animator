@@ -144,6 +144,38 @@ export function unicodeToLatex(frag: string): string {
   return s.replace(/\s{2,}/g, " ").trim();
 }
 
+const SYM = "εμπΔδθφλωΩσραβγηΦ";
+const OPS = "=∝≈≤≥+\\-*/×÷·^_()√";
+const isMathToken = (t: string) =>
+  !!t &&
+  !/^[A-Za-z]{4,}$/.test(t) &&
+  new RegExp(`^[A-Za-z0-9${SYM}${OPS}₀-₉⁰-⁹⁻⁺°½.,]+$`).test(t);
+
+/** Grab the mathematical span starting at an operator, stopping at prose. */
+function mathSpans(s: string): Array<[number, number]> {
+  const spans: Array<[number, number]> = [];
+  const start = new RegExp(`[A-Za-z${SYM}][A-Za-z0-9₀-₉⁰-⁹_^]*\\s*(?:=|∝|≈|≤|≥)`, "g");
+  let m: RegExpExecArray | null;
+  while ((m = start.exec(s))) {
+    let end = m.index + m[0].length;
+    // consume mathy tokens after the operator
+    while (end < s.length) {
+      const rest = s.slice(end);
+      const tok = /^\s*([^\s]+)/.exec(rest);
+      if (!tok) break;
+      const raw = tok[1].replace(/[.,;:]+$/, "");
+      if (!isMathToken(raw)) break;
+      end += tok[0].length - (tok[1].length - raw.length);
+      if (/[.,;:]$/.test(tok[1])) break;
+    }
+    if (end > m.index + m[0].length) spans.push([m.index, end]);
+    start.lastIndex = end;
+  }
+  return spans;
+}
+
+const SCI = /\d[\d.]*\s*×\s*10\s*[⁻⁺^-]?\s*[⁰-⁹\d]+/g;
+
 const MATH_CANDIDATE =
   /(?:[A-Za-zΦεμπΔθλσρ][A-Za-z0-9₀-₉⁰-⁹_^]*\s*(?:=|∝|≈|≤|≥)\s*[^,;.()]{1,70})|(?:\d[\d.,]*\s*×\s*10[⁻⁺]?[⁰-⁹]+(?:\s*[A-Za-z⁻¹²³\s]{0,12})?)/g;
 
@@ -154,8 +186,15 @@ const MATH_CANDIDATE =
 export function autoLatex(raw: string): string {
   const s = String(raw || "");
   if (!s || hasMath(s)) return s;
-  return s.replace(MATH_CANDIDATE, (m) => {
-    const body = unicodeToLatex(m.trim());
-    return body ? `$${body}$` : m;
-  });
+  let out = "";
+  let last = 0;
+  for (const [a, b] of mathSpans(s)) {
+    if (a < last) continue;
+    out += s.slice(last, a);
+    const body = unicodeToLatex(s.slice(a, b));
+    out += body ? `$${body}$` : s.slice(a, b);
+    last = b;
+  }
+  out += s.slice(last);
+  return out.replace(SCI, (m) => (hasMath(m) ? m : `$${unicodeToLatex(m)}$`));
 }
