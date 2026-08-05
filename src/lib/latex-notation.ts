@@ -238,7 +238,12 @@ export function unicodeToLatex(frag: string): string {
 export function normalizeLatex(body: string): string {
   const raw = String(body || "").trim();
   if (!raw) return "";
-  if (isValidLatex(raw) && !/[₀-₉⁰-⁹⁻⁺]/.test(raw)) return raw;
+  // Even valid-but-ugly input is rewritten: linear fractions, unbraced
+  // scripts, unicode scripts/symbols and unsubscripted chemical species.
+  const NEEDS_WORK = /[₀-₉⁰-⁹⁻⁺εμπΔδθφλωΩσραβγηΦ×·÷±∝∞→←⇌⇒≈≠≤≥√∫∮∂∇°½⅓¼]|(?<!\\)\//.test(raw)
+    || /[A-Za-z][A-Z]?\d/.test(raw.replace(/\\[a-zA-Z]+/g, ""))
+    || /[_^](?!\{)[^\s{]{2,}/.test(raw);
+  if (!NEEDS_WORK && isValidLatex(raw)) return raw;
   const conv = unicodeToLatex(raw);
   if (conv && isValidLatex(conv)) return conv;
   const safe = sanitizeLatex(conv || raw);
