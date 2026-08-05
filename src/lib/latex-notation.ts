@@ -106,3 +106,56 @@ export function plainMathText(raw: string): string {
     .replace(/\s{2,}/g, " ")
     .trim();
 }
+
+/* ---------------- Unicode → LaTeX auto-wrapping ---------------- */
+
+const UNI_SUP: Record<string, string> = {
+  "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4", "⁵": "5", "⁶": "6", "⁷": "7",
+  "⁸": "8", "⁹": "9", "⁻": "-", "⁺": "+", "ⁿ": "n", "ⁱ": "i",
+};
+const UNI_SUB: Record<string, string> = {
+  "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4", "₅": "5", "₆": "6", "₇": "7",
+  "₈": "8", "₉": "9", "₋": "-", "₊": "+", "ₐ": "a", "ₑ": "e", "ₙ": "n", "ₒ": "o", "ₓ": "x",
+};
+const UNI_CMD: Array<[RegExp, string]> = [
+  [/ε/g, "\\varepsilon"], [/μ/g, "\\mu"], [/π/g, "\\pi"], [/Δ/g, "\\Delta"], [/δ/g, "\\delta"],
+  [/θ/g, "\\theta"], [/φ/g, "\\phi"], [/λ/g, "\\lambda"], [/ω/g, "\\omega"], [/Ω/g, "\\Omega"],
+  [/σ/g, "\\sigma"], [/ρ/g, "\\rho"], [/α/g, "\\alpha"], [/β/g, "\\beta"], [/γ/g, "\\gamma"],
+  [/η/g, "\\eta"], [/Φ/g, "\\Phi"], [/Σ/g, "\\sum"], [/∑/g, "\\sum"], [/∫/g, "\\int"],
+  [/∮/g, "\\oint"], [/∂/g, "\\partial"], [/∇/g, "\\nabla"], [/√/g, "\\sqrt"],
+  [/×/g, "\\times"], [/·/g, "\\cdot"], [/÷/g, "\\div"], [/±/g, "\\pm"], [/∝/g, "\\propto"],
+  [/∞/g, "\\infty"], [/→/g, "\\rightarrow"], [/←/g, "\\leftarrow"], [/⇌/g, "\\rightleftharpoons"],
+  [/⇒/g, "\\Rightarrow"], [/≈/g, "\\approx"], [/≠/g, "\\neq"], [/≤/g, "\\leq"], [/≥/g, "\\geq"],
+  [/°/g, "^{\\circ}"], [/½/g, "\\frac{1}{2}"], [/⅓/g, "\\frac{1}{3}"], [/¼/g, "\\frac{1}{4}"],
+];
+
+/** Convert a plain/Unicode math fragment into a LaTeX body. */
+export function unicodeToLatex(frag: string): string {
+  let s = String(frag || "");
+  // Unicode scripts → ^{...} / _{...}
+  s = s
+    .replace(new RegExp(`[${Object.keys(UNI_SUP).join("")}]+`, "g"), (m) =>
+      `^{${[...m].map((c) => UNI_SUP[c]).join("")}}`)
+    .replace(new RegExp(`[${Object.keys(UNI_SUB).join("")}]+`, "g"), (m) =>
+      `_{${[...m].map((c) => UNI_SUB[c]).join("")}}`);
+  for (const [re, rep] of UNI_CMD) s = s.replace(re, `${rep} `);
+  // a/b → \frac{a}{b} for simple operands
+  s = s.replace(/([A-Za-z0-9\\{}^_]+)\s*\/\s*([A-Za-z0-9\\{}^_]+)/g, "\\frac{$1}{$2}");
+  return s.replace(/\s{2,}/g, " ").trim();
+}
+
+const MATH_CANDIDATE =
+  /(?:[A-Za-zΦεμπΔθλσρ][A-Za-z0-9₀-₉⁰-⁹_^]*\s*(?:=|∝|≈|≤|≥)\s*[^,;.()]{1,70})|(?:\d[\d.,]*\s*×\s*10[⁻⁺]?[⁰-⁹]+(?:\s*[A-Za-z⁻¹²³\s]{0,12})?)/g;
+
+/**
+ * Wrap the mathematical parts of a plain-text line in `$...$` LaTeX so KaTeX
+ * renders them. Lines that already contain authored LaTeX are left untouched.
+ */
+export function autoLatex(raw: string): string {
+  const s = String(raw || "");
+  if (!s || hasMath(s)) return s;
+  return s.replace(MATH_CANDIDATE, (m) => {
+    const body = unicodeToLatex(m.trim());
+    return body ? `$${body}$` : m;
+  });
+}
