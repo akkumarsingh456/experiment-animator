@@ -293,10 +293,29 @@ export function autoLatex(raw: string): string {
   for (const [a, b] of mathSpans(s)) {
     if (a < last) continue;
     out += s.slice(last, a);
-    const body = unicodeToLatex(s.slice(a, b));
+    const body = normalizeLatex(s.slice(a, b));
     out += body ? `$${body}$` : s.slice(a, b);
     last = b;
   }
   out += s.slice(last);
-  return out.replace(SCI, (m) => (hasMath(m) ? m : `$${unicodeToLatex(m)}$`));
+  return out.replace(SCI, (m) => {
+    if (hasMath(m)) return m;
+    const body = normalizeLatex(m);
+    return body ? `$${body}$` : m;
+  });
+}
+
+/**
+ * Normalise every math span of a whole line so KaTeX always gets valid input.
+ * Invalid fragments degrade to readable Unicode instead of red error text.
+ */
+export function normalizeLine(raw: string): string {
+  return splitMath(String(raw || ""))
+    .map((seg) => {
+      if (seg.type === "text") return seg.value;
+      const body = normalizeLatex(seg.value);
+      if (!body) return latexToUnicode(seg.value);
+      return seg.type === "block" ? `$$${body}$$` : `$${body}$`;
+    })
+    .join("");
 }
