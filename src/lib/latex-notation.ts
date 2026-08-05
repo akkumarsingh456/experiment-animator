@@ -129,20 +129,122 @@ const UNI_CMD: Array<[RegExp, string]> = [
   [/°/g, "^{\\circ}"], [/½/g, "\\frac{1}{2}"], [/⅓/g, "\\frac{1}{3}"], [/¼/g, "\\frac{1}{4}"],
 ];
 
-/** Convert a plain/Unicode math fragment into a LaTeX body. */
+/* ---------------- strict normalisation + validation ---------------- */
+
+/** Balance braces, drop dangling scripts, escape characters KaTeX chokes on. */
+export function sanitizeLatex(body: string): string {
+  let s = String(body || "");
+
+  // Escape bare specials that are not already escaped.
+  s = s.replace(/(?<!\\)([%#&])/g, "\\$1");
+  // Dangling scripts: "x^" / "x_" / "^ " with no argument.
+  s = s.replace(/([_^])\s*$/g, "").replace(/([_^])\s*(?=[)\]}\s,;])/g, "");
+  // Empty script braces.
+  s = s.replace(/([_^])\{\s*\}/g, "");
+  // \frac with a missing second argument.
+  s = s.replace(/\\(d|t)?frac\s*\{([^{}]*)\}\s*(?![{\s])/g, "($2)");
+  s = s.replace(/\\(d|t)?frac\s*(?![{\s])/g, "");
+  // Balance braces.
+  const open = (s.match(/(?<!\\)\{/g) || []).length;
+  const close = (s.match(/(?<!\\)\}/g) || []).length;
+  if (open > close) s += "}".repeat(open - close);
+  else if (close > open) s = "{".repeat(close - open) + s;
+  // Balance \left / \right.
+  const l = (s.match(/\\left/g) || []).length;
+  const r = (s.match(/\\right/g) || []).length;
+  if (l !== r) s = s.replace(/\\left|\\right/g, "");
+  return s.replace(/\s{2,}/g, " ").trim();
+}
+
+const validCache = new Map<string, boolean>();
+
+/** True when KaTeX can render the fragment without throwing. */
+export function isValidLatex(body: string): boolean {
+  const key = body;
+  const hit = validCache.get(key);
+  if (hit !== undefined) return hit;
+  let ok = false;
+  try {
+    // Lazy require keeps this module usable on the server too.
+    const katex = require("katex");
+    katex.renderToString(body, { throwOnError: true, strict: false, output: "html" });
+    ok = true;
+  } catch {
+    ok = false;
+  }
+  if (validCache.size > 4000) validCache.clear();
+  validCache.set(key, ok);
+  return ok;
+}
+
+const CHEM = /\b((?:[A-Z][a-z]?\d*){1,6})(\^?\d*[+-]?)\b/g;
+
+/** Subscript chemical species: H2SO4 → H_{2}SO_{4}, SO4^2- → SO_{4}^{2-}. */
+function chemSubscripts(s: string): string {
+  return s.replace(CHEM, (m) => {
+    if (!/[A-Z]/.test(m) || !/\d/.test(m) || /\\/.test(m)) return m;
+    return m
+      .replace(/\^(\d+)([+-])?/g, (_x, d, sign) => `^{${d}${sign || ""}}`)
+      .replace(/([A-Za-z])(\d+)(?![}])/g, "$1_{$2}");
+  });
+}
+
+/** Convert a plain/Unicode math fragment into a valid LaTeX body. */
 export function unicodeToLatex(frag: string): string {
   let s = String(frag || "");
+
   // Unicode scripts → ^{...} / _{...}
   s = s
     .replace(new RegExp(`[${Object.keys(UNI_SUP).join("")}]+`, "g"), (m) =>
       `^{${[...m].map((c) => UNI_SUP[c]).join("")}}`)
     .replace(new RegExp(`[${Object.keys(UNI_SUB).join("")}]+`, "g"), (m) =>
       `_{${[...m].map((c) => UNI_SUB[c]).join("")}}`);
+
+  // ASCII helpers before symbol substitution.
+  s = s
+    .replace(/\bsqrt\s*\(([^()]*)\)/gi, "\\sqrt{$1}")
+    .replace(/(\d)\s*\^\s*(-?\d+)/g, "$1^{$2}")
+    .replace(/([A-Za-z}])\s*\^\s*(-?\d+)/g, "$1^{$2}")
+    .replace(/\bdeg\b|\bdegrees?\b/gi, "^{\\circ}");
+
   for (const [re, rep] of UNI_CMD) s = s.replace(re, `${rep} `);
-  // a/b → \frac{a}{b} for simple operands
-  s = s.replace(/([A-Za-z0-9\\{}^_]+)\s*\/\s*([A-Za-z0-9\\{}^_]+)/g, "\\frac{$1}{$2}");
-  return s.replace(/\s{2,}/g, " ").trim();
+
+  // \sqrt followed by a bare operand needs braces.
+  s = s.replace(/\\sqrt\s+([A-Za-z0-9]+)/g, "\\sqrt{$1}");
+
+  s = chemSubscripts(s);
+
+  // a/b → \frac{a}{b}, innermost-first, never inside an existing \frac group.
+  for (let i = 0; i < 3; i++) {
+    const next = s.replace(
+      /(\\?[A-Za-z0-9\\{}^_+\-.]+)\s*\/\s*(\\?[A-Za-z0-9\\{}^_+\-.]+)/g,
+      (m, a, b) => (/\\frac/.test(m) ? m : `\\frac{${a}}{${b}}`),
+    );
+    if (next === s) break;
+    s = next;
+  }
+
+  // Multi-letter roman words inside math read better upright.
+  s = s.replace(/\b(sin|cos|tan|log|ln|lim|max|min|exp)\b(?!\{)/g, "\\$1 ");
+
+  const out = sanitizeLatex(s.replace(/\s{2,}/g, " ").trim());
+  return isValidLatex(out) ? out : sanitizeLatex(out.replace(/\\[a-zA-Z]+\s*$/, ""));
 }
+
+/**
+ * Normalise any math body (authored LaTeX or Unicode plain text) into a
+ * KaTeX-renderable fragment. Returns "" when nothing valid can be produced.
+ */
+export function normalizeLatex(body: string): string {
+  const raw = String(body || "").trim();
+  if (!raw) return "";
+  if (isValidLatex(raw) && !/[₀-₉⁰-⁹⁻⁺]/.test(raw)) return raw;
+  const conv = unicodeToLatex(raw);
+  if (conv && isValidLatex(conv)) return conv;
+  const safe = sanitizeLatex(conv || raw);
+  return safe && isValidLatex(safe) ? safe : "";
+}
+
 
 const SYM = "εμπΔδθφλωΩσραβγηΦ";
 const OPS = "=∝≈≤≥+\\-*/×÷·^_()√";
