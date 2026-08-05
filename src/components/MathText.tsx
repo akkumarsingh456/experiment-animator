@@ -1,5 +1,5 @@
 import katex from "katex";
-import { autoLatex, splitMath } from "@/lib/latex-notation";
+import { autoLatex, splitMath, normalizeLatex, latexToUnicode } from "@/lib/latex-notation";
 
 /**
  * Renders a note line containing **bold** labels and LaTeX math
