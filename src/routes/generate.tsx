@@ -53,20 +53,27 @@ import { plainMathText } from "@/lib/latex-notation";
 
 type NoteSectionUI = { heading: string; kind: string; lines: string[] };
 
-/** NCERT teacher notes — one single block, labels in bold (no repeated sections). */
+/** NCERT teacher notes — one label-prefixed block plus a monospace book diagram. */
 function NoteSections({ sections, scale }: { sections?: NoteSectionUI[]; scale?: "card" | "present" }) {
   if (!sections?.length) return null;
   const base = scale === "present" ? "text-[clamp(12px,1.2vw,18px)]" : "text-[12.5px]";
+  const mono = scale === "present" ? "text-[clamp(9px,0.78vw,13px)]" : "text-[9.5px]";
   return (
     <div className="space-y-1.5">
       {sections.map((sec, i) => (
         <div key={i} className="rounded-md border border-border/50 bg-secondary/40 px-2.5 py-2">
           <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-1">{sec.heading}</div>
-          <ul className={`${base} leading-snug space-y-1 text-foreground/90`}>
-            {sec.lines.map((l, k) => (
-              <li key={k}>• <MathText text={l} /></li>
-            ))}
-          </ul>
+          {sec.kind === "diagram" ? (
+            <pre className={`${mono} font-mono leading-[1.25] whitespace-pre overflow-x-auto text-foreground/90`}>
+              {sec.lines.join("\n")}
+            </pre>
+          ) : (
+            <ul className={`${base} leading-snug space-y-1 text-foreground/90`}>
+              {sec.lines.map((l, k) => (
+                <li key={k}>• <MathText text={l} /></li>
+              ))}
+            </ul>
+          )}
         </div>
       ))}
     </div>
