@@ -230,9 +230,8 @@ function sanitizeSections(raw: unknown, contextNorm: string): NoteSection[] {
   for (const s of raw) {
     const heading = String((s as any)?.heading || "").trim();
     const kindRaw = String((s as any)?.kind || "bullets");
-    const kind: NoteSectionKind = (["text", "bullets", "formula", "terms", "tip"] as const).includes(kindRaw as NoteSectionKind)
-      ? (kindRaw as NoteSectionKind)
-      : "bullets";
+    const kinds: string[] = ["text", "bullets", "formula", "terms", "tip"];
+    const kind: NoteSectionKind = kinds.includes(kindRaw) ? (kindRaw as NoteSectionKind) : "bullets";
     // Maths / pedagogy headings keep light repair only, so correct notation
     // (integrals, fractions, ε₀, superscripts) is never mistaken for garbage.
     const freeform = kind === "formula" || kind === "tip" || FREEFORM_LABEL.test(heading.replace(/^\d+\.\s*/, ""));
