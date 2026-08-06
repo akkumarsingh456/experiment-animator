@@ -422,7 +422,9 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         slide.addText(s.title || "", { x: 0.4, y: 0.55, w: W - 0.8, h: 0.85, fontSize: 26, bold: true, color: "1F2A4A", fontFace: "Calibri" });
         // Left column: NCERT teacher notes only (bullets shown only when no notes exist)
         const leftW = 6.6;
-        const secs = (s as any).sections as NoteSectionUI[] | undefined;
+        const allSecs = (s as any).sections as NoteSectionUI[] | undefined;
+        const diagramSec = allSecs?.find((sec) => sec.kind === "diagram");
+        const secs = allSecs?.filter((sec) => sec.kind !== "diagram");
         if (secs?.length) {
           const text = secs.flatMap((sec) =>
             sec.lines.flatMap((l): any[] => {
@@ -445,11 +447,18 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           slide.addText((s.bullets || []).map((b) => ({ text: b, options: { bullet: true } })),
             { x: 0.5, y: 1.5, w: leftW, h: 5.9, fontSize: 14, color: "33415C", fontFace: "Calibri", valign: "top", paraSpaceAfter: 4 });
         }
-        // Right column: image + key terms + quote
+        // Right column: image + book diagram + key terms + quote
         const rightX = leftW + 0.7;
         const rightW = W - rightX - 0.4;
         const img = images[i];
         if (img) slide.addImage({ data: img, x: rightX, y: 1.5, w: rightW, h: 3.2 });
+        if (diagramSec?.lines.length) {
+          slide.addText(diagramSec.heading, { x: rightX, y: 4.8, w: rightW, h: 0.28, fontSize: 11, bold: true, color: "1F2A4A", fontFace: "Calibri" });
+          slide.addText(diagramSec.lines.join("\n"), {
+            x: rightX, y: 5.1, w: rightW, h: 2.3, fontSize: 8.5, color: "33415C",
+            fontFace: "Consolas", valign: "top", lineSpacingMultiple: 0.9,
+          });
+        }
         if (s.key_terms?.length && !secs?.length) {
           slide.addText("Key terms", { x: rightX, y: 4.85, w: rightW, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
           slide.addText(s.key_terms.map((t) => ({ text: `${t.term}: ${t.meaning}`, options: { bullet: true } })),
