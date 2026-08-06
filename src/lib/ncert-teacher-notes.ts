@@ -13,8 +13,9 @@
 
 import { aiFixFormulas, aiFormulaSheet, cleanFormulaLine, needsFormulaAI, repairNotation } from "@/lib/formula-notation";
 import { mapOutsideMath, splitMath } from "@/lib/latex-notation";
+import { DIAGRAM_HEADING, aiNoteDiagrams, buildLocalDiagram } from "@/lib/note-diagram";
 
-export type NoteSectionKind = "text" | "bullets" | "formula" | "terms" | "tip";
+export type NoteSectionKind = "text" | "bullets" | "formula" | "terms" | "tip" | "diagram";
 
 export type NoteSection = {
   heading: string;
@@ -383,7 +384,47 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
     });
   }
 
-  return await repairSlideFormulas(await ensureFormulaBlocks(withLocal, opts), opts);
+  const repaired = await repairSlideFormulas(await ensureFormulaBlocks(withLocal, opts), opts);
+  return await attachNoteDiagrams(repaired, opts);
+}
+
+/**
+ * Add a monospace teaching diagram to every content slide's notes — drawn from
+ * the uploaded books (NCERT + PW / Med Easy / mind-map notes), never from the
+ * 2D image pipeline. Falls back to a deterministic local diagram so slides are
+ * never left with blank space.
+ */
+async function attachNoteDiagrams<T extends NoteSourceSlide & { kind?: string; sections?: NoteSection[] }>(
+  slides: T[],
+  opts: { apiKey?: string; klass: string; subject: string; chapter: string },
+): Promise<T[]> {
+  const targets = slides
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => (s.kind ?? "content") === "content");
+  if (targets.length === 0) return slides;
+
+  const CHUNK = 5;
+  const payload = targets.map(({ s, i }) => ({
+    index: i,
+    title: s.title,
+    excerpts: dedupe([...(s.bullets || []), ...(s.notes || []), ...sentences(s.grounding || "")]).slice(0, 8),
+  }));
+  const chunks: Array<typeof payload> = [];
+  for (let i = 0; i < payload.length; i += CHUNK) chunks.push(payload.slice(i, i + CHUNK));
+  const maps = await Promise.all(chunks.map((c) => aiNoteDiagrams({ ...opts, slides: c })));
+  const ai = new Map<number, string[]>();
+  for (const m of maps) for (const [k, v] of m) ai.set(k, v);
+
+  return slides.map((s, i) => {
+    if ((s.kind ?? "content") !== "content") return s;
+    const existing = (s.sections || []).filter((sec) => sec.kind !== "diagram");
+    const lines = ai.get(i);
+    const diagram: NoteSection | null = lines?.length
+      ? { heading: DIAGRAM_HEADING, kind: "diagram", lines }
+      : buildLocalDiagram(s);
+    if (!diagram) return { ...s, sections: existing };
+    return { ...s, sections: [...existing, diagram] };
+  });
 }
 
 /**
