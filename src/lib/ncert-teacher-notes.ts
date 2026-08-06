@@ -164,7 +164,7 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
     if (hook) lines.push(`**Memory trick:** ${first.term} → ${hook}.`);
   }
 
-  const finalLines = dedupeLabelled(lines).slice(0, 20);
+  const finalLines = dedupeLabelled(lines).slice(0, 30);
 
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
@@ -180,7 +180,7 @@ export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
       lines.push(/^\*\*/.test(raw) ? raw : `**${label}:** ${l}`);
     }
   }
-  const finalLines = dedupeLabelled(lines).slice(0, 22);
+  const finalLines = dedupeLabelled(lines).slice(0, 28);
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
 
@@ -481,7 +481,7 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       let at = 0;
       while (at < lines.length && /^\*\*(analogy|definition)/i.test(lines[at])) at++;
       lines.splice(at, 0, ...add);
-      const merged = dedupeLabelled(lines).slice(0, 26);
+      const merged = dedupeLabelled(lines).slice(0, 30);
       slide.sections = [{ heading: NOTE_HEADING, kind: "bullets", lines: merged }];
     }
   }
