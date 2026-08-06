@@ -260,10 +260,15 @@ const SUBJECT_ALIASES: Record<string, Simulation["subjects"][number]> = {
   mathematics: "math",
 };
 
+/**
+ * Pick the best simulations for a slide. Results are diversified across
+ * providers (PhET, oPhysics, MolView, GeoGebra 3D, OLabs, NIH 3D, …) so the
+ * panel never shows the same website every time.
+ */
 export function pickSimulations(
   hay: string,
   subject: string | undefined,
-  limit = 3,
+  limit = 4,
 ): Simulation[] {
   const text = String(hay || "").toLowerCase();
   const subj = SUBJECT_ALIASES[String(subject || "").toLowerCase()] ?? "general";
@@ -271,12 +276,26 @@ export function pickSimulations(
     const hits = s.keywords.reduce((n, k) => (k && text.includes(k) ? n + 1 : n), 0);
     const subjectBonus = s.subjects.includes(subj) ? 0.5 : 0;
     return { s, score: hits + subjectBonus };
-  }).filter((x) => x.score > 0);
+  })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score);
 
-  scored.sort((a, b) => b.score - a.score);
-  const chosen = scored.slice(0, limit).map((x) => x.s);
+  // First pass: one entry per provider, best-scoring first.
+  const chosen: Simulation[] = [];
+  const seen = new Set<string>();
+  for (const { s } of scored) {
+    if (chosen.length >= limit) break;
+    if (seen.has(s.provider)) continue;
+    seen.add(s.provider);
+    chosen.push(s);
+  }
+  // Second pass: fill remaining slots with the next best, regardless of provider.
+  for (const { s } of scored) {
+    if (chosen.length >= limit) break;
+    if (!chosen.includes(s)) chosen.push(s);
+  }
+
   if (chosen.length === 0) {
-    // Subject-appropriate default so the panel is never empty.
     const defaults = SIMULATIONS.filter((s) => s.subjects.includes(subj)).slice(0, limit);
     return defaults.length ? defaults : SIMULATIONS.filter((s) => s.subjects.includes("general")).slice(0, limit);
   }
