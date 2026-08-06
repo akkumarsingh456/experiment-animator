@@ -1954,20 +1954,32 @@ export const generateLesson = createServerFn({ method: "POST" })
 
 
     const chapterTerms = data.chapter ? [normalizeText(cleanSyllabusLabel(data.chapter)), ...normalizeText(cleanSyllabusLabel(data.chapter)).split(" ")] : [];
+    // Reference books uploaded alongside NCERT (PW, Shobhit Nirwan, Med Easy,
+    // mind maps, chapter notes) carry the best diagrams and formula sheets, so
+    // they are boosted and always allowed to sit next to the NCERT text.
+    const REF_BOOK = /\b(pw|physics\s*wallah|shobhit|nirwan|med\s*easy|medeasy|chemhack|biohack|mind\s*map|mindmap|short\s*notes?|revision|one\s*shot|formula)\b/i;
+    const isRef = (b: { file_name?: string | null; chapter?: string | null }) =>
+      REF_BOOK.test(`${b.file_name ?? ""} ${b.chapter ?? ""}`);
     const bookScores = candidates
       .map((book) => {
         const metadataScore = score(`${book.chapter} ${book.file_name}`, [...terms, ...chapterTerms]);
         const chunkScore = (chunks ?? [])
           .filter((chunk) => chunk.book_id === book.id)
           .reduce((sum, chunk) => sum + score(chunk.content, terms), 0);
-        return { ...book, _s: metadataScore * 5 + chunkScore };
+        const raw = metadataScore * 5 + chunkScore;
+        return { ...book, _s: isRef(book) ? raw * 1.35 + 2 : raw };
       })
       .sort((a, b) => b._s - a._s);
 
     let bestScore = bookScores[0]?._s ?? 0;
     let selectedBooks = bestScore > 0
-      ? bookScores.filter((book) => book._s >= Math.max(1, bestScore * 0.45)).slice(0, 2)
-      : bookScores.slice(0, 2);
+      ? bookScores.filter((book) => book._s >= Math.max(1, bestScore * 0.35)).slice(0, 4)
+      : bookScores.slice(0, 4);
+    // Guarantee at least one reference book in the mix when one scored at all.
+    if (!selectedBooks.some(isRef)) {
+      const ref = bookScores.find((b) => isRef(b) && b._s > 0);
+      if (ref) selectedBooks = [...selectedBooks.slice(0, 3), ref];
+    }
     let selectedIds = new Set(selectedBooks.map((book) => book.id));
     let selectedChunks = (chunks ?? []).filter((chunk) => selectedIds.has(chunk.book_id));
 
