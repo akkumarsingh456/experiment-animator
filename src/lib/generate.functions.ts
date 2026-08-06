@@ -1916,7 +1916,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     const preRanked = candidates
       .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject} ${b.class}`, [...terms, ...chapterTermsPre]) }))
       .sort((a, z) => z.m - a.m);
-    const cap = candidates.length <= 6 ? candidates.length : 6;
+    const cap = candidates.length <= 10 ? candidates.length : 10;
     const topCandidates = preRanked.slice(0, cap).map((x) => x.b);
     candidates = topCandidates;
 
