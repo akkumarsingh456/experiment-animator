@@ -245,9 +245,18 @@ export async function aiFormulaSheet(opts: {
     "",
     'Return STRICT JSON only: {"slides":[{"index":0,"formula":["..."],"variables":["..."],"unit":["..."],"derivation":["Step 1: ...","Step 2: ..."]}]}',
     "",
+    ...(opts.refContext?.trim()
+      ? [
+          "REFERENCE BOOK EXCERPTS (PW / Physics Wallah, Med Easy, mind-map & short-notes books uploaded by the teacher).",
+          "Use these for shortcut formulas, formula sheets, variable tables and derivation steps that NCERT states only in prose — they are trusted sources, not inventions:",
+          opts.refContext.replace(/\s+/g, " ").slice(0, 9000),
+          "",
+        ]
+      : []),
     "SLIDES:",
     JSON.stringify(opts.slides.map((s) => ({ index: s.index, title: s.title, ncert: s.excerpts.slice(0, 8) }))).slice(0, 16000),
   ].join("\n");
+
 
   try {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
