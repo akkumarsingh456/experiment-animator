@@ -196,17 +196,20 @@ const HEADINGS = [
   "4. Variable Breakdown",
   "5. SI Unit & Nature",
   "6. Derivation",
-  "7. Key Properties",
-  "8. NCERT Example / Activity",
-  "9. Real-life Use",
-  "10. Important Points",
-  "11. Key Terms",
-  "12. Exam tip",
-  "13. Memory Trick",
+  "7. Graph / Trend",
+  "8. Key Properties",
+  "9. NCERT Example / Activity",
+  "10. Real-life Use",
+  "11. Important Points",
+  "12. Key Terms",
+  "13. Exam tip",
+  "14. Memory Trick",
 ];
 
 /** Labels whose lines are maths/pedagogy and must not be filtered by lexical overlap. */
-const FREEFORM_LABEL = /^(formula|variable|variable breakdown|si unit|derivation|derivation step|analogy|memory trick|exam tip)\b/i;
+const FREEFORM_LABEL =
+  /^(formula|variable|variable breakdown|si unit|derivation|derivation step|graph|graph ?\/ ?trend|analogy|memory trick|exam tip)\b/i;
+
 
 /**
  * Drop any AI line that is not lexically supported by the NCERT context.
@@ -240,7 +243,7 @@ function sanitizeSections(raw: unknown, contextNorm: string): NoteSection[] {
         .map((l: unknown) => (freeform ? repairNotation(String(l || "")) : cleanNcertLine(String(l || ""))))
         .filter((l: string) => l.length > 4 && l.length < 320),
     ).filter((l) => freeform || ncertSupported(l, contextNorm));
-    if (heading && lines.length) out.push({ heading, kind, lines: lines.slice(0, 8) });
+    if (heading && lines.length) out.push({ heading, kind, lines: lines.slice(0, 10) });
   }
   return mergeToSingleSection(out);
 }
@@ -273,7 +276,8 @@ export async function geminiTeacherNotes(opts: {
     `Class: ${opts.klass} | Subject: ${opts.subject} | Chapter: ${opts.chapter}`,
     "",
     "SOURCE RULES:",
-    "- The NCERT excerpts below (plus the standard reference books already ingested for this class/subject) are the source of truth for every FACT, number, example and application.",
+    "- The excerpts below come from the uploaded NCERT textbook AND the uploaded reference books (PW / Physics Wallah notes, Med Easy, mind-map books) for this class/subject; both are the source of truth for every FACT, number, example and application.",
+    "- Prefer NCERT wording for definitions and prescribed statements; use the PW / reference-book material for extra depth: shortcut formulas, tables, graph behaviour, exam traps and memory tricks.",
     "- Never invent facts, data, examples or numbers that contradict or go beyond this chapter's scope.",
     "- Rewrite in crisp teacher language; never copy long paragraphs verbatim.",
     "- Clean OCR damage (broken words, stray page numbers, headers/footers) before writing.",
@@ -281,8 +285,10 @@ export async function geminiTeacherNotes(opts: {
     "TEACHING STYLE (mandatory):",
     "- Start with one short intuitive ANALOGY that makes the concept click (everyday comparison only, no new physics claims).",
     "- Give the precise textbook DEFINITION, then the FORMULA, then its SI UNIT and whether the quantity is scalar or vector.",
-    "- Where the chapter contains a standard relation, give a numbered STEP-BY-STEP DERIVATION (one short step per line, e.g. 'Step 1: V = -∫E·dr from ∞ to r').",
+    "- Where the chapter contains a standard relation, give a numbered STEP-BY-STEP DERIVATION (one short step per line, e.g. 'Step 1: $V = -\\int \\mathbf{E}\\cdot d\\mathbf{r}$ from $\\infty$ to $r$').",
+    "- GRAPH / TREND: whenever the topic has a graph or a variation (V-r, I-V, P-V, rate-time, growth curve, periodic-trend), describe it precisely: axes with units, curve shape, slope meaning, intercepts, asymptotes and what physically/chemically happens along the curve — written in LaTeX, e.g. 'Axes: $V$ (volt) vs $r$ (m); curve $V \\propto \\frac{1}{r}$, hyperbolic, $V \\to 0$ as $r \\to \\infty$; slope $= -E$.'",
     "- Add KEY PROPERTIES, an NCERT EXAMPLE/ACTIVITY, a REAL-LIFE USE, exam-ready IMPORTANT POINTS, KEY TERMS with one-line meanings, an EXAM TIP and a MEMORY TRICK.",
+
     "",
     "NOTATION RULES (very important — LaTeX is mandatory):",
     "- Every variable, expression, equation and chemical species must be LaTeX: inline $...$, standalone equations $$...$$. Prose stays outside the delimiters.",
@@ -296,8 +302,9 @@ export async function geminiTeacherNotes(opts: {
     "",
     `Use only these headings, in order, omitting any you cannot support: ${HEADINGS.join(" | ")}`,
     'Each section: { "heading": string, "kind": "text"|"bullets"|"formula"|"terms"|"tip", "lines": string[] }.',
-    "Use kind 'formula' for Formula/SI Unit/Derivation sections and 'tip' for Analogy/Exam tip/Memory Trick.",
-    "Lines must be short (max 24 words), exam-ready, dense, and free of filler. Aim for 12-18 lines total per slide.",
+    "Use kind 'formula' for Formula/SI Unit/Derivation/Graph sections and 'tip' for Analogy/Exam tip/Memory Trick.",
+    "Lines must be short (max 24 words), exam-ready, dense, and free of filler. Fill the slide: aim for 18-26 lines total per slide, and never fewer than 14 — teachers need a full, information-rich board.",
+
     "NEVER include edition years (e.g. 2019-20), figure/table numbers, page numbers or 'Fig.' references.",
     "Do not repeat the same fact under two headings — every fact appears exactly once.",
     "",
@@ -316,7 +323,7 @@ export async function geminiTeacherNotes(opts: {
         "Lovable-API-Key": opts.apiKey,
       },
       body: JSON.stringify({
-        model: "google/gemini-3.6-flash",
+        model: "google/gemini-3.1-pro-preview",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
       }),
