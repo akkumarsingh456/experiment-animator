@@ -243,7 +243,7 @@ function sanitizeSections(raw: unknown, contextNorm: string): NoteSection[] {
         .map((l: unknown) => (freeform ? repairNotation(String(l || "")) : cleanNcertLine(String(l || ""))))
         .filter((l: string) => l.length > 4 && l.length < 320),
     ).filter((l) => freeform || ncertSupported(l, contextNorm));
-    if (heading && lines.length) out.push({ heading, kind, lines: lines.slice(0, 8) });
+    if (heading && lines.length) out.push({ heading, kind, lines: lines.slice(0, 10) });
   }
   return mergeToSingleSection(out);
 }
