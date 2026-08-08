@@ -48,6 +48,26 @@ function conceptMap(title: string, labels: string[]): string[] {
   return out;
 }
 
+/** Reject labels that are extraction noise rather than teachable parts. */
+const STOP_LABEL =
+  /^(if|the|this|that|then|and|or|but|so|it|is|are|was|were|has|have|for|from|with|when|where|which|also|such|these|those|chapter|figure|fig|example|activity|note|page)\b/i;
+
+function usefulLabel(raw: string): string {
+  const s = plainMathText(String(raw || ""))
+    .replace(/^\*\*[^*]+:\*\*\s*/, "")
+    .replace(/^[\s\-–—•\d.)]+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (s.length < 5 || s.length > 34) return "";
+  if (STOP_LABEL.test(s)) return "";
+  const words = s.split(" ");
+  if (words.length > 5) return "";
+  // Needs at least two real words or one long domain word.
+  if (words.length === 1 && s.length < 7) return "";
+  if (!/[A-Za-z]{4}/.test(s)) return "";
+  return s;
+}
+
 /** Deterministic, zero-cost diagram for a slide. */
 export function buildLocalDiagram(slide: {
   title: string;
@@ -55,20 +75,33 @@ export function buildLocalDiagram(slide: {
   notes?: string[];
   key_terms?: { term: string; meaning: string }[];
 }): NoteSection | null {
-  const terms = (slide.key_terms || []).map((t) => t.term).filter(Boolean);
-  const stages = (slide.bullets || [])
-    .map((b) => plainMathText(b).replace(/^\*\*[^*]+:\*\*\s*/, "").split(/[,:;.]/)[0])
-    .filter((b) => b && b.length > 3)
-    .slice(0, 6);
+  const uniq = (arr: string[]) => {
+    const seen = new Set<string>();
+    return arr.filter((x) => {
+      const k = x.toLowerCase();
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  };
+
+  const terms = uniq((slide.key_terms || []).map((t) => usefulLabel(t.term)).filter(Boolean));
+  const stages = uniq(
+    [...(slide.bullets || []), ...(slide.notes || [])]
+      .map((b) => usefulLabel(plainMathText(b).replace(/^\*\*[^*]+:\*\*\s*/, "").split(/[,:;.]/)[0] || ""))
+      .filter(Boolean),
+  ).slice(0, 6);
 
   let lines: string[] = [];
   if (terms.length >= 3) lines = conceptMap(slide.title, terms);
-  else if (stages.length >= 2) lines = flowDiagram(stages);
-  else if (terms.length >= 1) lines = conceptMap(slide.title, terms);
+  else if (stages.length >= 3) lines = flowDiagram(stages);
+  else if (terms.length + stages.length >= 3) lines = conceptMap(slide.title, uniq([...terms, ...stages]));
 
-  if (!lines.length) return null;
+  // A two-item stub map is worse than no diagram — leave it out.
+  if (lines.length < 5) return null;
   return { heading: DIAGRAM_HEADING, kind: "diagram", lines };
 }
+
 
 /**
  * Ask Gemini for a monospace diagram per slide, drawn only from the supplied
