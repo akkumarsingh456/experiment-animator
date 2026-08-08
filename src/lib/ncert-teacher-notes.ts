@@ -302,8 +302,9 @@ export async function geminiTeacherNotes(opts: {
     "",
     `Use only these headings, in order, omitting any you cannot support: ${HEADINGS.join(" | ")}`,
     'Each section: { "heading": string, "kind": "text"|"bullets"|"formula"|"terms"|"tip", "lines": string[] }.',
-    "Use kind 'formula' for Formula/SI Unit/Derivation sections and 'tip' for Analogy/Exam tip/Memory Trick.",
-    "Lines must be short (max 24 words), exam-ready, dense, and free of filler. Aim for 12-18 lines total per slide.",
+    "Use kind 'formula' for Formula/SI Unit/Derivation/Graph sections and 'tip' for Analogy/Exam tip/Memory Trick.",
+    "Lines must be short (max 24 words), exam-ready, dense, and free of filler. Fill the slide: aim for 18-26 lines total per slide, and never fewer than 14 — teachers need a full, information-rich board.",
+
     "NEVER include edition years (e.g. 2019-20), figure/table numbers, page numbers or 'Fig.' references.",
     "Do not repeat the same fact under two headings — every fact appears exactly once.",
     "",
