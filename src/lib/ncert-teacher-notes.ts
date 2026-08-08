@@ -196,17 +196,20 @@ const HEADINGS = [
   "4. Variable Breakdown",
   "5. SI Unit & Nature",
   "6. Derivation",
-  "7. Key Properties",
-  "8. NCERT Example / Activity",
-  "9. Real-life Use",
-  "10. Important Points",
-  "11. Key Terms",
-  "12. Exam tip",
-  "13. Memory Trick",
+  "7. Graph / Trend",
+  "8. Key Properties",
+  "9. NCERT Example / Activity",
+  "10. Real-life Use",
+  "11. Important Points",
+  "12. Key Terms",
+  "13. Exam tip",
+  "14. Memory Trick",
 ];
 
 /** Labels whose lines are maths/pedagogy and must not be filtered by lexical overlap. */
-const FREEFORM_LABEL = /^(formula|variable|variable breakdown|si unit|derivation|derivation step|analogy|memory trick|exam tip)\b/i;
+const FREEFORM_LABEL =
+  /^(formula|variable|variable breakdown|si unit|derivation|derivation step|graph|graph ?\/ ?trend|analogy|memory trick|exam tip)\b/i;
+
 
 /**
  * Drop any AI line that is not lexically supported by the NCERT context.
