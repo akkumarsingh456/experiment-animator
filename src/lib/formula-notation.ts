@@ -165,7 +165,7 @@ export async function aiFixFormulas(opts: {
       method: "POST",
       headers: { "Content-Type": "application/json", "Lovable-API-Key": opts.apiKey },
       body: JSON.stringify({
-        model: "google/gemini-3.6-flash",
+        model: "google/gemini-3.1-pro-preview",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
       }),
@@ -251,7 +251,7 @@ export async function aiFormulaSheet(opts: {
       method: "POST",
       headers: { "Content-Type": "application/json", "Lovable-API-Key": opts.apiKey },
       body: JSON.stringify({
-        model: "google/gemini-3.6-flash",
+        model: "google/gemini-3.1-pro-preview",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
       }),
