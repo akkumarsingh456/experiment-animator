@@ -259,12 +259,16 @@ export async function geminiTeacherNotes(opts: {
   subject: string;
   chapter: string;
   context: string;
+  /** Excerpts from the uploaded reference books (PW / Med Easy / mind maps). */
+  refContext?: string;
   slides: NoteSourceSlide[];
 }): Promise<Map<number, NoteSection[]>> {
   const result = new Map<number, NoteSection[]>();
   if (!opts.apiKey || opts.slides.length === 0) return result;
 
-  const contextNorm = norm(opts.context);
+  // Reference-book text is part of the source of truth, so lines grounded in the
+  // PW / Med Easy books survive the support filter instead of being dropped.
+  const contextNorm = norm(`${opts.context}\n${opts.refContext ?? ""}`);
   const payload = opts.slides.map((s, i) => ({
     index: i,
     title: s.title,
@@ -311,6 +315,14 @@ export async function geminiTeacherNotes(opts: {
     "Return STRICT JSON only, no markdown fence:",
     '{"slides":[{"index":0,"sections":[...]}]}',
     "",
+    ...(opts.refContext?.trim()
+      ? [
+          "REFERENCE BOOK EXCERPTS (PW / Physics Wallah notes, Med Easy, mind-map & short-notes books uploaded by the teacher).",
+          "These are trusted sources: mine them for shortcut formulas, formula sheets, derivation steps, graph behaviour, comparison tables, exam traps and memory tricks that NCERT leaves in prose. Cite nothing, invent nothing.",
+          opts.refContext.replace(/\s+/g, " ").slice(0, 10000),
+          "",
+        ]
+      : []),
     "SLIDES AND THEIR NCERT EXCERPTS:",
     JSON.stringify(payload).slice(0, 24000),
   ].join("\n");
@@ -351,7 +363,7 @@ export async function geminiTeacherNotes(opts: {
 /** Attach sections to every content slide: Gemini rewrite where possible, local otherwise. */
 export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: string; sections?: NoteSection[] }>(
   slides: T[],
-  opts: { apiKey?: string; klass: string; subject: string; chapter: string; context: string },
+  opts: { apiKey?: string; klass: string; subject: string; chapter: string; context: string; refContext?: string },
 ): Promise<T[]> {
   // Clean print noise (edition years, Fig./page refs) out of the visible
   // bullets too, so slides never show "2019-20" or "FIGURE 2.11".
@@ -378,6 +390,7 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
         subject: opts.subject,
         chapter: opts.chapter,
         context: opts.context,
+        refContext: opts.refContext,
         slides: batch.map(({ s }) => s),
       }).then((map) => ({ batch, map })),
     ),
@@ -402,7 +415,7 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
  */
 async function attachNoteDiagrams<T extends NoteSourceSlide & { kind?: string; sections?: NoteSection[] }>(
   slides: T[],
-  opts: { apiKey?: string; klass: string; subject: string; chapter: string },
+  opts: { apiKey?: string; klass: string; subject: string; chapter: string; refContext?: string },
 ): Promise<T[]> {
   const targets = slides
     .map((s, i) => ({ s, i }))
@@ -441,7 +454,7 @@ async function attachNoteDiagrams<T extends NoteSourceSlide & { kind?: string; s
  */
 async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; sections?: NoteSection[] }>(
   slides: T[],
-  opts: { apiKey?: string; klass: string; subject: string; chapter: string },
+  opts: { apiKey?: string; klass: string; subject: string; chapter: string; refContext?: string },
 ): Promise<T[]> {
   if (!opts.apiKey) return slides;
 
