@@ -1841,7 +1841,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v28-pro-notes-graphs",
+      "lesson-v29-pw-reference-channel",
       data.klass,
       data.subject,
       data.chapter,
@@ -2046,6 +2046,59 @@ export const generateLesson = createServerFn({ method: "POST" })
       throw new Error(`The matching Class ${data.klass} ${data.subject} PDF was found, but no readable text chunks were saved. Re-ingest that PDF from Upload.`);
     }
 
+    // 4a. Dedicated reference-book channel (PW / Physics Wallah, Med Easy, mind
+    //     maps, short notes). These books hold the formula sheets, derivations
+    //     and labelled diagrams, so their chunks are retrieved and ranked on
+    //     their own instead of competing with NCERT for the same slots.
+    const refBooksAll = candidates.filter(isRef);
+    let refContext = "";
+    try {
+      let refPool = refBooksAll;
+      if (refPool.length === 0) {
+        const refLike = ["pw", "physics wallah", "med easy", "medeasy", "shobhit", "nirwan", "mind map", "short notes", "revision", "formula"]
+          .map((t) => `file_name.ilike.%${t}%`)
+          .join(",");
+        const { data: refFound } = await s
+          .from("ncert_books")
+          .select("id, class, subject, chapter, file_name")
+          .or(refLike)
+          .limit(60);
+        refPool = (refFound ?? []).filter((b) => subjectMatches(b.subject, data.subject, b.class));
+        if (refPool.length === 0) refPool = refFound ?? [];
+      }
+      const refTop = refPool
+        .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject}`, [...terms, ...chapterTerms]) }))
+        .sort((a, z) => z.m - a.m)
+        .slice(0, 4)
+        .map((x) => x.b);
+      if (refTop.length > 0) {
+        const refRows = await Promise.all(
+          refTop.map((b) => {
+            const q = s
+              .from("ncert_chunks")
+              .select("book_id, chunk_index, content")
+              .eq("book_id", b.id)
+              .order("chunk_index", { ascending: true })
+              .limit(400);
+            return (keywordFilter ? q.or(keywordFilter) : q).then((r) => r.data ?? []);
+          }),
+        );
+        const refRanked = refRows
+          .flat()
+          .map((c) => ({ ...c, _s: score(c.content, terms) }))
+          .filter((c) => c._s > 0)
+          .sort((a, z) => z._s - a._s)
+          .slice(0, 20);
+        const refNames = new Map(refTop.map((b) => [b.id, b.file_name || "reference book"]));
+        refContext = refRanked
+          .map((c) => `[${refNames.get(c.book_id)}] ${String(c.content || "").replace(/\s+/g, " ").trim()}`)
+          .join("\n---\n")
+          .slice(0, 14000);
+      }
+    } catch (e) {
+      console.warn("reference-book channel failed", e);
+    }
+
     // 4. Build slides + activity + storyboard locally from saved NCERT text.
     // For English/Hindi/Sanskrit (or explicit chapter mode) we paginate the full
     // chapter text verbatim with break slides every 10 pages.
@@ -2079,6 +2132,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       subject: String(data.subject || ""),
       chapter: String(data.chapter || data.topic || ""),
       context,
+      refContext,
     });
     const slides = [...notedSlides, ...mcqSlides];
     const activities = normalizeActivities(buildLocalActivities(data.topic, context), data.topic, context);
