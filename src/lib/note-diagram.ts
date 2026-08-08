@@ -113,6 +113,8 @@ export async function aiNoteDiagrams(opts: {
   klass: string;
   subject: string;
   chapter: string;
+  /** Excerpts from the uploaded reference books (PW / Med Easy / mind maps). */
+  refContext?: string;
   slides: Array<{ index: number; title: string; excerpts: string[] }>;
 }): Promise<Map<number, string[]>> {
   const out = new Map<number, string[]>();
@@ -133,13 +135,22 @@ export async function aiNoteDiagrams(opts: {
     "- Box-drawing characters ┌ ┐ └ ┘ │ ─ ├ ┬ ▶ ▼ ° and plain text labels only. No markdown, no LaTeX, no images.",
     "- Max 14 lines, max 64 characters per line, aligned so it renders correctly in a monospace font.",
     "- Every part/stage must carry a short readable label (max 22 characters).",
-    "- If the slide genuinely has nothing to draw, return an empty array for it.",
+    "- Labels must be real scientific terms from the excerpts (e.g. 'Cell membrane', 'Ohm's law'). Never use sentence fragments, stopwords ('If V', 'the', 'then'), chapter titles or page numbers as labels.",
+    "- A diagram needs at least 3 labelled parts/stages. If the slide genuinely has nothing to draw, return an empty array for it.",
     "",
     'Return STRICT JSON only: {"slides":[{"index":0,"lines":["┌────────┐","│ Nucleus │",...]}]}',
     "",
+    ...(opts.refContext?.trim()
+      ? [
+          "REFERENCE BOOK EXCERPTS (PW / Physics Wallah, Med Easy, mind-map books uploaded by the teacher) — these carry the best labelled diagrams and flow charts, so prefer their structures and part names:",
+          opts.refContext.replace(/\s+/g, " ").slice(0, 8000),
+          "",
+        ]
+      : []),
     "SLIDES:",
     JSON.stringify(opts.slides.map((s) => ({ index: s.index, title: s.title, book: s.excerpts.slice(0, 8) }))).slice(0, 16000),
   ].join("\n");
+
 
   try {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
