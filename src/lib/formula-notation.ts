@@ -216,10 +216,13 @@ export async function aiFormulaSheet(opts: {
   klass: string;
   subject: string;
   chapter: string;
+  /** Excerpts from the uploaded reference books (PW / Med Easy / mind maps). */
+  refContext?: string;
   slides: Array<{ index: number; title: string; excerpts: string[] }>;
 }): Promise<Map<number, FormulaBlock>> {
   const out = new Map<number, FormulaBlock>();
   if (!opts.apiKey || opts.slides.length === 0) return out;
+
 
   const prompt = [
     "You are a master teacher writing the formula sheet for NCERT slides.",
