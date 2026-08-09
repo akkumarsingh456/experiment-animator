@@ -60,6 +60,8 @@ function usefulLabel(raw: string): string {
     .trim();
   if (s.length < 5 || s.length > 34) return "";
   if (STOP_LABEL.test(s)) return "";
+  // Shared junk filter (chapter/page/figure headers, "If V", stopwords).
+  if (validateDiagramLabels([s]).length === 0) return "";
   const words = s.split(" ");
   if (words.length > 5) return "";
   // Needs at least two real words or one long domain word.
@@ -67,6 +69,7 @@ function usefulLabel(raw: string): string {
   if (!/[A-Za-z]{4}/.test(s)) return "";
   return s;
 }
+
 
 /** Deterministic, zero-cost diagram for a slide. */
 export function buildLocalDiagram(slide: {
