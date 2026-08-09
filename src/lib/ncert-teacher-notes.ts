@@ -14,6 +14,8 @@
 import { aiFixFormulas, aiFormulaSheet, cleanFormulaLine, needsFormulaAI, repairNotation } from "@/lib/formula-notation";
 import { mapOutsideMath, splitMath } from "@/lib/latex-notation";
 import { DIAGRAM_HEADING, aiNoteDiagrams, buildLocalDiagram } from "@/lib/note-diagram";
+import { PW_EXTRACTION_RULES, normalizeNoteLine } from "@/lib/pwNotesNormalizer";
+
 
 export type NoteSectionKind = "text" | "bullets" | "formula" | "terms" | "tip" | "diagram";
 
@@ -227,7 +229,7 @@ function ncertSupported(line: string, contextNorm: string): boolean {
   return hits / words.length >= 0.45;
 }
 
-function sanitizeSections(raw: unknown, contextNorm: string): NoteSection[] {
+function sanitizeSections(raw: unknown, contextNorm: string, subject = "physics"): NoteSection[] {
   if (!Array.isArray(raw)) return [];
   const out: NoteSection[] = [];
   for (const s of raw) {
@@ -241,12 +243,16 @@ function sanitizeSections(raw: unknown, contextNorm: string): NoteSection[] {
     const lines = dedupe(
       (Array.isArray((s as any)?.lines) ? (s as any).lines : [])
         .map((l: unknown) => (freeform ? repairNotation(String(l || "")) : cleanNcertLine(String(l || ""))))
+        // Subject-aware LaTeX normalisation (fractions, chemical subscripts,
+        // ionic superscripts) for every surviving line.
+        .map((l: string) => normalizeNoteLine(l, subject))
         .filter((l: string) => l.length > 4 && l.length < 320),
     ).filter((l) => freeform || ncertSupported(l, contextNorm));
     if (heading && lines.length) out.push({ heading, kind, lines: lines.slice(0, 10) });
   }
   return mergeToSingleSection(out);
 }
+
 
 /**
  * One Gemini call per batch of slides. Returns sanitised sections keyed by slide
@@ -279,7 +285,10 @@ export async function geminiTeacherNotes(opts: {
     "You are a master NCERT teacher writing a pedagogical masterclass note block for students meeting this topic for the FIRST time.",
     `Class: ${opts.klass} | Subject: ${opts.subject} | Chapter: ${opts.chapter}`,
     "",
+    PW_EXTRACTION_RULES,
+    "",
     "SOURCE RULES:",
+
     "- The excerpts below come from the uploaded NCERT textbook AND the uploaded reference books (PW / Physics Wallah notes, Med Easy, mind-map books) for this class/subject; both are the source of truth for every FACT, number, example and application.",
     "- Prefer NCERT wording for definitions and prescribed statements; use the PW / reference-book material for extra depth: shortcut formulas, tables, graph behaviour, exam traps and memory tricks.",
     "- Never invent facts, data, examples or numbers that contradict or go beyond this chapter's scope.",
@@ -351,7 +360,7 @@ export async function geminiTeacherNotes(opts: {
     for (const s of parsed.slides || []) {
       const idx = Number(s?.index);
       if (!Number.isFinite(idx)) continue;
-      const sections = sanitizeSections((s as any)?.sections, contextNorm);
+      const sections = sanitizeSections((s as any)?.sections, contextNorm, opts.subject);
       if (sections.length && sections[0].lines.length >= 3) result.set(idx, sections);
     }
   } catch (e) {
