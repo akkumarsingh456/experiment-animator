@@ -1065,6 +1065,8 @@ function SlideCanvas({
                 </ul>
               ) : null}
               <NoteSections sections={(slide as any).sections} />
+              <PenNotesBlock index={index} slide={slide} subject={subject} editable />
+
 
               {slide.notes?.length && !(slide as any).sections?.length ? (
                 <div className="rounded-md bg-secondary/50 border border-border/50 p-2 overflow-hidden">
