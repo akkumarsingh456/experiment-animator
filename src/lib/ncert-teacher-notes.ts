@@ -227,7 +227,7 @@ function ncertSupported(line: string, contextNorm: string): boolean {
   return hits / words.length >= 0.45;
 }
 
-function sanitizeSections(raw: unknown, contextNorm: string): NoteSection[] {
+function sanitizeSections(raw: unknown, contextNorm: string, subject = "physics"): NoteSection[] {
   if (!Array.isArray(raw)) return [];
   const out: NoteSection[] = [];
   for (const s of raw) {
@@ -241,12 +241,16 @@ function sanitizeSections(raw: unknown, contextNorm: string): NoteSection[] {
     const lines = dedupe(
       (Array.isArray((s as any)?.lines) ? (s as any).lines : [])
         .map((l: unknown) => (freeform ? repairNotation(String(l || "")) : cleanNcertLine(String(l || ""))))
+        // Subject-aware LaTeX normalisation (fractions, chemical subscripts,
+        // ionic superscripts) for every surviving line.
+        .map((l: string) => normalizeNoteLine(l, subject))
         .filter((l: string) => l.length > 4 && l.length < 320),
     ).filter((l) => freeform || ncertSupported(l, contextNorm));
     if (heading && lines.length) out.push({ heading, kind, lines: lines.slice(0, 10) });
   }
   return mergeToSingleSection(out);
 }
+
 
 /**
  * One Gemini call per batch of slides. Returns sanitised sections keyed by slide
