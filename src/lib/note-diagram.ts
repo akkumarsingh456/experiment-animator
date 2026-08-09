@@ -10,6 +10,8 @@
 
 import type { NoteSection } from "@/lib/ncert-teacher-notes";
 import { plainMathText } from "@/lib/latex-notation";
+import { validateDiagramLabels } from "@/lib/pwNotesNormalizer";
+
 
 export const DIAGRAM_HEADING = "Diagram (from the book)";
 
