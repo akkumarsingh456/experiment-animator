@@ -80,6 +80,52 @@ function NoteSections({ sections, scale }: { sections?: NoteSectionUI[]; scale?:
   );
 }
 
+/**
+ * Teacher's pen & paper block — hand-written formulas typeset in LaTeX by
+ * Gemini and saved permanently against this slide.
+ */
+function PenNotesBlock({
+  index,
+  slide,
+  subject,
+  topic,
+  editable,
+  scale,
+}: {
+  index: number;
+  slide: Slide;
+  subject?: string;
+  topic?: string;
+  editable?: boolean;
+  scale?: "card" | "present";
+}) {
+  const key = slideKey(subject, index, slide.title || "");
+  const { lines, save } = usePenNotes(key);
+  if (!lines.length && !editable) return null;
+  const base = scale === "present" ? "text-[clamp(12px,1.2vw,18px)]" : "text-[12.5px]";
+  return (
+    <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 px-2.5 py-2 space-y-1">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[9px] font-semibold uppercase tracking-wider text-primary">
+          Teacher's board · LaTeX
+        </div>
+        {editable && (
+          <PenPaperEditor lines={lines} onSave={save} subject={subject} topic={topic || slide.title} />
+        )}
+      </div>
+      {lines.length > 0 && (
+        <ul className={`${base} leading-snug space-y-1 text-foreground/90`}>
+          {lines.map((l, k) => (
+            <li key={k}>• <MathText text={l} /></li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+
+
 
 const SearchSchema = z.object({
   topic: z.coerce.string().default(""),
