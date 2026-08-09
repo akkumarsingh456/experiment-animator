@@ -49,6 +49,8 @@ import {
 } from "lucide-react";
 
 import { MathText } from "@/components/MathText";
+import { PenPaperEditor } from "@/components/PenPaperEditor";
+import { usePenNotes, getPenNotes } from "@/lib/pen-notes";
 import { plainMathText } from "@/lib/latex-notation";
 
 type NoteSectionUI = { heading: string; kind: string; lines: string[] };
@@ -79,6 +81,52 @@ function NoteSections({ sections, scale }: { sections?: NoteSectionUI[]; scale?:
     </div>
   );
 }
+
+/**
+ * Teacher's pen & paper block — hand-written formulas typeset in LaTeX by
+ * Gemini and saved permanently against this slide.
+ */
+function PenNotesBlock({
+  index,
+  slide,
+  subject,
+  topic,
+  editable,
+  scale,
+}: {
+  index: number;
+  slide: Slide;
+  subject?: string;
+  topic?: string;
+  editable?: boolean;
+  scale?: "card" | "present";
+}) {
+  const key = slideKey(subject, index, slide.title || "");
+  const { lines, save } = usePenNotes(key);
+  if (!lines.length && !editable) return null;
+  const base = scale === "present" ? "text-[clamp(12px,1.2vw,18px)]" : "text-[12.5px]";
+  return (
+    <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 px-2.5 py-2 space-y-1">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[9px] font-semibold uppercase tracking-wider text-primary">
+          Teacher's board · LaTeX
+        </div>
+        {editable && (
+          <PenPaperEditor lines={lines} onSave={save} subject={subject} topic={topic || slide.title} />
+        )}
+      </div>
+      {lines.length > 0 && (
+        <ul className={`${base} leading-snug space-y-1 text-foreground/90`}>
+          {lines.map((l, k) => (
+            <li key={k}>• <MathText text={l} /></li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+
 
 
 const SearchSchema = z.object({
@@ -465,6 +513,13 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
             { x: rightX, y: 5.2, w: rightW, h: 1.8, fontSize: 11, color: "475569", paraSpaceAfter: 3 });
         }
         if (s.ncert_quote && !secs?.length) slide.addText(`“${s.ncert_quote}”`, { x: rightX, y: 7.1, w: rightW, h: 0.6, fontSize: 10, italic: true, color: "5A6B91" });
+
+        const pen = getPenNotes(slideKey(result?.source_books?.[0]?.subject, i, s.title || ""));
+        if (pen.length) {
+          slide.addText("Teacher's board", { x: rightX, y: 6.7, w: rightW, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
+          slide.addText(pen.map((l) => ({ text: plainMathText(l), options: { bullet: true } })),
+            { x: rightX, y: 7.0, w: rightW, h: 1.1, fontSize: 11, color: "1F2A4A", paraSpaceAfter: 3 });
+        }
 
         if (s.caption) slide.addText(s.caption, { x: 0.5, y: 7.5, w: leftW, h: 0.4, fontSize: 10, italic: true, color: "5A6B91" });
         slide.addText("EduPlan AI · NCERT-grounded", { x: W - 3, y: H - 0.4, w: 2.8, h: 0.3, fontSize: 9, color: "8090B0", align: "right" });
@@ -1017,6 +1072,8 @@ function SlideCanvas({
                 </ul>
               ) : null}
               <NoteSections sections={(slide as any).sections} />
+              <PenNotesBlock index={index} slide={slide} subject={subject} editable />
+
 
               {slide.notes?.length && !(slide as any).sections?.length ? (
                 <div className="rounded-md bg-secondary/50 border border-border/50 p-2 overflow-hidden">
@@ -1274,6 +1331,8 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
                     </ul>
                   ) : null}
                   <NoteSections sections={(s as any).sections} scale="present" />
+                  <PenNotesBlock index={i} slide={s} subject={subject} scale="present" />
+
                   {s.notes?.length && !(s as any).sections?.length ? (
                     <div className="rounded-md bg-secondary/60 border border-border/40 p-2">
                       <div className="text-[9px] font-semibold uppercase tracking-wider opacity-70 mb-1">NCERT notes</div>
