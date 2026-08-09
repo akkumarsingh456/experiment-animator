@@ -357,7 +357,7 @@ export async function geminiTeacherNotes(opts: {
     for (const s of parsed.slides || []) {
       const idx = Number(s?.index);
       if (!Number.isFinite(idx)) continue;
-      const sections = sanitizeSections((s as any)?.sections, contextNorm);
+      const sections = sanitizeSections((s as any)?.sections, contextNorm, opts.subject);
       if (sections.length && sections[0].lines.length >= 3) result.set(idx, sections);
     }
   } catch (e) {
