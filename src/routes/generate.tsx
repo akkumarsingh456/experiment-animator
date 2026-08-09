@@ -514,6 +514,13 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         }
         if (s.ncert_quote && !secs?.length) slide.addText(`“${s.ncert_quote}”`, { x: rightX, y: 7.1, w: rightW, h: 0.6, fontSize: 10, italic: true, color: "5A6B91" });
 
+        const pen = getPenNotes(slideKey(result?.source_books?.[0]?.subject, i, s.title || ""));
+        if (pen.length) {
+          slide.addText("Teacher's board", { x: rightX, y: 6.7, w: rightW, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
+          slide.addText(pen.map((l) => ({ text: plainMathText(l), options: { bullet: true } })),
+            { x: rightX, y: 7.0, w: rightW, h: 1.1, fontSize: 11, color: "1F2A4A", paraSpaceAfter: 3 });
+        }
+
         if (s.caption) slide.addText(s.caption, { x: 0.5, y: 7.5, w: leftW, h: 0.4, fontSize: 10, italic: true, color: "5A6B91" });
         slide.addText("EduPlan AI · NCERT-grounded", { x: W - 3, y: H - 0.4, w: 2.8, h: 0.3, fontSize: 9, color: "8090B0", align: "right" });
       });
