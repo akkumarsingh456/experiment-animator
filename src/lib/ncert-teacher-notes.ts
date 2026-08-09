@@ -285,7 +285,10 @@ export async function geminiTeacherNotes(opts: {
     "You are a master NCERT teacher writing a pedagogical masterclass note block for students meeting this topic for the FIRST time.",
     `Class: ${opts.klass} | Subject: ${opts.subject} | Chapter: ${opts.chapter}`,
     "",
+    PW_EXTRACTION_RULES,
+    "",
     "SOURCE RULES:",
+
     "- The excerpts below come from the uploaded NCERT textbook AND the uploaded reference books (PW / Physics Wallah notes, Med Easy, mind-map books) for this class/subject; both are the source of truth for every FACT, number, example and application.",
     "- Prefer NCERT wording for definitions and prescribed statements; use the PW / reference-book material for extra depth: shortcut formulas, tables, graph behaviour, exam traps and memory tricks.",
     "- Never invent facts, data, examples or numbers that contradict or go beyond this chapter's scope.",
