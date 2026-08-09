@@ -1324,6 +1324,8 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
                     </ul>
                   ) : null}
                   <NoteSections sections={(s as any).sections} scale="present" />
+                  <PenNotesBlock index={i} slide={s} subject={subject} scale="present" />
+
                   {s.notes?.length && !(s as any).sections?.length ? (
                     <div className="rounded-md bg-secondary/60 border border-border/40 p-2">
                       <div className="text-[9px] font-semibold uppercase tracking-wider opacity-70 mb-1">NCERT notes</div>
