@@ -49,6 +49,8 @@ import {
 } from "lucide-react";
 
 import { MathText } from "@/components/MathText";
+import { PenPaperEditor } from "@/components/PenPaperEditor";
+import { usePenNotes, getPenNotes } from "@/lib/pen-notes";
 import { plainMathText } from "@/lib/latex-notation";
 
 type NoteSectionUI = { heading: string; kind: string; lines: string[] };
