@@ -1103,6 +1103,9 @@ export type GenerationResult = {
   activity_matches: ActivityMatch[];
   video: { title: string; scenes: VideoScene[] };
   figures_report?: FiguresReport;
+  /** Slides whose PW/NCERT notes failed LaTeX validity or grounding checks. */
+  notes_report?: { flagged_slide_indices: number[]; pass: boolean };
+
 };
 
 function supa() {
