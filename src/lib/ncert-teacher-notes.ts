@@ -200,7 +200,7 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
  * Fold the slide's own bullets ("upper notes") into the AI-written Teacher Notes
  * block so no good point is lost when only the notes block is displayed.
  */
-export function mergeBulletsIntoSections<T extends NoteSourceSlide & { sections?: NoteSection[] }>(slide: T): T {
+export function mergeBulletsIntoSections<T extends NoteSourceSlide & { sections?: NoteSection[] }>(slide: T, subject = "physics"): T {
   const secs = slide.sections || [];
   const notes = secs.find((s) => s.heading === NOTE_HEADING);
   if (!notes) return slide;
@@ -212,7 +212,7 @@ export function mergeBulletsIntoSections<T extends NoteSourceSlide & { sections?
     // Only add points that carry real substance.
     if (b.length < 30) continue;
     have.add(k);
-    extra.push(`**NCERT point:** ${normalizeNoteLine(b, "physics")}`);
+    extra.push(`**NCERT point:** ${normalizeNoteLine(b, subject)}`);
     if (extra.length >= 8) break;
   }
   if (!extra.length) return slide;
@@ -469,7 +469,7 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
   // notes, so the best points from both surfaces must live in one block.
   for (let i = 0; i < withLocal.length; i++) {
     if (((withLocal[i] as any).kind ?? "content") === "content") {
-      withLocal[i] = mergeBulletsIntoSections(withLocal[i]);
+      withLocal[i] = mergeBulletsIntoSections(withLocal[i], opts.subject);
     }
   }
 
