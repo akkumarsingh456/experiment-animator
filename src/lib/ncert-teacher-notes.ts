@@ -40,6 +40,17 @@ const norm = (s: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
+/** Exercise prompts, links and print furniture that must never become a note. */
+const JUNK_LINE = [
+  /https?:\/\/|www\.[a-z]/i,
+  /\bexercises?\b/i,
+  /\bx\s?ample\b/i,
+  /^\s*(answer|solution)\b/i,
+  /^\s*(estimate|calculate|check the order|find the|show that|prove that|verify|obtain the|state and prove)\b/i,
+  /\banswer the following\b/i,
+  /\bquestions? regarding\b/i,
+];
+
 /** Strip NCERT print noise: edition years, figure/page refs, watermarks. */
 export function cleanNcertLine(raw: string): string {
   let s = mapOutsideMath(repairNotation(String(raw || "")), (t) => t
@@ -58,9 +69,11 @@ export function cleanNcertLine(raw: string): string {
   s = s.replace(/^[^A-Za-z0-9($\\]+/, "").replace(/\s*[,;:]$/, "");
   if (s && !/[.?!)]$/.test(s)) s += ".";
   if (s.length <= 3) return "";
+  if (JUNK_LINE.some((p) => p.test(s))) return "";
   // Reject lines whose maths is unrecoverable extraction garbage.
   return cleanFormulaLine(s);
 }
+
 
 
 function sentences(text: string): string[] {
