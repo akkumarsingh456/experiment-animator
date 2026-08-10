@@ -121,19 +121,31 @@ const isExample = (s: string) => /\bexample\b|\bfor instance\b|\bactivity\b|\bex
 const isApplication = (s: string) => /\bused in\b|\bapplication\b|\bin daily life\b|\bpractical\b|\bdevice\b|\bmachine\b|\btechnolog/i.test(s);
 
 
+/** A key term is only useful when it is a real noun phrase with a full meaning. */
+const TERM_STOP = /^(with|there|however|which|that|this|these|those|also|such|when|then|and|but|for|from|it|is|are)\b/i;
+export function usefulTerm(term: string, meaning: string): boolean {
+  const t = String(term || "").trim();
+  const m = String(meaning || "").trim();
+  if (t.length < 3 || t.length > 42 || TERM_STOP.test(t)) return false;
+  if (/\d\s*$/.test(m) || m.length < 18) return false;
+  return /[A-Za-z]{3}/.test(t) && /[a-z]{3}/.test(m);
+}
+
 /**
  * Deterministic, zero-cost note builder — one single section where each line is
  * label-prefixed with inline bold (`**Definition:** …`) instead of separate
  * boxes, so nothing is duplicated across headings.
+ *
+ * The slide's own bullets ("upper notes") are merged into the same pool as the
+ * grounding text ("lower notes"), because the UI shows only this block — so the
+ * best points from both surfaces end up in one detailed set of notes.
  */
 export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
-  // Slide bullets are already shown above the notes — exclude them here so the
-  // same sentence never appears twice on one slide.
-  const shown = new Set((slide.bullets || []).map((b) => norm(cleanNcertLine(b)).slice(0, 70)));
   const pool = dedupe([
+    ...(slide.bullets || []).map(cleanNcertLine),
     ...(slide.notes || []).map(cleanNcertLine),
     ...sentences(slide.grounding || ""),
-  ]).filter((l) => l && !shown.has(norm(l).slice(0, 70)));
+  ]).filter(Boolean);
 
   const used = new Set<string>();
   const take = (pred: (s: string) => boolean, max: number) => {
@@ -154,35 +166,63 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
 
   // Order matters: earlier labels claim a sentence first, so the same sentence
   // can never surface twice under two different labels on one slide.
-  add("Definition", take(isDefinition, 2));
+  add("Definition", take(isDefinition, 3));
   const units = take(isUnit, 2);
   add("Formula", take(isFormula, 3));
   add("SI unit", units);
   add("Derivation step", take(isDerivation, 4));
-  add("Important point", take(isProperty, 3));
+  add("Important point", take(isProperty, 4));
   add("Example", take(isExample, 2));
   add("Use", take(isApplication, 2));
-  add("Key point", take(() => true, 4));
+  add("Key point", take(() => true, 8));
 
   const termSeen = new Set(lines.map((l) => norm(l.replace(/^\*\*[^*]+:\*\*\s*/, "")).slice(0, 70)));
-  for (const t of (slide.key_terms || []).slice(0, 5)) {
+  for (const t of (slide.key_terms || []).slice(0, 6)) {
     const meaning = cleanNcertLine(t.meaning);
     const key = norm(meaning).slice(0, 70);
-    if (!t.term || !meaning || termSeen.has(key)) continue;
+    if (!usefulTerm(t.term, meaning) || termSeen.has(key)) continue;
     termSeen.add(key);
     lines.push(`**Key term — ${t.term}:** ${meaning}`);
   }
 
-  const first = (slide.key_terms || [])[0];
+  const first = (slide.key_terms || []).find((t) => usefulTerm(t.term, cleanNcertLine(t.meaning)));
   if (first) {
     const hook = cleanNcertLine(first.meaning).split(/[,.;]/)[0];
     if (hook) lines.push(`**Memory trick:** ${first.term} → ${hook}.`);
   }
 
-  const finalLines = dedupeLabelled(lines).slice(0, 30);
+  const finalLines = dedupeLabelled(lines).slice(0, 34);
 
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
+
+/**
+ * Fold the slide's own bullets ("upper notes") into the AI-written Teacher Notes
+ * block so no good point is lost when only the notes block is displayed.
+ */
+export function mergeBulletsIntoSections<T extends NoteSourceSlide & { sections?: NoteSection[] }>(slide: T): T {
+  const secs = slide.sections || [];
+  const notes = secs.find((s) => s.heading === NOTE_HEADING);
+  if (!notes) return slide;
+  const have = new Set(notes.lines.map((l) => norm(l.replace(/^\*\*[^*]+:\*\*\s*/, "")).slice(0, 70)));
+  const extra: string[] = [];
+  for (const b of (slide.bullets || []).map(cleanNcertLine).filter(Boolean)) {
+    const k = norm(b).slice(0, 70);
+    if (!k || have.has(k)) continue;
+    // Only add points that carry real substance.
+    if (b.length < 30) continue;
+    have.add(k);
+    extra.push(`**NCERT point:** ${normalizeNoteLine(b, "physics")}`);
+    if (extra.length >= 8) break;
+  }
+  if (!extra.length) return slide;
+  const merged = dedupeLabelled([...notes.lines, ...extra]).slice(0, 34);
+  return {
+    ...slide,
+    sections: secs.map((s) => (s.heading === NOTE_HEADING ? { ...s, lines: merged } : s)),
+  };
+}
+
 
 /** Collapse any multi-section output into the one label-prefixed section. */
 export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
