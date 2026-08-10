@@ -2069,7 +2069,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       const refTop = refPool
         .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject}`, [...terms, ...chapterTerms]) }))
         .sort((a, z) => z.m - a.m)
-        .slice(0, 4)
+        .slice(0, 6)
         .map((x) => x.b);
       if (refTop.length > 0) {
         const refRows = await Promise.all(
@@ -2079,22 +2079,22 @@ export const generateLesson = createServerFn({ method: "POST" })
               .select("book_id, chunk_index, content")
               .eq("book_id", b.id)
               .order("chunk_index", { ascending: true })
-              .limit(400);
+              .limit(600);
             return (keywordFilter ? q.or(keywordFilter) : q).then((r) => r.data ?? []);
           }),
         );
-        const refRanked = refRows
-          .flat()
-          .map((c) => ({ ...c, _s: score(c.content, terms) }))
-          .filter((c) => c._s > 0)
-          .sort((a, z) => z._s - a._s)
-          .slice(0, 20);
+        const scored = refRows.flat().map((c) => ({ ...c, _s: score(c.content, terms) }));
+        const hits = scored.filter((c) => c._s > 0);
+        // Never come back empty-handed: when nothing scores, still pass the
+        // book's own excerpts so PW / Med Easy material always reaches the notes.
+        const refRanked = (hits.length ? hits : scored).sort((a, z) => z._s - a._s).slice(0, 32);
         const refNames = new Map(refTop.map((b) => [b.id, b.file_name || "reference book"]));
         refContext = refRanked
           .map((c) => `[${refNames.get(c.book_id)}] ${String(c.content || "").replace(/\s+/g, " ").trim()}`)
           .join("\n---\n")
-          .slice(0, 14000);
+          .slice(0, 20000);
       }
+
     } catch (e) {
       console.warn("reference-book channel failed", e);
     }
