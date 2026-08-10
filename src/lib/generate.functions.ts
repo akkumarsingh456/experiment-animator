@@ -6,6 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 import { renderNapkinInfographicDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
+import { verifyNoteSections, normalizeForGrounding, type NotesCheck } from "@/lib/notes-verification";
 
 
 function hashKey(parts: Array<string | undefined | null>) {
@@ -786,8 +787,11 @@ export type SlideVerification = {
   diagram_label_fit: "pass" | "adjusted";
   diagram_issues: string[];
   figures_check?: FigurePlacementCheck;
+  /** LaTeX validity + grounding confidence of the PW/NCERT teacher notes. */
+  notes_check?: NotesCheck;
   overall_pass: boolean;
 };
+
 
 export type FiguresReport = {
   /** Every unique figure ref present anywhere in the NCERT context. */
@@ -1099,6 +1103,9 @@ export type GenerationResult = {
   activity_matches: ActivityMatch[];
   video: { title: string; scenes: VideoScene[] };
   figures_report?: FiguresReport;
+  /** Slides whose PW/NCERT notes failed LaTeX validity or grounding checks. */
+  notes_report?: { flagged_slide_indices: number[]; pass: boolean };
+
 };
 
 function supa() {
@@ -1841,7 +1848,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v31-merged-detailed-notes",
+      "lesson-v32-verified-notes",
       data.klass,
       data.subject,
       data.chapter,
@@ -2134,7 +2141,31 @@ export const generateLesson = createServerFn({ method: "POST" })
       context,
       refContext,
     });
-    const slides = [...notedSlides, ...mcqSlides];
+    // Pre-save verification: every PW/NCERT note line must render as valid
+    // LaTeX and be grounded in the retrieved context. Failing lines are
+    // quarantined and the slide is flagged before the lesson is cached.
+    const groundNorm = normalizeForGrounding(`${context}\n${refContext}`);
+    const verifiedSlides = notedSlides.map((sl) => {
+      const { sections, check } = verifyNoteSections((sl as any).sections as NoteSection[] | undefined, groundNorm);
+      const prev = sl.verification as SlideVerification | undefined;
+      return {
+        ...sl,
+        sections,
+        verification: {
+          ...(prev as SlideVerification),
+          notes_check: check,
+          overall_pass: (prev?.overall_pass ?? false) && check.pass,
+        },
+      };
+    });
+    const notes_report = {
+      flagged_slide_indices: verifiedSlides
+        .map((sl, i) => (sl.verification?.notes_check?.pass === false ? i : -1))
+        .filter((i) => i >= 0),
+      pass: verifiedSlides.every((sl) => sl.verification?.notes_check?.pass !== false),
+    };
+    const slides = [...verifiedSlides, ...mcqSlides];
+
     const activities = normalizeActivities(buildLocalActivities(data.topic, context), data.topic, context);
     const video = fallbackVideo(data.topic, activities);
 
@@ -2170,6 +2201,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       activity_matches,
       video,
       figures_report: figCheck.report,
+      notes_report,
     };
 
     // Save lesson cache (best-effort)

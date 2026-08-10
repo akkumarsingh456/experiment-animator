@@ -1032,9 +1032,23 @@ function SlideCanvas({
                   Figures {v.figures_check.pass ? "✓" : "⚠"} {v.figures_check.correct.length}/{v.figures_check.expected.length}
                 </Badge>
               )}
+              {(v as any)?.notes_check && (
+                <Badge
+                  variant="outline"
+                  className={`rounded-full text-[10px] ${(v as any).notes_check.pass ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" : "bg-rose-500/10 text-rose-700 border-rose-500/30"}`}
+                  title={
+                    (v as any).notes_check.issues.length
+                      ? (v as any).notes_check.issues.join(" ")
+                      : "All formulas render as valid LaTeX and are grounded in NCERT / PW text."
+                  }
+                >
+                  Formulas {(v as any).notes_check.pass ? "✓" : "⚠"} · Grounding {(v as any).notes_check.grounding_confidence}%
+                </Badge>
+              )}
               <Badge variant="outline" className="rounded-full text-[10px]">
                 {v?.overall_pass ? "NCERT ✓ verified" : "NCERT-grounded"}
               </Badge>
+
             </div>
           </div>
 
