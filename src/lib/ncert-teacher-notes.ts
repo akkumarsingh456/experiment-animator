@@ -381,7 +381,7 @@ export async function geminiTeacherNotes(opts: {
       ? [
           "REFERENCE BOOK EXCERPTS (PW / Physics Wallah notes, Med Easy, mind-map & short-notes books uploaded by the teacher).",
           "These are trusted sources: mine them for shortcut formulas, formula sheets, derivation steps, graph behaviour, comparison tables, exam traps and memory tricks that NCERT leaves in prose. Cite nothing, invent nothing.",
-          opts.refContext.replace(/\s+/g, " ").slice(0, 10000),
+          opts.refContext.replace(/\s+/g, " ").slice(0, 16000),
           "",
         ]
       : []),
