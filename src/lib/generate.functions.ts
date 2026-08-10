@@ -2138,7 +2138,31 @@ export const generateLesson = createServerFn({ method: "POST" })
       context,
       refContext,
     });
-    const slides = [...notedSlides, ...mcqSlides];
+    // Pre-save verification: every PW/NCERT note line must render as valid
+    // LaTeX and be grounded in the retrieved context. Failing lines are
+    // quarantined and the slide is flagged before the lesson is cached.
+    const groundNorm = normalizeForGrounding(`${context}\n${refContext}`);
+    const verifiedSlides = notedSlides.map((sl) => {
+      const { sections, check } = verifyNoteSections((sl as any).sections as NoteSection[] | undefined, groundNorm);
+      const prev = sl.verification as SlideVerification | undefined;
+      return {
+        ...sl,
+        sections,
+        verification: {
+          ...(prev as SlideVerification),
+          notes_check: check,
+          overall_pass: (prev?.overall_pass ?? false) && check.pass,
+        },
+      };
+    });
+    const notes_report = {
+      flagged_slide_indices: verifiedSlides
+        .map((sl, i) => (sl.verification?.notes_check?.pass === false ? i : -1))
+        .filter((i) => i >= 0),
+      pass: verifiedSlides.every((sl) => sl.verification?.notes_check?.pass !== false),
+    };
+    const slides = [...verifiedSlides, ...mcqSlides];
+
     const activities = normalizeActivities(buildLocalActivities(data.topic, context), data.topic, context);
     const video = fallbackVideo(data.topic, activities);
 
