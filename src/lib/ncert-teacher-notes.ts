@@ -465,6 +465,16 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
     });
   }
 
+  // Fold the slide's own bullets into the notes block: the UI shows only the
+  // notes, so the best points from both surfaces must live in one block.
+  for (let i = 0; i < withLocal.length; i++) {
+    if (((withLocal[i] as any).kind ?? "content") === "content") {
+      withLocal[i] = mergeBulletsIntoSections(withLocal[i]);
+    }
+  }
+
+
+
   const repaired = await repairSlideFormulas(await ensureFormulaBlocks(withLocal, opts), opts);
   return await attachNoteDiagrams(repaired, opts);
 }
