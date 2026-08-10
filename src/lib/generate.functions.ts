@@ -6,6 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 import { renderNapkinInfographicDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
+import { verifyNoteSections, normalizeForGrounding, type NotesCheck } from "@/lib/notes-verification";
 
 
 function hashKey(parts: Array<string | undefined | null>) {
