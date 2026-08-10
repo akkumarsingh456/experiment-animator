@@ -786,8 +786,11 @@ export type SlideVerification = {
   diagram_label_fit: "pass" | "adjusted";
   diagram_issues: string[];
   figures_check?: FigurePlacementCheck;
+  /** LaTeX validity + grounding confidence of the PW/NCERT teacher notes. */
+  notes_check?: NotesCheck;
   overall_pass: boolean;
 };
+
 
 export type FiguresReport = {
   /** Every unique figure ref present anywhere in the NCERT context. */
