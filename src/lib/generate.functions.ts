@@ -1968,7 +1968,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Reference books uploaded alongside NCERT (PW, Shobhit Nirwan, Med Easy,
     // mind maps, chapter notes) carry the best diagrams and formula sheets, so
     // they are boosted and always allowed to sit next to the NCERT text.
-    const REF_BOOK = /\b(pw|physics\s*wallah|shobhit|nirwan|med\s*easy|medeasy|chemhack|biohack|mind\s*map|mindmap|short\s*notes?|revision|one\s*shot|formula)\b/i;
+    const REF_BOOK = REF_BOOK_PATTERN;
     const isRef = (b: { file_name?: string | null; chapter?: string | null }) =>
       REF_BOOK.test(`${b.file_name ?? ""} ${b.chapter ?? ""}`);
     const bookScores = candidates
