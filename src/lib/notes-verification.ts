@@ -26,6 +26,8 @@ export type NotesCheck = {
   dropped_ungrounded: string[];
   /** 0-100 share of surviving lines supported by the retrieved context. */
   grounding_confidence: number;
+  /** Note lines whose invalid LaTeX was rewritten into a valid equivalent. */
+  latex_fixed?: number;
   /** Human-readable reasons, shown in the verification panel. */
   issues: string[];
   pass: boolean;
