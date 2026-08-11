@@ -1042,7 +1042,7 @@ function SlideCanvas({
                       : "All formulas render as valid LaTeX and are grounded in NCERT / PW text."
                   }
                 >
-                  Formulas {(v as any).notes_check.pass ? "✓" : "⚠"} · Grounding {(v as any).notes_check.grounding_confidence}%
+                  Formulas {(v as any).notes_check.pass ? "✓" : "⚠"} · Grounding {(v as any).notes_check.grounding_confidence}%{(v as any).notes_check.latex_fixed ? ` · ${(v as any).notes_check.latex_fixed} auto-fixed` : ""}
                 </Badge>
               )}
               <Badge variant="outline" className="rounded-full text-[10px]">

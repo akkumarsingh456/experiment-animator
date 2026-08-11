@@ -6,7 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 import { renderNapkinInfographicDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
-import { verifyNoteSections, normalizeForGrounding, type NotesCheck } from "@/lib/notes-verification";
+import { verifyNoteSections, normalizeForGrounding, autoFixAndVerifyNotes, type NotesCheck } from "@/lib/notes-verification";
 
 
 function hashKey(parts: Array<string | undefined | null>) {
@@ -1642,6 +1642,7 @@ function buildLocalSlides(topic: string, subtopics: string, context: string, sub
   const topicTerms = [topic, ...topic.split(/\s+/), ...subtopicList];
   const visuals = ["lightbulb", "atom", "ruler", "bolt", "function", "magnet", "beaker", "microscope", "brain", "prism", "circuit", "planet", "leaf", "dna", "heart"];
   const plan = [
+    { title: `Introduction to ${topic}`, terms: ["introduction", "we", "study", "chapter", ...topicTerms], source: pickSentences(sentences, topicTerms, 14, 0) },
     { title: `${topic}: NCERT overview`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 16, 0) },
     { title: `Core definitions in ${topic}`, terms: ["defined", "called", "is", topic], source: [...definitions, ...pickSentences(sentences, topicTerms, 10, 8)] },
     { title: `Symbols, quantities and units`, terms: ["unit", "SI", "formula", "symbol", ...topicTerms], source: [...formulas, ...pickSentences(sentences, topicTerms, 10, 16)] },
@@ -1681,8 +1682,11 @@ function buildLocalSlides(topic: string, subtopics: string, context: string, sub
     return attempt;
   };
 
+  // Slide count grows with the amount of usable NCERT content: at least 10,
+  // extended past 10 whenever more grounded material is available.
+  const MAX_SLIDES = 18;
   const slides: Slide[] = [];
-  for (let index = 0; index < plan.length && slides.length < 10; index++) {
+  for (let index = 0; index < plan.length && slides.length < MAX_SLIDES; index++) {
     const item = plan[index];
     let src = filterUnused(item.source);
     if (src.length < 3) src = filterUnused([...src, ...pickSentences(sentences, item.terms, 14, index * 9)]);
@@ -1690,14 +1694,14 @@ function buildLocalSlides(topic: string, subtopics: string, context: string, sub
     slides.push(makeSlide(makeUniqueTitle(item.title), src, topic, visuals[index] ?? "lightbulb", index, subject));
   }
   let offset = 0;
-  while (slides.length < 10 && offset < sentences.length) {
+  while (slides.length < MAX_SLIDES && offset < sentences.length) {
     const src = filterUnused(sentences.slice(offset, offset + 14));
     offset += 14;
     if (src.length < 3) continue;
     const idx = slides.length;
     slides.push(makeSlide(makeUniqueTitle(`${topic} — NCERT point ${idx + 1}`), src, topic, visuals[idx] ?? "lightbulb", idx, subject));
   }
-  return slides.slice(0, 10);
+  return slides.slice(0, MAX_SLIDES);
 }
 
 function fallbackActivities(topic: string, context: string): Activity[] {
@@ -1848,7 +1852,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v32-verified-notes",
+      "lesson-v33-autofix-intro-formulas",
       data.klass,
       data.subject,
       data.chapter,
@@ -2141,12 +2145,22 @@ export const generateLesson = createServerFn({ method: "POST" })
       context,
       refContext,
     });
-    // Pre-save verification: every PW/NCERT note line must render as valid
-    // LaTeX and be grounded in the retrieved context. Failing lines are
-    // quarantined and the slide is flagged before the lesson is cached.
+    // Pre-save verification with auto-fix: invalid LaTeX is first rewritten
+    // into a valid equivalent (deterministically, then by Gemini) and only the
+    // lines that still fail — or that the NCERT / PW context does not support —
+    // are quarantined. Verification re-runs after every repair.
     const groundNorm = normalizeForGrounding(`${context}\n${refContext}`);
-    const verifiedSlides = notedSlides.map((sl) => {
-      const { sections, check } = verifyNoteSections((sl as any).sections as NoteSection[] | undefined, groundNorm);
+    const fixedChecks = await autoFixAndVerifyNotes(
+      notedSlides.map((sl) => (sl as any).sections as NoteSection[] | undefined),
+      groundNorm,
+      {
+        apiKey: process.env.LOVABLE_API_KEY,
+        subject: String(data.subject || ""),
+        chapter: String(data.chapter || data.topic || ""),
+      },
+    );
+    const verifiedSlides = notedSlides.map((sl, i) => {
+      const { sections, check } = fixedChecks[i];
       const prev = sl.verification as SlideVerification | undefined;
       return {
         ...sl,

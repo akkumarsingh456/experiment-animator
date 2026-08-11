@@ -26,6 +26,8 @@ export type NotesCheck = {
   dropped_ungrounded: string[];
   /** 0-100 share of surviving lines supported by the retrieved context. */
   grounding_confidence: number;
+  /** Note lines whose invalid LaTeX was rewritten into a valid equivalent. */
+  latex_fixed?: number;
   /** Human-readable reasons, shown in the verification panel. */
   issues: string[];
   pass: boolean;
@@ -138,4 +140,80 @@ export function verifyNoteSections(
       pass: issues.length === 0 && grounding_confidence >= 60,
     },
   };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Auto-fix flow: repair invalid LaTeX, then re-run verification.     */
+/* ------------------------------------------------------------------ */
+
+import { aiFixLatex, localLatexFix, lineHasInvalidLatex } from "@/lib/latex-autofix";
+
+/**
+ * Rewrite invalid LaTeX into a valid equivalent across a whole deck, then
+ * re-verify every slide before anything is saved.
+ *
+ * Pass 1 repairs deterministically; the lines that still fail are batched into
+ * one Gemini pass per 20 lines. Only after both passes does
+ * `verifyNoteSections` decide what to quarantine, so a line is dropped only
+ * when its maths is truly unrecoverable.
+ */
+export async function autoFixAndVerifyNotes(
+  perSlideSections: Array<NoteSection[] | undefined>,
+  contextNorm: string,
+  opts: { apiKey?: string; subject: string; chapter: string },
+): Promise<Array<{ sections: NoteSection[]; check: NotesCheck }>> {
+  type Ref = { slide: number; sec: number; line: number; label: string };
+  const refs: Ref[] = [];
+  const texts: string[] = [];
+
+  // Work on a mutable copy.
+  const decks: NoteSection[][] = perSlideSections.map((secs) =>
+    (secs ?? []).map((sec) => ({ ...sec, lines: [...(sec.lines ?? [])] })),
+  );
+
+  let localFixed = 0;
+  decks.forEach((secs, si) => {
+    secs.forEach((sec, xi) => {
+      sec.lines.forEach((line, li) => {
+        if (!lineHasInvalidLatex(line)) return;
+        const local = localLatexFix(line);
+        if (local && !lineHasInvalidLatex(local)) {
+          sec.lines[li] = local;
+          localFixed += 1;
+          return;
+        }
+        const m = line.match(/^(\*\*[^*]+:\*\*\s*)/);
+        refs.push({ slide: si, sec: xi, line: li, label: m ? m[1] : "" });
+        texts.push(m ? line.slice(m[1].length) : line);
+      });
+    });
+  });
+
+  let aiFixed = 0;
+  if (texts.length > 0 && opts.apiKey) {
+    const CHUNK = 20;
+    const chunks: Array<{ start: number; items: string[] }> = [];
+    for (let i = 0; i < texts.length; i += CHUNK) chunks.push({ start: i, items: texts.slice(i, i + CHUNK) });
+    const maps = await Promise.all(
+      chunks.map((c) =>
+        aiFixLatex({ apiKey: opts.apiKey, subject: opts.subject, chapter: opts.chapter, lines: c.items }).then(
+          (m) => ({ start: c.start, m }),
+        ),
+      ),
+    );
+    for (const { start, m } of maps) {
+      for (const [k, v] of m) {
+        const ref = refs[start + k];
+        if (!ref) continue;
+        decks[ref.slide][ref.sec].lines[ref.line] = `${ref.label}${v}`;
+        aiFixed += 1;
+      }
+    }
+  }
+
+  const totalFixed = localFixed + aiFixed;
+  return decks.map((secs) => {
+    const { sections, check } = verifyNoteSections(secs, contextNorm);
+    return { sections, check: { ...check, latex_fixed: totalFixed } };
+  });
 }
