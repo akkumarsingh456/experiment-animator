@@ -2141,12 +2141,22 @@ export const generateLesson = createServerFn({ method: "POST" })
       context,
       refContext,
     });
-    // Pre-save verification: every PW/NCERT note line must render as valid
-    // LaTeX and be grounded in the retrieved context. Failing lines are
-    // quarantined and the slide is flagged before the lesson is cached.
+    // Pre-save verification with auto-fix: invalid LaTeX is first rewritten
+    // into a valid equivalent (deterministically, then by Gemini) and only the
+    // lines that still fail — or that the NCERT / PW context does not support —
+    // are quarantined. Verification re-runs after every repair.
     const groundNorm = normalizeForGrounding(`${context}\n${refContext}`);
-    const verifiedSlides = notedSlides.map((sl) => {
-      const { sections, check } = verifyNoteSections((sl as any).sections as NoteSection[] | undefined, groundNorm);
+    const fixedChecks = await autoFixAndVerifyNotes(
+      notedSlides.map((sl) => (sl as any).sections as NoteSection[] | undefined),
+      groundNorm,
+      {
+        apiKey: process.env.LOVABLE_API_KEY,
+        subject: String(data.subject || ""),
+        chapter: String(data.chapter || data.topic || ""),
+      },
+    );
+    const verifiedSlides = notedSlides.map((sl, i) => {
+      const { sections, check } = fixedChecks[i];
       const prev = sl.verification as SlideVerification | undefined;
       return {
         ...sl,
