@@ -93,10 +93,7 @@ function subjectKey(subject: string): SubjectKey {
 export function referenceBooksFor(klass: string, subject: string): ReferenceBook[] {
   const num = Number(String(klass || "").replace(/[^0-9]/g, "")) || 10;
   const table = num >= 11 ? SENIOR : JUNIOR;
-  const key = subjectKey(subject);
-  const books = table[key] || [];
-  const generic = table.social === books ? [] : table.social;
-  return key === "social" ? books : [...books, ...(num >= 11 ? [] : generic.slice(0, 0))];
+  return table[subjectKey(subject)] || [];
 }
 
 /** Prompt block listing the reference books Gemini must also search. */
