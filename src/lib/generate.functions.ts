@@ -6,6 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 import { renderNapkinInfographicDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
+import { REF_BOOK_PATTERN } from "@/lib/reference-books";
 import { verifyNoteSections, normalizeForGrounding, autoFixAndVerifyNotes, type NotesCheck } from "@/lib/notes-verification";
 
 
@@ -1852,7 +1853,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v33-autofix-intro-formulas",
+      "lesson-v34-reference-book-library",
       data.klass,
       data.subject,
       data.chapter,
@@ -1968,7 +1969,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Reference books uploaded alongside NCERT (PW, Shobhit Nirwan, Med Easy,
     // mind maps, chapter notes) carry the best diagrams and formula sheets, so
     // they are boosted and always allowed to sit next to the NCERT text.
-    const REF_BOOK = /\b(pw|physics\s*wallah|shobhit|nirwan|med\s*easy|medeasy|chemhack|biohack|mind\s*map|mindmap|short\s*notes?|revision|one\s*shot|formula)\b/i;
+    const REF_BOOK = REF_BOOK_PATTERN;
     const isRef = (b: { file_name?: string | null; chapter?: string | null }) =>
       REF_BOOK.test(`${b.file_name ?? ""} ${b.chapter ?? ""}`);
     const bookScores = candidates

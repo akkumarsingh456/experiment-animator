@@ -15,6 +15,7 @@ import { aiFixFormulas, aiFormulaSheet, cleanFormulaLine, needsFormulaAI, repair
 import { mapOutsideMath, splitMath } from "@/lib/latex-notation";
 import { DIAGRAM_HEADING, aiNoteDiagrams, buildLocalDiagram } from "@/lib/note-diagram";
 import { PW_EXTRACTION_RULES, normalizeNoteLine } from "@/lib/pwNotesNormalizer";
+import { referenceBooksPrompt } from "@/lib/reference-books";
 
 
 export type NoteSectionKind = "text" | "bullets" | "formula" | "terms" | "tip" | "diagram";
@@ -340,6 +341,8 @@ export async function geminiTeacherNotes(opts: {
     `Class: ${opts.klass} | Subject: ${opts.subject} | Chapter: ${opts.chapter}`,
     "",
     PW_EXTRACTION_RULES,
+    "",
+    ...referenceBooksPrompt(opts.klass, opts.subject),
     "",
     "SOURCE RULES:",
 
