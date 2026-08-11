@@ -245,6 +245,7 @@ export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
 type GeminiSlideOut = { index: number; sections: NoteSection[] };
 
 const HEADINGS = [
+  "0. Introduction",
   "1. Analogy",
   "2. Definition",
   "3. Formula",
@@ -575,7 +576,7 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       let at = 0;
       while (at < lines.length && /^\*\*(analogy|definition)/i.test(lines[at])) at++;
       lines.splice(at, 0, ...add);
-      const merged = dedupeLabelled(lines).slice(0, 30);
+      const merged = dedupeLabelled(lines).slice(0, 34);
       slide.sections = [{ heading: NOTE_HEADING, kind: "bullets", lines: merged }];
     }
   }
