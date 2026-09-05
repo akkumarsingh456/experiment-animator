@@ -56,9 +56,9 @@ export const generateSlideImage = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
-    // v9: free local Napkin-style renderer (zero credits, never fails).
+    // v13: topic-aware textbook renderer with large labels and visual models.
     const cacheKey = hashKey([
-      "img-v12-napkin-large-text",
+      "img-v13-topic-aware-textbook",
       data.klass,
       data.subject,
       String(data.slideIndex),
