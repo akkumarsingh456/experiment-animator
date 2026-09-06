@@ -52,7 +52,7 @@ export const Route = createFileRoute("/notes-library")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: NotesLibrary;
+  component: NotesLibrary,
 });
 
 function NotesLibrary() {
