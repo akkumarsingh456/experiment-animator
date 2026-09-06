@@ -14,6 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      lesson_build_jobs: {
+        Row: {
+          attempts: number
+          chapter: string
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          id: string
+          klass: string
+          slides: number
+          status: string
+          subject: string
+          subtopics: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          chapter: string
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          id?: string
+          klass: string
+          slides?: number
+          status?: string
+          subject: string
+          subtopics?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          chapter?: string
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          id?: string
+          klass?: string
+          slides?: number
+          status?: string
+          subject?: string
+          subtopics?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lesson_build_state: {
+        Row: {
+          id: string
+          lease_until: string | null
+          message: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          lease_until?: string | null
+          message?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          lease_until?: string | null
+          message?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lesson_cache: {
         Row: {
           cache_key: string

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UploadRouteImport } from './routes/upload'
+import { Route as NotesLibraryRouteImport } from './routes/notes-library'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as GenerateRouteImport } from './routes/generate'
 import { Route as IndexRouteImport } from './routes/index'
@@ -17,6 +18,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const UploadRoute = UploadRouteImport.update({
   id: '/upload',
   path: '/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotesLibraryRoute = NotesLibraryRouteImport.update({
+  id: '/notes-library',
+  path: '/notes-library',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoryRoute = HistoryRouteImport.update({
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/generate': typeof GenerateRoute
   '/history': typeof HistoryRoute
+  '/notes-library': typeof NotesLibraryRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/generate': typeof GenerateRoute
   '/history': typeof HistoryRoute
+  '/notes-library': typeof NotesLibraryRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/generate': typeof GenerateRoute
   '/history': typeof HistoryRoute
+  '/notes-library': typeof NotesLibraryRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/generate' | '/history' | '/upload'
+  fullPaths: '/' | '/generate' | '/history' | '/notes-library' | '/upload'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/generate' | '/history' | '/upload'
-  id: '__root__' | '/' | '/generate' | '/history' | '/upload'
+  to: '/' | '/generate' | '/history' | '/notes-library' | '/upload'
+  id: '__root__' | '/' | '/generate' | '/history' | '/notes-library' | '/upload'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   GenerateRoute: typeof GenerateRoute
   HistoryRoute: typeof HistoryRoute
+  NotesLibraryRoute: typeof NotesLibraryRoute
   UploadRoute: typeof UploadRoute
 }
 
@@ -76,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/upload'
       fullPath: '/upload'
       preLoaderRoute: typeof UploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notes-library': {
+      id: '/notes-library'
+      path: '/notes-library'
+      fullPath: '/notes-library'
+      preLoaderRoute: typeof NotesLibraryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/history': {
@@ -106,6 +123,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   GenerateRoute: GenerateRoute,
   HistoryRoute: HistoryRoute,
+  NotesLibraryRoute: NotesLibraryRoute,
   UploadRoute: UploadRoute,
 }
 export const routeTree = rootRouteImport

@@ -339,7 +339,8 @@ function Landing() {
             <a href="#generator" className="hover:text-foreground transition">Generate</a>
             <a href="#how" className="hover:text-foreground transition">How it works</a>
             <Link to="/upload" className="hover:text-foreground transition">Upload</Link>
-            <Link to="/history" className="hover:text-foreground transition">Library</Link>
+            <Link to="/notes-library" className="hover:text-foreground transition">Notes Library</Link>
+            <Link to="/history" className="hover:text-foreground transition">Ingestion</Link>
           </nav>
           <Button asChild size="sm" className="rounded-full"><Link to="/upload">Upload NCERT PDF</Link></Button>
         </div>
