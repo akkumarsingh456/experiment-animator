@@ -201,8 +201,10 @@ export type FormulaBlock = {
   variables: string[];
   /** SI unit lines, e.g. "Potential $V$ → volt (V) $= \\mathrm{J\\,C^{-1}}$, scalar." */
   unit: string[];
-  /** Numbered derivation steps, one short step per line. */
+  /** Numbered derivation steps of the main formula, one short step per line. */
   derivation: string[];
+  /** One complete step-by-step derivation per formula of the slide. */
+  derivations: Array<{ formula: string; steps: string[] }>;
 };
 
 /**
