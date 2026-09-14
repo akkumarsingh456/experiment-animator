@@ -370,6 +370,7 @@ export async function geminiTeacherNotes(opts: {
     "- Maths: state theorems precisely and give proof outlines in LaTeX ($\\frac{dy}{dx}$, $^nC_r$, $\\lim_{x \\to 0}$).",
     "- Biology: bold headers for taxonomic/anatomical terms and sequential bullet steps for pathways; no fake formulas.",
     "- After each formula give a VARIABLE BREAKDOWN line per symbol, then the SI unit, then a derivation with NO skipped intermediate step.",
+    "- MANDATORY: EVERY formula on the slide must have its OWN full derivation — a line '**Derivation of <formula name>:** <formula>' followed by '**Derivation step n:** ...' lines (3-6 steps each). Never leave a formula underived.",
     "- Never output bracket soup like '(((())))', repeated '=' runs, unbalanced braces or stray page digits.",
     "",
     `Use only these headings, in order, omitting any you cannot support: ${HEADINGS.join(" | ")}`,
