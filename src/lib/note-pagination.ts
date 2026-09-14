@@ -28,7 +28,7 @@ function estimateContentHeight(content: SlideContent): number {
   // Title: ~40px
   if (content.title) height += 40;
 
-  // Bullets: ~20px each
+  // Bullets: ~20px each (accounting for wrapping)
   if (content.bullets?.length) {
     height += content.bullets.reduce((acc, b) => acc + Math.ceil(b.length / 60) * 20, 0);
   }
@@ -66,10 +66,11 @@ function estimateContentHeight(content: SlideContent): number {
 }
 
 /**
- * Calculates available space in a slide for content (in pixels)
- * Based on A4 landscape (297mm x 210mm) with standard margins
+ * Available space in a slide for content (in pixels)
+ * Based on A4 landscape (297mm x 210mm) with margins
+ * Card height ~600px - header ~50px - footer ~40px = ~510px usable
  */
-const AVAILABLE_HEIGHT = 480; // pixels (~5.5 inches at screen resolution)
+const AVAILABLE_HEIGHT = 450; // Conservative estimate for safe fit
 
 /**
  * Splits a slide's content into paginated pages
@@ -89,7 +90,7 @@ export function paginateSlideContent(content: SlideContent): SlideContent[] {
   };
   let currentHeight = 40; // account for title
 
-  // Helper: add item to current page or create new page
+  // Helper: add bullets across pages
   const tryAddBullets = (bullets: string[]) => {
     for (const bullet of bullets) {
       const bulletHeight = Math.ceil(bullet.length / 60) * 20;
