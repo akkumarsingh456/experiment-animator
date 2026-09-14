@@ -289,11 +289,19 @@ export async function aiFormulaSheet(opts: {
     for (const s of parsed.slides || []) {
       const i = Number((s as any)?.index);
       if (!Number.isFinite(i)) continue;
+      const derivations = (Array.isArray((s as any).derivations) ? (s as any).derivations : [])
+        .map((d: any) => ({
+          formula: normalizeFormulaLine(String(d?.formula || "")),
+          steps: clean(d?.steps, 8),
+        }))
+        .filter((d: { formula: string; steps: string[] }) => d.steps.length > 0)
+        .slice(0, 4);
       out.set(i, {
         formula: clean((s as any).formula, 4),
         variables: clean((s as any).variables, 6),
         unit: clean((s as any).unit, 3),
         derivation: clean((s as any).derivation, 6),
+        derivations,
       });
     }
   } catch (e) {
