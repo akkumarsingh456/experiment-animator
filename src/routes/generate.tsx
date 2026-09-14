@@ -604,7 +604,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
             {/* Real-time per-slide verification panel — shows for each slide
                 whether Gemini succeeded, failed, and whether it came from the
                 slide_image_cache. */}
-            <details className="mb-3 rounded-lg border border-border/60 bg-card/50 print:hidden" open={failedCount > 0}>
+            <details className="mb-3 rounded-lg border border-border/60 bg-card/50 print:hidden">
               <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold flex items-center gap-2">
                 <span>2D infographic verification panel</span>
                 <span className="text-muted-foreground font-normal">
@@ -709,7 +709,10 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
             )}
 
 
-            <div key={`slide-${activeIdx}`} className="animate-in fade-in slide-in-from-right-4 duration-500">
+            <div
+              key={`slide-${activeIdx}`}
+              className="animate-in fade-in slide-in-from-right-4 duration-500 h-[calc(100dvh-15rem)] min-h-[420px] grid place-items-center print:h-auto print:block"
+            >
               <SlideCanvas
                 slide={slides[activeIdx]}
                 index={activeIdx}
@@ -733,12 +736,12 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               </Button>
             </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2 mt-4 print:hidden">
+            <div className="flex gap-2 mt-3 overflow-x-auto pb-1 print:hidden">
               {slides.map((s, i) => (
                 <button
                   key={i}
                   onClick={() => setActiveIdx(i)}
-                  className={`text-left rounded-lg border p-2 text-xs transition ${
+                  className={`shrink-0 w-40 text-left rounded-lg border p-2 text-xs transition ${
                     i === activeIdx ? "border-primary bg-primary/5" : "border-border hover:bg-card/60"
                   }`}
                 >
@@ -982,9 +985,9 @@ function SlideCanvas({
   // Break / MCQ / chapter slides use single-column layout.
   if (kind === "break" || kind === "mcq" || kind === "chapter") {
     return (
-      <Card className="overflow-hidden border-border/60 shadow-soft">
-        <CardContent className="p-0">
-          <div className="relative w-full aspect-[297/210] overflow-hidden bg-card grid grid-rows-[auto_1fr_auto]">
+      <Card className="overflow-hidden border-border/60 shadow-soft h-full w-auto max-w-full mx-auto print:h-auto print:w-full">
+        <CardContent className="p-0 h-full print:h-auto">
+          <div className="relative h-full w-auto max-w-full aspect-[297/210] overflow-hidden bg-card grid grid-rows-[auto_1fr_auto] print:w-full print:h-auto">
             <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
               <span className="font-mono">Slide {index + 1} / {total}</span>
               <Badge variant="outline" className={`rounded-full text-[10px] ${kind === "mcq" ? "bg-primary/10 text-primary border-primary/30" : kind === "break" ? "bg-amber-500/10 text-amber-700 border-amber-500/30" : "bg-sky-500/10 text-sky-700 border-sky-500/30"}`}>
@@ -1008,9 +1011,9 @@ function SlideCanvas({
   }
 
   return (
-    <Card className="overflow-hidden border-border/60 shadow-soft">
-      <CardContent className="p-0">
-        <div className="relative w-full aspect-[297/210] overflow-hidden bg-card grid grid-rows-[auto_1fr_auto]">
+    <Card className="overflow-hidden border-border/60 shadow-soft h-full w-auto max-w-full mx-auto print:h-auto print:w-full">
+      <CardContent className="p-0 h-full print:h-auto">
+        <div className="relative h-full w-auto max-w-full aspect-[297/210] overflow-hidden bg-card grid grid-rows-[auto_1fr_auto] print:w-full print:h-auto">
           <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
             <span className="font-mono">Slide {index + 1} / {total}</span>
             <div className="flex items-center gap-2">

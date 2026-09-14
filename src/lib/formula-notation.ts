@@ -201,8 +201,10 @@ export type FormulaBlock = {
   variables: string[];
   /** SI unit lines, e.g. "Potential $V$ → volt (V) $= \\mathrm{J\\,C^{-1}}$, scalar." */
   unit: string[];
-  /** Numbered derivation steps, one short step per line. */
+  /** Numbered derivation steps of the main formula, one short step per line. */
   derivation: string[];
+  /** One complete step-by-step derivation per formula of the slide. */
+  derivations: Array<{ formula: string; steps: string[] }>;
 };
 
 /**
@@ -232,7 +234,8 @@ export async function aiFormulaSheet(opts: {
     '- "formula": every relevant relation of that slide in LaTeX (max 4), each with a short name, e.g. "Gauss law: $$\\\\Phi_E = \\\\oint \\\\mathbf{E}\\\\cdot d\\\\mathbf{A} = \\\\frac{Q}{\\\\varepsilon_0}$$".',
     '- "variables": one line per symbol used, e.g. "$\\\\varepsilon_0$: permittivity of free space" (max 6).',
     '- "unit": the SI unit of each quantity with symbol, base-unit form and scalar/vector nature (max 3).',
-    '- "derivation": a numbered step-by-step derivation of the main formula, one short step per line, no skipped intermediate step, starting from the defining relation and ending at the result (3-6 steps).',
+    '- "derivation": a numbered step-by-step derivation of the MAIN formula, one short step per line, no skipped intermediate step, starting from the defining relation and ending at the result (3-6 steps).',
+    '- "derivations": MANDATORY — one entry for EVERY formula you listed in "formula" (same order, same count), as {"formula":"<the same formula in LaTeX>","steps":["Step 1: ...","Step 2: ...","Step 3: ..."]}. Each derivation must start from a defining relation or a standard result of this class, keep every intermediate algebraic step, and end exactly at that formula. Never skip a formula, never leave "steps" empty; if a relation is a definition, derive it from the physical/mathematical statement it encodes.',
     "",
     "NOTATION RULES (never break these):",
     "- ALL maths must be LaTeX: inline $...$, standalone equations $$...$$. Prose sits outside the delimiters.",
@@ -243,7 +246,7 @@ export async function aiFormulaSheet(opts: {
     "- No markdown fences, no bracket soup, no repeated '=' runs, no unbalanced braces.",
     "- Every formula must be dimensionally correct and within this class's NCERT scope; if a slide has no formula, return empty arrays for it.",
     "",
-    'Return STRICT JSON only: {"slides":[{"index":0,"formula":["..."],"variables":["..."],"unit":["..."],"derivation":["Step 1: ...","Step 2: ..."]}]}',
+    'Return STRICT JSON only: {"slides":[{"index":0,"formula":["..."],"variables":["..."],"unit":["..."],"derivation":["Step 1: ...","Step 2: ..."],"derivations":[{"formula":"...","steps":["Step 1: ...","Step 2: ..."]}]}]}',
     "",
     ...(opts.refContext?.trim()
       ? [
@@ -286,11 +289,19 @@ export async function aiFormulaSheet(opts: {
     for (const s of parsed.slides || []) {
       const i = Number((s as any)?.index);
       if (!Number.isFinite(i)) continue;
+      const derivations = (Array.isArray((s as any).derivations) ? (s as any).derivations : [])
+        .map((d: any) => ({
+          formula: normalizeFormulaLine(String(d?.formula || "")),
+          steps: clean(d?.steps, 8),
+        }))
+        .filter((d: { formula: string; steps: string[] }) => d.steps.length > 0)
+        .slice(0, 4);
       out.set(i, {
         formula: clean((s as any).formula, 4),
         variables: clean((s as any).variables, 6),
         unit: clean((s as any).unit, 3),
         derivation: clean((s as any).derivation, 6),
+        derivations,
       });
     }
   } catch (e) {

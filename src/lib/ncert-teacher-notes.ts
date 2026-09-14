@@ -192,7 +192,7 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
     if (hook) lines.push(`**Memory trick:** ${first.term} → ${hook}.`);
   }
 
-  const finalLines = dedupeLabelled(lines).slice(0, 34);
+  const finalLines = dedupeLabelled(lines).slice(0, 54);
 
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
@@ -217,7 +217,7 @@ export function mergeBulletsIntoSections<T extends NoteSourceSlide & { sections?
     if (extra.length >= 8) break;
   }
   if (!extra.length) return slide;
-  const merged = dedupeLabelled([...notes.lines, ...extra]).slice(0, 34);
+  const merged = dedupeLabelled([...notes.lines, ...extra]).slice(0, 54);
   return {
     ...slide,
     sections: secs.map((s) => (s.heading === NOTE_HEADING ? { ...s, lines: merged } : s)),
@@ -236,7 +236,7 @@ export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
       lines.push(/^\*\*/.test(raw) ? raw : `**${label}:** ${l}`);
     }
   }
-  const finalLines = dedupeLabelled(lines).slice(0, 34);
+  const finalLines = dedupeLabelled(lines).slice(0, 54);
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
 
@@ -370,6 +370,7 @@ export async function geminiTeacherNotes(opts: {
     "- Maths: state theorems precisely and give proof outlines in LaTeX ($\\frac{dy}{dx}$, $^nC_r$, $\\lim_{x \\to 0}$).",
     "- Biology: bold headers for taxonomic/anatomical terms and sequential bullet steps for pathways; no fake formulas.",
     "- After each formula give a VARIABLE BREAKDOWN line per symbol, then the SI unit, then a derivation with NO skipped intermediate step.",
+    "- MANDATORY: EVERY formula on the slide must have its OWN full derivation — a line '**Derivation of <formula name>:** <formula>' followed by '**Derivation step n:** ...' lines (3-6 steps each). Never leave a formula underived.",
     "- Never output bracket soup like '(((())))', repeated '=' runs, unbalanced braces or stray page digits.",
     "",
     `Use only these headings, in order, omitting any you cannot support: ${HEADINGS.join(" | ")}`,
@@ -541,8 +542,15 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
   slides.forEach((s, i) => {
     if ((s.kind ?? "content") !== "content") return;
     const lines = s.sections?.[0]?.lines || [];
+    const count = (label: RegExp) => lines.filter((l) => label.test(l.replace(/^\*\*/, ""))).length;
+    // Every formula must carry its own derivation: ask again whenever the slide
+    // has fewer derivation groups than formulas.
+    const derivedGroups = count(/^derivation of/i);
     const missing =
-      !has(lines, /^formula/i) || !has(lines, /^si unit/i) || !has(lines, /^derivation/i);
+      !has(lines, /^formula/i) ||
+      !has(lines, /^si unit/i) ||
+      !has(lines, /^derivation/i) ||
+      derivedGroups < count(/^formula/i);
     if (!missing) return;
     targets.push({
       index: i,
@@ -567,10 +575,22 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       if (!has(existing, /^formula/i)) for (const f of block.formula) add.push(`**Formula:** ${f}`);
       if (!has(existing, /^variable/i)) for (const v of block.variables) add.push(`**Variable:** ${v}`);
       if (!has(existing, /^si unit/i)) for (const u of block.unit) add.push(`**SI unit:** ${u}`);
-      if (!has(existing, /^derivation/i))
-        block.derivation.forEach((d, n) =>
+      // Every formula gets its own complete derivation, grouped under a
+      // "Derivation of <formula>" heading with numbered steps below it.
+      const groups = block.derivations?.length
+        ? block.derivations
+        : block.derivation.length
+          ? [{ formula: block.formula[0] || "", steps: block.derivation }]
+          : [];
+      for (const g of groups) {
+        const name = (g.formula.split(/:(?!=)/)[0] || g.formula).replace(/\*+/g, "").trim().slice(0, 70);
+        const headLabel = `**Derivation of ${name || "the formula"}:**`;
+        if (has(existing, new RegExp(`^derivation of ${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i"))) continue;
+        add.push(`${headLabel} ${g.formula}`);
+        g.steps.forEach((d, n) =>
           add.push(`**Derivation step ${n + 1}:** ${d.replace(/^step\s*\d+\s*[:.\-]\s*/i, "")}`),
         );
+      }
       if (!add.length) continue;
 
       // Insert straight after the Definition lines so the block reads
@@ -579,7 +599,7 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       let at = 0;
       while (at < lines.length && /^\*\*(analogy|definition)/i.test(lines[at])) at++;
       lines.splice(at, 0, ...add);
-      const merged = dedupeLabelled(lines).slice(0, 34);
+      const merged = dedupeLabelled(lines).slice(0, 54);
       slide.sections = [{ heading: NOTE_HEADING, kind: "bullets", lines: merged }];
     }
   }
