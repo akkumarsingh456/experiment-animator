@@ -598,7 +598,7 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       let at = 0;
       while (at < lines.length && /^\*\*(analogy|definition)/i.test(lines[at])) at++;
       lines.splice(at, 0, ...add);
-      const merged = dedupeLabelled(lines).slice(0, 34);
+      const merged = dedupeLabelled(lines).slice(0, 54);
       slide.sections = [{ heading: NOTE_HEADING, kind: "bullets", lines: merged }];
     }
   }
