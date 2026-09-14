@@ -541,8 +541,15 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
   slides.forEach((s, i) => {
     if ((s.kind ?? "content") !== "content") return;
     const lines = s.sections?.[0]?.lines || [];
+    const count = (label: RegExp) => lines.filter((l) => label.test(l.replace(/^\*\*/, ""))).length;
+    // Every formula must carry its own derivation: ask again whenever the slide
+    // has fewer derivation groups than formulas.
+    const derivedGroups = count(/^derivation of/i);
     const missing =
-      !has(lines, /^formula/i) || !has(lines, /^si unit/i) || !has(lines, /^derivation/i);
+      !has(lines, /^formula/i) ||
+      !has(lines, /^si unit/i) ||
+      !has(lines, /^derivation/i) ||
+      derivedGroups < count(/^formula/i);
     if (!missing) return;
     targets.push({
       index: i,
