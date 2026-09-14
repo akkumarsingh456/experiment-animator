@@ -574,10 +574,22 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       if (!has(existing, /^formula/i)) for (const f of block.formula) add.push(`**Formula:** ${f}`);
       if (!has(existing, /^variable/i)) for (const v of block.variables) add.push(`**Variable:** ${v}`);
       if (!has(existing, /^si unit/i)) for (const u of block.unit) add.push(`**SI unit:** ${u}`);
-      if (!has(existing, /^derivation/i))
-        block.derivation.forEach((d, n) =>
+      // Every formula gets its own complete derivation, grouped under a
+      // "Derivation of <formula>" heading with numbered steps below it.
+      const groups = block.derivations?.length
+        ? block.derivations
+        : block.derivation.length
+          ? [{ formula: block.formula[0] || "", steps: block.derivation }]
+          : [];
+      for (const g of groups) {
+        const name = (g.formula.split(/:(?!=)/)[0] || g.formula).replace(/\*+/g, "").trim().slice(0, 70);
+        const headLabel = `**Derivation of ${name || "the formula"}:**`;
+        if (has(existing, new RegExp(`^derivation of ${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i"))) continue;
+        add.push(`${headLabel} ${g.formula}`);
+        g.steps.forEach((d, n) =>
           add.push(`**Derivation step ${n + 1}:** ${d.replace(/^step\s*\d+\s*[:.\-]\s*/i, "")}`),
         );
+      }
       if (!add.length) continue;
 
       // Insert straight after the Definition lines so the block reads
