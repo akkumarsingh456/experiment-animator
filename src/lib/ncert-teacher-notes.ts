@@ -192,7 +192,7 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
     if (hook) lines.push(`**Memory trick:** ${first.term} → ${hook}.`);
   }
 
-  const finalLines = dedupeLabelled(lines).slice(0, 34);
+  const finalLines = dedupeLabelled(lines).slice(0, 54);
 
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
@@ -217,7 +217,7 @@ export function mergeBulletsIntoSections<T extends NoteSourceSlide & { sections?
     if (extra.length >= 8) break;
   }
   if (!extra.length) return slide;
-  const merged = dedupeLabelled([...notes.lines, ...extra]).slice(0, 34);
+  const merged = dedupeLabelled([...notes.lines, ...extra]).slice(0, 54);
   return {
     ...slide,
     sections: secs.map((s) => (s.heading === NOTE_HEADING ? { ...s, lines: merged } : s)),
@@ -236,7 +236,7 @@ export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
       lines.push(/^\*\*/.test(raw) ? raw : `**${label}:** ${l}`);
     }
   }
-  const finalLines = dedupeLabelled(lines).slice(0, 34);
+  const finalLines = dedupeLabelled(lines).slice(0, 54);
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
 
