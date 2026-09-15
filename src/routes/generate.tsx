@@ -51,36 +51,10 @@ import {
 import { MathText } from "@/components/MathText";
 import { PenPaperEditor } from "@/components/PenPaperEditor";
 import { usePenNotes, getPenNotes } from "@/lib/pen-notes";
+import PagedNoteSections from "@/components/PagedNoteSections";
 import { plainMathText } from "@/lib/latex-notation";
 
 type NoteSectionUI = { heading: string; kind: string; lines: string[] };
-
-/** NCERT teacher notes — one label-prefixed block plus a monospace book diagram. */
-function NoteSections({ sections, scale }: { sections?: NoteSectionUI[]; scale?: "card" | "present" }) {
-  if (!sections?.length) return null;
-  const base = scale === "present" ? "text-[clamp(12px,1.2vw,18px)]" : "text-[12.5px]";
-  const mono = scale === "present" ? "text-[clamp(9px,0.78vw,13px)]" : "text-[9.5px]";
-  return (
-    <div className="space-y-1.5">
-      {sections.map((sec, i) => (
-        <div key={i} className="rounded-md border border-border/50 bg-secondary/40 px-2.5 py-2">
-          <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-1">{sec.heading}</div>
-          {sec.kind === "diagram" ? (
-            <pre className={`${mono} font-mono leading-[1.25] whitespace-pre overflow-x-auto text-foreground/90`}>
-              {sec.lines.join("\n")}
-            </pre>
-          ) : (
-            <ul className={`${base} leading-snug space-y-1 text-foreground/90`}>
-              {sec.lines.map((l, k) => (
-                <li key={k}>• <MathText text={l} /></li>
-              ))}
-            </ul>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 /**
  * Teacher's pen & paper block — hand-written formulas typeset in LaTeX by
@@ -1056,7 +1030,7 @@ function SlideCanvas({
           </div>
 
           <div className="grid grid-cols-[1.35fr_1fr] min-h-0 overflow-hidden">
-            <div className="p-4 sm:p-5 flex flex-col gap-2 min-h-0 overflow-auto">
+            <div className="p-4 sm:p-5 flex flex-col gap-2 min-h-0 overflow-hidden">
               {editing ? (
                 <Input
                   value={slide.title}
@@ -1088,8 +1062,10 @@ function SlideCanvas({
                   ))}
                 </ul>
               ) : null}
-              <NoteSections sections={(slide as any).sections} />
-              <PenNotesBlock index={index} slide={slide} subject={subject} editable />
+              <PagedNoteSections
+                sections={(slide as any).sections}
+                header={<PenNotesBlock index={index} slide={slide} subject={subject} editable />}
+              />
 
 
               {slide.notes?.length && !(slide as any).sections?.length ? (
@@ -1330,7 +1306,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
 
           {/* Body: text left, diagram right — both clipped to A4 area */}
           <div className="grid grid-cols-[1.35fr_1fr] min-h-0 overflow-hidden">
-            <div className="p-5 min-h-0 overflow-auto flex flex-col gap-2">
+            <div className="p-5 min-h-0 overflow-hidden flex flex-col gap-2">
               {s.kind === "chapter" && s.chapter_text ? (
                 <p className="text-[clamp(11px,1.05vw,15px)] leading-relaxed whitespace-pre-wrap">
                   {s.chapter_text}
@@ -1347,8 +1323,12 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
                       ))}
                     </ul>
                   ) : null}
-                  <NoteSections sections={(s as any).sections} scale="present" />
-                  <PenNotesBlock index={i} slide={s} subject={subject} scale="present" />
+                  <PagedNoteSections
+                    sections={(s as any).sections}
+                    scale="present"
+                    header={<PenNotesBlock index={i} slide={s} subject={subject} scale="present" />}
+                  />
+
 
                   {s.notes?.length && !(s as any).sections?.length ? (
                     <div className="rounded-md bg-secondary/60 border border-border/40 p-2">
