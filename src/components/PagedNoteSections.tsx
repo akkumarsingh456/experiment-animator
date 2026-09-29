@@ -10,7 +10,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MathText from "@/components/MathText";
-import { toNoteBlocks, packBlocks, type NoteBlock, type NoteSectionLike } from "@/lib/notes-paging";
+import { toNoteBlocks, packMeasuredBlocks, type NoteBlock, type NoteSectionLike } from "@/lib/notes-paging";
 
 function BlockView({
   block,
@@ -65,18 +65,21 @@ export function PagedNoteSections({
 
   const blocks = useMemo(() => toNoteBlocks(sections), [sections]);
   const areaRef = useRef<HTMLDivElement | null>(null);
-  const measureRef = useRef<HTMLDivElement | null>(null);
+  const plainMeasureRef = useRef<HTMLDivElement | null>(null);
+  const headedMeasureRef = useRef<HTMLDivElement | null>(null);
   const [pages, setPages] = useState<number[][]>([]);
   const [page, setPage] = useState(0);
 
   const recompute = () => {
     const area = areaRef.current;
-    const measure = measureRef.current;
-    if (!area || !measure) return;
+    const plainMeasure = plainMeasureRef.current;
+    const headedMeasure = headedMeasureRef.current;
+    if (!area || !plainMeasure || !headedMeasure) return;
     const available = area.clientHeight;
     if (!available) return;
-    const heights = Array.from(measure.children).map((c) => (c as HTMLElement).offsetHeight + 6);
-    setPages(packBlocks(heights, available));
+    const plainHeights = Array.from(plainMeasure.children).map((c) => (c as HTMLElement).offsetHeight + 6);
+    const headedHeights = Array.from(headedMeasure.children).map((c) => (c as HTMLElement).offsetHeight + 6);
+    setPages(packMeasuredBlocks(blocks, plainHeights, headedHeights, available));
   };
 
   useLayoutEffect(recompute, [blocks, base, mono]);
@@ -104,14 +107,17 @@ export function PagedNoteSections({
       {header}
       <div ref={areaRef} className="flex-1 min-h-0 overflow-hidden relative">
         {/* Hidden measurer — same width, same styles. */}
-        <div
-          ref={measureRef}
-          aria-hidden
-          className="absolute inset-x-0 top-0 invisible pointer-events-none space-y-1.5"
-        >
-          {blocks.map((b, i) => (
-            <BlockView key={i} block={b} showHeading continued={false} base={base} mono={mono} />
-          ))}
+        <div aria-hidden className="absolute inset-x-0 top-0 invisible pointer-events-none">
+          <div ref={plainMeasureRef} className="space-y-1.5">
+            {blocks.map((b, i) => (
+              <BlockView key={i} block={b} showHeading={false} continued={false} base={base} mono={mono} />
+            ))}
+          </div>
+          <div ref={headedMeasureRef} className="space-y-1.5">
+            {blocks.map((b, i) => (
+              <BlockView key={i} block={b} showHeading continued={false} base={base} mono={mono} />
+            ))}
+          </div>
         </div>
         <div className="space-y-1.5">
           {currentPage.map((bi, k) => {
