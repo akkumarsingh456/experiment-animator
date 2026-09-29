@@ -90,3 +90,40 @@ export function packBlocks(heights: number[], available: number): number[][] {
   if (current.length) pages.push(current);
   return pages.length ? pages : [[]];
 }
+
+/**
+ * Pack rendered note blocks while charging a section heading only when it is
+ * actually shown: at the start of a section or when that section continues on
+ * a new page. This avoids sparse pages caused by measuring the same heading on
+ * every individual note line.
+ */
+export function packMeasuredBlocks(
+  blocks: NoteBlock[],
+  plainHeights: number[],
+  headedHeights: number[],
+  available: number,
+): number[][] {
+  const pages: number[][] = [];
+  let current: number[] = [];
+  let used = 0;
+  const limit = Math.max(120, available);
+
+  blocks.forEach((block, index) => {
+    const previousIndex = current[current.length - 1];
+    const startsSection = previousIndex === undefined || blocks[previousIndex]?.sectionIndex !== block.sectionIndex;
+    let height = (startsSection ? headedHeights[index] : plainHeights[index]) || 0;
+
+    if (current.length && used + height > limit) {
+      pages.push(current);
+      current = [];
+      used = 0;
+      height = headedHeights[index] || plainHeights[index] || 0;
+    }
+
+    current.push(index);
+    used += height;
+  });
+
+  if (current.length) pages.push(current);
+  return pages.length ? pages : [[]];
+}

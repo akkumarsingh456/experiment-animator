@@ -121,7 +121,16 @@ function isLanguageSubject(subject?: string) {
 
 export const Route = createFileRoute("/generate")({
   validateSearch: SearchSchema,
-  head: () => ({ meta: [{ title: "Generated Lesson — EduPlan AI" }] }),
+  head: () => ({
+    meta: [
+      { title: "Generated NCERT Lesson | EduPlan AI" },
+      { name: "description", content: "View a paginated NCERT lesson with Teacher Notes, formulas, derivations, diagrams, and simulations." },
+      { property: "og:title", content: "Generated NCERT Lesson | EduPlan AI" },
+      { property: "og:description", content: "A screen-fitted NCERT lesson with paginated Teacher Notes, formulas, derivations, diagrams, and simulations." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: GeneratePage,
 });
 
@@ -685,7 +694,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
             <div
               key={`slide-${activeIdx}`}
-              className="animate-in fade-in slide-in-from-right-4 duration-500 h-[calc(100dvh-15rem)] min-h-[420px] grid place-items-center print:h-auto print:block"
+              className="animate-in fade-in slide-in-from-right-4 duration-500 mx-auto grid w-full max-w-[calc((100dvh-12rem)*1.414)] place-items-center print:max-w-none print:block"
             >
               <SlideCanvas
                 slide={slides[activeIdx]}
@@ -959,9 +968,9 @@ function SlideCanvas({
   // Break / MCQ / chapter slides use single-column layout.
   if (kind === "break" || kind === "mcq" || kind === "chapter") {
     return (
-      <Card className="overflow-hidden border-border/60 shadow-soft h-full w-auto max-w-full mx-auto print:h-auto print:w-full">
-        <CardContent className="p-0 h-full print:h-auto">
-          <div className="relative h-full w-auto max-w-full aspect-[297/210] overflow-hidden bg-card grid grid-rows-[auto_1fr_auto] print:w-full print:h-auto">
+      <Card className="aspect-[297/210] w-full overflow-hidden border-border/60 shadow-soft print:h-auto print:w-full">
+        <CardContent className="h-full p-0 print:h-auto">
+          <div className="relative grid h-full w-full grid-rows-[auto_1fr_auto] overflow-hidden bg-card print:h-auto">
             <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
               <span className="font-mono">Slide {index + 1} / {total}</span>
               <Badge variant="outline" className={`rounded-full text-[10px] ${kind === "mcq" ? "bg-primary/10 text-primary border-primary/30" : kind === "break" ? "bg-amber-500/10 text-amber-700 border-amber-500/30" : "bg-sky-500/10 text-sky-700 border-sky-500/30"}`}>
@@ -985,9 +994,9 @@ function SlideCanvas({
   }
 
   return (
-    <Card className="overflow-hidden border-border/60 shadow-soft h-full w-auto max-w-full mx-auto print:h-auto print:w-full">
-      <CardContent className="p-0 h-full print:h-auto">
-        <div className="relative h-full w-auto max-w-full aspect-[297/210] overflow-hidden bg-card grid grid-rows-[auto_1fr_auto] print:w-full print:h-auto">
+    <Card className="aspect-[297/210] w-full overflow-hidden border-border/60 shadow-soft print:h-auto print:w-full">
+      <CardContent className="h-full p-0 print:h-auto">
+        <div className="relative grid h-full w-full grid-rows-[auto_1fr_auto] overflow-hidden bg-card print:h-auto">
           <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
             <span className="font-mono">Slide {index + 1} / {total}</span>
             <div className="flex items-center gap-2">
@@ -1295,7 +1304,8 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
       <div className="flex-1 min-h-0 grid place-items-center p-3 sm:p-5">
         <div
           key={`present-${i}`}
-          className="w-full h-full max-w-[min(100%,calc(100vh*1.414))] max-h-[min(100%,calc(100vw/1.414))] aspect-[297/210] bg-background text-foreground rounded-xl shadow-2xl grid grid-rows-[auto_1fr_auto] overflow-hidden animate-in fade-in slide-in-from-right-6 duration-500"
+          className="aspect-[297/210] h-auto max-h-full w-auto max-w-full bg-background text-foreground rounded-xl shadow-2xl grid grid-rows-[auto_1fr_auto] overflow-hidden animate-in fade-in slide-in-from-right-6 duration-500"
+          style={{ width: "min(100%, calc((100dvh - 7.5rem) * 1.414))" }}
         >
           {/* Slide header */}
           <div className="px-6 pt-4 pb-2 border-b border-border/40">

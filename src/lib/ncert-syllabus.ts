@@ -4,6 +4,8 @@
  * nothing else is offered in the dropdowns.
  */
 
+import { EXTRA_SUBTOPICS } from "@/lib/ncert-subtopics-extra";
+
 export type SyllabusChapter = { chapter: string; subtopics: string[] };
 export type ClassSyllabus = Record<string, SyllabusChapter[]>;
 
@@ -261,5 +263,7 @@ export function chaptersFor(klass: string, subject: string): SyllabusChapter[] {
 }
 
 export function subtopicsFor(klass: string, subject: string, chapter: string): string[] {
-  return chaptersFor(klass, subject).find((c) => c.chapter === chapter)?.subtopics || [];
+  const canonical = chaptersFor(klass, subject).find((c) => c.chapter === chapter)?.subtopics || [];
+  const extra = EXTRA_SUBTOPICS[`${klass}|${subject}|${chapter}`] || [];
+  return Array.from(new Set([...canonical, ...extra]));
 }
