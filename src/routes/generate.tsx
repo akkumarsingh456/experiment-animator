@@ -239,7 +239,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       key_terms: [],
       visual: "cover",
       kind: "break",
-      caption: `Class ${search.klass} · ${search.subject} · ${search.chapter || search.topic}`,
+      caption: `Class ${search.klass} · ${search.subject} · Topic: ${search.topic || title} · Chapter: ${search.chapter || "—"}`,
     };
   };
   const withCoverSlide = (items: Slide[]) => [makeCoverSlide(), ...items];
