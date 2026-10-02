@@ -471,8 +471,34 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           ...(sections ? { sections } : {}),
           title: pageIndex === 0 ? item.title : `${item.title} (continued ${pageIndex + 1})`,
           sourceSlideIndex: sourceIndex,
+          notePageIndex: pageIndex,
         }));
       });
+      const exportImages: Record<number, string> = {};
+      await Promise.all(exportSlides.map(async (entry, exportIndex) => {
+        const sourceImage = images[entry.sourceSlideIndex];
+        if (entry.notePageIndex === 0 && sourceImage) {
+          exportImages[exportIndex] = sourceImage;
+          return;
+        }
+        const generated = await genImage({ data: {
+          title: entry.title,
+          bullets: entry.bullets || [],
+          notes: entry.notes || [],
+          key_terms: entry.key_terms || [],
+          sections: (entry as any).sections || undefined,
+          caption: entry.caption || "",
+          subject: result.source_books[0]?.subject || search.subject,
+          klass: search.klass,
+          slideIndex: exportIndex,
+          visual_prompt: entry.visual_prompt || "",
+          grounding: entry.grounding || entry.ncert_quote || "",
+          avoidUrls: Object.values({ ...images, ...exportImages }),
+          nocache: true,
+        } });
+        if (generated.url) exportImages[exportIndex] = generated.url;
+        else if (sourceImage) exportImages[exportIndex] = sourceImage;
+      }));
       exportSlides.forEach((s, i) => {
         const slide = pptx.addSlide();
         slide.background = { color: "F7F8FC" };
@@ -508,7 +534,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         // Right column: image + book diagram + key terms + quote
         const rightX = leftW + 0.7;
         const rightW = W - rightX - 0.4;
-        const img = images[s.sourceSlideIndex];
+        const img = exportImages[i] || images[s.sourceSlideIndex];
         if (img) slide.addImage({ data: img, x: rightX, y: 1.5, w: rightW, h: 3.2 });
         if (diagramSec?.lines.length) {
           slide.addText(diagramSec.heading, { x: rightX, y: 4.8, w: rightW, h: 0.28, fontSize: 11, bold: true, color: "1F2A4A", fontFace: "Calibri" });
