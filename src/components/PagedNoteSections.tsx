@@ -70,7 +70,7 @@ export function PagedNoteSections({
   const base = scale === "present" ? "text-[clamp(12px,0.95vw,15px)]" : "text-[clamp(12px,0.9vw,14px)]";
   const mono = scale === "present" ? "text-[clamp(9px,0.72vw,11px)]" : "text-[9px]";
   const blocks = useMemo(() => toNoteBlocks(sections), [sections]);
-  const pages = useMemo(() => paginateBlocks(blocks, scale === "present" ? 25 : 22), [blocks, scale]);
+  const pages = useMemo(() => paginateBlocks(blocks, scale === "present" ? 21 : 18), [blocks, scale]);
   const [pageIndex, setPageIndex] = useState(0);
 
   useEffect(() => setPageIndex(0), [sections]);
