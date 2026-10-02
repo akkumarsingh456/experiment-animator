@@ -192,7 +192,7 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
     if (hook) lines.push(`**Memory trick:** ${first.term} → ${hook}.`);
   }
 
-  const finalLines = dedupeLabelled(lines).slice(0, 54);
+  const finalLines = dedupeLabelled(lines);
 
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
@@ -217,7 +217,7 @@ export function mergeBulletsIntoSections<T extends NoteSourceSlide & { sections?
     if (extra.length >= 8) break;
   }
   if (!extra.length) return slide;
-  const merged = dedupeLabelled([...notes.lines, ...extra]).slice(0, 54);
+  const merged = dedupeLabelled([...notes.lines, ...extra]);
   return {
     ...slide,
     sections: secs.map((s) => (s.heading === NOTE_HEADING ? { ...s, lines: merged } : s)),
@@ -236,7 +236,7 @@ export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
       lines.push(/^\*\*/.test(raw) ? raw : `**${label}:** ${l}`);
     }
   }
-  const finalLines = dedupeLabelled(lines).slice(0, 54);
+  const finalLines = dedupeLabelled(lines);
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
 
@@ -397,14 +397,14 @@ export async function geminiTeacherNotes(opts: {
   ].join("\n");
 
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Lovable-API-Key": opts.apiKey,
+        Authorization: `Bearer ${opts.apiKey}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-3.1-pro-preview",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
       }),
@@ -599,7 +599,7 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       let at = 0;
       while (at < lines.length && /^\*\*(analogy|definition)/i.test(lines[at])) at++;
       lines.splice(at, 0, ...add);
-      const merged = dedupeLabelled(lines).slice(0, 54);
+      const merged = dedupeLabelled(lines);
       slide.sections = [{ heading: NOTE_HEADING, kind: "bullets", lines: merged }];
     }
   }
