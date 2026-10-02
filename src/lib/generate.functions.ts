@@ -58,7 +58,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     // v13: topic-aware textbook renderer with large labels and visual models.
     const cacheKey = hashKey([
-      "img-v13-topic-aware-textbook",
+      "img-v14-slide-notes-grounded",
       data.klass,
       data.subject,
       String(data.slideIndex),
@@ -68,6 +68,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       (data.bullets || []).join(" "),
       (data.notes || []).join(" "),
       (data.key_terms || []).map((t) => `${t.term}:${t.meaning}`).join(" "),
+      (data.sections || []).flatMap((section) => [section.heading, ...(section.lines || [])]).join(" "),
     ]);
 
     const db = cacheSupa();
@@ -127,10 +128,16 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     const source: "local" = "local";
     let geminiError: string | undefined;
     try {
+      const sectionNotes = (data.sections || [])
+        .filter((section) => section.kind !== "diagram")
+        .flatMap((section) => section.lines || []);
+      const visualNotes = [...new Set([...(data.notes || []), ...sectionNotes])]
+        .sort((a, b) => Number(/formula|derivation|equation/i.test(b)) - Number(/formula|derivation|equation/i.test(a)))
+        .slice(0, 18);
       url = renderNapkinInfographicDataUrl({
         title: data.title,
         bullets: data.bullets,
-        notes: data.notes,
+        notes: visualNotes,
         keyTerms: data.key_terms,
         subject: data.subject,
         slideIndex: data.slideIndex,
