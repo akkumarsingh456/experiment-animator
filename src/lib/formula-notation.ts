@@ -5,7 +5,7 @@
  * garbage like "( ( ( ( ) ) ) ) 1 – 1 2 1 2 s m 8.7 s 5 7 m 0 10 4 27 = = = =".
  * This module does two things:
  *   1. Deterministic, zero-cost repair + garbage detection (runs always).
- *   2. An AI pass (Gemini via Lovable AI Gateway) that rewrites the surviving
+ *   2. An AI pass (Groq Chat Completions) that rewrites the surviving
  *      broken math into correct notation and symbols, grounded in the NCERT
  *      sentence it came from. Works for every subject and every chapter.
  */
