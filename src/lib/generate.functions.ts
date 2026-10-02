@@ -2139,7 +2139,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // dropped, and if the gateway is unavailable the deterministic local
     // sectioniser is used, so notes are always present and always NCERT-only.
     const notedSlides = await attachTeacherNotes(contentSlides, {
-      apiKey: process.env.LOVABLE_API_KEY,
+      apiKey: process.env.GROQ_API_KEY,
       klass: String(data.klass || ""),
       subject: String(data.subject || ""),
       chapter: String(data.chapter || data.topic || ""),
@@ -2155,7 +2155,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       notedSlides.map((sl) => (sl as any).sections as NoteSection[] | undefined),
       groundNorm,
       {
-        apiKey: process.env.LOVABLE_API_KEY,
+        apiKey: process.env.GROQ_API_KEY,
         subject: String(data.subject || ""),
         chapter: String(data.chapter || data.topic || ""),
       },
