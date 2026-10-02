@@ -184,7 +184,7 @@ function GeneratePage() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-5 py-8">
+      <div className="w-[min(96vw,1650px)] mx-auto px-2 sm:px-3 py-5">
         <div className="flex flex-wrap items-center gap-2 mb-6">
           <Badge variant="secondary" className="rounded-full"><Sparkles className="h-3.5 w-3.5" />Class {search.klass}</Badge>
           <Badge variant="outline" className="rounded-full">{search.subject}</Badge>
@@ -547,7 +547,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                   <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setPresenting(true)}>
-                  <Maximize2 className="h-4 w-4" />Presentation Mode
+                  <Maximize2 className="h-4 w-4" />Full Screen
                 </Button>
                 <Button size="sm" variant="outline" onClick={downloadPDF}>
                   <Download className="h-4 w-4" />PDF
@@ -695,8 +695,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
             <div
               key={`slide-${activeIdx}`}
               className="animate-in fade-in slide-in-from-right-4 duration-500 mx-auto grid w-full place-items-center print:max-w-none print:block"
-              style={{ maxWidth: "min(100%, max(20rem, calc(141.4286dvh - 16.9714rem)))" }}
-            >
+                          >
               <SlideCanvas
                 slide={slides[activeIdx]}
                 index={activeIdx}
@@ -714,7 +713,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               <Button variant="outline" size="sm" disabled={activeIdx === 0} onClick={() => setActiveIdx((i) => i - 1)}>
                 <ChevronLeft className="h-4 w-4" />Prev
               </Button>
-              <div className="text-sm text-muted-foreground">{activeIdx + 1} / {slides.length}</div>
+              <div className="text-sm font-mono text-muted-foreground">Slide {activeIdx + 1} / {slides.length}</div>
               <Button variant="outline" size="sm" disabled={activeIdx === slides.length - 1} onClick={() => setActiveIdx((i) => i + 1)}>
                 Next<ChevronRight className="h-4 w-4" />
               </Button>
@@ -969,7 +968,7 @@ function SlideCanvas({
   // Break / MCQ / chapter slides use single-column layout.
   if (kind === "break" || kind === "mcq" || kind === "chapter") {
     return (
-      <Card className="aspect-[297/210] w-full overflow-hidden border-border/60 shadow-soft print:h-auto print:w-full">
+      <Card className="h-[calc(100dvh-7rem)] min-h-[560px] w-full overflow-hidden border-border/60 shadow-soft print:h-auto print:w-full">
         <CardContent className="h-full p-0 print:h-auto">
           <div className="relative grid h-full w-full grid-rows-[auto_1fr_auto] overflow-hidden bg-card print:h-auto">
             <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
@@ -995,7 +994,7 @@ function SlideCanvas({
   }
 
   return (
-    <Card className="aspect-[297/210] w-full overflow-hidden border-border/60 shadow-soft print:h-auto print:w-full">
+    <Card className="h-[calc(100dvh-7rem)] min-h-[560px] w-full overflow-hidden border-border/60 shadow-soft print:h-auto print:w-full">
       <CardContent className="h-full p-0 print:h-auto">
         <div className="relative grid h-full w-full grid-rows-[auto_1fr_auto] overflow-hidden bg-card print:h-auto">
           <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
@@ -1039,16 +1038,16 @@ function SlideCanvas({
             </div>
           </div>
 
-          <div className="grid grid-cols-[1.35fr_1fr] min-h-0 overflow-hidden">
-            <div className="p-4 sm:p-5 flex flex-col gap-2 min-h-0 overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] min-h-0 overflow-hidden">
+            <div className="px-5 sm:px-8 py-5 flex flex-col gap-3 min-h-0 overflow-hidden">
               {editing ? (
                 <Input
                   value={slide.title}
                   onChange={(e) => onChange({ title: e.target.value })}
-                  className="font-display text-lg sm:text-xl font-bold border-0 px-0 shadow-none focus-visible:ring-0 h-auto"
+                  className="font-display text-[clamp(22px,2.2vw,32px)] font-bold border-0 px-0 shadow-none focus-visible:ring-0 h-auto"
                 />
               ) : (
-                <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight leading-tight">{slide.title}</h3>
+                <h3 className="font-display text-[clamp(22px,2.2vw,32px)] font-bold tracking-tight leading-tight shrink-0">{slide.title}</h3>
               )}
               {!(slide as any).sections?.length || editing ? (
                 <ul className="space-y-1">
@@ -1132,7 +1131,6 @@ function SlideCanvas({
               {/* Hide the 3D / simulation panel entirely for language subjects. */}
               {!lang && (
                 <div className="relative w-full flex-[2] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">
-                  <div className="absolute top-1 left-1 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">Live simulation</div>
                   <SimPanel slide={slide} index={index} subject={subject} editable />
                 </div>
               )}
@@ -1302,11 +1300,10 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
       </div>
 
       {/* A4 landscape frame that scales to fit — no scroll */}
-      <div className="flex-1 min-h-0 grid place-items-center p-3 sm:p-5">
+      <div className="flex-1 min-h-0 grid place-items-center p-2 sm:p-3">
         <div
           key={`present-${i}`}
-          className="aspect-[297/210] h-auto max-h-full w-auto max-w-full bg-background text-foreground rounded-xl shadow-2xl grid grid-rows-[auto_1fr_auto] overflow-hidden animate-in fade-in slide-in-from-right-6 duration-500"
-          style={{ width: "min(100%, max(20rem, calc(141.4286dvh - 10.6071rem)))" }}
+          className="h-full w-full max-w-[1800px] bg-background text-foreground rounded-xl shadow-2xl grid grid-rows-[auto_1fr_auto] overflow-hidden animate-in fade-in slide-in-from-right-6 duration-500"
         >
           {/* Slide header */}
           <div className="px-6 pt-4 pb-2 border-b border-border/40">
@@ -1316,8 +1313,8 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
           </div>
 
           {/* Body: text left, diagram right — both clipped to A4 area */}
-          <div className="grid grid-cols-[1.35fr_1fr] min-h-0 overflow-hidden">
-            <div className="p-5 min-h-0 overflow-hidden flex flex-col gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] min-h-0 overflow-hidden">
+            <div className="px-8 py-5 min-h-0 overflow-hidden flex flex-col gap-3">
               {s.kind === "chapter" && s.chapter_text ? (
                 <p className="text-[clamp(11px,1.05vw,15px)] leading-relaxed whitespace-pre-wrap">
                   {s.chapter_text}
@@ -1395,11 +1392,11 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
 
       {/* Bottom controls (fixed) */}
       <div className="shrink-0 flex items-center justify-between px-5 py-2 border-t border-background/10 text-xs">
-        <div className="opacity-60 font-mono">← → to navigate · Esc to exit</div>
+        <Button variant="ghost" size="sm" disabled={i === 0} onClick={() => setI(i - 1)} className="text-background hover:bg-background/10">
+          <ChevronLeft className="h-4 w-4" />Previous
+        </Button>
+        <div className="opacity-70 font-mono">Slide {i + 1} / {slides.length}</div>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" disabled={i === 0} onClick={() => setI(i - 1)} className="text-background hover:bg-background/10">
-            <ChevronLeft className="h-4 w-4" />Prev
-          </Button>
           <Button variant="ghost" size="sm" disabled={i === slides.length - 1} onClick={() => setI(i + 1)} className="text-background hover:bg-background/10">
             Next<ChevronRight className="h-4 w-4" />
           </Button>
