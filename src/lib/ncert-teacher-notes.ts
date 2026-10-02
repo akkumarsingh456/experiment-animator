@@ -6,7 +6,7 @@
  * Properties → Important points → Example → Exam tip → Memory trick).
  *
  * HARD RULE: every line must come from the uploaded NCERT chapter text that is
- * passed in. Nothing is invented. The Gemini pass is only allowed to rewrite,
+ * passed in. Nothing is invented. The Groq pass is only allowed to rewrite,
  * simplify and organise the supplied excerpts; if it returns a line that has no
  * lexical support in the NCERT context, that line is dropped.
  */
@@ -241,9 +241,9 @@ export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
 }
 
 
-/* ---------------- Gemini rewrite pass (NCERT + reference-book grounding) ---------------- */
+/* ---------------- Groq rewrite pass (NCERT + reference-book grounding) ---------------- */
 
-type GeminiSlideOut = { index: number; sections: NoteSection[] };
+type TeacherSlideOut = { index: number; sections: NoteSection[] };
 
 const HEADINGS = [
   "0. Introduction",
@@ -310,11 +310,11 @@ function sanitizeSections(raw: unknown, contextNorm: string, subject = "physics"
 
 
 /**
- * One Gemini call per batch of slides. Returns sanitised sections keyed by slide
+ * One Groq call per batch of slides. Returns sanitised sections keyed by slide
  * index. On any failure it returns an empty map and the caller keeps the local
  * deterministic sections, so notes never go missing.
  */
-export async function geminiTeacherNotes(opts: {
+export async function groqTeacherNotes(opts: {
   apiKey?: string;
   klass: string;
   subject: string;
@@ -417,7 +417,7 @@ export async function geminiTeacherNotes(opts: {
     const json = (await res.json()) as any;
     const text = json?.choices?.[0]?.message?.content ?? "";
     const cleaned = String(text).replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-    const parsed = JSON.parse(cleaned) as { slides?: GeminiSlideOut[] };
+    const parsed = JSON.parse(cleaned) as { slides?: TeacherSlideOut[] };
     for (const s of parsed.slides || []) {
       const idx = Number(s?.index);
       if (!Number.isFinite(idx)) continue;
@@ -430,7 +430,7 @@ export async function geminiTeacherNotes(opts: {
   return result;
 }
 
-/** Attach sections to every content slide: Gemini rewrite where possible, local otherwise. */
+/** Attach sections to every content slide: Groq rewrite where possible, local otherwise. */
 export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: string; sections?: NoteSection[] }>(
   slides: T[],
   opts: { apiKey?: string; klass: string; subject: string; chapter: string; context: string; refContext?: string },
@@ -454,7 +454,7 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
 
   const results = await Promise.all(
     batches.map((batch) =>
-      geminiTeacherNotes({
+      groqTeacherNotes({
         apiKey: opts.apiKey,
         klass: opts.klass,
         subject: opts.subject,
