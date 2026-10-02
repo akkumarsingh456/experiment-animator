@@ -2,8 +2,8 @@
  * Pen & paper → LaTeX.
  *
  * A teacher writes a formula/note by hand on the slide canvas (or types it).
- * Gemini reads it and returns correct LaTeX so it renders through KaTeX in the
- * blank space of the slide. Free Lovable AI Gateway model only.
+ * Groq Vision reads it and returns correct LaTeX so it renders through KaTeX in the
+ * blank space of the slide. The request runs server-side with a Groq API key.
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -20,7 +20,7 @@ export type PenLatexResult = { lines: string[]; error?: string };
 export const penToLatex = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }): Promise<PenLatexResult> => {
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["GROQ_API_KEY"];
     if (!apiKey) return { lines: [], error: "AI is not configured." };
     if (!data.text?.trim() && !data.imageDataUrl) return { lines: [], error: "Nothing to read." };
 
@@ -49,11 +49,11 @@ export const penToLatex = createServerFn({ method: "POST" })
     if (data.imageDataUrl) content.push({ type: "image_url", image_url: { url: data.imageDataUrl } });
 
     try {
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
-          model: "google/gemini-3.6-flash",
+          model: "qwen/qwen3.8-27b",
           messages: [{ role: "user", content }],
           response_format: { type: "json_object" },
         }),

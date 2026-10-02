@@ -5,7 +5,7 @@
  * garbage like "( ( ( ( ) ) ) ) 1 – 1 2 1 2 s m 8.7 s 5 7 m 0 10 4 27 = = = =".
  * This module does two things:
  *   1. Deterministic, zero-cost repair + garbage detection (runs always).
- *   2. An AI pass (Gemini via Lovable AI Gateway) that rewrites the surviving
+ *   2. An AI pass (Groq Chat Completions) that rewrites the surviving
  *      broken math into correct notation and symbols, grounded in the NCERT
  *      sentence it came from. Works for every subject and every chapter.
  */
@@ -161,11 +161,11 @@ export async function aiFixFormulas(opts: {
   ].join("\n");
 
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": opts.apiKey },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${opts.apiKey}` },
       body: JSON.stringify({
-        model: "google/gemini-3.1-pro-preview",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
       }),
@@ -262,11 +262,11 @@ export async function aiFormulaSheet(opts: {
 
 
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": opts.apiKey },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${opts.apiKey}` },
       body: JSON.stringify({
-        model: "google/gemini-3.1-pro-preview",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
       }),

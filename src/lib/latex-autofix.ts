@@ -5,7 +5,7 @@
  * cannot be rendered by KaTeX. Dropping is a last resort: this module first
  * tries to rewrite the broken maths into a valid equivalent —
  *   1. deterministically (normalise → sanitise → re-validate), then
- *   2. with Gemini, which re-typesets the line in correct LaTeX.
+ *   2. with Groq, which re-typesets the line in correct LaTeX.
  * Verification is re-run on the rewritten lines before anything is saved.
  */
 
@@ -51,7 +51,7 @@ export function localLatexFix(line: string): string | null {
 }
 
 /**
- * AI repair: Gemini rewrites each broken line so the maths is valid LaTeX with
+ * AI repair: Groq rewrites each broken line so the maths is valid LaTeX with
  * the correct symbols, subscripts and units, keeping the meaning identical.
  * Returns a map of input index → rewritten line (missing keys = unfixable).
  */
@@ -84,11 +84,11 @@ export async function aiFixLatex(opts: {
   ].join("\n");
 
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": opts.apiKey },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${opts.apiKey}` },
       body: JSON.stringify({
-        model: "google/gemini-3.1-pro-preview",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
       }),

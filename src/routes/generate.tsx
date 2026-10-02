@@ -53,12 +53,13 @@ import { PenPaperEditor } from "@/components/PenPaperEditor";
 import { usePenNotes, getPenNotes } from "@/lib/pen-notes";
 import PagedNoteSections from "@/components/PagedNoteSections";
 import { plainMathText } from "@/lib/latex-notation";
+import { paginateNoteSections } from "@/lib/notes-paging";
 
 type NoteSectionUI = { heading: string; kind: string; lines: string[] };
 
 /**
  * Teacher's pen & paper block — hand-written formulas typeset in LaTeX by
- * Gemini and saved permanently against this slide.
+ * Groq Vision and saved permanently against this slide.
  */
 function PenNotesBlock({
   index,
@@ -226,7 +227,23 @@ function GeneratePage() {
 function ResultView({ result, title }: { result: GenerationResult; title: string }) {
   const search = Route.useSearch();
   const genImage = useServerFn(generateSlideImage);
-  const [slides, setSlides] = useState<Slide[]>(result.slides);
+  const makeCoverSlide = (): Slide => {
+    const objectives = String(search.subtopics || "")
+      .split(/[,;\n]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return {
+      title: String(search.chapter || title || search.topic || "Lesson overview").trim(),
+      bullets: objectives.length ? objectives : [String(search.topic || title || "Lesson topic").trim()],
+      notes: [],
+      key_terms: [],
+      visual: "cover",
+      kind: "break",
+      caption: `Class ${search.klass} · ${search.subject} · Topic: ${search.topic || title} · Chapter: ${search.chapter || "—"}`,
+    };
+  };
+  const withCoverSlide = (items: Slide[]) => [makeCoverSlide(), ...items];
+  const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -244,7 +261,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const imgHashRef = useRef<Record<number, string>>({});
   const dupRetryRef = useRef<Record<number, number>>({});
 
-  useEffect(() => { setSlides(result.slides); setVerified(false); setActiveIdx(0); setImages({}); setImgLoading({}); setImgStatus({}); imgHashRef.current = {}; dupRetryRef.current = {}; }, [result]);
+  useEffect(() => { setSlides(withCoverSlide(result.slides)); setVerified(false); setActiveIdx(0); setImages({}); setImgLoading({}); setImgStatus({}); imgHashRef.current = {}; dupRetryRef.current = {}; }, [result]);
 
   function updateSlide(idx: number, patch: Partial<Slide>) {
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
@@ -378,7 +395,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
 
 
-  // Auto-generate the Gemini 2D infographic for EVERY slide once verification
+  // Auto-generate the local 2D infographic for EVERY slide once verification
   // passes — regardless of subject (Physics, Chem, Bio, Math, Economics,
   // History, Geography, Political Science, and language chapters alike).
   // Results are cached in `slide_image_cache` keyed by class+subject+slide
@@ -446,10 +463,46 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       pptx.defineLayout({ name: "A4_LANDSCAPE", width: 11.69, height: 8.27 });
       pptx.layout = "A4_LANDSCAPE";
       const W = 11.69, H = 8.27;
-      slides.forEach((s, i) => {
+      const exportSlides = slides.flatMap((item, sourceIndex) => {
+        const sourceSections = (item as any).sections as NoteSectionUI[] | undefined;
+        const notePages = sourceSections?.length ? paginateNoteSections(sourceSections, 18) : [undefined];
+        return notePages.map((sections, pageIndex) => ({
+          ...item,
+          ...(sections ? { sections } : {}),
+          title: pageIndex === 0 ? item.title : `${item.title} (continued ${pageIndex + 1})`,
+          sourceSlideIndex: sourceIndex,
+          notePageIndex: pageIndex,
+        }));
+      });
+      const exportImages: Record<number, string> = {};
+      await Promise.all(exportSlides.map(async (entry, exportIndex) => {
+        const sourceImage = images[entry.sourceSlideIndex];
+        if (entry.notePageIndex === 0 && sourceImage) {
+          exportImages[exportIndex] = sourceImage;
+          return;
+        }
+        const generated = await genImage({ data: {
+          title: entry.title,
+          bullets: entry.bullets || [],
+          notes: entry.notes || [],
+          key_terms: entry.key_terms || [],
+          sections: (entry as any).sections || undefined,
+          caption: entry.caption || "",
+          subject: result.source_books[0]?.subject || search.subject,
+          klass: search.klass,
+          slideIndex: exportIndex,
+          visual_prompt: entry.visual_prompt || "",
+          grounding: entry.grounding || entry.ncert_quote || "",
+          avoidUrls: Object.values({ ...images, ...exportImages }),
+          nocache: true,
+        } });
+        if (generated.url) exportImages[exportIndex] = generated.url;
+        else if (sourceImage) exportImages[exportIndex] = sourceImage;
+      }));
+      exportSlides.forEach((s, i) => {
         const slide = pptx.addSlide();
         slide.background = { color: "F7F8FC" };
-        slide.addText(`Slide ${i + 1} / ${slides.length}`, { x: 0.3, y: 0.2, w: 4, h: 0.3, fontSize: 10, color: "8090B0", fontFace: "Calibri" });
+        slide.addText(`Slide ${i + 1} / ${exportSlides.length}`, { x: 0.3, y: 0.2, w: 4, h: 0.3, fontSize: 10, color: "8090B0", fontFace: "Calibri" });
         slide.addText(s.title || "", { x: 0.4, y: 0.55, w: W - 0.8, h: 0.85, fontSize: 26, bold: true, color: "1F2A4A", fontFace: "Calibri" });
         // Left column: NCERT teacher notes only (bullets shown only when no notes exist)
         const leftW = 6.6;
@@ -481,7 +534,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         // Right column: image + book diagram + key terms + quote
         const rightX = leftW + 0.7;
         const rightW = W - rightX - 0.4;
-        const img = images[i];
+        const img = exportImages[i] || images[s.sourceSlideIndex];
         if (img) slide.addImage({ data: img, x: rightX, y: 1.5, w: rightW, h: 3.2 });
         if (diagramSec?.lines.length) {
           slide.addText(diagramSec.heading, { x: rightX, y: 4.8, w: rightW, h: 0.28, fontSize: 11, bold: true, color: "1F2A4A", fontFace: "Calibri" });
@@ -497,7 +550,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         }
         if (s.ncert_quote && !secs?.length) slide.addText(`“${s.ncert_quote}”`, { x: rightX, y: 7.1, w: rightW, h: 0.6, fontSize: 10, italic: true, color: "5A6B91" });
 
-        const pen = getPenNotes(slideKey(result?.source_books?.[0]?.subject, i, s.title || ""));
+        const pen = getPenNotes(slideKey(result?.source_books?.[0]?.subject, s.sourceSlideIndex, s.title || ""));
         if (pen.length) {
           slide.addText("Teacher's board", { x: rightX, y: 6.7, w: rightW, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
           slide.addText(pen.map((l) => ({ text: plainMathText(l), options: { bullet: true } })),
@@ -541,7 +594,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           {/* Slides */}
           <section className="mb-10">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
-              <h2 className="font-semibold text-lg">10-Slide Interactive Lesson · A4 landscape (smart-board ready)</h2>
+              <h2 className="font-semibold text-lg">{slides.length}-Slide Interactive Lesson · A4 landscape (smart-board ready)</h2>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => setEditing((v) => !v)}>
                   <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
@@ -585,7 +638,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
             </div>
 
             {/* Real-time per-slide verification panel — shows for each slide
-                whether Gemini succeeded, failed, and whether it came from the
+                whether rendering succeeded, failed, and whether it came from the
                 slide_image_cache. */}
             <details className="mb-3 rounded-lg border border-border/60 bg-card/50 print:hidden">
               <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold flex items-center gap-2">
@@ -894,7 +947,7 @@ function McqSlideBody({ slide }: { slide: Slide }) {
   const mcq = slide.mcq;
   if (!mcq) return null;
   return (
-    <div className="p-6 flex flex-col gap-3 min-h-0 overflow-auto">
+    <div className="p-6 flex flex-col gap-3 min-h-0 overflow-hidden">
       <p className="font-display text-base sm:text-lg font-semibold leading-snug">{mcq.question}</p>
       <ol className="grid sm:grid-cols-2 gap-2">
         {mcq.options.map((o) => {
@@ -928,7 +981,7 @@ function McqSlideBody({ slide }: { slide: Slide }) {
 
 function ChapterSlideBody({ slide }: { slide: Slide }) {
   return (
-    <div className="p-6 flex flex-col gap-2 min-h-0 overflow-auto">
+    <div className="p-6 flex flex-col gap-2 min-h-0 overflow-hidden">
       <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{slide.chapter_text}</p>
       {slide.figures?.length ? (
         <p className="text-[11px] text-muted-foreground italic">Referenced NCERT figures: {slide.figures.join(", ")}</p>
@@ -938,6 +991,23 @@ function ChapterSlideBody({ slide }: { slide: Slide }) {
 }
 
 function BreakSlideBody({ slide }: { slide: Slide }) {
+  if (slide.visual === "cover") {
+    return (
+      <div className="h-full min-h-0 px-8 py-6 sm:px-16 flex flex-col justify-center gap-5">
+        <div className="text-center">
+          <div className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Chapter overview</div>
+          <p className="mt-2 text-sm text-muted-foreground">{slide.caption}</p>
+          <h2 className="mt-4 font-display text-3xl sm:text-5xl font-extrabold leading-tight">{slide.title}</h2>
+        </div>
+        <section className="mx-auto w-full max-w-3xl rounded-xl border border-primary/20 bg-primary/5 p-6 sm:p-8">
+          <h3 className="font-display text-xl sm:text-2xl font-bold mb-4">What you will learn</h3>
+          <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm sm:text-base leading-relaxed">
+            {(slide.bullets || []).map((item, index) => <li key={index} className="flex gap-2"><span className="text-primary font-bold">{index + 1}.</span><span>{item}</span></li>)}
+          </ul>
+        </section>
+      </div>
+    );
+  }
   return (
     <div className="p-8 grid place-items-center text-center gap-3">
       <div className="text-4xl">☕</div>
@@ -974,7 +1044,7 @@ function SlideCanvas({
             <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
               <span className="font-mono">Slide {index + 1} / {total}</span>
               <Badge variant="outline" className={`rounded-full text-[10px] ${kind === "mcq" ? "bg-primary/10 text-primary border-primary/30" : kind === "break" ? "bg-amber-500/10 text-amber-700 border-amber-500/30" : "bg-sky-500/10 text-sky-700 border-sky-500/30"}`}>
-                {kind === "mcq" ? "MCQ" : kind === "break" ? "Break" : "Chapter page"}
+                {kind === "mcq" ? "MCQ" : kind === "break" ? (slide.visual === "cover" ? "Chapter overview" : "Break") : "Chapter page"}
               </Badge>
             </div>
             <div className="min-h-0 overflow-hidden">
@@ -1281,7 +1351,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
     };
   }, [slides.length, onClose]);
 
-  // Active slide asks for its Gemini 2D image if missing.
+  // Active slide asks for its local 2D infographic if missing.
   useEffect(() => {
     if (!images[i]) onNeedImage(i);
   }, [i, images, onNeedImage, slides.length]);
@@ -1321,6 +1391,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
                 </p>
               ) : (
                 <>
+                  {s.visual === "cover" && <h3 className="text-[clamp(14px,1.3vw,20px)] font-bold text-primary">What you will learn</h3>}
                   {!(s as any).sections?.length ? (
                     <ul className="space-y-1.5">
                       {(s.bullets || []).map((b, k) => (
@@ -1361,7 +1432,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
               )}
             </div>
 
-            {/* Diagram column — Gemini 2D infographic + live sim */}
+            {/* Diagram column — local 2D infographic + live sim */}
             <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col p-3 min-h-0 overflow-hidden gap-2">
               <div className="relative w-full flex-[3] min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden grid place-items-center">
                 {img ? (

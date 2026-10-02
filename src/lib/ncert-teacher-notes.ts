@@ -6,7 +6,7 @@
  * Properties → Important points → Example → Exam tip → Memory trick).
  *
  * HARD RULE: every line must come from the uploaded NCERT chapter text that is
- * passed in. Nothing is invented. The Gemini pass is only allowed to rewrite,
+ * passed in. Nothing is invented. The Groq pass is only allowed to rewrite,
  * simplify and organise the supplied excerpts; if it returns a line that has no
  * lexical support in the NCERT context, that line is dropped.
  */
@@ -192,7 +192,7 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
     if (hook) lines.push(`**Memory trick:** ${first.term} → ${hook}.`);
   }
 
-  const finalLines = dedupeLabelled(lines).slice(0, 54);
+  const finalLines = dedupeLabelled(lines);
 
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
@@ -217,7 +217,7 @@ export function mergeBulletsIntoSections<T extends NoteSourceSlide & { sections?
     if (extra.length >= 8) break;
   }
   if (!extra.length) return slide;
-  const merged = dedupeLabelled([...notes.lines, ...extra]).slice(0, 54);
+  const merged = dedupeLabelled([...notes.lines, ...extra]);
   return {
     ...slide,
     sections: secs.map((s) => (s.heading === NOTE_HEADING ? { ...s, lines: merged } : s)),
@@ -236,14 +236,14 @@ export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
       lines.push(/^\*\*/.test(raw) ? raw : `**${label}:** ${l}`);
     }
   }
-  const finalLines = dedupeLabelled(lines).slice(0, 54);
+  const finalLines = dedupeLabelled(lines);
   return finalLines.length ? [{ heading: NOTE_HEADING, kind: "bullets", lines: finalLines }] : [];
 }
 
 
-/* ---------------- Gemini rewrite pass (NCERT + reference-book grounding) ---------------- */
+/* ---------------- Groq rewrite pass (NCERT + reference-book grounding) ---------------- */
 
-type GeminiSlideOut = { index: number; sections: NoteSection[] };
+type TeacherSlideOut = { index: number; sections: NoteSection[] };
 
 const HEADINGS = [
   "0. Introduction",
@@ -303,18 +303,18 @@ function sanitizeSections(raw: unknown, contextNorm: string, subject = "physics"
         .map((l: string) => normalizeNoteLine(l, subject))
         .filter((l: string) => l.length > 4 && l.length < 320),
     ).filter((l) => freeform || ncertSupported(l, contextNorm));
-    if (heading && lines.length) out.push({ heading, kind, lines: lines.slice(0, 10) });
+    if (heading && lines.length) out.push({ heading, kind, lines });
   }
   return mergeToSingleSection(out);
 }
 
 
 /**
- * One Gemini call per batch of slides. Returns sanitised sections keyed by slide
+ * One Groq call per batch of slides. Returns sanitised sections keyed by slide
  * index. On any failure it returns an empty map and the caller keeps the local
  * deterministic sections, so notes never go missing.
  */
-export async function geminiTeacherNotes(opts: {
+export async function groqTeacherNotes(opts: {
   apiKey?: string;
   klass: string;
   subject: string;
@@ -369,7 +369,8 @@ export async function geminiTeacherNotes(opts: {
     "- Chemistry: never plain text — write $H_2O$, $CO_2$, $H_2SO_4$, $SO_4^{2-}$, and balance equations as $$\\mathrm{CH_4 + 2O_2 \\rightarrow CO_2 + 2H_2O}$$ with states $(s)$, $(l)$, $(g)$, $(aq)$.",
     "- Maths: state theorems precisely and give proof outlines in LaTeX ($\\frac{dy}{dx}$, $^nC_r$, $\\lim_{x \\to 0}$).",
     "- Biology: bold headers for taxonomic/anatomical terms and sequential bullet steps for pathways; no fake formulas.",
-    "- After each formula give a VARIABLE BREAKDOWN line per symbol, then the SI unit, then a derivation with NO skipped intermediate step.",
+    "- After each formula give a VARIABLE BREAKDOWN line for every symbol, with its meaning and SI unit in square brackets (for example, $v$ [final velocity; $\\mathrm{m\\,s^{-1}}$]); never invent a unit that the source does not provide.",
+    "- Then give the formula's SI unit and a derivation with NO skipped intermediate step.",
     "- MANDATORY: EVERY formula on the slide must have its OWN full derivation — a line '**Derivation of <formula name>:** <formula>' followed by '**Derivation step n:** ...' lines (3-6 steps each). Never leave a formula underived.",
     "- Never output bracket soup like '(((())))', repeated '=' runs, unbalanced braces or stray page digits.",
     "",
@@ -397,14 +398,14 @@ export async function geminiTeacherNotes(opts: {
   ].join("\n");
 
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Lovable-API-Key": opts.apiKey,
+        Authorization: `Bearer ${opts.apiKey}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-3.1-pro-preview",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
       }),
@@ -416,7 +417,7 @@ export async function geminiTeacherNotes(opts: {
     const json = (await res.json()) as any;
     const text = json?.choices?.[0]?.message?.content ?? "";
     const cleaned = String(text).replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-    const parsed = JSON.parse(cleaned) as { slides?: GeminiSlideOut[] };
+    const parsed = JSON.parse(cleaned) as { slides?: TeacherSlideOut[] };
     for (const s of parsed.slides || []) {
       const idx = Number(s?.index);
       if (!Number.isFinite(idx)) continue;
@@ -429,7 +430,7 @@ export async function geminiTeacherNotes(opts: {
   return result;
 }
 
-/** Attach sections to every content slide: Gemini rewrite where possible, local otherwise. */
+/** Attach sections to every content slide: Groq rewrite where possible, local otherwise. */
 export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: string; sections?: NoteSection[] }>(
   slides: T[],
   opts: { apiKey?: string; klass: string; subject: string; chapter: string; context: string; refContext?: string },
@@ -453,7 +454,7 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
 
   const results = await Promise.all(
     batches.map((batch) =>
-      geminiTeacherNotes({
+      groqTeacherNotes({
         apiKey: opts.apiKey,
         klass: opts.klass,
         subject: opts.subject,
@@ -599,7 +600,7 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       let at = 0;
       while (at < lines.length && /^\*\*(analogy|definition)/i.test(lines[at])) at++;
       lines.splice(at, 0, ...add);
-      const merged = dedupeLabelled(lines).slice(0, 54);
+      const merged = dedupeLabelled(lines);
       slide.sections = [{ heading: NOTE_HEADING, kind: "bullets", lines: merged }];
     }
   }
