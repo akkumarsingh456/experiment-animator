@@ -226,7 +226,23 @@ function GeneratePage() {
 function ResultView({ result, title }: { result: GenerationResult; title: string }) {
   const search = Route.useSearch();
   const genImage = useServerFn(generateSlideImage);
-  const [slides, setSlides] = useState<Slide[]>(result.slides);
+  const makeCoverSlide = (): Slide => {
+    const objectives = String(search.subtopics || "")
+      .split(/[,;\\n]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return {
+      title: String(search.chapter || title || search.topic || "Lesson overview").trim(),
+      bullets: objectives.length ? objectives : [String(search.topic || title || "Lesson topic").trim()],
+      notes: [],
+      key_terms: [],
+      visual: "lightbulb",
+      kind: "break",
+      caption: `Class ${search.klass} · ${search.subject} · ${search.chapter || search.topic}`,
+    };
+  };
+  const withCoverSlide = (items: Slide[]) => [makeCoverSlide(), ...items];
+  const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -244,7 +260,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const imgHashRef = useRef<Record<number, string>>({});
   const dupRetryRef = useRef<Record<number, number>>({});
 
-  useEffect(() => { setSlides(result.slides); setVerified(false); setActiveIdx(0); setImages({}); setImgLoading({}); setImgStatus({}); imgHashRef.current = {}; dupRetryRef.current = {}; }, [result]);
+  useEffect(() => { setSlides(withCoverSlide(result.slides)); setVerified(false); setActiveIdx(0); setImages({}); setImgLoading({}); setImgStatus({}); imgHashRef.current = {}; dupRetryRef.current = {}; }, [result]);
 
   function updateSlide(idx: number, patch: Partial<Slide>) {
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
@@ -938,6 +954,23 @@ function ChapterSlideBody({ slide }: { slide: Slide }) {
 }
 
 function BreakSlideBody({ slide }: { slide: Slide }) {
+  if (slide.visual === "lightbulb") {
+    return (
+      <div className="h-full min-h-0 px-8 py-6 sm:px-16 flex flex-col justify-center gap-5">
+        <div className="text-center">
+          <div className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Chapter overview</div>
+          <p className="mt-2 text-sm text-muted-foreground">{slide.caption}</p>
+          <h2 className="mt-4 font-display text-3xl sm:text-5xl font-extrabold leading-tight">{slide.title}</h2>
+        </div>
+        <section className="mx-auto w-full max-w-3xl rounded-xl border border-primary/20 bg-primary/5 p-6 sm:p-8">
+          <h3 className="font-display text-xl sm:text-2xl font-bold mb-4">What you will learn</h3>
+          <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm sm:text-base leading-relaxed">
+            {(slide.bullets || []).map((item, index) => <li key={index} className="flex gap-2"><span className="text-primary font-bold">{index + 1}.</span><span>{item}</span></li>)}
+          </ul>
+        </section>
+      </div>
+    );
+  }
   return (
     <div className="p-8 grid place-items-center text-center gap-3">
       <div className="text-4xl">☕</div>
@@ -974,7 +1007,7 @@ function SlideCanvas({
             <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
               <span className="font-mono">Slide {index + 1} / {total}</span>
               <Badge variant="outline" className={`rounded-full text-[10px] ${kind === "mcq" ? "bg-primary/10 text-primary border-primary/30" : kind === "break" ? "bg-amber-500/10 text-amber-700 border-amber-500/30" : "bg-sky-500/10 text-sky-700 border-sky-500/30"}`}>
-                {kind === "mcq" ? "MCQ" : kind === "break" ? "Break" : "Chapter page"}
+                {kind === "mcq" ? "MCQ" : kind === "break" ? (slide.visual === "lightbulb" ? "Chapter overview" : "Break") : "Chapter page"}
               </Badge>
             </div>
             <div className="min-h-0 overflow-hidden">
@@ -1321,6 +1354,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
                 </p>
               ) : (
                 <>
+                  {s.visual === "lightbulb" && <h3 className="text-[clamp(14px,1.3vw,20px)] font-bold text-primary">What you will learn</h3>}
                   {!(s as any).sections?.length ? (
                     <ul className="space-y-1.5">
                       {(s.bullets || []).map((b, k) => (
