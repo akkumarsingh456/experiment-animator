@@ -15,6 +15,10 @@
  * diagram fallback. The AI-expanded notes and formula derivations require a
  * valid key and available free-tier quota.
  *
+ * Handwritten board-note OCR still uses the existing Lovable image endpoint
+ * because it sends a teacher's handwritten image to an external AI service.
+ * The slide infographic renderer does not send images to an external service.
+ *
  * Current references:
  * - https://console.groq.com/docs/api-reference
  * - https://console.groq.com/docs/models
