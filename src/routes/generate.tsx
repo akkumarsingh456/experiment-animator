@@ -694,7 +694,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
             <div
               key={`slide-${activeIdx}`}
-              className="animate-in fade-in slide-in-from-right-4 duration-500 mx-auto grid w-full max-w-[calc((100dvh-12rem)*1.414)] place-items-center print:max-w-none print:block"
+              className="animate-in fade-in slide-in-from-right-4 duration-500 mx-auto grid w-full place-items-center print:max-w-none print:block"
+              style={{ maxWidth: "min(100%, max(20rem, calc(141.4286dvh - 16.9714rem)))" }}
             >
               <SlideCanvas
                 slide={slides[activeIdx]}
@@ -1305,7 +1306,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
         <div
           key={`present-${i}`}
           className="aspect-[297/210] h-auto max-h-full w-auto max-w-full bg-background text-foreground rounded-xl shadow-2xl grid grid-rows-[auto_1fr_auto] overflow-hidden animate-in fade-in slide-in-from-right-6 duration-500"
-          style={{ width: "min(100%, calc((100dvh - 7.5rem) * 1.414))" }}
+          style={{ width: "min(100%, max(20rem, calc(141.4286dvh - 10.6071rem)))" }}
         >
           {/* Slide header */}
           <div className="px-6 pt-4 pb-2 border-b border-border/40">
