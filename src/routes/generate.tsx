@@ -236,7 +236,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       bullets: objectives.length ? objectives : [String(search.topic || title || "Lesson topic").trim()],
       notes: [],
       key_terms: [],
-      visual: "lightbulb",
+      visual: "cover",
       kind: "break",
       caption: `Class ${search.klass} · ${search.subject} · ${search.chapter || search.topic}`,
     };
@@ -954,7 +954,7 @@ function ChapterSlideBody({ slide }: { slide: Slide }) {
 }
 
 function BreakSlideBody({ slide }: { slide: Slide }) {
-  if (slide.visual === "lightbulb") {
+  if (slide.visual === "cover") {
     return (
       <div className="h-full min-h-0 px-8 py-6 sm:px-16 flex flex-col justify-center gap-5">
         <div className="text-center">
@@ -1007,7 +1007,7 @@ function SlideCanvas({
             <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
               <span className="font-mono">Slide {index + 1} / {total}</span>
               <Badge variant="outline" className={`rounded-full text-[10px] ${kind === "mcq" ? "bg-primary/10 text-primary border-primary/30" : kind === "break" ? "bg-amber-500/10 text-amber-700 border-amber-500/30" : "bg-sky-500/10 text-sky-700 border-sky-500/30"}`}>
-                {kind === "mcq" ? "MCQ" : kind === "break" ? (slide.visual === "lightbulb" ? "Chapter overview" : "Break") : "Chapter page"}
+                {kind === "mcq" ? "MCQ" : kind === "break" ? (slide.visual === "cover" ? "Chapter overview" : "Break") : "Chapter page"}
               </Badge>
             </div>
             <div className="min-h-0 overflow-hidden">
@@ -1354,7 +1354,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
                 </p>
               ) : (
                 <>
-                  {s.visual === "lightbulb" && <h3 className="text-[clamp(14px,1.3vw,20px)] font-bold text-primary">What you will learn</h3>}
+                  {s.visual === "cover" && <h3 className="text-[clamp(14px,1.3vw,20px)] font-bold text-primary">What you will learn</h3>}
                   {!(s as any).sections?.length ? (
                     <ul className="space-y-1.5">
                       {(s.bullets || []).map((b, k) => (
