@@ -53,6 +53,7 @@ import { PenPaperEditor } from "@/components/PenPaperEditor";
 import { usePenNotes, getPenNotes } from "@/lib/pen-notes";
 import PagedNoteSections from "@/components/PagedNoteSections";
 import { plainMathText } from "@/lib/latex-notation";
+import { paginateNoteSections } from "@/lib/notes-paging";
 
 type NoteSectionUI = { heading: string; kind: string; lines: string[] };
 
@@ -462,10 +463,20 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       pptx.defineLayout({ name: "A4_LANDSCAPE", width: 11.69, height: 8.27 });
       pptx.layout = "A4_LANDSCAPE";
       const W = 11.69, H = 8.27;
-      slides.forEach((s, i) => {
+      const exportSlides = slides.flatMap((item, sourceIndex) => {
+        const sourceSections = (item as any).sections as NoteSectionUI[] | undefined;
+        const notePages = sourceSections?.length ? paginateNoteSections(sourceSections, 18) : [undefined];
+        return notePages.map((sections, pageIndex) => ({
+          ...item,
+          ...(sections ? { sections } : {}),
+          title: pageIndex === 0 ? item.title : `${item.title} (continued ${pageIndex + 1})`,
+          sourceSlideIndex: sourceIndex,
+        }));
+      });
+      exportSlides.forEach((s, i) => {
         const slide = pptx.addSlide();
         slide.background = { color: "F7F8FC" };
-        slide.addText(`Slide ${i + 1} / ${slides.length}`, { x: 0.3, y: 0.2, w: 4, h: 0.3, fontSize: 10, color: "8090B0", fontFace: "Calibri" });
+        slide.addText(`Slide ${i + 1} / ${exportSlides.length}`, { x: 0.3, y: 0.2, w: 4, h: 0.3, fontSize: 10, color: "8090B0", fontFace: "Calibri" });
         slide.addText(s.title || "", { x: 0.4, y: 0.55, w: W - 0.8, h: 0.85, fontSize: 26, bold: true, color: "1F2A4A", fontFace: "Calibri" });
         // Left column: NCERT teacher notes only (bullets shown only when no notes exist)
         const leftW = 6.6;
@@ -497,7 +508,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         // Right column: image + book diagram + key terms + quote
         const rightX = leftW + 0.7;
         const rightW = W - rightX - 0.4;
-        const img = images[i];
+        const img = images[s.sourceSlideIndex];
         if (img) slide.addImage({ data: img, x: rightX, y: 1.5, w: rightW, h: 3.2 });
         if (diagramSec?.lines.length) {
           slide.addText(diagramSec.heading, { x: rightX, y: 4.8, w: rightW, h: 0.28, fontSize: 11, bold: true, color: "1F2A4A", fontFace: "Calibri" });
@@ -513,7 +524,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         }
         if (s.ncert_quote && !secs?.length) slide.addText(`“${s.ncert_quote}”`, { x: rightX, y: 7.1, w: rightW, h: 0.6, fontSize: 10, italic: true, color: "5A6B91" });
 
-        const pen = getPenNotes(slideKey(result?.source_books?.[0]?.subject, i, s.title || ""));
+        const pen = getPenNotes(slideKey(result?.source_books?.[0]?.subject, s.sourceSlideIndex, s.title || ""));
         if (pen.length) {
           slide.addText("Teacher's board", { x: rightX, y: 6.7, w: rightW, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
           slide.addText(pen.map((l) => ({ text: plainMathText(l), options: { bullet: true } })),
