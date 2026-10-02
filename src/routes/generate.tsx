@@ -395,7 +395,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
 
 
-  // Auto-generate the Gemini 2D infographic for EVERY slide once verification
+  // Auto-generate the local 2D infographic for EVERY slide once verification
   // passes — regardless of subject (Physics, Chem, Bio, Math, Economics,
   // History, Geography, Political Science, and language chapters alike).
   // Results are cached in `slide_image_cache` keyed by class+subject+slide
@@ -638,7 +638,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
             </div>
 
             {/* Real-time per-slide verification panel — shows for each slide
-                whether Gemini succeeded, failed, and whether it came from the
+                whether rendering succeeded, failed, and whether it came from the
                 slide_image_cache. */}
             <details className="mb-3 rounded-lg border border-border/60 bg-card/50 print:hidden">
               <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold flex items-center gap-2">
@@ -1351,7 +1351,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
     };
   }, [slides.length, onClose]);
 
-  // Active slide asks for its Gemini 2D image if missing.
+  // Active slide asks for its local 2D infographic if missing.
   useEffect(() => {
     if (!images[i]) onNeedImage(i);
   }, [i, images, onNeedImage, slides.length]);
@@ -1432,7 +1432,7 @@ function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { s
               )}
             </div>
 
-            {/* Diagram column — Gemini 2D infographic + live sim */}
+            {/* Diagram column — local 2D infographic + live sim */}
             <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col p-3 min-h-0 overflow-hidden gap-2">
               <div className="relative w-full flex-[3] min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden grid place-items-center">
                 {img ? (
