@@ -594,7 +594,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           {/* Slides */}
           <section className="mb-10">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
-              <h2 className="font-semibold text-lg">10-Slide Interactive Lesson · A4 landscape (smart-board ready)</h2>
+              <h2 className="font-semibold text-lg">{slides.length}-Slide Interactive Lesson · A4 landscape (smart-board ready)</h2>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => setEditing((v) => !v)}>
                   <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
@@ -947,7 +947,7 @@ function McqSlideBody({ slide }: { slide: Slide }) {
   const mcq = slide.mcq;
   if (!mcq) return null;
   return (
-    <div className="p-6 flex flex-col gap-3 min-h-0 overflow-auto">
+    <div className="p-6 flex flex-col gap-3 min-h-0 overflow-hidden">
       <p className="font-display text-base sm:text-lg font-semibold leading-snug">{mcq.question}</p>
       <ol className="grid sm:grid-cols-2 gap-2">
         {mcq.options.map((o) => {
@@ -981,7 +981,7 @@ function McqSlideBody({ slide }: { slide: Slide }) {
 
 function ChapterSlideBody({ slide }: { slide: Slide }) {
   return (
-    <div className="p-6 flex flex-col gap-2 min-h-0 overflow-auto">
+    <div className="p-6 flex flex-col gap-2 min-h-0 overflow-hidden">
       <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{slide.chapter_text}</p>
       {slide.figures?.length ? (
         <p className="text-[11px] text-muted-foreground italic">Referenced NCERT figures: {slide.figures.join(", ")}</p>
