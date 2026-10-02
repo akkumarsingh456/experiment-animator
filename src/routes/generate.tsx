@@ -59,7 +59,7 @@ type NoteSectionUI = { heading: string; kind: string; lines: string[] };
 
 /**
  * Teacher's pen & paper block — hand-written formulas typeset in LaTeX by
- * Gemini and saved permanently against this slide.
+ * Groq Vision and saved permanently against this slide.
  */
 function PenNotesBlock({
   index,
