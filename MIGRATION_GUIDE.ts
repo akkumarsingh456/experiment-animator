@@ -26,3 +26,5 @@ export const FREE_AI_SETUP = {
   model: "openai/gpt-oss-120b",
   imageGeneration: "local-svg",
 } as const;
+
+export const MIGRATION_COMPLETE = true;
