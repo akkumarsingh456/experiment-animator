@@ -69,6 +69,53 @@ export function toNoteBlocks(sections: NoteSectionLike[] | undefined): NoteBlock
 }
 
 /**
+ * Split a note section into A4-sized pages without separating a formula from
+ * its derivation. The returned sections preserve headings and block kinds.
+ */
+export function paginateNoteSections(
+  sections: NoteSectionLike[] | undefined,
+  maxRows = 18,
+): NoteSectionLike[][] {
+  const source = sections || [];
+  const blocks = toNoteBlocks(source);
+  if (!blocks.length) return [source];
+
+  const pages: NoteBlock[][] = [];
+  let page: NoteBlock[] = [];
+  let rows = 0;
+  for (const block of blocks) {
+    const blockRows = block.lines.reduce((sum, line) => {
+      const plain = line.replace(/\$\$?/g, "").replace(/\\[a-zA-Z]+/g, "x");
+      return sum + Math.max(1, Math.ceil(plain.length / 58));
+    }, 0);
+    const startsSection = !page.length || page[page.length - 1]!.sectionIndex !== block.sectionIndex;
+    const cost = blockRows + (startsSection ? 2 : 0);
+    if (page.length && rows + cost > maxRows) {
+      pages.push(page);
+      page = [];
+      rows = 0;
+    }
+    const newSection = !page.length || page[page.length - 1]!.sectionIndex !== block.sectionIndex;
+    page.push(block);
+    rows += blockRows + (newSection ? 2 : 0);
+  }
+  if (page.length) pages.push(page);
+
+  return pages.map((pageBlocks) => {
+    const grouped = new Map<number, string[]>();
+    for (const block of pageBlocks) {
+      const lines = grouped.get(block.sectionIndex) || [];
+      lines.push(...block.lines);
+      grouped.set(block.sectionIndex, lines);
+    }
+    return [...grouped.entries()].map(([sectionIndex, lines]) => ({
+      ...source[sectionIndex]!,
+      lines,
+    }));
+  });
+}
+
+/**
  * Greedily pack blocks into pages using measured pixel heights.
  * A block taller than the page gets its own page (it is never dropped).
  */
