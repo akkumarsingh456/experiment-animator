@@ -109,7 +109,7 @@ export function buildLocalDiagram(slide: {
 
 
 /**
- * Ask Gemini for a monospace diagram per slide, drawn only from the supplied
+ * Ask Groq for a monospace diagram per slide, drawn only from the supplied
  * book excerpts (NCERT + PW / Med Easy / mind-map notes). Returns an empty map
  * on any failure, so the local diagram is used instead.
  */
