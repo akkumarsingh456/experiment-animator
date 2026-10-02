@@ -229,7 +229,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const genImage = useServerFn(generateSlideImage);
   const makeCoverSlide = (): Slide => {
     const objectives = String(search.subtopics || "")
-      .split(/[,;\\n]+/)
+      .split(/[,;\n]+/)
       .map((item) => item.trim())
       .filter(Boolean);
     return {
