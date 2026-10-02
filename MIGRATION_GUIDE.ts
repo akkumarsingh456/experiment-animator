@@ -15,9 +15,10 @@
  * diagram fallback. The AI-expanded notes and formula derivations require a
  * valid key and available free-tier quota.
  *
- * Handwritten board-note OCR still uses the existing Lovable image endpoint
- * because it sends a teacher's handwritten image to an external AI service.
- * The slide infographic renderer does not send images to an external service.
+ * Handwritten board-note OCR also uses Groq Vision (qwen/qwen3.8-27b).
+ * When a teacher asks to transcribe a handwritten note, its image is sent to
+ * Groq for processing. The slide infographic renderer remains local and does
+ * not send images to an external service.
  *
  * Current references:
  * - https://console.groq.com/docs/api-reference
@@ -28,6 +29,7 @@ export const FREE_AI_SETUP = {
   env: "GROQ_API_KEY",
   endpoint: "https://api.groq.com/openai/v1/chat/completions",
   model: "openai/gpt-oss-120b",
+  handwrittenOcrModel: "qwen/qwen3.8-27b",
   imageGeneration: "local-svg",
 } as const;
 
