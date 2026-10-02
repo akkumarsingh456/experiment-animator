@@ -303,7 +303,7 @@ function sanitizeSections(raw: unknown, contextNorm: string, subject = "physics"
         .map((l: string) => normalizeNoteLine(l, subject))
         .filter((l: string) => l.length > 4 && l.length < 320),
     ).filter((l) => freeform || ncertSupported(l, contextNorm));
-    if (heading && lines.length) out.push({ heading, kind, lines: lines.slice(0, 10) });
+    if (heading && lines.length) out.push({ heading, kind, lines });
   }
   return mergeToSingleSection(out);
 }
