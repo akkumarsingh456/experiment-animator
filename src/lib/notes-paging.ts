@@ -41,9 +41,41 @@ export function toNoteBlocks(sections: NoteSectionLike[] | undefined): NoteBlock
       }
       return;
     }
+    const formulaIndexes = lines
+      .map((line, index) => (FORMULA_LABEL.test(line) ? index : -1))
+      .filter((index) => index >= 0);
+    const derivationIndexes = lines
+      .map((line, index) => (DERIV_START.test(line) ? index : -1))
+      .filter((index) => index >= 0);
+    const pairedDerivations = new Map<number, number>();
+    formulaIndexes.forEach((formulaIndex, order) => {
+      const derivationIndex = derivationIndexes[order];
+      if (derivationIndex !== undefined && derivationIndex > formulaIndex) {
+        pairedDerivations.set(formulaIndex, derivationIndex);
+      }
+    });
+    const consumed = new Set<number>();
     let i = 0;
     while (i < lines.length) {
+      if (consumed.has(i)) {
+        i += 1;
+        continue;
+      }
       const line = lines[i]!;
+      const pairedStart = pairedDerivations.get(i);
+      if (pairedStart !== undefined) {
+        const group = [line, lines[pairedStart]!];
+        consumed.add(pairedStart);
+        let j = pairedStart + 1;
+        while (j < lines.length && DERIV_STEP.test(lines[j]!)) {
+          group.push(lines[j]!);
+          consumed.add(j);
+          j += 1;
+        }
+        blocks.push({ sectionIndex, heading: sec.heading, kind: sec.kind, lines: group });
+        i += 1;
+        continue;
+      }
       // A formula line directly followed by its derivation → keep together.
       const nextIsDeriv = i + 1 < lines.length && DERIV_START.test(lines[i + 1]!);
       if (DERIV_START.test(line) || (nextIsDeriv && FORMULA_LABEL.test(line))) {
@@ -66,6 +98,18 @@ export function toNoteBlocks(sections: NoteSectionLike[] | undefined): NoteBlock
     }
   });
   return blocks;
+}
+
+/** True only when every visible formula has a complete headed derivation with steps. */
+export function hasCompleteFormulaDerivations(sections: NoteSectionLike[] | undefined): boolean {
+  const lines = (sections || []).filter((section) => section.kind !== "diagram").flatMap((section) => section.lines || []);
+  const formulaCount = lines.filter((line) => FORMULA_LABEL.test(line)).length;
+  if (formulaCount === 0) return true;
+  const derivations = lines.reduce((count, line, index) => {
+    if (!DERIV_START.test(line)) return count;
+    return count + (index + 1 < lines.length && DERIV_STEP.test(lines[index + 1]!) ? 1 : 0);
+  }, 0);
+  return derivations >= formulaCount;
 }
 
 /**
