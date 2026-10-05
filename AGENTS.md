@@ -11,3 +11,4 @@
 
 - Merge curated NCERT subtopic supplements through `subtopicsFor` so every syllabus consumer receives one deduplicated list.
 - Measure Teacher Notes with separate headed and plain block heights so pagination matches the headings actually rendered.
+- Keep local lesson illustrations deterministic per slide identity and vary their topic icon and composition without external image APIs.
