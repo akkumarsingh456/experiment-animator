@@ -18,6 +18,7 @@ export type FactInput = {
 
 type Fact = { label: string; caption: string };
 type Palette = { ink: string; accent: string; accent2: string; pale: string; pale2: string };
+type IconKind = "bolt" | "atom" | "cell" | "flask" | "graph" | "book" | "globe" | "leaf" | "shape" | "idea";
 
 const W = 1600;
 const H = 900;
@@ -43,6 +44,49 @@ function paletteFor(subject = ""): Palette {
 
 function esc(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function stableHash(value: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function iconFor(value: string): IconKind {
+  const text = value.toLowerCase();
+  if (/current|circuit|electric|voltage|resistor|charge/.test(text)) return "bolt";
+  if (/atom|electron|proton|neutron|orbital|molecule|bond/.test(text)) return "atom";
+  if (/cell|tissue|organelle|nucleus|mitochond|chloroplast/.test(text)) return "cell";
+  if (/acid|base|reaction|solution|compound|element|chem/.test(text)) return "flask";
+  if (/graph|rate|variation|function|equation|data|statistics/.test(text)) return "graph";
+  if (/history|language|poem|story|literature|constitution|democracy/.test(text)) return "book";
+  if (/earth|map|geography|climate|country|population/.test(text)) return "globe";
+  if (/plant|ecology|environment|food|life|organism/.test(text)) return "leaf";
+  if (/angle|triangle|circle|geometry|area|volume|shape/.test(text)) return "shape";
+  return "idea";
+}
+
+function icon(kind: IconKind, cx: number, cy: number, size: number, color: string): string {
+  const s = size / 24;
+  const tx = cx - 12 * s;
+  const ty = cy - 12 * s;
+  const open = `<g transform="translate(${tx} ${ty}) scale(${s})" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">`;
+  const paths: Record<IconKind, string> = {
+    bolt: `<path d="M13 2 5 14h7l-1 8 8-12h-7z"/>`,
+    atom: `<ellipse cx="12" cy="12" rx="9" ry="3.7"/><ellipse cx="12" cy="12" rx="9" ry="3.7" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="3.7" transform="rotate(-60 12 12)"/><circle cx="12" cy="12" r="1.8" fill="${color}"/>`,
+    cell: `<path d="M4 7c3-5 13-5 16 0 3 6-1 13-8 14C5 21 1 14 4 7Z"/><circle cx="11" cy="12" r="3.2"/><circle cx="16.5" cy="8" r="1.2"/>`,
+    flask: `<path d="M9 2h6M10 2v6L4.5 19a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L14 8V2M7 16h10"/><circle cx="9" cy="18.5" r=".8" fill="${color}"/>`,
+    graph: `<path d="M3 20V4M3 20h18M6 16l4-5 4 2 6-8"/><circle cx="10" cy="11" r="1" fill="${color}"/><circle cx="20" cy="5" r="1" fill="${color}"/>`,
+    book: `<path d="M3 5c4-2 7-1 9 1v15c-2-2-5-3-9-1V5Zm18 0c-4-2-7-1-9 1v15c2-2 5-3 9-1V5Z"/>`,
+    globe: `<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c5 5 5 13 0 18M12 3c-5 5-5 13 0 18"/>`,
+    leaf: `<path d="M20 4C11 4 5 8 5 15c0 3 2 5 5 5 7 0 10-8 10-16Z"/><path d="M4 21c3-6 7-9 13-12"/>`,
+    shape: `<path d="m12 3 9 17H3L12 3Z"/><circle cx="12" cy="13" r="3"/>`,
+    idea: `<path d="M8 16c-2-1-3-3-3-6a7 7 0 0 1 14 0c0 3-1 5-3 6l-1 2H9l-1-2ZM9 21h6M9 18h6"/>`,
+  };
+  return `${open}${paths[kind]}</g>`;
 }
 
 function clean(value: string) {
@@ -113,9 +157,10 @@ function callout(x: number, y: number, w: number, fact: Fact, index: number, pal
   const edge = index % 2 ? palette.accent2 : palette.accent;
   return [
     `<rect x="${x}" y="${y}" width="${w}" height="168" rx="18" fill="${fill}" stroke="${edge}" stroke-width="3"/>`,
-    `<circle cx="${x + 30}" cy="${y + 30}" r="17" fill="${edge}"/>`,
-    `<text x="${x + 30}" y="${y + 37}" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="800" fill="#ffffff">${index + 1}</text>`,
-    textLines(label, x + 58, y + 37, { size: 25, weight: 800, fill: palette.ink, gap: 29 }),
+    `<circle cx="${x + 34}" cy="${y + 34}" r="23" fill="#ffffff" stroke="${edge}" stroke-width="2.5"/>`,
+    icon(iconFor(`${fact.label} ${fact.caption}`), x + 34, y + 34, 27, edge),
+    `<text x="${x + w - 24}" y="${y + 29}" text-anchor="end" font-family="Arial,sans-serif" font-size="14" font-weight="800" fill="${edge}">0${index + 1}</text>`,
+    textLines(label, x + 70, y + 37, { size: 24, weight: 800, fill: palette.ink, gap: 28 }),
     caption.length ? `<line x1="${x + 24}" y1="${y + 87}" x2="${x + w - 24}" y2="${y + 87}" stroke="${edge}" stroke-width="1.5" opacity=".35"/>` : "",
     textLines(caption, x + 25, y + 119, { size: 20, weight: 500, fill: "#344b58", gap: 25 }),
   ].join("");
@@ -202,28 +247,55 @@ function graphVisual(x: number, y: number, w: number, h: number, p: Palette, dir
   ].join("");
 }
 
-function genericVisual(x: number, y: number, w: number, h: number, p: Palette, facts: Fact[]) {
+function genericVisual(x: number, y: number, w: number, h: number, p: Palette, facts: Fact[], variant: number) {
   const cx = x + w / 2;
   const cy = y + h / 2;
   const labels = facts.slice(0, 3);
-  const points = [{ x: cx, y: y + 72 }, { x: x + 120, y: y + h - 72 }, { x: x + w - 120, y: y + h - 72 }];
+  const pointSets = [
+    [{ x: cx, y: y + 78 }, { x: x + 125, y: y + h - 78 }, { x: x + w - 125, y: y + h - 78 }],
+    [{ x: x + 125, y: y + 100 }, { x: cx, y: y + h - 82 }, { x: x + w - 125, y: y + 100 }],
+    [{ x: x + 120, y: cy }, { x: cx, y: y + 82 }, { x: x + w - 120, y: cy }],
+  ];
+  const points = pointSets[variant % pointSets.length];
   const parts = [`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="24" fill="#ffffff" stroke="${p.accent}" stroke-width="3"/>`];
   points.forEach((point, i) => {
     if (i > 0) parts.push(arrowPath(`M ${points[i - 1].x} ${points[i - 1].y} Q ${cx} ${cy} ${point.x} ${point.y}`, p.accent));
     parts.push(`<circle cx="${point.x}" cy="${point.y}" r="60" fill="${i % 2 ? p.pale2 : p.pale}" stroke="${i % 2 ? p.accent2 : p.accent}" stroke-width="4"/>`);
+    parts.push(icon(iconFor(`${labels[i]?.label || ""} ${labels[i]?.caption || ""}`), point.x, point.y - 15, 31, i % 2 ? p.accent2 : p.accent));
     const lines = wrap(labels[i]?.label || `Concept ${i + 1}`, 13, 2);
-    parts.push(textLines(lines, point.x, point.y - (lines.length - 1) * 14 + 8, { size: 20, weight: 800, fill: p.ink, anchor: "middle", gap: 27 }));
+    parts.push(textLines(lines, point.x, point.y + 25, { size: 17, weight: 800, fill: p.ink, anchor: "middle", gap: 21 }));
+  });
+  return parts.join("");
+}
+
+function processVisual(x: number, y: number, w: number, h: number, p: Palette, facts: Fact[], kind: IconKind, variant: number) {
+  const vertical = variant % 2 === 1;
+  const points = vertical
+    ? [{ x: x + w / 2, y: y + 105 }, { x: x + w / 2, y: y + h / 2 }, { x: x + w / 2, y: y + h - 105 }]
+    : [{ x: x + 115, y: y + h / 2 }, { x: x + w / 2, y: y + h / 2 }, { x: x + w - 115, y: y + h / 2 }];
+  const parts = [`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="24" fill="#ffffff" stroke="${p.accent}" stroke-width="3"/>`];
+  points.forEach((point, index) => {
+    if (index) parts.push(arrowPath(`M ${points[index - 1].x} ${points[index - 1].y} L ${point.x} ${point.y}`, p.accent));
+    parts.push(`<rect x="${point.x - 84}" y="${point.y - 70}" width="168" height="140" rx="24" fill="${index % 2 ? p.pale2 : p.pale}" stroke="${index % 2 ? p.accent2 : p.accent}" stroke-width="4"/>`);
+    parts.push(icon(index === 1 ? kind : iconFor(facts[index]?.label || "idea"), point.x, point.y - 20, 39, index % 2 ? p.accent2 : p.accent));
+    parts.push(textLines(wrap(facts[index]?.label || `Stage ${index + 1}`, 17, 2), point.x, point.y + 36, { size: 18, weight: 800, fill: p.ink, anchor: "middle", gap: 21 }));
   });
   return parts.join("");
 }
 
 function mainVisual(input: FactInput, facts: Fact[], x: number, y: number, w: number, h: number, p: Palette) {
   const hay = `${input.title} ${input.subject} ${facts.map((f) => `${f.label} ${f.caption}`).join(" ")}`.toLowerCase();
+  const variant = stableHash(`${input.subject}|${input.title}|${input.slideIndex ?? 0}|${hay}`) % 6;
   if (/current|circuit|ohm|resistor|voltage|electric/.test(hay)) return circuitVisual(x, y, w, h, p);
   if (/atom|electron|nucleus|orbital|molecule|bond/.test(hay)) return atomVisual(x, y, w, h, p);
   if (/cell|organelle|tissue|nucleus|mitochond|chloroplast/.test(hay)) return cellVisual(x, y, w, h, p);
   if (/graph|variation|proportional|relation|function|equation|rate|velocity|distance/.test(hay)) return graphVisual(x, y, w, h, p, /direct|linear|ohm|proportional/.test(hay));
-  return genericVisual(x, y, w, h, p, facts);
+  if (/reaction|acid|base|solution|compound|salt|chemical/.test(hay)) return processVisual(x, y, w, h, p, facts, "flask", variant);
+  if (/photosynthesis|respiration|ecosystem|food chain|cycle|process|sequence/.test(hay)) return processVisual(x, y, w, h, p, facts, "leaf", variant);
+  if (/history|timeline|constitution|democracy|literature|poem|story/.test(hay)) return processVisual(x, y, w, h, p, facts, "book", variant);
+  if (/geography|climate|earth|population|resource|map/.test(hay)) return processVisual(x, y, w, h, p, facts, "globe", variant);
+  if (/geometry|triangle|circle|angle|area|volume/.test(hay)) return processVisual(x, y, w, h, p, facts, "shape", variant);
+  return genericVisual(x, y, w, h, p, facts, variant);
 }
 
 export function renderNapkinInfographic(input: FactInput): string {
@@ -233,7 +305,9 @@ export function renderNapkinInfographic(input: FactInput): string {
   const title = wrap(clean(input.title).toUpperCase() || "NCERT TOPIC", 55, 2);
   const titleSize = title.length > 1 ? 31 : 37;
   const titleY = title.length > 1 ? 58 : 71;
-  const defs = `<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="${palette.accent}"/></marker>`;
+  const identity = stableHash(`${input.subject}|${input.title}|${input.slideIndex ?? 0}|${safeFacts.map((fact) => fact.label).join("|")}`);
+  const patternGap = 34 + (identity % 4) * 4;
+  const defs = `<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="${palette.accent}"/></marker><pattern id="lesson-grid" width="${patternGap}" height="${patternGap}" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.5" fill="${palette.accent}" opacity=".13"/></pattern>`;
   const header = [
     `<rect x="54" y="30" width="1492" height="112" rx="18" fill="${NAVY}"/>`,
     `<rect x="80" y="56" width="10" height="62" rx="5" fill="${palette.accent2}"/>`,
@@ -268,7 +342,7 @@ export function renderNapkinInfographic(input: FactInput): string {
     `<text x="92" y="872" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="${palette.ink}">Concept illustration · labels derived from the slide</text>`,
   ].join("");
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs>${defs}</defs><rect width="${W}" height="${H}" fill="${PAPER}"/><path d="M0 175 H1600 M0 810 H1600" stroke="${palette.pale}" stroke-width="3"/>${header}${body.join("")}${footer}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" data-lesson-id="${identity.toString(16)}"><defs>${defs}</defs><rect width="${W}" height="${H}" fill="${PAPER}"/><rect width="${W}" height="${H}" fill="url(#lesson-grid)"/><path d="M0 175 H1600 M0 810 H1600" stroke="${palette.pale}" stroke-width="3"/>${header}${body.join("")}${footer}</svg>`;
 }
 
 export function renderNapkinInfographicDataUrl(input: FactInput): string {
