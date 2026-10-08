@@ -108,7 +108,7 @@ export function PagedNoteSections({
         <div
           ref={contentRef}
           style={{ fontSize: `${fit.px}px`, columnCount: fit.cols, columnGap: "1.5em" }}
-          className="[column-rule:1px_solid_hsl(var(--border)/0.5)]"
+         
         >
           {blocks.map((block, index) => {
             const previous = blocks[index - 1];
