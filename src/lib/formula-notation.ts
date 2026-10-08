@@ -11,6 +11,7 @@
  */
 
 import { hasMath, mapOutsideMath, normalizeLine } from "@/lib/latex-notation";
+import { gatewayJSON, hasGatewayKey } from "@/lib/ai-gateway-json";
 
 /* ---------------- deterministic layer ---------------- */
 
@@ -135,7 +136,7 @@ export async function aiFixFormulas(opts: {
   lines: string[];
 }): Promise<Map<number, string>> {
   const out = new Map<number, string>();
-  if (!opts.apiKey || opts.lines.length === 0) return out;
+  if (!hasGatewayKey() || opts.lines.length === 0) return out;
 
   const payload = opts.lines.map((text, index) => ({ index, text }));
   const prompt = [
@@ -160,34 +161,31 @@ export async function aiFixFormulas(opts: {
     JSON.stringify(payload).slice(0, 12000),
   ].join("\n");
 
-  try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${opts.apiKey}` },
-      body: JSON.stringify({
-        model: "openai/gpt-oss-120b",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-      }),
-    });
-    if (!res.ok) {
-      console.warn("formula-ai gateway", res.status, (await res.text()).slice(0, 180));
-      return out;
-    }
-    const json = (await res.json()) as any;
-    const raw = String(json?.choices?.[0]?.message?.content ?? "")
-      .replace(/^```(?:json)?/i, "")
-      .replace(/```$/, "")
-      .trim();
-    const parsed = JSON.parse(raw) as { lines?: Array<{ index?: number; text?: string }> };
-    for (const l of parsed.lines || []) {
-      const i = Number(l?.index);
-      if (!Number.isFinite(i)) continue;
-      const fixed = normalizeFormulaLine(String(l?.text || ""));
-      out.set(i, isGarbledMath(fixed) ? "" : fixed);
-    }
-  } catch (e) {
-    console.warn("formula-ai failed", e);
+  const parsed = await gatewayJSON<{ lines?: Array<{ index?: number; text?: string }> }>({
+    prompt,
+    schemaName: "formula_lines",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["lines"],
+      properties: {
+        lines: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["index", "text"],
+            properties: { index: { type: "number" }, text: { type: "string" } },
+          },
+        },
+      },
+    },
+  });
+  for (const l of parsed?.lines || []) {
+    const i = Number(l?.index);
+    if (!Number.isFinite(i)) continue;
+    const fixed = normalizeFormulaLine(String(l?.text || ""));
+    out.set(i, isGarbledMath(fixed) ? "" : fixed);
   }
   return out;
 }
@@ -223,19 +221,20 @@ export async function aiFormulaSheet(opts: {
   slides: Array<{ index: number; title: string; excerpts: string[] }>;
 }): Promise<Map<number, FormulaBlock>> {
   const out = new Map<number, FormulaBlock>();
-  if (!opts.apiKey || opts.slides.length === 0) return out;
+  if (!hasGatewayKey() || opts.slides.length === 0) return out;
 
 
   const prompt = [
     "You are a master teacher writing the formula sheet for NCERT slides.",
     `Class ${opts.klass} | Subject ${opts.subject} | Chapter ${opts.chapter}.`,
     "",
-    "For EACH slide return, when the topic genuinely has quantitative content:",
-    '- "formula": every relevant relation of that slide in LaTeX (max 4), each with a short name, e.g. "Gauss law: $$\\\\Phi_E = \\\\oint \\\\mathbf{E}\\\\cdot d\\\\mathbf{A} = \\\\frac{Q}{\\\\varepsilon_0}$$".',
+    "For EACH slide return, when the topic genuinely has quantitative content (any subject: physics, chemistry, maths, biology, economics):",
+    "- First check the slide topic yourself: list EVERY formula NCERT gives for this topic, then add closely related NCERT formulas of the same chapter that a teacher would derive alongside it (e.g. drift velocity -> $I = neAv_d$ and $\\\\mu = \\\\frac{v_d}{E}$). Only NCERT-syllabus formulas of this class; never invent.",
+    '- "formula": every relevant relation of that slide in LaTeX (max 5), each with a short name, e.g. "Gauss law: $$\\\\Phi_E = \\\\oint \\\\mathbf{E}\\\\cdot d\\\\mathbf{A} = \\\\frac{Q}{\\\\varepsilon_0}$$".',
     '- "variables": one line per symbol used, e.g. "$\\\\varepsilon_0$: permittivity of free space" (max 6).',
     '- "unit": the SI unit of each quantity with symbol, base-unit form and scalar/vector nature (max 3).',
     '- "derivation": a numbered step-by-step derivation of the MAIN formula, one short step per line, no skipped intermediate step, starting from the defining relation and ending at the result (3-6 steps).',
-    '- "derivations": MANDATORY — one entry for EVERY formula you listed in "formula" (same order, same count), as {"formula":"<the same formula in LaTeX>","steps":["Step 1: ...","Step 2: ...","Step 3: ..."]}. Each derivation must start from a defining relation or a standard result of this class, keep every intermediate algebraic step, and end exactly at that formula. Never skip a formula, never leave "steps" empty; if a relation is a definition, derive it from the physical/mathematical statement it encodes.',
+    '- "derivations": MANDATORY — one entry for EVERY formula you listed in "formula" (same order, same count), as {"formula":"<the same formula in LaTeX>","steps":["Step 1: ...","Step 2: ...","Step 3: ..."]}. Follow the NCERT textbook derivation: start from the defining relation or standard result NCERT uses, keep every intermediate algebraic step, and end exactly at that formula (4-8 steps). EVERY step must contain its equation in LaTeX (e.g. "Step 2: Charge crossing area $A$ in time $\\\\Delta t$ is $\\\\Delta Q = neAv_d\\\\,\\\\Delta t$"). Never write vague steps such as "rearrange the terms" or "state the final relation" without the actual equation. Never skip a formula, never leave "steps" empty; if a relation is a definition, derive it from the physical/mathematical statement it encodes.',
     "",
     "NOTATION RULES (never break these):",
     "- ALL maths must be LaTeX: inline $...$, standalone equations $$...$$. Prose sits outside the delimiters.",
@@ -261,51 +260,66 @@ export async function aiFormulaSheet(opts: {
   ].join("\n");
 
 
-  try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${opts.apiKey}` },
-      body: JSON.stringify({
-        model: "openai/gpt-oss-120b",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-      }),
+  const parsed = await gatewayJSON<{ slides?: Array<Record<string, unknown>> }>({
+    prompt,
+    schemaName: "formula_sheet",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["slides"],
+      properties: {
+        slides: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["index", "formula", "variables", "unit", "derivation", "derivations"],
+            properties: {
+              index: { type: "number" },
+              formula: STR_ARR,
+              variables: STR_ARR,
+              unit: STR_ARR,
+              derivation: STR_ARR,
+              derivations: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["formula", "steps"],
+                  properties: { formula: { type: "string" }, steps: STR_ARR },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!parsed) return out;
+  const clean = (arr: unknown, max: number) =>
+    (Array.isArray(arr) ? arr : [])
+      .map((l) => normalizeFormulaLine(String(l || "")))
+      .filter((l) => l.length > 2 && l.length < 320)
+      .slice(0, max);
+  for (const s of parsed.slides || []) {
+    const i = Number((s as any)?.index);
+    if (!Number.isFinite(i)) continue;
+    const derivations = (Array.isArray((s as any).derivations) ? (s as any).derivations : [])
+      .map((d: any) => ({
+        formula: normalizeFormulaLine(String(d?.formula || "")),
+        steps: clean(d?.steps, 8),
+      }))
+      .filter((d: { formula: string; steps: string[] }) => d.steps.length > 0)
+      .slice(0, 5);
+    out.set(i, {
+      formula: clean((s as any).formula, 5),
+      variables: clean((s as any).variables, 6),
+      unit: clean((s as any).unit, 3),
+      derivation: clean((s as any).derivation, 8),
+      derivations,
     });
-    if (!res.ok) {
-      console.warn("formula-sheet gateway", res.status, (await res.text()).slice(0, 180));
-      return out;
-    }
-    const json = (await res.json()) as any;
-    const raw = String(json?.choices?.[0]?.message?.content ?? "")
-      .replace(/^```(?:json)?/i, "")
-      .replace(/```$/, "")
-      .trim();
-    const parsed = JSON.parse(raw) as { slides?: Array<Record<string, unknown>> };
-    const clean = (arr: unknown, max: number) =>
-      (Array.isArray(arr) ? arr : [])
-        .map((l) => normalizeFormulaLine(String(l || "")))
-        .filter((l) => l.length > 2 && l.length < 220)
-        .slice(0, max);
-    for (const s of parsed.slides || []) {
-      const i = Number((s as any)?.index);
-      if (!Number.isFinite(i)) continue;
-      const derivations = (Array.isArray((s as any).derivations) ? (s as any).derivations : [])
-        .map((d: any) => ({
-          formula: normalizeFormulaLine(String(d?.formula || "")),
-          steps: clean(d?.steps, 8),
-        }))
-        .filter((d: { formula: string; steps: string[] }) => d.steps.length > 0)
-        .slice(0, 4);
-      out.set(i, {
-        formula: clean((s as any).formula, 4),
-        variables: clean((s as any).variables, 6),
-        unit: clean((s as any).unit, 3),
-        derivation: clean((s as any).derivation, 6),
-        derivations,
-      });
-    }
-  } catch (e) {
-    console.warn("formula-sheet failed", e);
   }
   return out;
 }
+
+const STR_ARR = { type: "array", items: { type: "string" } };
