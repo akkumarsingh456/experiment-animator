@@ -539,15 +539,6 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
 ): Promise<T[]> {
   if (!hasGatewayKey()) return slides;
 
-  // Drop weak derivation groups (fewer than 3 steps, or steps with no actual
-  // equation) so the AI pass replaces them with the full NCERT derivation.
-  slides = slides.map((s) => {
-    if ((s.kind ?? "content") !== "content" || !s.sections?.[0]) return s;
-    const cleaned = stripWeakDerivations(s.sections[0].lines);
-    if (cleaned.length === s.sections[0].lines.length) return s;
-    return { ...s, sections: [{ ...s.sections[0], lines: cleaned }, ...s.sections.slice(1)] };
-  });
-
   const has = (lines: string[], label: RegExp) => lines.some((l) => label.test(l.replace(/^\*\*/, "")));
   const targets: Array<{ index: number; title: string; excerpts: string[] }> = [];
   slides.forEach((s, i) => {
@@ -584,7 +575,10 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
     for (const [i, block] of map) {
       const slide = out[i];
       if (!slide) continue;
-      const existing = slide.sections?.[0]?.lines || [];
+      // Weak derivation groups (too short / no equations) are replaced only
+      // when the AI actually returned full derivations for this slide.
+      const rawExisting = slide.sections?.[0]?.lines || [];
+      const existing = block.derivations?.length ? stripWeakDerivations(rawExisting) : rawExisting;
       const add: string[] = [];
       const norm = (t: string) => t.replace(/\*\*[^*]+:\*\*/g, "").replace(/[\s$\\{}]/g, "").toLowerCase();
       const known = new Set(existing.filter((l) => /^\*\*formula/i.test(l)).map(norm));
