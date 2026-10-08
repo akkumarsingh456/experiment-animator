@@ -12,6 +12,7 @@
  */
 
 import { aiFixFormulas, aiFormulaSheet, cleanFormulaLine, needsFormulaAI, repairNotation } from "@/lib/formula-notation";
+import { hasGatewayKey } from "@/lib/ai-gateway-json";
 import { mapOutsideMath, splitMath } from "@/lib/latex-notation";
 import { DIAGRAM_HEADING, aiNoteDiagrams, buildLocalDiagram } from "@/lib/note-diagram";
 import { PW_EXTRACTION_RULES, normalizeNoteLine } from "@/lib/pwNotesNormalizer";
@@ -536,7 +537,16 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
   slides: T[],
   opts: { apiKey?: string; klass: string; subject: string; chapter: string; refContext?: string },
 ): Promise<T[]> {
-  if (!opts.apiKey) return slides;
+  if (!hasGatewayKey()) return slides;
+
+  // Drop weak derivation groups (fewer than 3 steps, or steps with no actual
+  // equation) so the AI pass replaces them with the full NCERT derivation.
+  slides = slides.map((s) => {
+    if ((s.kind ?? "content") !== "content" || !s.sections?.[0]) return s;
+    const cleaned = stripWeakDerivations(s.sections[0].lines);
+    if (cleaned.length === s.sections[0].lines.length) return s;
+    return { ...s, sections: [{ ...s.sections[0], lines: cleaned }, ...s.sections.slice(1)] };
+  });
 
   const has = (lines: string[], label: RegExp) => lines.some((l) => label.test(l.replace(/^\*\*/, "")));
   const targets: Array<{ index: number; title: string; excerpts: string[] }> = [];
@@ -552,7 +562,10 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       !has(lines, /^si unit/i) ||
       !has(lines, /^derivation/i) ||
       derivedGroups < count(/^formula/i);
-    if (!missing) return;
+    // Quantitative slides are always re-checked so related NCERT formulas
+    // and their derivations get added too.
+    const quantitative = /[=∝]|\$|formula|equation|law|relation/i.test(lines.join(" ") + " " + s.title);
+    if (!missing && !quantitative) return;
     targets.push({
       index: i,
       title: s.title,
@@ -573,7 +586,9 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       if (!slide) continue;
       const existing = slide.sections?.[0]?.lines || [];
       const add: string[] = [];
-      if (!has(existing, /^formula/i)) for (const f of block.formula) add.push(`**Formula:** ${f}`);
+      const norm = (t: string) => t.replace(/\*\*[^*]+:\*\*/g, "").replace(/[\s$\\{}]/g, "").toLowerCase();
+      const known = new Set(existing.filter((l) => /^\*\*formula/i.test(l)).map(norm));
+      for (const f of block.formula) if (!known.has(norm(f))) add.push(`**Formula:** ${f}`);
       if (!has(existing, /^variable/i)) for (const v of block.variables) add.push(`**Variable:** ${v}`);
       if (!has(existing, /^si unit/i)) for (const u of block.unit) add.push(`**SI unit:** ${u}`);
       // Every formula gets its own complete derivation, grouped under a
@@ -605,6 +620,31 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
     }
   }
   return out as T[];
+}
+
+/** Remove derivation groups that are too short or lack real equations. */
+function stripWeakDerivations(lines: string[]): string[] {
+  const out: string[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (/^\*\*derivation of/i.test(lines[i])) {
+      let j = i + 1;
+      while (j < lines.length && /^\*\*derivation step/i.test(lines[j])) j++;
+      const steps = lines.slice(i + 1, j);
+      const withMath = steps.filter((l) => /\$|=/.test(l.replace(/^\*\*[^*]+:\*\*/, ""))).length;
+      const vague = steps.some((l) => /rearrange the terms|state the final relation|stands alone/i.test(l));
+      if (steps.length < 3 || vague || withMath < Math.ceil(steps.length / 2)) {
+        i = j;
+        continue;
+      }
+      out.push(...lines.slice(i, j));
+      i = j;
+      continue;
+    }
+    out.push(lines[i]);
+    i++;
+  }
+  return out;
 }
 
 /**
