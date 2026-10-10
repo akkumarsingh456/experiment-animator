@@ -91,7 +91,7 @@ function sentences(text: string): string[] {
 /** Include more topic-specific chapter evidence for detailed guided notes. */
 export function selectSlideExcerpts(slide: NoteSourceSlide, context: string): string[] {
   const own = dedupe([...(slide.bullets || []), ...(slide.notes || []), ...sentences(slide.grounding || "")]).filter(Boolean);
-  const stop = new Set(["chapter", "introduction", "important", "concept", "current", "electricity", "the", "and", "for", "with", "from"]);
+  const stop = new Set(["chapter", "introduction", "important", "concept", "current", "electricity", "the", "and", "for", "with", "from", "ncert", "point", "overview", "core", "definitions", "symbols", "quantities", "units", "activity", "working", "relationships", "applications", "interpretation", "common", "exam", "points", "final", "revision"]);
   const terms = norm(slide.title).split(" ").filter((word) => word.length > 3 && !stop.has(word));
   if (!terms.length) return own.slice(0, 24);
   const related = sentences(context).map((line, index) => ({ line, index, score: terms.filter((term) => norm(line).split(" ").includes(term)).length }))
@@ -157,20 +157,21 @@ const NOTE_HEADING = "Teacher Notes";
 
 
 const isDefinition = (s: string) => /\bis defined as\b|\bis called\b|\bis known as\b|\brefers to\b|\bmeans\b/i.test(s) && !/^\s*(from|hence|therefore|next|which|\d)/i.test(s);
-const isFormula = (s: string) => /[A-Za-zΔ]\s*=\s*[^=]/.test(s) || /\bformula\b|\bequation\b/i.test(s);
+const isFormula = (s: string) => /[A-Za-zΔ]\s*=\s*[^=]/.test(s) && s.length < 240;
 const isUnit = (s: string) => /\bSI unit\b|\bunit of\b|\bmeasured in\b|\bN\/C\b|\bV\/m\b|\bjoule\b|\bnewton\b|\bvolt\b|\bfarad\b|\bcoulomb\b/i.test(s);
-const isDerivation = (s: string) => /\bderiv(e|ed|ation|ing)\b|\bsubstitut(e|ing)\b|\bwe get\b|\bwe obtain\b|\btherefore\b|\bhence\b|\bon simplif/i.test(s);
+const isDerivation = (s: string) => /\bderiv(e|ed|ation|ing)\b|\bsubstitut(e|ing)\b|\bwe get\b|\bwe obtain\b|\bon simplif/i.test(s) && /[=]|\$/.test(s);
 const isProperty = (s: string) => /\bproperty\b|\bproperties\b|\bnever\b|\balways\b|\bcannot\b|\bdepends\b|\bproportional\b|\bincreases\b|\bdecreases\b/i.test(s);
 const isExample = (s: string) => /\bexample\b|\bfor instance\b|\bactivity\b|\bexperiment\b|\bcalculate\b|\bsuppose\b/i.test(s);
 const isApplication = (s: string) => /\bused in\b|\bapplication\b|\bin daily life\b|\bpractical\b|\bdevice\b|\bmachine\b|\btechnolog/i.test(s);
 
 
 /** A key term is only useful when it is a real noun phrase with a full meaning. */
-const TERM_STOP = /^(with|there|however|which|that|this|these|those|also|such|when|then|and|but|for|from|it|is|are)\b/i;
+const TERM_STOP = /^(with|there|however|which|that|this|these|those|also|such|when|then|and|but|for|from|it|is|are|as|they|what|if|one|end|solution|thus)\b/i;
 export function usefulTerm(term: string, meaning: string): boolean {
   const t = String(term || "").trim();
   const m = String(meaning || "").trim();
   if (t.length < 3 || t.length > 42 || TERM_STOP.test(t)) return false;
+  if (/\b(is|are|will|where|their|that|was|were|by|be)\b/i.test(t)) return false;
   if (/^(important quantity|current electricity|key point|definition)$/i.test(t)) return false;
   if (/\d\s*$/.test(m) || m.length < 18) return false;
   return /[A-Za-z]{3}/.test(t) && /[a-z]{3}/.test(m);
@@ -306,6 +307,14 @@ const HEADINGS = [
   "14. Memory Trick",
   "15. Check Your Understanding",
   "16. Answers and Explanations",
+  "17. Learning Objectives",
+  "18. Prerequisites",
+  "19. Common Misconceptions",
+  "20. Summary",
+  "21. Support Practice",
+  "22. Core Practice",
+  "23. Challenge Practice",
+  "24. Exit Ticket",
 ];
 
 /** Labels whose lines are maths/pedagogy and must not be filtered by lexical overlap. */
@@ -339,7 +348,7 @@ function sanitizeSections(raw: unknown, contextNorm: string, subject = "physics"
     const kind: NoteSectionKind = kinds.includes(kindRaw) ? (kindRaw as NoteSectionKind) : "bullets";
     // Maths / pedagogy headings keep light repair only, so correct notation
     // (integrals, fractions, ε₀, superscripts) is never mistaken for garbage.
-    const educational = /^(check your understanding|answers and explanations)/i.test(heading.replace(/^\d+\.\s*/, ""));
+    const educational = /^(check your understanding|answers and explanations|learning objectives|prerequisites|common misconceptions|summary|support practice|core practice|challenge practice|exit ticket)/i.test(heading.replace(/^\d+\.\s*/, ""));
     const freeform = kind === "formula" || kind === "tip" || FREEFORM_LABEL.test(heading.replace(/^\d+\.\s*/, ""));
     const lines = dedupe(
       (Array.isArray((s as any)?.lines) ? (s as any).lines : [])
@@ -375,7 +384,6 @@ export async function groqTeacherNotes(opts: {
 
   // Reference-book text is part of the source of truth, so lines grounded in the
   // PW / Med Easy books survive the support filter instead of being dropped.
-  const contextNorm = norm(`${opts.context}\n${opts.refContext ?? ""}`);
   const payload = opts.slides.map((s, i) => ({
     index: i,
     title: s.title,
@@ -401,7 +409,7 @@ export async function groqTeacherNotes(opts: {
     "",
     "TEACHING STYLE (mandatory):",
     "- OPEN WITH AN INTRODUCTION: 2-3 lines saying what the topic is about, why it matters and where it sits in the chapter, before anything else.",
-    "- Then give EVERY formula the topic touches (main relation, special cases, limiting cases, shortcut/exam forms) — be exhaustive, not selective; more correct formulas is better.",
+    "- Include only formulas and special cases supported by this topic's excerpts, with their conditions of validity. Never infer a formula from corrupted OCR or a page/equation reference.",
     "- Start with one short intuitive ANALOGY that makes the concept click (everyday comparison only, no new physics claims).",
     "- Give the precise textbook DEFINITION, then the FORMULA, then its SI UNIT and whether the quantity is scalar or vector.",
     "- Where the chapter contains a standard relation, give a numbered STEP-BY-STEP DERIVATION (one short step per line, e.g. 'Step 1: $V = -\\int \\mathbf{E}\\cdot d\\mathbf{r}$ from $\\infty$ to $r$').",
@@ -420,7 +428,11 @@ export async function groqTeacherNotes(opts: {
     "- Biology: bold headers for taxonomic/anatomical terms and sequential bullet steps for pathways; no fake formulas.",
     "- After each formula give a VARIABLE BREAKDOWN line for every symbol, with its meaning and SI unit in square brackets (for example, $v$ [final velocity; $\\mathrm{m\\,s^{-1}}$]); never invent a unit that the source does not provide.",
     "- Then give the formula's SI unit and a derivation with NO skipped intermediate step.",
-    "- MANDATORY: EVERY formula on the slide must have its OWN full derivation — a line '**Derivation of <formula name>:** <formula>' followed by '**Derivation step n:** ...' lines (3-6 steps each). Never leave a formula underived.",
+    "- Derive only relations actually derived in the supplied source. A definition or empirical law need not have a derivation. Never manufacture derivation steps to fill a template.",
+    "- CLASSROOM PACKET: add 2-3 measurable learning objectives (explain, compare, interpret, apply), the prerequisite ideas, a concise summary, and supported misconceptions in 'Misconception → Correction → Reason' form.",
+    "- DIFFERENTIATION: Support Practice is one scaffolded recall/interpretation task with a sentence starter; Core Practice is one explain/apply task; Challenge Practice is one evidence-based transfer or comparison task within NCERT scope. These are tasks, not claims that students have different ability levels.",
+    "- Add a short Exit Ticket that checks an objective. Put sample answers or success criteria for ALL practice and exit-ticket tasks under Answers and Explanations, using matching task labels. Do not invent marks, board exam predictions, numerical data or official NEP/NCERT certification.",
+    "- Use a predict–observe–explain activity where supported, and ask students to justify conclusions using textbook evidence. Do not generate website URLs: simulation links are supplied separately from a verified registry.",
     "- Never output bracket soup like '(((())))', repeated '=' runs, unbalanced braces or stray page digits.",
     "",
     `Use only these headings, in order, omitting any you cannot support: ${HEADINGS.join(" | ")}`,
@@ -470,7 +482,11 @@ export async function groqTeacherNotes(opts: {
     for (const s of parsed.slides || []) {
       const idx = Number(s?.index);
       if (!Number.isFinite(idx)) continue;
-      const sections = sanitizeSections((s as any)?.sections, contextNorm, opts.subject);
+      // Ground each topic in its own evidence rather than allowing vocabulary
+      // from an unrelated part of the chapter to validate a new claim.
+      const evidence = payload[idx]?.ncert_excerpts.join(" ");
+      if (!evidence) continue;
+      const sections = sanitizeSections((s as any)?.sections, norm(evidence), opts.subject);
       if (sections.length && sections[0].lines.length >= 3) result.set(idx, sections);
     }
   } catch (e) {
@@ -594,19 +610,11 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
   slides.forEach((s, i) => {
     if ((s.kind ?? "content") !== "content") return;
     const lines = s.sections?.[0]?.lines || [];
-    const count = (label: RegExp) => lines.filter((l) => label.test(l.replace(/^\*\*/, ""))).length;
-    // Every formula must carry its own derivation: ask again whenever the slide
-    // has fewer derivation groups than formulas.
-    const derivedGroups = count(/^derivation of/i);
     const missing =
       !has(lines, /^formula/i) ||
-      !has(lines, /^si unit/i) ||
-      !has(lines, /^derivation/i) ||
-      derivedGroups < count(/^formula/i);
-    // Quantitative slides are always re-checked so related NCERT formulas
-    // and their derivations get added too.
-    const quantitative = /[=∝]|\$|formula|equation|law|relation/i.test(lines.join(" ") + " " + s.title);
-    if (!missing && !quantitative) return;
+      !has(lines, /^si unit/i);
+    const quantitative = /[=∝]|\$/.test(lines.join(" "));
+    if (!missing || !quantitative) return;
     targets.push({
       index: i,
       title: s.title,

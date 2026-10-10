@@ -161,6 +161,19 @@
 .guided-topic .katex-display { margin: 14px 0; max-width: 100%; overflow-x: auto; overflow-y: hidden; }
 .guided-topic .katex { color: #17212e; }
 .guided-topic footer { border-top: 1px solid #e1e6eb; margin-top: 30px; padding-top: 12px; font-size: 11px; color: #667584; }
+.guided-eyebrow { display: block; color: #337989; font-size: 12px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 12px; }
+.guided-planner { border-top: 4px solid #337989; }
+.guided-small { font-size: 13px; color: #506171; line-height: 1.6; }
+.guided-resource { border: 1px solid #dbe3ea; border-radius: 8px; padding: 20px; margin-top: 20px; break-inside: avoid; }
+.guided-resource h3 { font-size: 18px; font-weight: 750; margin: 8px 0; }
+.guided-resource a { color: #075985; text-decoration: underline; text-underline-offset: 3px; }
+.guided-resource p { margin-top: 10px; }
+.guided-resource-type { font-size: 12px; color: #337989; font-weight: 700; }
+.guided-print-url { display: none; }
+.guided-learning-tasks { border-top: 1px solid #dbe3ea; margin-top: 28px; }
+.guided-recap { background: #f7fafc; padding: 16px 20px; border-radius: 8px; margin-top: 24px; }
+.guided-recap summary { font-weight: 700; cursor: pointer; }
+.guided-recap ul { margin-top: 12px; }
 @media (max-width: 640px) {
   .guided-topic { padding: 24px 20px; }
   .guided-explanation figure { float: none; width: 100%; max-width: 450px; margin: 0 auto 24px; }
@@ -184,4 +197,5 @@
   body[data-lesson-view="notes"] .guided-derivation { break-inside: avoid; }
   body[data-lesson-view="notes"] .guided-topic .katex-display { overflow: visible; }
   body[data-lesson-view="notes"] .guided-topic li { break-inside: avoid; }
+  body[data-lesson-view="notes"] .guided-print-url { display: block; font-size: 9pt; overflow-wrap: anywhere; }
 }

@@ -1,8 +1,17 @@
 import { dedupeLabelled, type NoteSection } from "@/lib/ncert-teacher-notes";
 import { toNoteBlocks } from "@/lib/notes-paging";
+import { splitMath } from "@/lib/latex-notation";
 
 export type GuidedGroup = { heading: string; kind: "prose" | "list" | "formula" | "derivation" | "terms"; lines: string[] };
 const categories: Array<[RegExp, string, GuidedGroup["kind"]]> = [
+  [/^learning objectives?\b/i, "Learning objectives", "list"],
+  [/^prerequisites?\b/i, "Before you begin", "list"],
+  [/^common misconceptions?\b/i, "Common misconceptions", "list"],
+  [/^summary\b/i, "Quick recap", "prose"],
+  [/^support practice\b/i, "Support practice", "list"],
+  [/^core practice\b/i, "Core practice", "list"],
+  [/^challenge practice\b/i, "Challenge practice", "list"],
+  [/^exit ticket\b/i, "Exit ticket", "list"],
   [/^(key terms?|definition)\b/i, "Key terms and definitions", "terms"],
   [/^(introduction|explanation|analogy)\b/i, "Understanding the concept", "prose"],
   [/^(formula|equation|relation|result)\b/i, "Formulas and relations", "formula"],
@@ -38,8 +47,13 @@ export function guidedGroups(sections: NoteSection[] | undefined, fallback: stri
       const match = line.match(/^\*\*([^*]+):\*\*\s*(.*)$/s);
       const label = match?.[1] || "Explanation";
       const category = categories.find(([pattern]) => pattern.test(label));
-      const [heading, kind] = category ? [category[1], category[2]] : ["Important points", "list" as const];
+      let [heading, kind] = category ? [category[1], category[2]] : ["Important points", "list" as const];
       const body = match?.[2] || line;
+      // An equation reference or a prose paragraph is not a formula table row.
+      const math = splitMath(body).filter((part) => part.type !== "text").map((part) => part.value).join(" ");
+      const formulaRow = body.split(" | ").length === 3;
+      const actualRelation = /[=∝<>]|\\(?:propto|approx|equiv|rightarrow|rightleftharpoons|leq|geq)\b/.test(math || body);
+      if (kind === "formula" && !formulaRow && !actualRelation) { heading = "Important points"; kind = "list"; }
       // Named terms, formula names and example steps still need their labels.
       const term = label.match(/^key term\s*[—-]\s*(.+)$/i);
       const keepLabel = /^(worked example|example|answer\s*[—-]|solution\s*[—-])/i.test(label);
@@ -48,6 +62,20 @@ export function guidedGroups(sections: NoteSection[] | undefined, fallback: stri
   }
   const rank = (group: GuidedGroup) => group.kind === "terms" ? 0 : group.kind === "prose" && group.heading === "Understanding the concept" ? 1 : 2;
   return groups.sort((a, b) => rank(a) - rank(b));
+}
+
+/** Keep shared prose once in a flowing document, while preserving calculations and tasks. */
+export function uniqueTopicGroups(topics: GuidedGroup[][]): GuidedGroup[][] {
+  const seen = new Set<string>();
+  return topics.map((groups) => groups.map((group) => {
+    if (group.kind === "formula" || group.kind === "derivation" || /practice|answers|check your understanding|objectives|exit ticket|before you begin|recap/i.test(group.heading)) return group;
+    const lines = group.lines.filter((line) => {
+      const key = line.replace(/\*\*/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key); return true;
+    });
+    return { ...group, lines };
+  }).filter((group) => group.lines.length));
 }
 
 export function guidedFormulaRow(line: string): { concept: string; expression: string; unit: string } {

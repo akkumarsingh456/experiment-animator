@@ -1,5 +1,6 @@
 import { MathText } from "@/components/MathText";
-import { guidedFormulaRow, guidedGroups, type GuidedGroup } from "@/lib/guided-notes";
+import { guidedFormulaRow, guidedGroups, uniqueTopicGroups, type GuidedGroup } from "@/lib/guided-notes";
+import { LessonNotesPlanner, TopicLearningTasks, TopicRecap } from "@/components/LessonNotesPlanner";
 import type { Slide } from "@/lib/generate.functions";
 import { lessonIllustrationCaption, renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
 
@@ -20,10 +21,12 @@ function NotesGroup({ group }: { group: GuidedGroup }) {
 export function GuidedLessonNotes({ slides, title, subject, klass }: { slides: Slide[]; title: string; subject?: string; klass?: string }) {
   const content = slides.filter((slide) => (slide.kind ?? "content") === "content" || slide.kind === "chapter");
   const questions = slides.flatMap((slide) => slide.mcq ? [slide.mcq] : []);
+  const topicGroups = uniqueTopicGroups(content.map((slide) => guidedGroups(slide.sections, slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...(slide.bullets || []), ...(slide.notes || [])])));
   return <div className="guided-notes" aria-label="Complete guided lesson notes">
-    <div className="guided-document-title"><span>Class {klass} · {subject}</span><h2>{title}</h2><p>Guided notes · Concepts, formulas and practice</p></div>
+    <div className="guided-document-title"><span>Class {klass} · {subject}</span><h2>{title}</h2><p>Read · Investigate · Practise · Reflect</p></div>
+    {!!content.length && <LessonNotesPlanner topics={content.map((slide) => slide.title)} subject={subject} />}
     {content.map((slide, index) => {
-      const groups = guidedGroups(slide.sections, slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...(slide.bullets || []), ...(slide.notes || [])]);
+      const groups = topicGroups[index];
       const terms = groups.filter((g) => g.kind === "terms");
       const explanation = groups.filter((g) => g.heading === "Understanding the concept");
       const rest = groups.filter((g) => g.kind !== "terms" && g.heading !== "Understanding the concept");
@@ -41,6 +44,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass }: { slides: S
         </div>
         {rest.map((group, i) => <NotesGroup group={group} key={`body:${i}`} />)}
         {!groups.length && <p>No verified source notes are available for this topic. Regenerate the lesson after uploading the relevant textbook pages.</p>}
+        {!!groups.length && <><TopicLearningTasks title={slide.title} groups={groups} /><TopicRecap groups={groups} /></>}
         <footer>{subject} · Class {klass} · Topic {index + 1} of {content.length}</footer>
       </article>;
     })}

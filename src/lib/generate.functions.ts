@@ -1696,7 +1696,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v38-detailed-guided-worksheets",
+      "lesson-v39-classroom-notes-planner",
       data.klass,
       data.subject,
       data.chapter,
