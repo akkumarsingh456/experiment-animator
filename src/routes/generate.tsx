@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,7 @@ import { downloadLessonPdf } from "@/lib/lesson-pdf";
 import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
 import { plainMathText } from "@/lib/latex-notation";
 import { paginateNoteSections } from "@/lib/notes-paging";
+import { paginateLectureSections } from "@/lib/lecture-pages";
 
 type NoteSectionUI = { heading: string; kind: string; lines: string[] };
 
@@ -250,6 +251,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
+  const closePresentation = useCallback(() => setPresenting(false), []);
   const [exportMode, setExportMode] = useState<"notes" | "slides" | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
@@ -464,7 +466,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
   const presentationPages = useMemo(() => slides.flatMap((slide, sourceIndex) => {
     const sections = slide.sections?.filter((section) => section.kind !== "diagram");
-    const pages = sections?.length ? paginateNoteSections(sections, 12) : [undefined];
+    const pages = sections?.length ? paginateLectureSections(sections, 12) : [undefined];
     return pages.map((page, pageIndex) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
       title: pageIndex ? `${slide.title} (continued ${pageIndex + 1})` : slide.title }));
   }), [slides]);
@@ -845,8 +847,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           <SlideCanvas slide={slide} index={i} total={presentationPages.length} staticView editing={false} onChange={() => {}} imageUrl={renderLessonIllustrationDataUrl({ ...slide, subject: search.subject, slideIndex: slide.sourceIndex })} subject={search.subject} />
         </div>)}
       </div>}
-      {presenting && (lessonView === "notes" ? <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} onClose={() => setPresenting(false)} onPdf={() => downloadPDF("notes")} /> :
-        <PresentationMode slides={presentationPages} images={images} onClose={() => setPresenting(false)} onNeedImage={(idx) => ensureImage(presentationPages[idx]?.sourceIndex ?? idx)} subject={search.subject} />
+      {presenting && (lessonView === "notes" ? <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} onClose={closePresentation} onPdf={() => downloadPDF("notes")} /> :
+        <PresentationMode slides={presentationPages} images={images} onClose={closePresentation} onNeedImage={(idx) => ensureImage(presentationPages[idx]?.sourceIndex ?? idx)} subject={search.subject} />
       )}
     </>
   );
@@ -1063,7 +1065,7 @@ function SlideCanvas({
   if (!slide) return null;
   const sourceIndex = (slide as Slide & { sourceIndex?: number }).sourceIndex ?? index;
   imageUrl = renderLessonIllustrationDataUrl({ ...slide, subject, slideIndex: sourceIndex });
-  const kind = slide.kind || "content";
+  const kind = slide.kind === "chapter" && slide.sections?.length ? "content" : slide.kind || "content";
   const lang = isLanguageSubject(subject);
   const v = slide.verification;
   const vTone = !v ? "" :
@@ -1131,20 +1133,20 @@ function SlideCanvas({
                   title={
                     (v as any).notes_check.issues.length
                       ? (v as any).notes_check.issues.join(" ")
-                      : "All formulas render as valid LaTeX and are grounded in NCERT / PW text."
+                      : "Notation renders correctly and vocabulary matches the retrieved source. These checks do not certify factual accuracy."
                   }
                 >
-                  Formulas {(v as any).notes_check.pass ? "✓" : "⚠"} · Grounding {(v as any).notes_check.grounding_confidence}%{(v as any).notes_check.latex_fixed ? ` · ${(v as any).notes_check.latex_fixed} auto-fixed` : ""}
+                  Notation {(v as any).notes_check.pass ? "✓" : "⚠"} · Source match {(v as any).notes_check.grounding_confidence}%{(v as any).notes_check.latex_fixed ? ` · ${(v as any).notes_check.latex_fixed} auto-fixed` : ""}
                 </Badge>
               )}
               <Badge variant="outline" className="rounded-full text-[10px]">
-                {v?.overall_pass ? "NCERT ✓ verified" : "NCERT-grounded"}
+                {slide.notes_quality && !slide.notes_quality.ready ? "Source review needed" : "Textbook-based"}
               </Badge>
 
             </div>
           </div>
 
-          <div className="lesson-slide-body grid grid-cols-1 md:grid-cols-[3fr_2fr] min-h-0 overflow-hidden">
+          <div className="lesson-slide-body grid grid-cols-1 md:grid-cols-[3fr_2fr] min-h-0 overflow-hidden" style={lang ? { gridTemplateColumns: "1fr" } : undefined}>
             <div className="px-5 sm:px-8 py-5 flex flex-col gap-3 min-h-0 overflow-hidden">
               {editing ? (
                 <Input
@@ -1217,7 +1219,7 @@ function SlideCanvas({
               ) : null}
 
             </div>
-            <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0">
+            <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0" style={lang ? { display: "none" } : undefined}>
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
               <div className="lesson-figure-panel relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 grid place-items-center">
                 {imageUrl ? (

@@ -7,6 +7,7 @@ import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
 import { REF_BOOK_PATTERN } from "@/lib/reference-books";
+import { sourceDiscussion, reviewNotes, learningScaffold } from "@/lib/learning-design";
 import { verifyNoteSections, normalizeForGrounding, autoFixAndVerifyNotes, type NotesCheck } from "@/lib/notes-verification";
 
 
@@ -681,6 +682,7 @@ export type Mcq = {
 };
 
 export type Slide = {
+  notes_quality?: ReturnType<typeof reviewNotes>;
   title: string;
   bullets: string[];
   notes: string[];
@@ -986,14 +988,14 @@ function normalizeText(value: string) {
   return value
     .toLowerCase()
     .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/[^\p{L}\p{M}0-9]+/gu, " ")
     .replace(/\b(ch|chapter|class|ncert|part|book|vol|volume)\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 function classNumber(value: string) {
-  return value.match(/9|10|11|12/)?.[0] ?? normalizeText(value);
+  return value.match(/(?:^|\D)(9|10|11|12)(?=\D|$)/)?.[1] ?? normalizeText(value);
 }
 
 function subjectAliases(subject: string, klass?: string) {
@@ -1008,8 +1010,10 @@ function subjectAliases(subject: string, klass?: string) {
     biology: isJunior ? ["biology", "science", "vigyan", "jeev"] : ["biology", "jeev vigyan", "jiv vigyan"],
     science: ["science", "vigyan", "physics", "chemistry", "biology"],
     economics: ["economics", "arthashastra"],
-    history: ["history", "itihas"],
-    geography: ["geography", "bhugol"],
+    history: isJunior ? ["history", "itihas", "social science"] : ["history", "itihas"],
+    geography: isJunior ? ["geography", "bhugol", "social science"] : ["geography", "bhugol"],
+    "political science": isJunior ? ["political science", "civics", "social science", "democratic politics"] : ["political science", "political", "politics"],
+    "social science": ["social science", "history", "geography", "civics", "political science", "economics"],
     english: ["english"],
     hindi: ["hindi"],
     sanskrit: ["sanskrit"],
@@ -1020,9 +1024,17 @@ function subjectAliases(subject: string, klass?: string) {
   return map[normalized] ?? [normalized];
 }
 
-function subjectMatches(actual: string, requested: string, klass?: string) {
+export function subjectMatches(actual: string, requested: string, klass?: string) {
   const a = normalizeText(actual);
-  return subjectAliases(requested, klass).some((alias) => a.includes(alias) || alias.includes(a));
+  if (!a || !requested.trim()) return false;
+  return subjectAliases(requested, klass).some((alias) => {
+    if (alias === "science" && /computer|political|social/.test(a)) return false;
+    return a === alias || (alias.length >= 4 && a.includes(alias)) || (a.length >= 4 && alias.includes(a));
+  });
+}
+
+export function bookMatchesLesson(book: { class: string; subject: string }, klass: string, subject: string) {
+  return classNumber(book.class) === classNumber(klass) && subjectMatches(book.subject, subject, klass);
 }
 
 /**
@@ -1067,7 +1079,7 @@ function buildTerms(data: z.infer<typeof Input>) {
 function splitSentences(context: string) {
   return context
     .replace(/\s+/g, " ")
-    .replace(/([.!?])\s+(?=[A-Z0-9])/g, "$1|SPLIT|")
+    .replace(/([.!?।])\s+(?=[\p{L}0-9])/gu, "$1|SPLIT|")
     .split("|SPLIT|")
     .map((s) => s.replace(/\s+/g, " ").trim())
     .filter((s) => s.length > 28 && s.length < 420)
@@ -1168,7 +1180,7 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
     ncert_quote: cleaned[0] ? beautifyMath(trimToWords(cleaned[0], 180)) : undefined,
     visual,
     visual_prompt: `Draw a clean labelled 2D NCERT diagram for ${prettyTitle}. Include arrows, labels, symbols/formulas, and only details supported by the grounding excerpt.`,
-    grounding: cleaned.slice(0, 3).join(" "),
+    grounding: cleaned.join(" "),
     caption: figures.length ? `Refer NCERT ${figures.join(", ")}` : `NCERT-grounded summary for ${prettyTitle}.`,
     kind: "content",
     figures,
@@ -1416,7 +1428,7 @@ export function validateFigurePlacement(slides: Slide[], context: string): { rep
 
 
 
-function buildLocalSlides(topic: string, subtopics: string, context: string, subject = "", mode: "topic" | "chapter" = "topic"): Slide[] {
+export function buildLocalSlides(topic: string, subtopics: string, context: string, subject = "", mode: "topic" | "chapter" = "topic"): Slide[] {
   const rawSentences = uniqueByNormalized(splitSentences(context));
   const sentences = filterJunkSentences(rawSentences).slice(0, 260);
   if (sentences.length === 0) return fallbackSlides(topic, context);
@@ -1475,78 +1487,28 @@ function buildLocalSlides(topic: string, subtopics: string, context: string, sub
   }
 
   // ---------- TOPIC MODE (science / math / social) ----------
-  const subtopicList = (subtopics || "")
-    .split(/[,;\n]/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 8);
-  const definitions = uniqueByNormalized(extractDefinitionSentences(sentences));
-  const formulas = uniqueByNormalized(extractFormulaSentences(sentences));
-  const activityText = uniqueByNormalized(sentences.filter((s) => /activity|experiment|observe|apparatus|procedure|conclusion/i.test(s)));
-  const topicTerms = [topic, ...topic.split(/\s+/), ...subtopicList];
-  const visuals = ["lightbulb", "atom", "ruler", "bolt", "function", "magnet", "beaker", "microscope", "brain", "prism", "circuit", "planet", "leaf", "dna", "heart"];
-  const plan = [
-    { title: `Introduction to ${topic}`, terms: ["introduction", "we", "study", "chapter", ...topicTerms], source: pickSentences(sentences, topicTerms, 14, 0) },
-    { title: `${topic}: NCERT overview`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 16, 0) },
-    { title: `Core definitions in ${topic}`, terms: ["defined", "called", "is", topic], source: [...definitions, ...pickSentences(sentences, topicTerms, 10, 8)] },
-    { title: `Symbols, quantities and units`, terms: ["unit", "SI", "formula", "symbol", ...topicTerms], source: [...formulas, ...pickSentences(sentences, topicTerms, 10, 16)] },
-    ...subtopicList.slice(0, 8).map((name, idx) => ({
-      title: titleCase(name),
-      terms: [name, ...name.split(/\s+/)],
-      source: pickSentences(sentences, [name, ...name.split(/\s+/)], 14, 24 + idx * 8),
-    })),
-    { title: `NCERT activity / working`, terms: ["activity", "experiment", "observe", topic], source: [...activityText, ...pickSentences(sentences, topicTerms, 10, 42)] },
-    { title: `Important NCERT relationships`, terms: ["law", "relation", "formula", "proportional", topic], source: [...formulas, ...pickSentences(sentences, topicTerms, 10, 56)] },
-    { title: `Applications and interpretation`, terms: ["application", "used", "therefore", "hence", topic], source: pickSentences(sentences, ["application", "used", "therefore", "hence", ...topicTerms], 14, 70) },
-    { title: `Common exam points`, terms: ["important", "remember", "note", "example", topic], source: pickSentences(sentences, ["important", "example", "note", ...topicTerms], 14, 84) },
-    { title: `${topic}: final revision`, terms: topicTerms, source: pickSentences(sentences, topicTerms, 14, 100) },
-  ];
-
-  const usedSentences = new Set<string>();
-  const filterUnused = (arr: string[]) => {
-    const out: string[] = [];
-    for (const s of uniqueByNormalized(filterJunkSentences(arr))) {
-      const key = normalizeText(s).slice(0, 140);
-      if (!key || usedSentences.has(key)) continue;
-      usedSentences.add(key);
-      out.push(s);
-      if (out.length >= 12) break;
+  // Each selected concept gets its own evidence, with no unrelated filler to
+  // reach a fixed slide count. The presentation layer handles continuation pages.
+  const selectedConcepts = [...new Set((subtopics || "").split(/[,;\n]/).map((s) => s.trim()).filter(Boolean))];
+  const concepts = selectedConcepts.length ? selectedConcepts : [cleanSyllabusLabel(topic)];
+  const conceptSlides: Slide[] = [];
+  for (const name of concepts) {
+    const keywords = normalizeText(name).split(" ").filter((word) => word.length > 2 && !/^(the|and|law|laws|rule|rules|introduction|chapter|properties|basic|concept|concepts)$/.test(word));
+    const source = sentences.filter((line) => {
+      const normalized = normalizeText(line);
+      return normalized.includes(normalizeText(name)) || keywords.some((word) => normalized.split(" ").includes(word));
+    });
+    if (!source.length) {
+      // A missing topic is explicit; do not relabel an unrelated paragraph.
+      conceptSlides.push({ title: name, kind: "content", bullets: [], notes: [], key_terms: [], visual: "book", grounding: "", caption: "No readable topic evidence was found in the selected textbook." });
+      continue;
     }
-    return out;
-  };
-  const usedTitles = new Set<string>();
-  const makeUniqueTitle = (t: string) => {
-    let base = t.trim();
-    let attempt = base;
-    let i = 2;
-    while (usedTitles.has(normalizeText(attempt))) {
-      attempt = `${base} (${i++})`;
-    }
-    usedTitles.add(normalizeText(attempt));
-    return attempt;
-  };
+    conceptSlides.push(makeSlide(titleCase(name), source, topic, "book", conceptSlides.length, subject));
+  }
+  return conceptSlides;
 
-  // Slide count grows with the amount of usable NCERT content: at least 10,
-  // extended past 10 whenever more grounded material is available.
-  const MAX_SLIDES = 18;
-  const slides: Slide[] = [];
-  for (let index = 0; index < plan.length && slides.length < MAX_SLIDES; index++) {
-    const item = plan[index];
-    let src = filterUnused(item.source);
-    if (src.length < 3) src = filterUnused([...src, ...pickSentences(sentences, item.terms, 14, index * 9)]);
-    if (src.length < 3) continue;
-    slides.push(makeSlide(makeUniqueTitle(item.title), src, topic, visuals[index] ?? "lightbulb", index, subject));
-  }
-  let offset = 0;
-  while (slides.length < MAX_SLIDES && offset < sentences.length) {
-    const src = filterUnused(sentences.slice(offset, offset + 14));
-    offset += 14;
-    if (src.length < 3) continue;
-    const idx = slides.length;
-    slides.push(makeSlide(makeUniqueTitle(`${topic} — NCERT point ${idx + 1}`), src, topic, visuals[idx] ?? "lightbulb", idx, subject));
-  }
-  return slides.slice(0, MAX_SLIDES);
 }
+
 
 function fallbackActivities(topic: string, context: string): Activity[] {
   const sentences = splitSentences(context).filter((s) => sentenceHasAny(s, [topic, "activity", "experiment", "observe", "apparatus"])).slice(0, 6);
@@ -1696,7 +1658,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v39-classroom-notes-planner",
+      "lesson-v40-source-locked-all-subject-notes",
       data.klass,
       data.subject,
       data.chapter,
@@ -1748,22 +1710,16 @@ export const generateLesson = createServerFn({ method: "POST" })
       .or(`class.ilike.%${wantedClass}%,${combinedFilter}`)
       .limit(200);
     if (bErr) throw new Error(bErr.message);
-    let candidates = (classBooks ?? []).filter((book) => subjectMatches(book.subject, data.subject, data.klass));
+    let candidates = (classBooks ?? []).filter((book) => bookMatchesLesson(book, data.klass, data.subject));
 
-    // Fallback 1: same class, ignore subject filter and rank by topic later
-    if (candidates.length === 0 && (classBooks?.length ?? 0) > 0) {
-      candidates = classBooks!;
-    }
-
-    // Fallback 2: cross-class search
+    // Retry against the full inventory, retaining the same class/subject scope.
     if (candidates.length === 0) {
       const { data: allBooks } = await s.from("ncert_books").select("id, class, subject, chapter, file_name").limit(500);
-      const pool = (allBooks ?? []).filter((b) => subjectMatches(b.subject, data.subject, b.class));
-      candidates = pool.length > 0 ? pool : (allBooks ?? []);
+      candidates = (allBooks ?? []).filter((b) => bookMatchesLesson(b, data.klass, data.subject));
     }
 
     if (candidates.length === 0) {
-      throw new Error(`No uploaded NCERT books found in the library. Please upload PDFs from the Upload page.`);
+      throw new Error(`No matching Class ${data.klass} ${data.subject} textbook is uploaded. Add the correct textbook in Upload; material from another class or subject will not be substituted.`);
     }
 
     // 2. Pre-rank by metadata
@@ -1835,14 +1791,19 @@ export const generateLesson = createServerFn({ method: "POST" })
       const ref = bookScores.find((b) => isRef(b) && b._s > 0);
       if (ref) selectedBooks = [...selectedBooks.slice(0, 3), ref];
     }
+    if (!selectedBooks.some((b) => !isRef(b))) {
+      const primary = bookScores.find((b) => !isRef(b));
+      if (primary) selectedBooks = [primary, ...selectedBooks.slice(0, 3)];
+    }
     let selectedIds = new Set(selectedBooks.map((book) => book.id));
     let selectedChunks = (chunks ?? []).filter((chunk) => selectedIds.has(chunk.book_id));
 
-    // Cross-class rescue
+    // Broader inventory search, still restricted to the selected class/subject.
     const hasTopicalHit = (chunks ?? []).some((c) => score(c.content, terms) > 8);
     if (!hasTopicalHit) {
       const { data: allBooks2 } = await s.from("ncert_books").select("id, class, subject, chapter, file_name").limit(500);
       const ranked2 = (allBooks2 ?? [])
+        .filter((b) => bookMatchesLesson(b, data.klass, data.subject))
         .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject} ${b.class}`, [...terms, ...chapterTerms]) }))
         .sort((a, z) => z.m - a.m)
         .slice(0, 10)
@@ -1873,6 +1834,10 @@ export const generateLesson = createServerFn({ method: "POST" })
     }
 
     // 3. Rank chunks by topic/subtopic/chapter relevance
+    // Reference supplements stay separate from the primary textbook evidence.
+    const primaryIds = new Set(selectedBooks.filter((b) => !isRef(b)).map((b) => b.id));
+    if (!primaryIds.size) throw new Error(`Upload the Class ${data.klass} ${data.subject} NCERT textbook for this lesson. Reference notes alone cannot establish the chapter's prescribed content.`);
+    selectedChunks = selectedChunks.filter((chunk) => primaryIds.has(chunk.book_id));
     const ranked = selectedChunks
       .map((c) => ({ ...c, _s: score(c.content, terms) }))
       .sort((a, b) => b._s - a._s)
@@ -1918,8 +1883,7 @@ export const generateLesson = createServerFn({ method: "POST" })
           .select("id, class, subject, chapter, file_name")
           .or(refLike)
           .limit(60);
-        refPool = (refFound ?? []).filter((b) => subjectMatches(b.subject, data.subject, b.class));
-        if (refPool.length === 0) refPool = refFound ?? [];
+        refPool = (refFound ?? []).filter((b) => bookMatchesLesson(b, data.klass, data.subject));
       }
       const refTop = refPool
         .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject}`, [...terms, ...chapterTerms]) }))
@@ -2005,10 +1969,13 @@ export const generateLesson = createServerFn({ method: "POST" })
     );
     const verifiedSlides = notedSlides.map((sl, i) => {
       const { sections, check } = fixedChecks[i];
+      const activity = sourceDiscussion(sl.title, sections, data.subject, data.klass);
+      const completeSections = learningScaffold(sl.title, activity ? [...sections, activity] : sections);
       const prev = sl.verification as SlideVerification | undefined;
       return {
         ...sl,
-        sections,
+        sections: completeSections,
+        notes_quality: reviewNotes(completeSections),
         verification: {
           ...(prev as SlideVerification),
           notes_check: check,

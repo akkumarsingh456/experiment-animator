@@ -15,12 +15,14 @@ export async function gatewayJSON<T>(opts: {
   prompt: string;
   schemaName: string;
   schema: Record<string, unknown>;
+  reasoningEffort?: "low" | "medium" | "high";
 }): Promise<T | null> {
   const key = process.env.LOVABLE_API_KEY;
   if (!key) return null;
   try {
     const res = await fetch(GATEWAY, {
       method: "POST",
+      signal: AbortSignal.timeout(90_000),
       headers: {
         "Content-Type": "application/json",
         "Lovable-API-Key": key,
@@ -31,7 +33,7 @@ export async function gatewayJSON<T>(opts: {
         input: [{ role: "user", content: opts.prompt }],
         stream: true,
         store: false,
-        reasoning: { effort: "low", summary: "auto" },
+        reasoning: { effort: opts.reasoningEffort || "low", summary: "auto" },
         include: ["reasoning.encrypted_content"],
         text: { format: { type: "json_schema", name: opts.schemaName, strict: true, schema: opts.schema } },
       }),

@@ -3,6 +3,7 @@ import { guidedFormulaRow, guidedGroups, uniqueTopicGroups, type GuidedGroup } f
 import { LessonNotesPlanner, TopicLearningTasks, TopicRecap } from "@/components/LessonNotesPlanner";
 import type { Slide } from "@/lib/generate.functions";
 import { lessonIllustrationCaption, renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
+import { learningProfile } from "@/lib/learning-design";
 
 function NotesGroup({ group }: { group: GuidedGroup }) {
   return <section className={`guided-group guided-${group.kind}`}>
@@ -24,23 +25,26 @@ export function GuidedLessonNotes({ slides, title, subject, klass }: { slides: S
   const topicGroups = uniqueTopicGroups(content.map((slide) => guidedGroups(slide.sections, slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...(slide.bullets || []), ...(slide.notes || [])])));
   return <div className="guided-notes" aria-label="Complete guided lesson notes">
     <div className="guided-document-title"><span>Class {klass} · {subject}</span><h2>{title}</h2><p>Read · Investigate · Practise · Reflect</p></div>
-    {!!content.length && <LessonNotesPlanner topics={content.map((slide) => slide.title)} subject={subject} />}
+    {!!content.length && <LessonNotesPlanner topics={content.map((slide) => slide.title)} subject={subject} klass={klass} />}
     {content.map((slide, index) => {
       const groups = topicGroups[index];
+      const goals = groups.filter((g) => /^(Learning objectives|Before you begin)$/.test(g.heading));
       const terms = groups.filter((g) => g.kind === "terms");
       const explanation = groups.filter((g) => g.heading === "Understanding the concept");
-      const rest = groups.filter((g) => g.kind !== "terms" && g.heading !== "Understanding the concept");
+      const rest = groups.filter((g) => !goals.includes(g) && g.kind !== "terms" && g.heading !== "Understanding the concept");
       return <article className="guided-topic" key={`${index}:${slide.title}`}>
         <div className="guided-student-line"><span>Name: ____________________</span><span>Date: ____________________</span></div>
         <h2><span className="guided-topic-number">{String(index + 1).padStart(2, "0")}</span>{slide.title}</h2>
+        {goals.map((group, i) => <NotesGroup group={group} key={`goals:${i}`} />)}
+        {slide.notes_quality?.issues.length ? <p className="guided-quality-note">Source review: {slide.notes_quality.issues.join(" ")}</p> : null}
+        {explanation.map((group, i) => <NotesGroup key={`prose:${i}`} group={group} />)}
         {terms.map((group, i) => <NotesGroup group={group} key={`terms:${i}`} />)}
         <div className="guided-explanation">
-          <figure>
+          {!["language", "humanities", "commerce", "general"].includes(learningProfile(subject, klass).family) && <figure>
             <div className="guided-figure-heading"><strong>Concept diagram</strong><span>Labelled 2D model</span></div>
             <img src={renderLessonIllustrationDataUrl({ title: slide.title, subject, slideIndex: index, bullets: slide.bullets, notes: slide.notes, keyTerms: slide.key_terms })} alt={`Labelled concept illustration for ${slide.title}`} />
             <figcaption>{lessonIllustrationCaption(slide.title, subject)}</figcaption>
-          </figure>
-          {explanation.map((group, i) => <NotesGroup key={`prose:${i}`} group={group} />)}
+          </figure>}
           {!explanation.length && rest[0]?.heading === "Important points" && <NotesGroup group={rest.shift()!} />}
         </div>
         {rest.map((group, i) => <NotesGroup group={group} key={`body:${i}`} />)}

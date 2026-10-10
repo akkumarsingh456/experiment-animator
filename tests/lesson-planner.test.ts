@@ -21,7 +21,7 @@ describe("Classroom notes planner", () => {
   });
   it("recognises classroom packet sections without putting tasks in formula tables", () => {
     const groups = guidedGroups([{ heading: "Teacher Notes", kind: "bullets", lines: ["**Learning Objectives:** Explain the meaning of electric current.", "**Support Practice:** Define current using a sentence starter.", "**Core Practice:** Explain why charge is conserved at a junction.", "**Challenge Practice:** Compare two circuit arrangements.", "**Exit Ticket:** Justify a claim using evidence.", "**Summary:** Current measures the rate of charge flow."] }]);
-    expect(groups.map((g) => g.heading)).toEqual(["Learning objectives", "Support practice", "Core practice", "Challenge practice", "Exit ticket", "Quick recap"]);
+    expect(groups.map((g) => g.heading)).toEqual(["Learning objectives", "Support practice", "Core practice", "Challenge practice", "Quick recap", "Exit ticket"]);
   });
   it("does not treat equation references or the word hence as equations and derivations", () => {
     const groups = guidedGroups([{ heading: "Teacher Notes", kind: "bullets", lines: ["**Formula:** Equation (3.33) has an important application to power transmission."] }]);

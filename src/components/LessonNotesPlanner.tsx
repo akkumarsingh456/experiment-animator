@@ -1,16 +1,19 @@
 import { MathText } from "@/components/MathText";
 import { lessonResources } from "@/lib/lesson-resources";
 import type { GuidedGroup } from "@/lib/guided-notes";
+import { learningProfile } from "@/lib/learning-design";
 
-export function LessonNotesPlanner({ topics, subject }: { topics: string[]; subject?: string }) {
+export function LessonNotesPlanner({ topics, subject, klass }: { topics: string[]; subject?: string; klass?: string }) {
   const resources = lessonResources(topics, subject);
+  const profile = learningProfile(subject, klass);
   return <>
     <article className="guided-topic guided-planner">
       <span className="guided-eyebrow">Teacher planning page</span>
       <h2>Teach for understanding</h2>
       <p>Use the topic notes as the reading material. Adapt the sequence and pace to your class; the tasks below encourage explanation, application and evidence.</p>
+      <p><strong>Focus for {subject}:</strong> {profile.focus}. {profile.level}</p>
       <section className="guided-group"><h3>Learning goals & success criteria</h3><ul>
-        <li>Explain the key ideas in your own words, using the vocabulary and labelled diagrams in the notes.</li>
+        <li>Explain the key ideas in your own words, using the vocabulary and source evidence in the notes.</li>
         <li>Apply a relevant relationship or principle and state its assumptions; include units where needed.</li>
         <li>Justify an answer with evidence from the textbook, a worked example or an observation.</li>
       </ul><p><strong>Coverage:</strong> {topics.join(" · ")}</p></section>
@@ -41,7 +44,7 @@ export function TopicLearningTasks({ title, groups }: { title: string; groups: G
   return <section className="guided-learning-tasks">
     {!has("Learning objectives") && <div className="guided-group"><h3>Learning target</h3><p>Explain {title} using a key term, a labelled representation and evidence from these notes.</p></div>}
     {!hasPractice && <div className="guided-group"><h3>Practice at three levels</h3><ul>
-      <li><strong>Support:</strong> choose one key term and complete: “This means … . The diagram shows it by … .” Use the notes as a word bank.</li>
+      <li><strong>Support:</strong> choose one key term and complete: “This means … . The passage or representation shows it by … .” Use the notes as a word bank.</li>
       <li><strong>Core:</strong> explain one relationship or process from this topic. State the condition under which it applies and support your explanation with the notes.</li>
       <li><strong>Challenge:</strong> change one condition in a source example or diagram. Predict the result and explain which principle supports your prediction.</li>
     </ul><p className="guided-small"><strong>Success criteria:</strong> correct vocabulary; evidence that matches the source; a clear reason; correct units and assumptions if a calculation is used.</p></div>}

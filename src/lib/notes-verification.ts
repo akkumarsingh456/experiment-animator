@@ -42,7 +42,7 @@ const words = (s: string) =>
   String(s || "")
     .toLowerCase()
     .replace(/\$[^$]*\$/g, " ")
-    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/[^\p{L}\p{M}0-9\s]/gu, " ")
     .split(/\s+/)
     .filter((w) => w.length > 3 && !STOP.has(w));
 
@@ -70,7 +70,7 @@ export function latexLineValid(line: string): { spans: number; invalid: number }
 export const normalizeForGrounding = (s: string) =>
   String(s || "")
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/[^\p{L}\p{M}0-9\s]/gu, " ")
     .replace(/\s+/g, " ");
 
 /** Minimum share of content words that must be found in the context. */
@@ -109,6 +109,10 @@ export function verifyNoteSections(
         return true;
       }
       const g = groundingScore(line, contextNorm);
+      // Task instructions are scaffolds rather than textbook factual claims.
+      if (/^\*\*(learning objectives?|prerequisites?|support practice|core practice|challenge practice|exit ticket|check your understanding):/i.test(line)) {
+        kept += 1; grounded += 1; return true;
+      }
       kept += 1;
       if (g >= GROUND_MIN) {
         grounded += 1;

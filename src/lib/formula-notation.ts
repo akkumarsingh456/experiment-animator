@@ -307,7 +307,7 @@ export async function aiFormulaSheet(opts: {
     const derivations = (Array.isArray((s as any).derivations) ? (s as any).derivations : [])
       .map((d: any) => ({
         formula: normalizeFormulaLine(String(d?.formula || "")),
-        steps: clean(d?.steps, 8),
+        steps: clean(d?.steps, 40),
       }))
       .filter((d: { formula: string; steps: string[] }) => d.steps.length > 0)
       .slice(0, 5);
@@ -315,7 +315,7 @@ export async function aiFormulaSheet(opts: {
       formula: clean((s as any).formula, 5),
       variables: clean((s as any).variables, 6),
       unit: clean((s as any).unit, 3),
-      derivation: clean((s as any).derivation, 8),
+      derivation: clean((s as any).derivation, 40),
       derivations,
     });
   }

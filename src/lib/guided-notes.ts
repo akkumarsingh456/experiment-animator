@@ -17,6 +17,7 @@ const categories: Array<[RegExp, string, GuidedGroup["kind"]]> = [
   [/^(formula|equation|relation|result)\b/i, "Formulas and relations", "formula"],
   [/^(variable|si unit|unit|dimension)\b/i, "Symbols and SI units", "list"],
   [/^derivation\b/i, "Step-by-step derivation", "derivation"],
+  [/^(activity|experiment|discussion|classroom discussion)\b/i, "Investigate and discuss", "list"],
   [/^(worked example|example|ncert example|activity)\b/i, "Worked examples and activities", "list"],
   [/^(check your understanding|practice|guided question)\b/i, "Check your understanding", "list"],
   [/^(answers?|solution)\b/i, "Answers and explanations", "list"],
@@ -56,11 +57,12 @@ export function guidedGroups(sections: NoteSection[] | undefined, fallback: stri
       if (kind === "formula" && !formulaRow && !actualRelation) { heading = "Important points"; kind = "list"; }
       // Named terms, formula names and example steps still need their labels.
       const term = label.match(/^key term\s*[—-]\s*(.+)$/i);
-      const keepLabel = /^(worked example|example|answer\s*[—-]|solution\s*[—-])/i.test(label);
+      const keepLabel = /^(activity|experiment|discussion|worked example|example|answer\s*[—-]|solution\s*[—-])/i.test(label);
       get(heading, kind).lines.push(term ? `**${term[1]}:** ${body}` : keepLabel ? line : body);
     }
   }
-  const rank = (group: GuidedGroup) => group.kind === "terms" ? 0 : group.kind === "prose" && group.heading === "Understanding the concept" ? 1 : 2;
+  const order = ["Learning objectives", "Before you begin", "Understanding the concept", "Key terms and definitions", "Formulas and relations", "Symbols and SI units", "Step-by-step derivation", "Graphs and trends", "Important points", "Applications", "Worked examples and activities", "Investigate and discuss", "Common misconceptions", "Check your understanding", "Support practice", "Core practice", "Challenge practice", "Answers and explanations", "Remember", "Quick recap", "Exit ticket"];
+  const rank = (group: GuidedGroup) => { const index = order.indexOf(group.heading); return index < 0 ? 9 : index; };
   return groups.sort((a, b) => rank(a) - rank(b));
 }
 
@@ -68,7 +70,7 @@ export function guidedGroups(sections: NoteSection[] | undefined, fallback: stri
 export function uniqueTopicGroups(topics: GuidedGroup[][]): GuidedGroup[][] {
   const seen = new Set<string>();
   return topics.map((groups) => groups.map((group) => {
-    if (group.kind === "formula" || group.kind === "derivation" || /practice|answers|check your understanding|objectives|exit ticket|before you begin|recap/i.test(group.heading)) return group;
+    if (group.kind === "formula" || group.kind === "derivation" || /practice|answers|check your understanding|objectives|exit ticket|before you begin|recap|discuss|activities/i.test(group.heading)) return group;
     const lines = group.lines.filter((line) => {
       const key = line.replace(/\*\*/g, "").replace(/\s+/g, " ").trim().toLowerCase();
       if (seen.has(key)) return false;
