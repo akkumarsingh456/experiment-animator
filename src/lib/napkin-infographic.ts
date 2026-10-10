@@ -1,5 +1,7 @@
 import { plainMathText } from "@/lib/latex-notation";
 import { currentElectricityDiagram, wrapTextbookDrawing } from "@/lib/current-electricity-diagrams";
+import { renderSourceConceptMap, sourceConceptFacts, type ConceptMapInput } from "@/lib/source-concept-map";
+import { geometryDiagram } from "@/lib/geometry-diagrams";
 
 /**
  * Zero-cost, topic-aware educational illustration renderer.
@@ -353,22 +355,21 @@ export function renderNapkinInfographicDataUrl(input: FactInput): string {
 }
 
 /** Large reference-style figure without a miniature duplicate of the notes. */
-export function renderLessonIllustration(input: FactInput): string {
+export function renderLessonIllustration(input: FactInput & ConceptMapInput): string {
   const identity = stableHash(`${input.subject}|${input.title}|${input.slideIndex ?? 0}`).toString(16);
-  const textbook = /phys|science/i.test(input.subject || "") ? currentElectricityDiagram(input.title) : null;
+  const textbook = /^(physics|science)$/i.test(input.subject || "") ? currentElectricityDiagram(input.title) : null;
   if (textbook) return wrapTextbookDrawing(textbook.drawing, identity);
-  const palette = paletteFor(input.subject);
-  const facts = factsFrom(input);
-  const drawing = mainVisual(input, facts, 28, 28, 704, 590, palette);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="760" height="650" viewBox="0 0 760 650" data-lesson-id="${identity}"><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="${palette.accent}"/></marker></defs><rect width="760" height="650" fill="#fff9ed"/>${drawing}</svg>`;
+  const geometry = geometryDiagram(input.title, input.subject);
+  if (geometry) return geometry.svg;
+  return renderSourceConceptMap(input, sourceConceptFacts(input).slice(0, 4));
 }
 
-export function renderLessonIllustrationDataUrl(input: FactInput): string {
+export function renderLessonIllustrationDataUrl(input: FactInput & ConceptMapInput): string {
   const svg = renderLessonIllustration(input);
   const b64 = typeof Buffer !== "undefined" ? Buffer.from(svg, "utf8").toString("base64") : btoa(unescape(encodeURIComponent(svg)));
   return `data:image/svg+xml;base64,${b64}`;
 }
 
 export function lessonIllustrationCaption(title: string, subject?: string): string {
-  return (/phys|science/i.test(subject || "") ? currentElectricityDiagram(title)?.caption : undefined) || `${title} · Concept illustration`;
+  return (/^(physics|science)$/i.test(subject || "") ? currentElectricityDiagram(title)?.caption : undefined) || geometryDiagram(title, subject)?.caption || `${title} · Source-based concept map`;
 }

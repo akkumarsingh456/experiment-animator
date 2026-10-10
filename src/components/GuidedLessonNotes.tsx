@@ -2,18 +2,17 @@ import { MathText } from "@/components/MathText";
 import { guidedFormulaRow, guidedGroups, uniqueTopicGroups, type GuidedGroup } from "@/lib/guided-notes";
 import { LessonNotesPlanner, TopicLearningTasks, TopicRecap } from "@/components/LessonNotesPlanner";
 import type { Slide } from "@/lib/generate.functions";
-import { lessonIllustrationCaption, renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
-import { learningProfile } from "@/lib/learning-design";
+import { TopicVisualStructures } from "@/components/TopicVisualStructures";
 
 function NotesGroup({ group }: { group: GuidedGroup }) {
   return <section className={`guided-group guided-${group.kind}`}>
     <h3>{group.heading}</h3>
-    {group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula</th><th>SI unit</th></tr></thead><tbody>
+    {group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula / relation</th><th>Unit, if applicable</th></tr></thead><tbody>
       {group.lines.map((line, i) => { const row = guidedFormulaRow(line); return <tr key={i}><td><MathText text={row.concept} /></td><td><MathText text={row.expression} /></td><td><MathText text={row.unit} /></td></tr>; })}
     </tbody></table></div> : group.kind === "prose" ? group.lines.map((line, i) => <p key={i}><MathText text={line} /></p>) :
       group.kind === "derivation" ? <>
         {group.lines.filter((line) => /^\*\*derivation of/i.test(line)).map((line, i) => <p key={i}><MathText text={line} /></p>)}
-        <ol>{group.lines.filter((line) => !/^\*\*(formula|derivation of)/i.test(line)).map((line, i) => <li key={i}><MathText text={line.replace(/^\*\*derivation step\s*\d*:\*\*\s*/i, "")} /></li>)}</ol>
+        <ol className="guided-derivation-flow">{group.lines.filter((line) => !/^\*\*(formula|derivation of)/i.test(line)).map((line, i) => <li key={i}><MathText text={line.replace(/^\*\*derivation step\s*\d*:\*\*\s*/i, "")} /></li>)}</ol>
       </> :
       <ul>{group.lines.map((line, i) => <li key={i}><MathText text={line} /></li>)}</ul>}
   </section>;
@@ -39,14 +38,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass }: { slides: S
         {slide.notes_quality?.issues.length ? <p className="guided-quality-note">Source review: {slide.notes_quality.issues.join(" ")}</p> : null}
         {explanation.map((group, i) => <NotesGroup key={`prose:${i}`} group={group} />)}
         {terms.map((group, i) => <NotesGroup group={group} key={`terms:${i}`} />)}
-        <div className="guided-explanation">
-          {!["language", "humanities", "commerce", "general"].includes(learningProfile(subject, klass).family) && <figure>
-            <div className="guided-figure-heading"><strong>Concept diagram</strong><span>Labelled 2D model</span></div>
-            <img src={renderLessonIllustrationDataUrl({ title: slide.title, subject, slideIndex: index, bullets: slide.bullets, notes: slide.notes, keyTerms: slide.key_terms })} alt={`Labelled concept illustration for ${slide.title}`} />
-            <figcaption>{lessonIllustrationCaption(slide.title, subject)}</figcaption>
-          </figure>}
-          {!explanation.length && rest[0]?.heading === "Important points" && <NotesGroup group={rest.shift()!} />}
-        </div>
+        <TopicVisualStructures input={{ ...slide, keyTerms: slide.key_terms }} subject={subject} />
         {rest.map((group, i) => <NotesGroup group={group} key={`body:${i}`} />)}
         {!groups.length && <p>No verified source notes are available for this topic. Regenerate the lesson after uploading the relevant textbook pages.</p>}
         {!!groups.length && <><TopicLearningTasks title={slide.title} groups={groups} /><TopicRecap groups={groups} /></>}

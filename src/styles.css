@@ -190,6 +190,13 @@
 .guided-slide-deck .guided-small { font-size: 17px; }
 .guided-slide-deck .guided-explanation img { max-height: 260px; }
 .guided-slide-deck .guided-explanation figure { max-width: 560px; margin-bottom: 8px; }
+.guided-visual-structures img { display: block; height: auto; max-height: none; }
+.guided-slide-deck .guided-visual-structures img { max-height: none; }
+.guided-derivation-flow { border-left: 3px solid #90b5bd; padding-left: 30px; }
+.guided-derivation-flow li { position: relative; padding: 14px 18px; margin: 12px 0 18px; background: #f0f7f8; border: 1px solid #c4d9df; border-radius: 8px; break-inside: avoid; }
+.guided-derivation-flow li::marker { font-weight: 700; color: #246f80; }
+.guided-derivation-flow li + li::before { content: "↓"; position: absolute; top: -24px; left: 18px; color: #246f80; }
+.guided-formula td:nth-child(2) { background: #fafdfd; }
 .guided-slide-deck .guided-continuation { font-size: 15px; color: #536273; }
 .guided-slide-deck .guided-topic table { table-layout: fixed; font-size: 18px; }
 .guided-slide-deck .guided-table-scroll { overflow: visible; }

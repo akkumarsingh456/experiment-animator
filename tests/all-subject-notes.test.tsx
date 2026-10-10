@@ -25,7 +25,7 @@ describe("Classes 9–12 curriculum output coverage", () => {
     const sections = learningScaffold(chapter, [...notes, task]);
     const html = renderToStaticMarkup(<GuidedLessonNotes title={chapter} klass={klass} subject={subject} slides={[{ title: chapter, bullets: [], notes: [], visual: "book", sections }]} />);
     expect(html).toContain("Investigate and discuss"); expect(html).toContain("Core practice");
-    if (profile.family === "language" || profile.family === "humanities") expect(html).not.toContain("Labelled 2D model");
+    expect(html).toContain("Source-based concept map");
     expect(reviewNotes(sections).activity).toBe(true);
     expect(paginateNoteSections(sections, 12).flatMap((p) => p.flatMap((s) => s.lines))).toEqual(sections.flatMap((s) => s.lines));
     const topics = subtopicsFor(klass, subject, chapter); expect(new Set(topics).size).toBe(topics.length);
