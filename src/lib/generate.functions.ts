@@ -4,7 +4,7 @@ import { createHash } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
-import { renderNapkinInfographicDataUrl } from "@/lib/napkin-infographic";
+import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
 import { REF_BOOK_PATTERN } from "@/lib/reference-books";
 import { verifyNoteSections, normalizeForGrounding, autoFixAndVerifyNotes, type NotesCheck } from "@/lib/notes-verification";
@@ -56,7 +56,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     // v13: topic-aware textbook renderer with large labels and visual models.
     const cacheKey = hashKey([
-      "img-v15-unique-icon-diagrams",
+      "img-v16-textbook-topic-illustrations",
       data.klass,
       data.subject,
       String(data.slideIndex),
@@ -132,7 +132,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       const visualNotes = [...new Set([...(data.notes || []), ...sectionNotes])]
         .sort((a, b) => Number(/formula|derivation|equation/i.test(b)) - Number(/formula|derivation|equation/i.test(a)))
         .slice(0, 18);
-      url = renderNapkinInfographicDataUrl({
+      url = renderLessonIllustrationDataUrl({
         title: data.title,
         bullets: data.bullets,
         notes: visualNotes,
@@ -1152,14 +1152,9 @@ function extractKeyTerms(sentences: string[], topic: string): { term: string; me
 
 function makeSlide(title: string, source: string[], topic: string, visual: string, index: number, subject = ""): Slide {
   const cleaned = uniqueByNormalized(filterJunkSentences(source)).filter(Boolean);
-  const bullets = cleaned.slice(0, 6).map((s) => beautifyMath(trimToWords(s, 180)));
-  while (bullets.length < 4) {
-    bullets.push(
-      index === 0
-        ? `This point is grounded in the uploaded NCERT chapter passage for ${topic}.`
-        : `Revise this idea with the matching NCERT excerpt for ${topic}.`,
-    );
-  }
+  // Keep complete statements; clipping mid-equation produces broken notes.
+  // Sparse excerpts should not be padded with repeated placeholder bullets.
+  const bullets = cleaned.slice(0, 6).map((s) => beautifyMath(s));
   const notesSource = cleaned.slice(6, 12).length ? cleaned.slice(6, 12) : cleaned.slice(0, 4);
   const bulletsOut = bullets.slice(0, 6);
   const prettyTitle = beautifyMath(title);
@@ -1168,7 +1163,7 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
   return {
     title: prettyTitle,
     bullets: bulletsOut,
-    notes: notesSource.slice(0, 4).map((s) => beautifyMath(trimToWords(s, 210))),
+    notes: notesSource.slice(0, 4).map((s) => beautifyMath(s)),
     key_terms: extractKeyTerms(cleaned, topic).map((k) => ({ term: beautifyMath(k.term), meaning: beautifyMath(k.meaning) })),
     ncert_quote: cleaned[0] ? beautifyMath(trimToWords(cleaned[0], 180)) : undefined,
     visual,
@@ -1701,7 +1696,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v36-full-ncert-derivations",
+      "lesson-v38-detailed-guided-worksheets",
       data.klass,
       data.subject,
       data.chapter,
