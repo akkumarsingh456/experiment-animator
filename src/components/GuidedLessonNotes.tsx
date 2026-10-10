@@ -36,6 +36,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass }: { slides: S
         {terms.map((group, i) => <NotesGroup group={group} key={`terms:${i}`} />)}
         <div className="guided-explanation">
           <figure>
+            <div className="guided-figure-heading"><strong>Concept diagram</strong><span>Labelled 2D model</span></div>
             <img src={renderLessonIllustrationDataUrl({ title: slide.title, subject, slideIndex: index, bullets: slide.bullets, notes: slide.notes, keyTerms: slide.key_terms })} alt={`Labelled concept illustration for ${slide.title}`} />
             <figcaption>{lessonIllustrationCaption(slide.title, subject)}</figcaption>
           </figure>

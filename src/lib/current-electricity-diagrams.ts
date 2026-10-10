@@ -7,6 +7,15 @@ const resistor = (x: number, y: number, angle: number, label: string) => `<g tra
 
 export function currentElectricityDiagram(title: string): { drawing: string; caption: string } | null {
   const topic = title.toLowerCase();
+  if (/symbols|quantities|units/.test(topic)) {
+    return { caption: "Current is the rate of charge flow: I = ΔQ/Δt for the average current over a time interval. Charge is measured in coulombs, time in seconds, current in amperes.", drawing: [
+      `<rect x="70" y="160" width="250" height="145" rx="12" fill="#edf6fb" stroke="${ink}" stroke-width="2"/>`,
+      text(195, 212, "Charge transferred ΔQ", 24), text(195, 267, "coulomb (C)", 22),
+      `<rect x="440" y="160" width="250" height="145" rx="12" fill="#eef8f4" stroke="${ink}" stroke-width="2"/>`,
+      text(565, 212, "Time interval Δt", 24), text(565, 267, "second (s)", 22),
+      text(380, 255, "÷", 48), text(380, 390, "Average current I = ΔQ / Δt", 30), text(380, 450, "1 ampere = 1 coulomb per second", 23),
+    ].join("") };
+  }
   if (/wheatstone|bridge/.test(topic)) {
     return { caption: "Balanced Wheatstone bridge: P/Q = R/S; galvanometer current is zero.", drawing: [
       wire("M360 95L160 275L360 455L560 275Z M160 275H560 M360 95H680V455H360"),
@@ -59,5 +68,5 @@ export function currentElectricityDiagram(title: string): { drawing: string; cap
 }
 
 export function wrapTextbookDrawing(drawing: string, identity: string): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="760" height="540" viewBox="0 0 760 540" data-lesson-id="${identity}"><defs><marker id="tip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="context-stroke"/></marker></defs><rect width="760" height="540" rx="18" fill="#fff9ed"/>${drawing}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1520" height="1080" viewBox="0 0 760 540" data-lesson-id="${identity}"><defs><pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" stroke="#e9eff3" stroke-width=".6"/></pattern><marker id="tip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="context-stroke"/></marker></defs><rect width="760" height="540" rx="12" fill="#ffffff"/><rect x="25" y="25" width="710" height="490" rx="8" fill="url(#grid)"/>${drawing}</svg>`;
 }

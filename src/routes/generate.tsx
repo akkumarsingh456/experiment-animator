@@ -53,6 +53,9 @@ import { PenPaperEditor } from "@/components/PenPaperEditor";
 import { usePenNotes, getPenNotes } from "@/lib/pen-notes";
 import PagedNoteSections from "@/components/PagedNoteSections";
 import { GuidedLessonNotes } from "@/components/GuidedLessonNotes";
+import { GuidedNotesPresentation } from "@/components/GuidedNotesPresentation";
+import { downloadLessonPdf } from "@/lib/lesson-pdf";
+import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
 import { plainMathText } from "@/lib/latex-notation";
 import { paginateNoteSections } from "@/lib/notes-paging";
 
@@ -247,6 +250,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
+  const [exportMode, setExportMode] = useState<"notes" | "slides" | null>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [lessonView, setLessonView] = useState<"notes" | "slides">("notes");
   useEffect(() => {
@@ -457,8 +462,28 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
 
 
-  async function downloadPDF() {
-    window.print();
+  const presentationPages = useMemo(() => slides.flatMap((slide, sourceIndex) => {
+    const sections = slide.sections?.filter((section) => section.kind !== "diagram");
+    const pages = sections?.length ? paginateNoteSections(sections, 12) : [undefined];
+    return pages.map((page, pageIndex) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
+      title: pageIndex ? `${slide.title} (continued ${pageIndex + 1})` : slide.title }));
+  }), [slides]);
+
+  async function downloadPDF(mode: "notes" | "slides" = lessonView) {
+    if (exportMode) return;
+    setExportMode(mode);
+    try {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      if (!exportRef.current) throw new Error("The PDF pages are not ready.");
+      await downloadLessonPdf(exportRef.current, mode, title);
+    } catch (error) {
+      toast.error(`PDF download failed: ${error instanceof Error ? error.message : "Please try again."}`);
+    } finally { setExportMode(null); }
+  }
+
+  function presentSelectedView() {
+    setPresenting(true);
+    document.documentElement.requestFullscreen?.().catch(() => {});
   }
 
   async function downloadPPTX() {
@@ -576,6 +601,13 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
   return (
     <>
+      <div className="lesson-view-controls flex flex-wrap items-center gap-2 mb-4 print:hidden" aria-label="Choose lesson view">
+        <Button variant={lessonView === "notes" ? "default" : "outline"} aria-pressed={lessonView === "notes"} onClick={() => setLessonView("notes")}>Guided notes · page view</Button>
+        <Button variant={lessonView === "slides" ? "default" : "outline"} aria-pressed={lessonView === "slides"} onClick={() => setLessonView("slides")}>Presentation slides</Button>
+        <Button variant="outline" onClick={presentSelectedView}><Maximize2 className="h-4 w-4" />Present {lessonView === "notes" ? "notes" : "slides"}</Button>
+        <Button variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("notes")}><Download className="h-4 w-4" />{exportMode === "notes" ? "Preparing notes…" : "Notes PDF"}</Button>
+        <Button variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("slides")}><Download className="h-4 w-4" />{exportMode === "slides" ? "Preparing slides…" : "Slides PDF"}</Button>
+      </div>
       {/* Step 1 — Activity verification (skipped for language chapters) */}
       {!skipVerify && lessonView === "slides" && (
         <ActivityVerification
@@ -602,16 +634,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
               <h2 className="font-semibold text-lg">{lessonView === "notes" ? "Complete guided notes" : `${slides.length}-Slide Interactive Lesson`}</h2>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant={lessonView === "notes" ? "default" : "outline"} aria-pressed={lessonView === "notes"} onClick={() => setLessonView("notes")}>Guided notes</Button>
-                <Button size="sm" variant={lessonView === "slides" ? "default" : "outline"} aria-pressed={lessonView === "slides"} onClick={() => setLessonView("slides")}>Interactive slides</Button>
                 <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => { setLessonView("slides"); setEditing((v) => !v); }}>
                   <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setPresenting(true)}>
-                  <Maximize2 className="h-4 w-4" />Full Screen
-                </Button>
-                <Button size="sm" variant="outline" onClick={downloadPDF}>
-                  <Download className="h-4 w-4" />PDF
                 </Button>
                 <Button size="sm" onClick={downloadPPTX}>
                   <Download className="h-4 w-4" />PPTX
@@ -816,14 +840,13 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         Source: {result.source_books.map((b) => `${b.subject} · Class ${b.class} · ${b.chapter}`).join(", ")} ({result.context_chars.toLocaleString()} chars of NCERT text)
       </p>
 
-      {presenting && (
-        <PresentationMode
-          slides={slides}
-          images={images}
-          onClose={() => setPresenting(false)}
-          onNeedImage={() => {}}
-          subject={result.source_books[0]?.subject}
-        />
+      {exportMode && <div ref={exportRef} className={`lesson-export-root lesson-export-${exportMode}`} aria-hidden="true">
+        {exportMode === "notes" ? <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} /> : presentationPages.map((slide, i) => <div className="lesson-export-slide" key={i}>
+          <SlideCanvas slide={slide} index={i} total={presentationPages.length} staticView editing={false} onChange={() => {}} imageUrl={renderLessonIllustrationDataUrl({ ...slide, subject: search.subject, slideIndex: slide.sourceIndex })} subject={search.subject} />
+        </div>)}
+      </div>}
+      {presenting && (lessonView === "notes" ? <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} onClose={() => setPresenting(false)} onPdf={() => downloadPDF("notes")} /> :
+        <PresentationMode slides={presentationPages} images={images} onClose={() => setPresenting(false)} onNeedImage={(idx) => ensureImage(presentationPages[idx]?.sourceIndex ?? idx)} subject={search.subject} />
       )}
     </>
   );
@@ -1032,12 +1055,14 @@ function BreakSlideBody({ slide }: { slide: Slide }) {
 }
 
 function SlideCanvas({
-  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage, subject,
+  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage, subject, staticView,
 }: {
   slide: Slide; index: number; total: number; editing: boolean; onChange: (p: Partial<Slide>) => void;
-  imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void; subject?: string;
+  imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void; subject?: string; staticView?: boolean;
 }) {
   if (!slide) return null;
+  const sourceIndex = (slide as Slide & { sourceIndex?: number }).sourceIndex ?? index;
+  imageUrl = renderLessonIllustrationDataUrl({ ...slide, subject, slideIndex: sourceIndex });
   const kind = slide.kind || "content";
   const lang = isLanguageSubject(subject);
   const v = slide.verification;
@@ -1049,7 +1074,7 @@ function SlideCanvas({
   // Break / MCQ / chapter slides use single-column layout.
   if (kind === "break" || kind === "mcq" || kind === "chapter") {
     return (
-      <Card className="h-[calc(100dvh-7rem)] min-h-[560px] w-full overflow-hidden border-border/60 shadow-soft print:h-auto print:w-full">
+      <Card className="lesson-slide-canvas h-[calc(100dvh-7rem)] min-h-[560px] w-full overflow-hidden border-border/60 shadow-soft print:h-auto print:w-full">
         <CardContent className="h-full p-0 print:h-auto">
           <div className="relative grid h-full w-full grid-rows-[auto_1fr_auto] overflow-hidden bg-card print:h-auto">
             <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
@@ -1075,7 +1100,7 @@ function SlideCanvas({
   }
 
   return (
-    <Card className="h-[calc(100dvh-7rem)] min-h-[560px] w-full overflow-hidden border-border/60 shadow-soft print:h-auto print:w-full">
+    <Card className="lesson-slide-canvas h-[calc(100dvh-7rem)] min-h-[560px] w-full overflow-hidden border-border/60 shadow-soft print:h-auto print:w-full">
       <CardContent className="h-full p-0 print:h-auto">
         <div className="relative grid h-full w-full grid-rows-[auto_1fr_auto] overflow-hidden bg-card print:h-auto">
           <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
@@ -1119,7 +1144,7 @@ function SlideCanvas({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] min-h-0 overflow-hidden">
+          <div className="lesson-slide-body grid grid-cols-1 md:grid-cols-[3fr_2fr] min-h-0 overflow-hidden">
             <div className="px-5 sm:px-8 py-5 flex flex-col gap-3 min-h-0 overflow-hidden">
               {editing ? (
                 <Input
@@ -1153,8 +1178,8 @@ function SlideCanvas({
                 </ul>
               ) : null}
               <PagedNoteSections
-                sections={(slide as any).sections}
-                header={<PenNotesBlock index={index} slide={slide} subject={subject} editable />}
+                sections={slide.sections?.filter((section) => section.kind !== "diagram")}
+                header={<PenNotesBlock index={sourceIndex} slide={slide} subject={subject} editable={!staticView} />}
               />
 
 
@@ -1194,7 +1219,7 @@ function SlideCanvas({
             </div>
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0">
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
-              <div className="relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 grid place-items-center">
+              <div className="lesson-figure-panel relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 grid place-items-center">
                 {imageUrl ? (
                   <img src={imageUrl} alt={`${slide.title} — NCERT 2D infographic`} className="w-full h-full object-contain" />
                 ) : imageLoading ? (
@@ -1210,9 +1235,9 @@ function SlideCanvas({
                 )}
               </div>
               {/* Hide the 3D / simulation panel entirely for language subjects. */}
-              {!lang && (
-                <div className="relative w-full flex-[2] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">
-                  <SimPanel slide={slide} index={index} subject={subject} editable />
+              {!lang && !staticView && (
+                <div className="lesson-simulation-panel relative w-full flex-[2] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">
+                  <SimPanel slide={slide} index={sourceIndex} subject={subject} editable />
                 </div>
               )}
             </div>
@@ -1346,146 +1371,26 @@ function VideoView({ video }: { video: GenerationResult["video"] }) {
   );
 }
 
-function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { slides: Slide[]; images: Record<number, string>; onClose: () => void; onNeedImage: (idx: number) => void; subject?: string }) {
+function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { slides: Array<Slide & { sourceIndex?: number }>; images: Record<number, string>; onClose: () => void; onNeedImage: (idx: number) => void; subject?: string }) {
   const [i, setI] = useState(0);
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-      if (e.key === "ArrowRight" || e.key === " ") setI((x) => Math.min(slides.length - 1, x + 1));
-      if (e.key === "ArrowLeft") setI((x) => Math.max(0, x - 1));
+    function onKey(event: KeyboardEvent) {
+      if (event.target instanceof HTMLElement && /input|textarea/i.test(event.target.tagName)) return;
+      if (event.key === "Escape") onClose();
+      if (event.key === "ArrowRight" || event.key === " ") { event.preventDefault(); setI((x) => Math.min(slides.length - 1, x + 1)); }
+      if (event.key === "ArrowLeft") { event.preventDefault(); setI((x) => Math.max(0, x - 1)); }
     }
+    const previous = document.body.style.overflow; document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
-    document.documentElement.requestFullscreen?.().catch(() => {});
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-    };
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = previous; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); };
   }, [slides.length, onClose]);
-
-  // Active slide asks for its local 2D infographic if missing.
-  useEffect(() => {
-    if (!images[i]) onNeedImage(i);
-  }, [i, images, onNeedImage, slides.length]);
-
-  const s = slides[i];
-  const Icon = ICONS[(s?.visual || "atom").toLowerCase()] ?? Atom;
-  const img = images[i];
-  return (
-    <div className="fixed inset-0 z-50 bg-foreground text-background flex flex-col overflow-hidden">
-      {/* Top bar (fixed) */}
-      <div className="shrink-0 flex items-center justify-between px-5 py-2 border-b border-background/10 text-xs">
-        <div className="flex items-center gap-2 opacity-70 font-mono">
-          <Icon className="h-4 w-4" /> Slide {i + 1} / {slides.length}
-        </div>
-        <button onClick={onClose} className="opacity-70 hover:opacity-100">Exit ✕</button>
-      </div>
-
-      {/* A4 landscape frame that scales to fit — no scroll */}
-      <div className="flex-1 min-h-0 grid place-items-center p-2 sm:p-3">
-        <div
-          key={`present-${i}`}
-          className="h-full w-full max-w-[1800px] bg-background text-foreground rounded-xl shadow-2xl grid grid-rows-[auto_1fr_auto] overflow-hidden animate-in fade-in slide-in-from-right-6 duration-500"
-        >
-          {/* Slide header */}
-          <div className="px-6 pt-4 pb-2 border-b border-border/40">
-            <h2 className="font-display text-[clamp(18px,2.6vw,34px)] font-extrabold leading-tight line-clamp-2">
-              {s.title}
-            </h2>
-          </div>
-
-          {/* Body: text left, diagram right — both clipped to A4 area */}
-          <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] min-h-0 overflow-hidden">
-            <div className="px-8 py-5 min-h-0 overflow-hidden flex flex-col gap-3">
-              {s.kind === "chapter" && s.chapter_text ? (
-                <p className="text-[clamp(11px,1.05vw,15px)] leading-relaxed whitespace-pre-wrap">
-                  {s.chapter_text}
-                </p>
-              ) : (
-                <>
-                  {s.visual === "cover" && <h3 className="text-[clamp(14px,1.3vw,20px)] font-bold text-primary">What you will learn</h3>}
-                  {!(s as any).sections?.length ? (
-                    <ul className="space-y-1.5">
-                      {(s.bullets || []).map((b, k) => (
-                        <li key={k} className="flex gap-2 text-[clamp(11px,1.1vw,15px)] leading-snug">
-                          <span className="opacity-50 shrink-0">{k + 1}.</span>
-                          <span>{b}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  <PagedNoteSections
-                    sections={(s as any).sections}
-                    scale="present"
-                    header={<PenNotesBlock index={i} slide={s} subject={subject} scale="present" />}
-                  />
-
-
-                  {s.notes?.length && !(s as any).sections?.length ? (
-                    <div className="rounded-md bg-secondary/60 border border-border/40 p-2">
-                      <div className="text-[9px] font-semibold uppercase tracking-wider opacity-70 mb-1">NCERT notes</div>
-                      <ol className="space-y-0.5 list-decimal list-inside text-[clamp(10px,0.95vw,13px)] leading-snug">
-                        {s.notes.map((n, k) => <li key={k}>{n}</li>)}
-                      </ol>
-                    </div>
-                  ) : null}
-                  {s.key_terms?.length && !(s as any).sections?.length ? (
-                    <div className="text-[clamp(10px,0.95vw,13px)] leading-snug space-y-0.5">
-                      {s.key_terms.map((t, k) => (
-                        <div key={k}><span className="font-semibold">{t.term}:</span> <span className="opacity-80">{t.meaning}</span></div>
-                      ))}
-                    </div>
-                  ) : null}
-                  {s.ncert_quote && !(s as any).sections?.length && (
-                    <p className="italic opacity-70 border-l-2 border-primary/40 pl-2 text-[clamp(10px,0.9vw,12px)]">"{s.ncert_quote}"</p>
-                  )}
-                </>
-
-              )}
-            </div>
-
-            {/* Diagram column — local 2D infographic + live sim */}
-            <div className="border-l border-border/40 bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/20 flex flex-col p-3 min-h-0 overflow-hidden gap-2">
-              <div className="relative w-full flex-[3] min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden grid place-items-center">
-                {img ? (
-                  <img src={img} alt={`${s.title} — NCERT 2D infographic`} className="w-full h-full object-contain" />
-                ) : (
-                  <div className="flex flex-col items-center gap-2 text-[10px] text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                    Drawing 2D infographic…
-                  </div>
-                )}
-              </div>
-              <div className="relative w-full flex-[2] min-h-0 rounded-md bg-background/80 border border-border/40 overflow-hidden">
-                <SimPanel slide={s} index={i} subject={subject} />
-              </div>
-              {s.caption && (
-                <p className="text-[clamp(9px,0.85vw,11px)] italic text-muted-foreground text-center line-clamp-1">{s.caption}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="px-6 py-1.5 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground">
-            <span className="italic truncate max-w-[70%]">NCERT-grounded · {s.title}</span>
-            <span className="font-mono">EduPlan AI · A4</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom controls (fixed) */}
-      <div className="shrink-0 flex items-center justify-between px-5 py-2 border-t border-background/10 text-xs">
-        <Button variant="ghost" size="sm" disabled={i === 0} onClick={() => setI(i - 1)} className="text-background hover:bg-background/10">
-          <ChevronLeft className="h-4 w-4" />Previous
-        </Button>
-        <div className="opacity-70 font-mono">Slide {i + 1} / {slides.length}</div>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" disabled={i === slides.length - 1} onClick={() => setI(i + 1)} className="text-background hover:bg-background/10">
-            Next<ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
+  const slide = slides[i];
+  return <div className="lesson-presentation fixed inset-0 z-50 bg-slate-900 flex flex-col" role="dialog" aria-modal="true" aria-label="Slide presentation">
+    <div className="shrink-0 flex items-center justify-between px-5 py-3 text-white text-sm"><span>Presentation slides · {i + 1} / {slides.length}</span><button onClick={onClose}>Exit ✕</button></div>
+    <div className="flex-1 min-h-0 overflow-auto px-3"><SlideCanvas slide={slide} index={i} total={slides.length} editing={false} onChange={() => {}} subject={subject}
+      imageUrl={renderLessonIllustrationDataUrl({ ...slide, subject, slideIndex: slide.sourceIndex ?? i })} onRegenImage={() => onNeedImage(i)} /></div>
+    <div className="shrink-0 flex justify-between px-5 py-3 text-white"><button disabled={i === 0} onClick={() => setI(i - 1)}>← Previous</button><span>{i + 1} / {slides.length}</span><button disabled={i === slides.length - 1} onClick={() => setI(i + 1)}>Next →</button></div>
+  </div>;
 }
 
 /**

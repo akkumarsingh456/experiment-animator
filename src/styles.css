@@ -147,14 +147,17 @@
 .guided-terms ul { list-style: none; padding: 0; }
 .guided-terms li:last-child { margin-bottom: 0; }
 .guided-explanation { display: flow-root; margin-top: 25px; }
-.guided-explanation figure { float: right; width: 47%; margin: 0 0 16px 24px; break-inside: avoid; }
-.guided-explanation img { width: 100%; border-radius: 6px; }
-.guided-explanation figcaption { text-align: center; color: #506171; font-size: 12px; font-style: italic; line-height: 1.5; padding-top: 10px; }
+.guided-explanation figure { width: 100%; max-width: 680px; margin: 0 auto 24px; break-inside: avoid; border: 1px solid #cbd9e2; border-radius: 10px; overflow: hidden; background: white; }
+.guided-explanation img { width: 100%; max-height: 400px; object-fit: contain; }
+.guided-figure-heading { display: flex; justify-content: space-between; gap: 12px; padding: 12px 18px; background: #edf5f8; color: #183b45; font-size: 13px; border-bottom: 1px solid #cbd9e2; }
+.guided-figure-heading span { color: #506171; font-size: 12px; }
+.guided-explanation figcaption { color: #506171; font-size: 13px; line-height: 1.6; padding: 14px 18px; border-top: 1px solid #e1e6eb; }
 .guided-explanation .guided-group { margin-top: 0; }
 .guided-topic table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 15px; }
 .guided-table-scroll { max-width: 100%; overflow-x: auto; }
 .guided-topic th, .guided-topic td { border: 1px solid #5a6875; padding: 12px 16px; text-align: left; overflow-wrap: anywhere; }
-.guided-topic th, .guided-topic td:nth-child(2) { white-space: nowrap; overflow-wrap: normal; }
+.guided-topic th { white-space: nowrap; }
+.guided-topic td:nth-child(2) { white-space: normal; overflow-wrap: anywhere; }
 .guided-topic th { background: #ecfaf4; font-weight: 750; }
 .guided-topic tr { break-inside: avoid; }
 .guided-derivation { border-left: 3px solid #7eaff7; padding-left: 20px; }
@@ -174,6 +177,25 @@
 .guided-recap { background: #f7fafc; padding: 16px 20px; border-radius: 8px; margin-top: 24px; }
 .guided-recap summary { font-weight: 700; cursor: pointer; }
 .guided-recap ul { margin-top: 12px; }
+.lesson-export-root { position: fixed; left: -20000px; top: 0; width: 794px; background: white; color: #17212e; pointer-events: none; }
+.lesson-export-notes .guided-document-title { display: none; }
+.lesson-export-notes .guided-topic { box-shadow: none; margin: 0; padding: 32px; border-radius: 0; }
+.lesson-export-notes .guided-small { font-size: 13px; }
+.lesson-export-notes .guided-print-url { display: block; overflow-wrap: anywhere; font-size: 11px; }
+.lesson-export-notes .guided-table-scroll { overflow: visible; }
+.lesson-export-notes table { table-layout: fixed; }
+.lesson-export-notes th { white-space: normal; }
+.lesson-export-notes td, .lesson-export-notes th { overflow-wrap: anywhere; }
+.lesson-export-notes th:first-child { width: 20%; }
+.lesson-export-notes th:last-child { width: 15%; }
+.lesson-export-notes .katex-display { overflow: visible; }
+.lesson-export-slides { width: 1120px; }
+.lesson-export-slide .lesson-slide-canvas { height: 760px; min-height: 760px; box-shadow: none; }
+.lesson-export-slide .lesson-simulation-panel { display: none; }
+.lesson-export-slide .lesson-figure-panel { flex: 1; }
+.lesson-export-slide .lesson-slide-body { grid-template-columns: 3fr 2fr; }
+.lesson-export-slide * { animation: none !important; transition: none !important; }
+.lesson-presentation .lesson-slide-canvas { height: calc(100dvh - 112px); min-height: 560px; }
 @media (max-width: 640px) {
   .guided-topic { padding: 24px 20px; }
   .guided-explanation figure { float: none; width: 100%; max-width: 450px; margin: 0 auto 24px; }
