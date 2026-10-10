@@ -10,6 +10,29 @@ import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import MathText from "@/components/MathText";
 import { toNoteBlocks, type NoteBlock, type NoteSectionLike } from "@/lib/notes-paging";
 
+// Present repeated prose labels as a single heading, keeping mathematical
+// derivation labels intact for the block grouping helpers.
+export function groupNoteLabels(sections: NoteSectionLike[] | undefined): NoteSectionLike[] {
+  const out: NoteSectionLike[] = [];
+  for (const section of sections || []) {
+    if (section.heading !== "Teacher Notes" || section.kind === "diagram") {
+      out.push(section);
+      continue;
+    }
+    let group: NoteSectionLike | undefined;
+    for (const line of section.lines) {
+      const match = line.match(/^\*\*(Definition|Key point|Important point|Use|Example|NCERT point):\*\*\s*(.+)$/i);
+      const heading = match ? ({ Definition: "Definitions", "Key point": "Key points", "Important point": "Important points", Use: "Applications", Example: "Examples", "NCERT point": "Textbook points" } as Record<string, string>)[match[1]] || match[1] : "Teacher Notes";
+      if (!group || group.heading !== heading) {
+        group = { ...section, heading, lines: [] };
+        out.push(group);
+      }
+      group.lines.push(match ? match[2] : line);
+    }
+  }
+  return out;
+}
+
 function BlockView({ block, showHeading }: { block: NoteBlock; showHeading: boolean }) {
   const isDeriv = block.lines.some((l) => /derivation of/i.test(l));
   return (
@@ -20,12 +43,12 @@ function BlockView({ block, showHeading }: { block: NoteBlock; showHeading: bool
         </h4>
       )}
       {block.kind === "diagram" ? (
-        <pre className="text-[0.72em] font-mono leading-[1.2] whitespace-pre overflow-hidden text-foreground/90 rounded-md border border-border/50 bg-secondary/40 p-[0.4em]">
+        <pre className="text-[0.85em] font-mono leading-[1.4] whitespace-pre overflow-x-auto text-foreground/90 rounded-md border border-border/50 bg-secondary/40 p-[0.7em]">
           {block.lines.join("\n")}
         </pre>
       ) : (
         <ul
-          className={`leading-snug space-y-[0.15em] text-foreground/90 break-words ${
+          className={`leading-relaxed space-y-[0.4em] text-foreground/90 break-words ${
             isDeriv ? "rounded-md border-l-2 border-primary/50 bg-secondary/30 py-[0.2em] pr-[0.3em]" : ""
           }`}
         >
@@ -40,7 +63,7 @@ function BlockView({ block, showHeading }: { block: NoteBlock; showHeading: bool
   );
 }
 
-const MIN_PX = 10;
+const MIN_PX = 14;
 
 export function PagedNoteSections({
   sections,
@@ -51,7 +74,7 @@ export function PagedNoteSections({
   scale?: "card" | "present";
   header?: React.ReactNode;
 }) {
-  const blocks = useMemo(() => toNoteBlocks(sections), [sections]);
+  const blocks = useMemo(() => toNoteBlocks(groupNoteLabels(sections)), [sections]);
   const maxPx = scale === "present" ? 22 : 18;
   const boxRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -83,7 +106,7 @@ export function PagedNoteSections({
         };
         const one = search(1);
         const wide = box.clientWidth > 640;
-        const two = wide && one < 13 ? search(2) : 0;
+        const two = wide && one < MIN_PX + 1 ? search(2) : 0;
         const next = two > one ? { px: two, cols: 2 as const } : { px: one || MIN_PX, cols: 1 as const };
         content.style.fontSize = `${next.px}px`;
         content.style.columnCount = String(next.cols);
@@ -104,7 +127,7 @@ export function PagedNoteSections({
   return (
     <div className="flex-1 min-h-0 flex flex-col gap-1.5">
       {header}
-      <div ref={boxRef} className="flex-1 min-h-0 overflow-hidden">
+      <div ref={boxRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-2">
         <div
           ref={contentRef}
           style={{ fontSize: `${fit.px}px`, columnCount: fit.cols, columnGap: "1.5em" }}

@@ -1152,14 +1152,9 @@ function extractKeyTerms(sentences: string[], topic: string): { term: string; me
 
 function makeSlide(title: string, source: string[], topic: string, visual: string, index: number, subject = ""): Slide {
   const cleaned = uniqueByNormalized(filterJunkSentences(source)).filter(Boolean);
-  const bullets = cleaned.slice(0, 6).map((s) => beautifyMath(trimToWords(s, 180)));
-  while (bullets.length < 4) {
-    bullets.push(
-      index === 0
-        ? `This point is grounded in the uploaded NCERT chapter passage for ${topic}.`
-        : `Revise this idea with the matching NCERT excerpt for ${topic}.`,
-    );
-  }
+  // Keep complete statements; clipping mid-equation produces broken notes.
+  // Sparse excerpts should not be padded with repeated placeholder bullets.
+  const bullets = cleaned.slice(0, 6).map((s) => beautifyMath(s));
   const notesSource = cleaned.slice(6, 12).length ? cleaned.slice(6, 12) : cleaned.slice(0, 4);
   const bulletsOut = bullets.slice(0, 6);
   const prettyTitle = beautifyMath(title);
@@ -1168,7 +1163,7 @@ function makeSlide(title: string, source: string[], topic: string, visual: strin
   return {
     title: prettyTitle,
     bullets: bulletsOut,
-    notes: notesSource.slice(0, 4).map((s) => beautifyMath(trimToWords(s, 210))),
+    notes: notesSource.slice(0, 4).map((s) => beautifyMath(s)),
     key_terms: extractKeyTerms(cleaned, topic).map((k) => ({ term: beautifyMath(k.term), meaning: beautifyMath(k.meaning) })),
     ncert_quote: cleaned[0] ? beautifyMath(trimToWords(cleaned[0], 180)) : undefined,
     visual,
@@ -1701,7 +1696,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v36-full-ncert-derivations",
+      "lesson-v37-deduplicated-readable-notes",
       data.klass,
       data.subject,
       data.chapter,

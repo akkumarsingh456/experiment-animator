@@ -55,6 +55,8 @@ const JUNK_LINE = [
 
 /** Strip NCERT print noise: edition years, figure/page refs, watermarks. */
 export function cleanNcertLine(raw: string): string {
+  // A clipped extraction is not a complete teaching statement.
+  if (/(?:\.{3}|…)\s*$/.test(String(raw || ""))) return "";
   let s = mapOutsideMath(repairNotation(String(raw || "")), (t) => t
     .replace(/\s+/g, " ")
     .replace(/\b(19|20)\d{2}\s*[-–]\s*\d{2}\b/g, " ")
@@ -68,7 +70,7 @@ export function cleanNcertLine(raw: string): string {
     .replace(/\s+([,.;:])/g, "$1")
     .replace(/\s{2,}/g, " "))
     .trim();
-  s = s.replace(/^[^A-Za-z0-9($\\]+/, "").replace(/\s*[,;:]$/, "");
+  s = s.replace(/^\s*\d+\.\d+\s*,\s*/, "").replace(/^[^A-Za-z0-9($\\]+/, "").replace(/\s*[,;:]$/, "");
   if (s && !/[.?!)]$/.test(s)) s += ".";
   if (s.length <= 3) return "";
   if (JUNK_LINE.some((p) => p.test(s))) return "";
@@ -99,12 +101,34 @@ function dedupe(lines: string[]): string[] {
 }
 
 /** Dedupe label-prefixed lines by their content, ignoring the bold label. */
-function dedupeLabelled(lines: string[]): string[] {
+export function dedupeLabelled(lines: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
+  const words = (s: string) => new Set(norm(s).split(" ").filter((word) => word.length > 3));
+  const math = (s: string) => splitMath(s).filter((part) => part.type !== "text").map((part) => part.value.replace(/\s/g, "")).join("|");
   for (const l of lines) {
-    const k = norm(l.replace(/^\*\*[^*]+:\*\*\s*/, "")).slice(0, 70);
+    // A derivation may intentionally restate its formula or an intermediate
+    // equation. Its labels also carry the grouping information for rendering.
+    if (/^\*\*derivation\b/i.test(l)) {
+      if (!out.includes(l.trim())) out.push(l.trim());
+      continue;
+    }
+    const content = l.replace(/^\*\*[^*]+:\*\*\s*/, "");
+    const k = norm(content);
     if (!k || seen.has(k)) continue;
+    // OCR excerpts often repeat the same sentence with a different opening
+    // or a clipped ending. Keep one copy, without conflating short formulas.
+    if (k.length > 60 && [...seen].some((previous) =>
+      previous.length > 60 && (previous.includes(k) || k.includes(previous)))) continue;
+    const tokens = words(content);
+    if (tokens.size >= 8 && out.some((previous) => {
+      if (/^\*\*derivation\b/i.test(previous)) return false;
+      const body = previous.replace(/^\*\*[^*]+:\*\*\s*/, "");
+      if (math(body) !== math(content)) return false;
+      const other = words(body);
+      const overlap = [...tokens].filter((word) => other.has(word)).length;
+      return overlap / Math.max(tokens.size, other.size) >= 0.9;
+    })) continue;
     seen.add(k);
     out.push(l.trim());
   }
@@ -114,7 +138,7 @@ function dedupeLabelled(lines: string[]): string[] {
 const NOTE_HEADING = "Teacher Notes";
 
 
-const isDefinition = (s: string) => /\bis defined as\b|\bis called\b|\bis known as\b|\brefers to\b|\bmeans\b|\bis the\b|\bare the\b/i.test(s);
+const isDefinition = (s: string) => /\bis defined as\b|\bis called\b|\bis known as\b|\brefers to\b|\bmeans\b/i.test(s) && !/^\s*(from|hence|therefore|next|which|\d)/i.test(s);
 const isFormula = (s: string) => /[A-Za-zΔ]\s*=\s*[^=]/.test(s) || /\bformula\b|\bequation\b/i.test(s);
 const isUnit = (s: string) => /\bSI unit\b|\bunit of\b|\bmeasured in\b|\bN\/C\b|\bV\/m\b|\bjoule\b|\bnewton\b|\bvolt\b|\bfarad\b|\bcoulomb\b/i.test(s);
 const isDerivation = (s: string) => /\bderiv(e|ed|ation|ing)\b|\bsubstitut(e|ing)\b|\bwe get\b|\bwe obtain\b|\btherefore\b|\bhence\b|\bon simplif/i.test(s);
@@ -129,6 +153,7 @@ export function usefulTerm(term: string, meaning: string): boolean {
   const t = String(term || "").trim();
   const m = String(meaning || "").trim();
   if (t.length < 3 || t.length > 42 || TERM_STOP.test(t)) return false;
+  if (/^(important quantity|current electricity|key point|definition)$/i.test(t)) return false;
   if (/\d\s*$/.test(m) || m.length < 18) return false;
   return /[A-Za-z]{3}/.test(t) && /[a-z]{3}/.test(m);
 }
@@ -144,8 +169,8 @@ export function usefulTerm(term: string, meaning: string): boolean {
  */
 export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
   const pool = dedupe([
-    ...(slide.bullets || []).map(cleanNcertLine),
-    ...(slide.notes || []).map(cleanNcertLine),
+    ...(slide.bullets || []).flatMap(sentences),
+    ...(slide.notes || []).flatMap(sentences),
     ...sentences(slide.grounding || ""),
   ]).filter(Boolean);
 
@@ -187,11 +212,8 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
     lines.push(`**Key term — ${t.term}:** ${meaning}`);
   }
 
-  const first = (slide.key_terms || []).find((t) => usefulTerm(t.term, cleanNcertLine(t.meaning)));
-  if (first) {
-    const hook = cleanNcertLine(first.meaning).split(/[,.;]/)[0];
-    if (hook) lines.push(`**Memory trick:** ${first.term} → ${hook}.`);
-  }
+  // Repeating the first definition is not a mnemonic. Only the grounded AI
+  // pass may supply an actual memory aid.
 
   const finalLines = dedupeLabelled(lines);
 
@@ -351,6 +373,7 @@ export async function groqTeacherNotes(opts: {
     "- PRIMARY SOURCE IS NCERT: definitions, prescribed statements and the derivations that NCERT itself performs come from NCERT wording. Use HC Verma / PW / reference-book material for extra depth: shortcut formulas, tables, graph behaviour, exam traps and memory tricks.",
     "- Never invent facts, data, examples or numbers that contradict or go beyond this chapter's scope.",
     "- Rewrite in crisp teacher language; never copy long paragraphs verbatim.",
+    "- Stay on the individual slide topic. State each fact once; do not repeat a definition as a key point, key term or memory trick. Omit irrelevant headings rather than filling a template.",
     "- Clean OCR damage (broken words, stray page numbers, headers/footers) before writing.",
     "",
     "TEACHING STYLE (mandatory):",
@@ -485,7 +508,9 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
 
 
   const repaired = await repairSlideFormulas(await ensureFormulaBlocks(withLocal, opts), opts);
-  return await attachNoteDiagrams(repaired, opts);
+  const unique = repaired.map((s) => ({ ...s, sections: s.sections?.map((sec) =>
+    sec.kind === "diagram" ? sec : { ...sec, lines: dedupeLabelled(sec.lines) }) }));
+  return await attachNoteDiagrams(unique, opts);
 }
 
 /**
