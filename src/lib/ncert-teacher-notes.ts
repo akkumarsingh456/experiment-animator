@@ -88,6 +88,23 @@ function sentences(text: string): string[] {
     .filter((s) => s.length > 20 && /[a-z]/.test(s));
 }
 
+/** Include more topic-specific chapter evidence for detailed guided notes. */
+export function selectSlideExcerpts(slide: NoteSourceSlide, context: string): string[] {
+  const own = dedupe([...(slide.bullets || []), ...(slide.notes || []), ...sentences(slide.grounding || "")]).filter(Boolean);
+  const stop = new Set(["chapter", "introduction", "important", "concept", "current", "electricity", "the", "and", "for", "with", "from"]);
+  const terms = norm(slide.title).split(" ").filter((word) => word.length > 3 && !stop.has(word));
+  if (!terms.length) return own.slice(0, 24);
+  const related = sentences(context).map((line, index) => ({ line, index, score: terms.filter((term) => norm(line).split(" ").includes(term)).length }))
+    .filter(({ score }) => score > 0).sort((a, b) => b.score - a.score || a.index - b.index).slice(0, 16).sort((a, b) => a.index - b.index).map(({ line }) => line);
+  const result: string[] = [];
+  let chars = 0;
+  for (const line of dedupe([...own, ...related])) {
+    if (chars + line.length > 12000) continue;
+    result.push(line); chars += line.length;
+  }
+  return result;
+}
+
 function dedupe(lines: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
@@ -125,6 +142,7 @@ export function dedupeLabelled(lines: string[]): string[] {
       if (/^\*\*derivation\b/i.test(previous)) return false;
       const body = previous.replace(/^\*\*[^*]+:\*\*\s*/, "");
       if (math(body) !== math(content)) return false;
+      if ((body.match(/\d+(?:\.\d+)?/g) || []).join("|") !== (content.match(/\d+(?:\.\d+)?/g) || []).join("|")) return false;
       const other = words(body);
       const overlap = [...tokens].filter((word) => other.has(word)).length;
       return overlap / Math.max(tokens.size, other.size) >= 0.9;
@@ -193,15 +211,17 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
 
   // Order matters: earlier labels claim a sentence first, so the same sentence
   // can never surface twice under two different labels on one slide.
-  add("Definition", take(isDefinition, 3));
-  const units = take(isUnit, 2);
-  add("Formula", take(isFormula, 3));
+  add("Definition", take(isDefinition, pool.length));
+  const units = take(isUnit, pool.length);
+  add("Formula", take(isFormula, pool.length));
   add("SI unit", units);
   add("Derivation step", take(isDerivation, 4));
   add("Important point", take(isProperty, 4));
   add("Example", take(isExample, 2));
   add("Use", take(isApplication, 2));
-  add("Key point", take(() => true, 8));
+  // Guided notes are a flowing document, so retain all remaining source
+  // statements rather than capping the notes to fit a fixed slide.
+  add("Key point", take(() => true, pool.length));
 
   const termSeen = new Set(lines.map((l) => norm(l.replace(/^\*\*[^*]+:\*\*\s*/, "")).slice(0, 70)));
   for (const t of (slide.key_terms || []).slice(0, 6)) {
@@ -254,7 +274,7 @@ export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
   for (const sec of sections) {
     const label = sec.heading.replace(/^\d+\.\s*/, "").replace(/\s*\(NCERT\)\s*/i, "").trim();
     for (const raw of sec.lines) {
-      const l = cleanNcertLine(raw);
+      const l = /^(?:\d+\.\s*)?(check your understanding|answers and explanations)/i.test(sec.heading) ? repairNotation(raw) : cleanNcertLine(raw);
       if (!l) continue;
       lines.push(/^\*\*/.test(raw) ? raw : `**${label}:** ${l}`);
     }
@@ -284,6 +304,8 @@ const HEADINGS = [
   "12. Key Terms",
   "13. Exam tip",
   "14. Memory Trick",
+  "15. Check Your Understanding",
+  "16. Answers and Explanations",
 ];
 
 /** Labels whose lines are maths/pedagogy and must not be filtered by lexical overlap. */
@@ -317,14 +339,15 @@ function sanitizeSections(raw: unknown, contextNorm: string, subject = "physics"
     const kind: NoteSectionKind = kinds.includes(kindRaw) ? (kindRaw as NoteSectionKind) : "bullets";
     // Maths / pedagogy headings keep light repair only, so correct notation
     // (integrals, fractions, ε₀, superscripts) is never mistaken for garbage.
+    const educational = /^(check your understanding|answers and explanations)/i.test(heading.replace(/^\d+\.\s*/, ""));
     const freeform = kind === "formula" || kind === "tip" || FREEFORM_LABEL.test(heading.replace(/^\d+\.\s*/, ""));
     const lines = dedupe(
       (Array.isArray((s as any)?.lines) ? (s as any).lines : [])
-        .map((l: unknown) => (freeform ? repairNotation(String(l || "")) : cleanNcertLine(String(l || ""))))
+        .map((l: unknown) => (freeform || educational ? repairNotation(String(l || "")) : cleanNcertLine(String(l || ""))))
         // Subject-aware LaTeX normalisation (fractions, chemical subscripts,
         // ionic superscripts) for every surviving line.
         .map((l: string) => normalizeNoteLine(l, subject))
-        .filter((l: string) => l.length > 4 && l.length < 320),
+        .filter((l: string) => l.length > 4 && l.length < 900),
     ).filter((l) => freeform || ncertSupported(l, contextNorm));
     if (heading && lines.length) out.push({ heading, kind, lines });
   }
@@ -356,7 +379,7 @@ export async function groqTeacherNotes(opts: {
   const payload = opts.slides.map((s, i) => ({
     index: i,
     title: s.title,
-    ncert_excerpts: dedupe([...(s.bullets || []), ...(s.notes || []), ...sentences(s.grounding || "")]).slice(0, 16),
+    ncert_excerpts: selectSlideExcerpts(s, opts.context),
   }));
 
   const prompt = [
@@ -372,7 +395,7 @@ export async function groqTeacherNotes(opts: {
     "- The excerpts below come from the uploaded NCERT textbook AND the uploaded reference books (PW / Physics Wallah notes, HC Verma, Med Easy, mind-map books) for this class/subject; both are the source of truth for every FACT, number, example and application.",
     "- PRIMARY SOURCE IS NCERT: definitions, prescribed statements and the derivations that NCERT itself performs come from NCERT wording. Use HC Verma / PW / reference-book material for extra depth: shortcut formulas, tables, graph behaviour, exam traps and memory tricks.",
     "- Never invent facts, data, examples or numbers that contradict or go beyond this chapter's scope.",
-    "- Rewrite in crisp teacher language; never copy long paragraphs verbatim.",
+    "- Write detailed guided study notes: explain what happens, why it happens, assumptions, physical interpretation and links between concepts. Use complete short paragraphs, not only label-prefixed fragments.",
     "- Stay on the individual slide topic. State each fact once; do not repeat a definition as a key point, key term or memory trick. Omit irrelevant headings rather than filling a template.",
     "- Clean OCR damage (broken words, stray page numbers, headers/footers) before writing.",
     "",
@@ -383,7 +406,9 @@ export async function groqTeacherNotes(opts: {
     "- Give the precise textbook DEFINITION, then the FORMULA, then its SI UNIT and whether the quantity is scalar or vector.",
     "- Where the chapter contains a standard relation, give a numbered STEP-BY-STEP DERIVATION (one short step per line, e.g. 'Step 1: $V = -\\int \\mathbf{E}\\cdot d\\mathbf{r}$ from $\\infty$ to $r$').",
     "- GRAPH / TREND: whenever the topic has a graph or a variation (V-r, I-V, P-V, rate-time, growth curve, periodic-trend), describe it precisely: axes with units, curve shape, slope meaning, intercepts, asymptotes and what physically/chemically happens along the curve — written in LaTeX, e.g. 'Axes: $V$ (volt) vs $r$ (m); curve $V \\propto \\frac{1}{r}$, hyperbolic, $V \\to 0$ as $r \\to \\infty$; slope $= -E$.'",
-    "- Add KEY PROPERTIES, an NCERT EXAMPLE/ACTIVITY, a REAL-LIFE USE, exam-ready IMPORTANT POINTS, KEY TERMS with one-line meanings, an EXAM TIP and a MEMORY TRICK.",
+    "- Add KEY PROPERTIES, a fully worked NCERT EXAMPLE/ACTIVITY (given values, chosen formula, substitution, result and units), a REAL-LIFE USE, and exam-ready IMPORTANT POINTS. Include limitations and common misconceptions only when supported by the excerpts.",
+    "- Add 2-3 conceptual Check Your Understanding questions derived from this slide's source, followed by matching numbered Answers and Explanations. Do not invent numerical exercises or their data.",
+    "- In the Formula section, write each summary line as 'Concept name | $expression$ | SI unit'. Use 'Not applicable' for a law with no single SI unit; never invent units. Supply symbol meanings separately.",
 
     "",
     "NOTATION RULES (very important — LaTeX is mandatory):",
@@ -401,7 +426,7 @@ export async function groqTeacherNotes(opts: {
     `Use only these headings, in order, omitting any you cannot support: ${HEADINGS.join(" | ")}`,
     'Each section: { "heading": string, "kind": "text"|"bullets"|"formula"|"terms"|"tip", "lines": string[] }.',
     "Use kind 'formula' for Formula/SI Unit/Derivation/Graph sections and 'tip' for Analogy/Exam tip/Memory Trick.",
-    "Lines must be short (max 24 words), exam-ready, dense, and free of filler. Fill the slide: aim for 22-32 lines total per slide, and never fewer than 16 — teachers need a full, information-rich board.",
+    "The notes flow across printable pages. Aim for 30-45 substantive lines when the source supports that depth; use complete paragraphs of 2-4 sentences for explanations and short numbered lines for derivations/examples. Do not pad sparse sources or impose a fixed slide word limit.",
 
     "NEVER include edition years (e.g. 2019-20), figure/table numbers, page numbers or 'Fig.' references.",
     "Do not repeat the same fact under two headings — every fact appears exactly once.",
@@ -418,7 +443,7 @@ export async function groqTeacherNotes(opts: {
         ]
       : []),
     "SLIDES AND THEIR NCERT EXCERPTS:",
-    JSON.stringify(payload).slice(0, 24000),
+    JSON.stringify(payload),
   ].join("\n");
 
   try {
@@ -468,11 +493,11 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
   );
   const targets = slides.map((s, i) => ({ s, i })).filter(({ s }) => (s.kind ?? "content") === "content");
   const withLocal = slides.map((s) =>
-    (s.kind ?? "content") === "content" ? { ...s, sections: buildLocalSections(s) } : s,
+    (s.kind ?? "content") === "content" ? { ...s, sections: buildLocalSections({ ...s, grounding: selectSlideExcerpts(s, opts.context).join(" ") }) } : s,
   );
   if (targets.length === 0) return withLocal;
 
-  const BATCH = 5;
+  const BATCH = 3;
   const batches: Array<Array<{ s: T; i: number }>> = [];
   for (let i = 0; i < targets.length; i += BATCH) batches.push(targets.slice(i, i + BATCH));
 
@@ -606,8 +631,19 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       const existing = block.derivations?.length ? stripWeakDerivations(rawExisting) : rawExisting;
       const add: string[] = [];
       const norm = (t: string) => t.replace(/\*\*[^*]+:\*\*/g, "").replace(/[\s$\\{}]/g, "").toLowerCase();
-      const known = new Set(existing.filter((l) => /^\*\*formula/i.test(l)).map(norm));
-      for (const f of block.formula) if (!known.has(norm(f))) add.push(`**Formula:** ${f}`);
+      const formulaKey = (line: string) => {
+        const body = line.replace(/^\*\*[^*]+:\*\*\s*/, "");
+        const cells = body.split(" | ");
+        const expression = cells.length === 3 ? cells[1] : body;
+        const math = splitMath(expression).filter((part) => part.type !== "text").map((part) => part.value).join(" ");
+        return norm(math || expression);
+      };
+      const known = new Set(existing.filter((l) => /^\*\*formula/i.test(l)).map(formulaKey));
+      for (const f of block.formula) {
+        if (known.has(formulaKey(f))) continue;
+        known.add(formulaKey(f));
+        add.push(`**Formula:** ${f}`);
+      }
       if (!has(existing, /^variable/i)) for (const v of block.variables) add.push(`**Variable:** ${v}`);
       if (!has(existing, /^si unit/i)) for (const u of block.unit) add.push(`**SI unit:** ${u}`);
       // Every formula gets its own complete derivation, grouped under a

@@ -12,6 +12,14 @@
 
 export type NoteSectionLike = { heading: string; kind: string; lines: string[] };
 
+const formulaIdentity = (line: string) => {
+  const body = line.replace(/^\s*\*\*[^*]+:\*\*\s*/, "");
+  const cells = body.split(" | ");
+  const expression = cells.length === 3 ? cells[1] : body;
+  const math = expression.match(/\$\$?([^$]+)\$\$?/g)?.join(" ") || expression;
+  return math.replace(/[\s${}]/g, "").toLowerCase();
+};
+
 /** One unbreakable unit of notes: a heading fragment with some of its lines. */
 export type NoteBlock = {
   /** Index of the parent section, used to know when a heading repeats. */
@@ -48,10 +56,12 @@ export function toNoteBlocks(sections: NoteSectionLike[] | undefined): NoteBlock
       .map((line, index) => (DERIV_START.test(line) ? index : -1))
       .filter((index) => index >= 0);
     const pairedDerivations = new Map<number, number>();
-    formulaIndexes.forEach((formulaIndex, order) => {
-      const derivationIndex = derivationIndexes[order];
+    const assigned = new Set<number>();
+    formulaIndexes.forEach((formulaIndex) => {
+      const derivationIndex = derivationIndexes.find((index) => !assigned.has(index) && index > formulaIndex && formulaIdentity(lines[index]) === formulaIdentity(lines[formulaIndex]));
       if (derivationIndex !== undefined && derivationIndex > formulaIndex) {
         pairedDerivations.set(formulaIndex, derivationIndex);
+        assigned.add(derivationIndex);
       }
     });
     const consumed = new Set<number>();
@@ -77,7 +87,7 @@ export function toNoteBlocks(sections: NoteSectionLike[] | undefined): NoteBlock
         continue;
       }
       // A formula line directly followed by its derivation → keep together.
-      const nextIsDeriv = i + 1 < lines.length && DERIV_START.test(lines[i + 1]!);
+      const nextIsDeriv = i + 1 < lines.length && !consumed.has(i + 1) && DERIV_START.test(lines[i + 1]!) && formulaIdentity(line) === formulaIdentity(lines[i + 1]);
       if (DERIV_START.test(line) || (nextIsDeriv && FORMULA_LABEL.test(line))) {
         const group: string[] = [line];
         let j = i + 1;

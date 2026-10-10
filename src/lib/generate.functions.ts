@@ -4,7 +4,7 @@ import { createHash } from "crypto";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
-import { renderNapkinInfographicDataUrl } from "@/lib/napkin-infographic";
+import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
 import { REF_BOOK_PATTERN } from "@/lib/reference-books";
 import { verifyNoteSections, normalizeForGrounding, autoFixAndVerifyNotes, type NotesCheck } from "@/lib/notes-verification";
@@ -56,7 +56,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     // v13: topic-aware textbook renderer with large labels and visual models.
     const cacheKey = hashKey([
-      "img-v15-unique-icon-diagrams",
+      "img-v16-textbook-topic-illustrations",
       data.klass,
       data.subject,
       String(data.slideIndex),
@@ -132,7 +132,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       const visualNotes = [...new Set([...(data.notes || []), ...sectionNotes])]
         .sort((a, b) => Number(/formula|derivation|equation/i.test(b)) - Number(/formula|derivation|equation/i.test(a)))
         .slice(0, 18);
-      url = renderNapkinInfographicDataUrl({
+      url = renderLessonIllustrationDataUrl({
         title: data.title,
         bullets: data.bullets,
         notes: visualNotes,
@@ -1696,7 +1696,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v37-deduplicated-readable-notes",
+      "lesson-v38-detailed-guided-worksheets",
       data.klass,
       data.subject,
       data.chapter,

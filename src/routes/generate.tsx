@@ -52,6 +52,7 @@ import { MathText } from "@/components/MathText";
 import { PenPaperEditor } from "@/components/PenPaperEditor";
 import { usePenNotes, getPenNotes } from "@/lib/pen-notes";
 import PagedNoteSections from "@/components/PagedNoteSections";
+import { GuidedLessonNotes } from "@/components/GuidedLessonNotes";
 import { plainMathText } from "@/lib/latex-notation";
 import { paginateNoteSections } from "@/lib/notes-paging";
 
@@ -185,8 +186,8 @@ function GeneratePage() {
         </div>
       </header>
 
-      <div className="w-[min(96vw,1650px)] mx-auto px-2 sm:px-3 py-5">
-        <div className="flex flex-wrap items-center gap-2 mb-6">
+      <div className="w-[min(96vw,1650px)] mx-auto px-2 sm:px-3 py-5 print:w-auto print:mx-0 print:p-0">
+        <div className="flex flex-wrap items-center gap-2 mb-6 print:hidden">
           <Badge variant="secondary" className="rounded-full"><Sparkles className="h-3.5 w-3.5" />Class {search.klass}</Badge>
           <Badge variant="outline" className="rounded-full">{search.subject}</Badge>
           {search.chapter && <Badge variant="outline" className="rounded-full">Ch. {search.chapter}</Badge>}
@@ -247,6 +248,11 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [lessonView, setLessonView] = useState<"notes" | "slides">("notes");
+  useEffect(() => {
+    document.body.dataset.lessonView = lessonView;
+    return () => { delete document.body.dataset.lessonView; };
+  }, [lessonView]);
   // English / Hindi / Sanskrit chapters have no experiment to verify —
   // the full chapter text is rendered straight away.
   const skipVerify = isLanguageSubject(String(search.subject || "")) || search.mode === "chapter";
@@ -261,7 +267,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const imgHashRef = useRef<Record<number, string>>({});
   const dupRetryRef = useRef<Record<number, number>>({});
 
-  useEffect(() => { setSlides(withCoverSlide(result.slides)); setVerified(false); setActiveIdx(0); setImages({}); setImgLoading({}); setImgStatus({}); imgHashRef.current = {}; dupRetryRef.current = {}; }, [result]);
+  useEffect(() => { setSlides(withCoverSlide(result.slides)); setVerified(skipVerify); setActiveIdx(0); setImages({}); setImgLoading({}); setImgStatus({}); imgHashRef.current = {}; dupRetryRef.current = {}; }, [result]);
 
   function updateSlide(idx: number, patch: Partial<Slide>) {
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
@@ -571,7 +577,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   return (
     <>
       {/* Step 1 — Activity verification (skipped for language chapters) */}
-      {!skipVerify && (
+      {!skipVerify && lessonView === "slides" && (
         <ActivityVerification
           matches={result.activity_matches}
           activities={result.activities}
@@ -585,18 +591,20 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       )}
 
 
-      {!verified ? (
-        <p className="text-xs text-muted-foreground mt-6">
-          Confirm the matched NCERT Activity above to unlock the 10-slide PPT, downloads, and 3D animated storyboard.
-        </p>
+      {!verified && lessonView === "slides" ? (
+        <div className="print:hidden mt-6"><p className="text-xs text-muted-foreground mb-3">
+          Confirm the matched NCERT Activity above to unlock the interactive slides and animated storyboard.
+        </p><Button variant="outline" size="sm" onClick={() => setLessonView("notes")}>Back to guided notes</Button></div>
       ) : (
         <>
           {/* Slides */}
-          <section className="mb-10">
+          <section className="mb-10 print:m-0">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
-              <h2 className="font-semibold text-lg">{slides.length}-Slide Interactive Lesson · A4 landscape (smart-board ready)</h2>
+              <h2 className="font-semibold text-lg">{lessonView === "notes" ? "Complete guided notes" : `${slides.length}-Slide Interactive Lesson`}</h2>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => setEditing((v) => !v)}>
+                <Button size="sm" variant={lessonView === "notes" ? "default" : "outline"} aria-pressed={lessonView === "notes"} onClick={() => setLessonView("notes")}>Guided notes</Button>
+                <Button size="sm" variant={lessonView === "slides" ? "default" : "outline"} aria-pressed={lessonView === "slides"} onClick={() => setLessonView("slides")}>Interactive slides</Button>
+                <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => { setLessonView("slides"); setEditing((v) => !v); }}>
                   <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setPresenting(true)}>
@@ -610,6 +618,9 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 </Button>
               </div>
             </div>
+
+            {lessonView === "notes" && <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} />}
+            <div className={lessonView === "slides" ? "lesson-slides" : "hidden"}>
 
             {/* Live auto-gen status — proves the 2D pipeline is running for
                 every subject and every slide, not just Physics. */}
@@ -747,7 +758,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
             <div
               key={`slide-${activeIdx}`}
-              className="animate-in fade-in slide-in-from-right-4 duration-500 mx-auto grid w-full place-items-center print:max-w-none print:block"
+              className="animate-in fade-in slide-in-from-right-4 duration-500 mx-auto grid w-full place-items-center print:hidden"
                           >
               <SlideCanvas
                 slide={slides[activeIdx]}
@@ -794,14 +805,14 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 </div>
               ))}
             </div>
+            </div>
           </section>
 
-          <ActivitiesView activities={result.activities} />
-          <VideoView video={result.video} />
+          {lessonView === "slides" && <><ActivitiesView activities={result.activities} /><VideoView video={result.video} /></>}
         </>
       )}
 
-      <p className="text-xs text-muted-foreground mt-10">
+      <p className="text-xs text-muted-foreground mt-10 print:hidden">
         Source: {result.source_books.map((b) => `${b.subject} · Class ${b.class} · ${b.chapter}`).join(", ")} ({result.context_chars.toLocaleString()} chars of NCERT text)
       </p>
 
@@ -835,7 +846,7 @@ function ActivityVerification({
     : "bg-rose-500/10 text-rose-700 border-rose-500/30";
 
   return (
-    <section className="mb-8">
+    <section className="mb-8 print:hidden">
       <Card className="border-primary/30 shadow-soft">
         <CardContent className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
