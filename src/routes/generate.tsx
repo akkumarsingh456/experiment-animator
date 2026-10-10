@@ -56,9 +56,7 @@ import { GuidedLessonNotes } from "@/components/GuidedLessonNotes";
 import { GuidedNotesPresentation } from "@/components/GuidedNotesPresentation";
 import { downloadLessonPdf } from "@/lib/lesson-pdf";
 import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
-import { plainMathText } from "@/lib/latex-notation";
-import { paginateNoteSections } from "@/lib/notes-paging";
-import { paginateLectureSections } from "@/lib/lecture-pages";
+import { prepareSlideExport, downloadRenderedPptx } from "@/lib/lesson-slide-export";
 
 type NoteSectionUI = { heading: string; kind: string; lines: string[] };
 
@@ -464,19 +462,13 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
 
 
-  const presentationPages = useMemo(() => slides.flatMap((slide, sourceIndex) => {
-    const sections = slide.sections?.filter((section) => section.kind !== "diagram");
-    const pages = sections?.length ? paginateLectureSections(sections, 12) : [undefined];
-    return pages.map((page, pageIndex) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
-      title: pageIndex ? `${slide.title} (continued ${pageIndex + 1})` : slide.title }));
-  }), [slides]);
-
   async function downloadPDF(mode: "notes" | "slides" = lessonView) {
     if (exportMode) return;
     setExportMode(mode);
     try {
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       if (!exportRef.current) throw new Error("The PDF pages are not ready.");
+      if (mode === "slides") await prepareSlideExport(exportRef.current);
       await downloadLessonPdf(exportRef.current, mode, title);
     } catch (error) {
       toast.error(`PDF download failed: ${error instanceof Error ? error.message : "Please try again."}`);
@@ -489,115 +481,15 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   }
 
   async function downloadPPTX() {
+    if (exportMode) return;
+    setExportMode("slides");
     try {
-      const pptxgen = (await import("pptxgenjs")).default;
-      const pptx = new pptxgen();
-      // A4 landscape — 11.69in x 8.27in. Better for printing & smart-board display.
-      pptx.defineLayout({ name: "A4_LANDSCAPE", width: 11.69, height: 8.27 });
-      pptx.layout = "A4_LANDSCAPE";
-      const W = 11.69, H = 8.27;
-      const exportSlides = slides.flatMap((item, sourceIndex) => {
-        const sourceSections = (item as any).sections as NoteSectionUI[] | undefined;
-        const notePages = sourceSections?.length ? paginateNoteSections(sourceSections, 18) : [undefined];
-        return notePages.map((sections, pageIndex) => ({
-          ...item,
-          ...(sections ? { sections } : {}),
-          title: pageIndex === 0 ? item.title : `${item.title} (continued ${pageIndex + 1})`,
-          sourceSlideIndex: sourceIndex,
-          notePageIndex: pageIndex,
-        }));
-      });
-      const exportImages: Record<number, string> = {};
-      await Promise.all(exportSlides.map(async (entry, exportIndex) => {
-        const sourceImage = images[entry.sourceSlideIndex];
-        if (entry.notePageIndex === 0 && sourceImage) {
-          exportImages[exportIndex] = sourceImage;
-          return;
-        }
-        const generated = await genImage({ data: {
-          title: entry.title,
-          bullets: entry.bullets || [],
-          notes: entry.notes || [],
-          key_terms: entry.key_terms || [],
-          sections: (entry as any).sections || undefined,
-          caption: entry.caption || "",
-          subject: result.source_books[0]?.subject || search.subject,
-          klass: search.klass,
-          slideIndex: exportIndex,
-          visual_prompt: entry.visual_prompt || "",
-          grounding: entry.grounding || entry.ncert_quote || "",
-          avoidUrls: Object.values({ ...images, ...exportImages }),
-          nocache: true,
-        } });
-        if (generated.url) exportImages[exportIndex] = generated.url;
-        else if (sourceImage) exportImages[exportIndex] = sourceImage;
-      }));
-      exportSlides.forEach((s, i) => {
-        const slide = pptx.addSlide();
-        slide.background = { color: "F7F8FC" };
-        slide.addText(`Slide ${i + 1} / ${exportSlides.length}`, { x: 0.3, y: 0.2, w: 4, h: 0.3, fontSize: 10, color: "8090B0", fontFace: "Calibri" });
-        slide.addText(s.title || "", { x: 0.4, y: 0.55, w: W - 0.8, h: 0.85, fontSize: 26, bold: true, color: "1F2A4A", fontFace: "Calibri" });
-        // Left column: NCERT teacher notes only (bullets shown only when no notes exist)
-        const leftW = 6.6;
-        const allSecs = (s as any).sections as NoteSectionUI[] | undefined;
-        const diagramSec = allSecs?.find((sec) => sec.kind === "diagram");
-        const secs = allSecs?.filter((sec) => sec.kind !== "diagram");
-        if (secs?.length) {
-          const text = secs.flatMap((sec) =>
-            sec.lines.flatMap((l): any[] => {
-              const flat = plainMathText(l);
-              const m = /^\*\*([^*]+)\*\*\s*(.*)$/.exec(flat);
-              if (!m) return [{ text: flat, options: { fontSize: 14, color: "33415C", bullet: true, breakLine: true } }];
-              return [
-                { text: m[1], options: { fontSize: 14, bold: true, color: "1F2A4A", bullet: true } },
-                { text: ` ${m[2]}`, options: { fontSize: 14, color: "33415C", breakLine: true } },
-              ];
-            }),
-          );
-          slide.addText("Teacher Notes", { x: 0.5, y: 1.5, w: leftW, h: 0.32, fontSize: 13, bold: true, color: "1F2A4A", fontFace: "Calibri" });
-          slide.addText(text as any, { x: 0.5, y: 1.9, w: leftW, h: 5.5, fontFace: "Calibri", valign: "top", paraSpaceAfter: 5 });
-        } else if (s.notes?.length) {
-          slide.addText("NCERT Notes", { x: 0.5, y: 1.5, w: leftW, h: 0.3, fontSize: 13, bold: true, color: "1F2A4A" });
-          slide.addText((s.notes).map((n) => ({ text: n, options: { bullet: { type: "number" } } })),
-            { x: 0.5, y: 1.9, w: leftW, h: 5.5, fontSize: 14, color: "475569", paraSpaceAfter: 4 });
-        } else {
-          slide.addText((s.bullets || []).map((b) => ({ text: b, options: { bullet: true } })),
-            { x: 0.5, y: 1.5, w: leftW, h: 5.9, fontSize: 14, color: "33415C", fontFace: "Calibri", valign: "top", paraSpaceAfter: 4 });
-        }
-        // Right column: image + book diagram + key terms + quote
-        const rightX = leftW + 0.7;
-        const rightW = W - rightX - 0.4;
-        const img = exportImages[i] || images[s.sourceSlideIndex];
-        if (img) slide.addImage({ data: img, x: rightX, y: 1.5, w: rightW, h: 3.2 });
-        if (diagramSec?.lines.length) {
-          slide.addText(diagramSec.heading, { x: rightX, y: 4.8, w: rightW, h: 0.28, fontSize: 11, bold: true, color: "1F2A4A", fontFace: "Calibri" });
-          slide.addText(diagramSec.lines.join("\n"), {
-            x: rightX, y: 5.1, w: rightW, h: 2.3, fontSize: 8.5, color: "33415C",
-            fontFace: "Consolas", valign: "top", lineSpacingMultiple: 0.9,
-          });
-        }
-        if (s.key_terms?.length && !secs?.length) {
-          slide.addText("Key terms", { x: rightX, y: 4.85, w: rightW, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
-          slide.addText(s.key_terms.map((t) => ({ text: `${t.term}: ${t.meaning}`, options: { bullet: true } })),
-            { x: rightX, y: 5.2, w: rightW, h: 1.8, fontSize: 11, color: "475569", paraSpaceAfter: 3 });
-        }
-        if (s.ncert_quote && !secs?.length) slide.addText(`“${s.ncert_quote}”`, { x: rightX, y: 7.1, w: rightW, h: 0.6, fontSize: 10, italic: true, color: "5A6B91" });
-
-        const pen = getPenNotes(slideKey(result?.source_books?.[0]?.subject, s.sourceSlideIndex, s.title || ""));
-        if (pen.length) {
-          slide.addText("Teacher's board", { x: rightX, y: 6.7, w: rightW, h: 0.3, fontSize: 12, bold: true, color: "1F2A4A" });
-          slide.addText(pen.map((l) => ({ text: plainMathText(l), options: { bullet: true } })),
-            { x: rightX, y: 7.0, w: rightW, h: 1.1, fontSize: 11, color: "1F2A4A", paraSpaceAfter: 3 });
-        }
-
-        if (s.caption) slide.addText(s.caption, { x: 0.5, y: 7.5, w: leftW, h: 0.4, fontSize: 10, italic: true, color: "5A6B91" });
-        slide.addText("EduPlan AI · NCERT-grounded", { x: W - 3, y: H - 0.4, w: 2.8, h: 0.3, fontSize: 9, color: "8090B0", align: "right" });
-      });
-      await pptx.writeFile({ fileName: `${title || "lesson"}.pptx` });
-    } catch (e) {
-      toast.error("PPTX export failed");
-      console.error(e);
-    }
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      if (!exportRef.current) throw new Error("The slides are not ready.");
+      await downloadRenderedPptx(exportRef.current, title);
+    } catch (error) {
+      toast.error(`PPTX export failed: ${error instanceof Error ? error.message : "Please try again."}`);
+    } finally { setExportMode(null); }
   }
 
 
@@ -634,12 +526,12 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           {/* Slides */}
           <section className="mb-10 print:m-0">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
-              <h2 className="font-semibold text-lg">{lessonView === "notes" ? "Complete guided notes" : `${slides.length}-Slide Interactive Lesson`}</h2>
+              <h2 className="font-semibold text-lg">{lessonView === "notes" ? "Complete guided notes" : "Complete lecture slides"}</h2>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => { setLessonView("slides"); setEditing((v) => !v); }}>
                   <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
                 </Button>
-                <Button size="sm" onClick={downloadPPTX}>
+                <Button size="sm" disabled={!!exportMode} onClick={downloadPPTX} title="PowerPoint with rendered equations; slide text is also included in speaker notes">
                   <Download className="h-4 w-4" />PPTX
                 </Button>
               </div>
@@ -786,7 +678,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               key={`slide-${activeIdx}`}
               className="animate-in fade-in slide-in-from-right-4 duration-500 mx-auto grid w-full place-items-center print:hidden"
                           >
-              <SlideCanvas
+              {editing ? <SlideCanvas
                 slide={slides[activeIdx]}
                 index={activeIdx}
                 total={slides.length}
@@ -796,9 +688,10 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 imageLoading={!!imgLoading[activeIdx]}
                 onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
                 subject={result.source_books[0]?.subject}
-              />
+              /> : <GuidedNotesPresentation inline mode="slides" slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} onClose={closePresentation} onPdf={() => downloadPDF("slides")} />}
             </div>
 
+            {editing && <>
             <div className="flex items-center justify-between mt-4 print:hidden">
               <Button variant="outline" size="sm" disabled={activeIdx === 0} onClick={() => setActiveIdx((i) => i - 1)}>
                 <ChevronLeft className="h-4 w-4" />Prev
@@ -824,12 +717,9 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               ))}
             </div>
 
+            </>}
             <div className="hidden print:block">
-              {slides.map((s, i) => (
-                <div key={i} className="break-after-page mb-6">
-                  <SlideCanvas slide={s} index={i} total={slides.length} editing={false} onChange={() => {}} imageUrl={images[i]} imageLoading={false} onRegenImage={() => {}} subject={result.source_books[0]?.subject} />
-                </div>
-              ))}
+              <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} />
             </div>
             </div>
           </section>
@@ -843,13 +733,10 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       </p>
 
       {exportMode && <div ref={exportRef} className={`lesson-export-root lesson-export-${exportMode}`} aria-hidden="true">
-        {exportMode === "notes" ? <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} /> : presentationPages.map((slide, i) => <div className="lesson-export-slide" key={i}>
-          <SlideCanvas slide={slide} index={i} total={presentationPages.length} staticView editing={false} onChange={() => {}} imageUrl={renderLessonIllustrationDataUrl({ ...slide, subject: search.subject, slideIndex: slide.sourceIndex })} subject={search.subject} />
-        </div>)}
+        <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} includeBreaks={exportMode === "slides"} />
       </div>}
-      {presenting && (lessonView === "notes" ? <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} onClose={closePresentation} onPdf={() => downloadPDF("notes")} /> :
-        <PresentationMode slides={presentationPages} images={images} onClose={closePresentation} onNeedImage={(idx) => ensureImage(presentationPages[idx]?.sourceIndex ?? idx)} subject={search.subject} />
-      )}
+      {presenting && <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} mode={lessonView} onClose={closePresentation} onPdf={() => downloadPDF(lessonView)} />}
+
     </>
   );
 }
@@ -1371,28 +1258,6 @@ function VideoView({ video }: { video: GenerationResult["video"] }) {
       </Card>
     </section>
   );
-}
-
-function PresentationMode({ slides, images, onClose, onNeedImage, subject }: { slides: Array<Slide & { sourceIndex?: number }>; images: Record<number, string>; onClose: () => void; onNeedImage: (idx: number) => void; subject?: string }) {
-  const [i, setI] = useState(0);
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if (event.target instanceof HTMLElement && /input|textarea/i.test(event.target.tagName)) return;
-      if (event.key === "Escape") onClose();
-      if (event.key === "ArrowRight" || event.key === " ") { event.preventDefault(); setI((x) => Math.min(slides.length - 1, x + 1)); }
-      if (event.key === "ArrowLeft") { event.preventDefault(); setI((x) => Math.max(0, x - 1)); }
-    }
-    const previous = document.body.style.overflow; document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
-    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = previous; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); };
-  }, [slides.length, onClose]);
-  const slide = slides[i];
-  return <div className="lesson-presentation fixed inset-0 z-50 bg-slate-900 flex flex-col" role="dialog" aria-modal="true" aria-label="Slide presentation">
-    <div className="shrink-0 flex items-center justify-between px-5 py-3 text-white text-sm"><span>Presentation slides · {i + 1} / {slides.length}</span><button onClick={onClose}>Exit ✕</button></div>
-    <div className="flex-1 min-h-0 overflow-auto px-3"><SlideCanvas slide={slide} index={i} total={slides.length} editing={false} onChange={() => {}} subject={subject}
-      imageUrl={renderLessonIllustrationDataUrl({ ...slide, subject, slideIndex: slide.sourceIndex ?? i })} onRegenImage={() => onNeedImage(i)} /></div>
-    <div className="shrink-0 flex justify-between px-5 py-3 text-white"><button disabled={i === 0} onClick={() => setI(i - 1)}>← Previous</button><span>{i + 1} / {slides.length}</span><button disabled={i === slides.length - 1} onClick={() => setI(i + 1)}>Next →</button></div>
-  </div>;
 }
 
 /**

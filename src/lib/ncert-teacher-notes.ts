@@ -115,7 +115,7 @@ function dedupe(lines: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const l of lines) {
-    const k = norm(l).slice(0, 70);
+    const k = /[=$∝]/.test(l) ? l.replace(/\s+/g, " ").trim() : norm(l);
     if (!k || seen.has(k)) continue;
     seen.add(k);
     out.push(l.trim());
@@ -128,7 +128,7 @@ export function dedupeLabelled(lines: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   const words = (s: string) => new Set(norm(s).split(" ").filter((word) => word.length > 3));
-  const math = (s: string) => splitMath(s).filter((part) => part.type !== "text").map((part) => part.value.replace(/\s/g, "")).join("|");
+  const math = (s: string) => splitMath(s).filter((part) => part.type !== "text").map((part) => part.value.replace(/\s/g, "")).join("|") || (/[=∝]/.test(s) ? s.replace(/\s/g, "") : "");
   for (const l of lines) {
     // A derivation may intentionally restate its formula or an intermediate
     // equation. Its labels also carry the grouping information for rendering.
@@ -137,11 +137,12 @@ export function dedupeLabelled(lines: string[]): string[] {
       continue;
     }
     const content = l.replace(/^\*\*[^*]+:\*\*\s*/, "");
-    const k = norm(content);
+    const equation = math(content) || (/[=∝]/.test(content) ? content.replace(/\s/g, "") : "");
+    const k = equation ? `${norm(content)}|${equation}` : norm(content);
     if (!k || seen.has(k)) continue;
     // OCR excerpts often repeat the same sentence with a different opening
     // or a clipped ending. Keep one copy, without conflating short formulas.
-    if (k.length > 60 && [...seen].some((previous) =>
+    if (!equation && k.length > 60 && [...seen].some((previous) =>
       previous.length > 60 && (previous.includes(k) || k.includes(previous)))) continue;
     const tokens = words(content);
     if (tokens.size >= 8 && out.some((previous) => {
@@ -440,8 +441,9 @@ export async function groqTeacherNotes(opts: {
     "- Never write a fraction linearly: use $\\frac{a}{b}$, not a/b. Use \\int, \\oint, \\sum, \\lim, \\sqrt and \\begin{bmatrix} ... \\end{bmatrix} where the chapter needs them.",
     "- Example style: $$V = \\frac{1}{4\\pi\\varepsilon_0}\\frac{Q}{r}$$, $E = -\\frac{dV}{dl}$, $C = \\frac{\\varepsilon_0 A}{d}$, $U = \\frac{1}{2}CV^2$.",
     "- Chemistry: never plain text — write $H_2O$, $CO_2$, $H_2SO_4$, $SO_4^{2-}$, and balance equations as $$\\mathrm{CH_4 + 2O_2 \\rightarrow CO_2 + 2H_2O}$$ with states $(s)$, $(l)$, $(g)$, $(aq)$.",
-    "- Maths: state theorems precisely and give proof outlines in LaTeX ($\\frac{dy}{dx}$, $^nC_r$, $\\lim_{x \\to 0}$).",
+    "- Maths: state theorems precisely and give complete source-supported proofs with every justified step in LaTeX ($\\frac{dy}{dx}$, $^nC_r$, $\\lim_{x \\to 0}$).",
     "- Biology: bold headers for taxonomic/anatomical terms and sequential bullet steps for pathways; no fake formulas.",
+    "- Keep SI Unit entries separate from the unit used in the source where they differ; include supported conversions and dimensional checks. For every relation that is a definition or empirical law, explain its meaning and validity instead of inventing a proof.",
     "- After each formula give a VARIABLE BREAKDOWN line for every symbol, with its meaning and SI unit in square brackets (for example, $v$ [final velocity; $\\mathrm{m\\,s^{-1}}$]); never invent a unit that the source does not provide.",
     "- Where the textbook derives a relation or proves a theorem, include its starting assumptions, each justified intermediate step and the final result. Retain the entire sequence even if it spans several slides.",
     "- Derive only relations actually derived in the supplied source. A definition or empirical law need not have a derivation. Never manufacture derivation steps to fill a template.",
@@ -663,7 +665,7 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       const rawExisting = slide.sections?.[0]?.lines || [];
       const existing = block.derivations?.length ? stripWeakDerivations(rawExisting) : rawExisting;
       const add: string[] = [];
-      const norm = (t: string) => t.replace(/\*\*[^*]+:\*\*/g, "").replace(/[\s$\\{}]/g, "").toLowerCase();
+      const norm = (t: string) => t.replace(/\*\*[^*]+:\*\*/g, "").replace(/[\s$]/g, "");
       const formulaKey = (line: string) => {
         const body = line.replace(/^\*\*[^*]+:\*\*\s*/, "");
         const cells = body.split(" | ");
@@ -679,6 +681,7 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       }
       for (const v of block.variables) add.push(`**Variable:** ${v}`);
       for (const u of block.unit) add.push(`**Unit:** ${u}`);
+      for (const basis of block.basis) add.push(`**Formula basis:** ${basis}`);
       // Source-derived relations get separate numbered derivation groups.
       const groups = block.derivations?.length
         ? block.derivations

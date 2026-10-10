@@ -3,11 +3,12 @@ import { guidedFormulaRow, guidedGroups, uniqueTopicGroups, type GuidedGroup } f
 import { LessonNotesPlanner, TopicLearningTasks, TopicRecap } from "@/components/LessonNotesPlanner";
 import type { Slide } from "@/lib/generate.functions";
 import { TopicVisualStructures } from "@/components/TopicVisualStructures";
+import { FormulaMindMap } from "@/components/FormulaMindMap";
 
 function NotesGroup({ group }: { group: GuidedGroup }) {
   return <section className={`guided-group guided-${group.kind}`}>
     <h3>{group.heading}</h3>
-    {group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula / relation</th><th>Unit, if applicable</th></tr></thead><tbody>
+    {group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula / relation</th><th>Unit / SI unit</th></tr></thead><tbody>
       {group.lines.map((line, i) => { const row = guidedFormulaRow(line); return <tr key={i}><td><MathText text={row.concept} /></td><td><MathText text={row.expression} /></td><td><MathText text={row.unit} /></td></tr>; })}
     </tbody></table></div> : group.kind === "prose" ? group.lines.map((line, i) => <p key={i}><MathText text={line} /></p>) :
       group.kind === "derivation" ? <>
@@ -18,14 +19,15 @@ function NotesGroup({ group }: { group: GuidedGroup }) {
   </section>;
 }
 
-export function GuidedLessonNotes({ slides, title, subject, klass }: { slides: Slide[]; title: string; subject?: string; klass?: string }) {
-  const content = slides.filter((slide) => (slide.kind ?? "content") === "content" || slide.kind === "chapter");
+export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks = false }: { slides: Slide[]; title: string; subject?: string; klass?: string; includeBreaks?: boolean }) {
+  const content = slides.filter((slide) => (slide.kind ?? "content") === "content" || slide.kind === "chapter" || (includeBreaks && slide.kind === "break"));
   const questions = slides.flatMap((slide) => slide.mcq ? [slide.mcq] : []);
   const topicGroups = uniqueTopicGroups(content.map((slide) => guidedGroups(slide.sections, slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...(slide.bullets || []), ...(slide.notes || [])])));
   return <div className="guided-notes" aria-label="Complete guided lesson notes">
     <div className="guided-document-title"><span>Class {klass} · {subject}</span><h2>{title}</h2><p>Read · Investigate · Practise · Reflect</p></div>
     {!!content.length && <LessonNotesPlanner topics={content.map((slide) => slide.title)} subject={subject} klass={klass} />}
     {content.map((slide, index) => {
+      if (slide.kind === "break") return <article className="guided-topic" key={`break:${index}`}><h2>{slide.title}</h2><ul>{[...slide.bullets, ...slide.notes].map((line, i) => <li key={i}><MathText text={line} /></li>)}</ul></article>;
       const groups = topicGroups[index];
       const goals = groups.filter((g) => /^(Learning objectives|Before you begin)$/.test(g.heading));
       const terms = groups.filter((g) => g.kind === "terms");
@@ -49,5 +51,6 @@ export function GuidedLessonNotes({ slides, title, subject, klass }: { slides: S
       <ol>{questions.map((question, i) => <li key={i}><p><MathText text={question.question} /></p><ul>{question.options.map((option) => <li key={option.key}><strong>{option.key}.</strong> <MathText text={option.text} /></li>)}</ul></li>)}</ol>
     </article>}
     {!!questions.length && <article className="guided-topic guided-answer-key"><h2>Answer key</h2><ol>{questions.map((question, i) => <li key={i}><strong>{question.answer}.</strong> <MathText text={question.explanation || question.options.find((option) => option.key === question.answer)?.text || ""} /></li>)}</ol></article>}
+    <FormulaMindMap slides={content} />
   </div>;
 }

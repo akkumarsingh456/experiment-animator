@@ -4,6 +4,7 @@ import { splitMath } from "@/lib/latex-notation";
 
 export type GuidedGroup = { heading: string; kind: "prose" | "list" | "formula" | "derivation" | "terms"; lines: string[] };
 const categories: Array<[RegExp, string, GuidedGroup["kind"]]> = [
+  [/^formula basis\b/i, "Meaning and conditions", "prose"],
   [/^learning objectives?\b/i, "Learning objectives", "list"],
   [/^prerequisites?\b/i, "Before you begin", "list"],
   [/^common misconceptions?\b/i, "Common misconceptions", "list"],
@@ -15,7 +16,7 @@ const categories: Array<[RegExp, string, GuidedGroup["kind"]]> = [
   [/^(key terms?|definition)\b/i, "Key terms and definitions", "terms"],
   [/^(introduction|explanation|analogy)\b/i, "Understanding the concept", "prose"],
   [/^(formula|equation|relation|result)\b/i, "Formulas and relations", "formula"],
-  [/^(variable|si unit|unit|dimension)\b/i, "Symbols and units", "list"],
+  [/^(variable|si unit|unit|dimension)\b/i, "Symbols, units and SI units", "list"],
   [/^derivation\b/i, "Step-by-step derivation", "derivation"],
   [/^(activity|experiment|discussion|classroom discussion)\b/i, "Investigate and discuss", "list"],
   [/^(worked example|example|ncert example|activity)\b/i, "Worked examples and activities", "list"],
@@ -61,7 +62,7 @@ export function guidedGroups(sections: NoteSection[] | undefined, fallback: stri
       get(heading, kind).lines.push(term ? `**${term[1]}:** ${body}` : keepLabel ? line : body);
     }
   }
-  const order = ["Learning objectives", "Before you begin", "Understanding the concept", "Key terms and definitions", "Formulas and relations", "Symbols and units", "Step-by-step derivation", "Graphs and trends", "Important points", "Applications", "Worked examples and activities", "Investigate and discuss", "Common misconceptions", "Check your understanding", "Support practice", "Core practice", "Challenge practice", "Answers and explanations", "Remember", "Quick recap", "Exit ticket"];
+  const order = ["Learning objectives", "Before you begin", "Understanding the concept", "Key terms and definitions", "Formulas and relations", "Symbols, units and SI units", "Step-by-step derivation", "Graphs and trends", "Important points", "Applications", "Worked examples and activities", "Investigate and discuss", "Common misconceptions", "Check your understanding", "Support practice", "Core practice", "Challenge practice", "Answers and explanations", "Remember", "Quick recap", "Exit ticket"];
   const rank = (group: GuidedGroup) => { const index = order.indexOf(group.heading); return index < 0 ? 9 : index; };
   return groups.sort((a, b) => rank(a) - rank(b));
 }

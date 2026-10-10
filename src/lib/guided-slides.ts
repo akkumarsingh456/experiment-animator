@@ -1,5 +1,6 @@
 /** Paginate the rendered notes, retaining text, list numbering and mathematical nodes. */
 export function paginateGuidedArticles(root: HTMLElement, maxHeight: number): HTMLElement[] {
+  maxHeight = Math.max(1, maxHeight);
   const pages: HTMLElement[] = [];
   const articles = Array.from(root.querySelectorAll<HTMLElement>(":scope > .guided-notes > .guided-topic"));
   const measure = document.createElement("div"); measure.className = "guided-notes guided-slide-measure"; root.appendChild(measure);
@@ -14,9 +15,20 @@ export function paginateGuidedArticles(root: HTMLElement, maxHeight: number): HT
       measure.appendChild(page); pages.push(page); count = 0;
     };
     newPage();
-    const add = (block: HTMLElement) => {
+    const add = (block: HTMLElement, allowSplit = true) => {
+      const shownHeadings = new Set(Array.from(page.querySelectorAll("h3, summary")).map((heading) => heading.textContent));
+      const repeated = Array.from(block.querySelectorAll("h3, summary")).filter((heading) => shownHeadings.has(heading.textContent))
+        .map((heading) => ({ heading, parent: heading.parentNode!, next: heading.nextSibling }));
+      repeated.forEach(({ heading }) => heading.remove());
       page.appendChild(block);
-      if (page.scrollHeight > maxHeight && count) { block.remove(); newPage(); page.appendChild(block); }
+      if (page.scrollHeight > maxHeight && count) {
+        block.remove(); repeated.forEach(({ heading, parent, next }) => parent.insertBefore(heading, next));
+        newPage(); page.appendChild(block);
+      }
+      if (page.scrollHeight > maxHeight && allowSplit) {
+        const parts = splitOversizedText(block);
+        if (parts.length > 1) { block.remove(); parts.forEach((part) => add(part, false)); return; }
+      }
       count++;
     };
     const walk = (node: HTMLElement, wrappers: HTMLElement[] = []) => {
@@ -48,5 +60,50 @@ export function paginateGuidedArticles(root: HTMLElement, maxHeight: number): HT
     };
     for (const child of Array.from(article.children) as HTMLElement[]) walk(child);
   }
-  pages.forEach((page) => page.remove()); measure.remove(); return pages;
+  // Atomic diagrams or a single unusually wide equation cannot be cut safely.
+  // Fit that page as a whole only after ordinary text has been paginated.
+  const width = root.clientWidth || root.getBoundingClientRect().width || 1100;
+  pages.forEach((page) => {
+    const factor = slideFitScale(width, maxHeight, Math.max(width, page.scrollWidth), page.scrollHeight);
+    page.style.transformOrigin = "top left";
+    page.style.transform = `scale(${factor})`;
+    page.dataset.fitScale = String(factor);
+    page.remove();
+  }); measure.remove(); return pages;
+}
+
+export function slideFitScale(width: number, height: number, contentWidth: number, contentHeight: number) {
+  return Math.min(1, width / Math.max(1, contentWidth), height / Math.max(1, contentHeight));
+}
+
+/** Split long prose without splitting a rendered LaTeX expression or losing markup. */
+export function splitOversizedText(block: HTMLElement): HTMLElement[] {
+  const targets = block.matches("p, li") ? [block] : Array.from(block.querySelectorAll<HTMLElement>("p, li"));
+  if (targets.length !== 1 || block.querySelector("figure, table")) return [block];
+  const target = targets[0];
+  const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+  const points: Array<{ node: Node; offset: number }> = [];
+  let node: Node | null, words = 0;
+  while ((node = walker.nextNode())) {
+    if (node.parentElement?.closest(".katex")) continue;
+    for (const match of (node.textContent || "").matchAll(/\S+\s*/g)) {
+      if (++words % 55 === 0) points.push({ node, offset: match.index! + match[0].length });
+    }
+  }
+  if (words <= 75 || !points.length) return [block];
+  const path: number[] = []; let ancestor: Node = target;
+  while (ancestor !== block) { path.unshift(Array.from(ancestor.parentNode!.childNodes).indexOf(ancestor as ChildNode)); ancestor = ancestor.parentNode!; }
+  const fragments: HTMLElement[] = [];
+  let start: { node: Node; offset: number } = { node: target, offset: 0 };
+  for (const end of [...points, { node: target, offset: target.childNodes.length }]) {
+    const range = document.createRange(); range.setStart(start.node, start.offset); range.setEnd(end.node, end.offset);
+    const contents = range.cloneContents();
+    if (contents.textContent?.trim()) {
+      const copy = block.cloneNode(true) as HTMLElement;
+      let destination: Node = copy; path.forEach((index) => { destination = destination.childNodes[index]; });
+      (destination as HTMLElement).replaceChildren(contents); fragments.push(copy);
+    }
+    start = end;
+  }
+  return fragments;
 }

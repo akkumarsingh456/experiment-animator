@@ -193,6 +193,8 @@ export async function aiFixFormulas(opts: {
 /* ---------------- guaranteed formula / SI unit / derivation sheet ---------------- */
 
 export type FormulaBlock = {
+  /** Source-supported meaning/conditions for definitions and empirical relations. */
+  basis: string[];
   /** Correctly typeset LaTeX formulas, e.g. "$V = \\frac{1}{4\\pi\\varepsilon_0}\\frac{Q}{r}$". */
   formula: string[];
   /** Variable breakdown lines, e.g. "$\\varepsilon_0$: permittivity of free space". */
@@ -232,7 +234,8 @@ export async function aiFormulaSheet(opts: {
     "- List only formulas supported by this slide’s supplied excerpts. Do not add related chapter formulas from memory. If OCR leaves the formula ambiguous, omit it rather than guess.",
     '- "formula": every distinct relevant relation in the excerpts, up to 24, each with a short name. Include the main relation, source-supported rearrangements, special cases and conditions of use; omit duplicates and unrelated relations.',
     '- "variables": explain every symbol used, including constants and their source-supported values, up to 64 lines.',
-    '- "unit": units for every quantity, up to 64 lines. Use SI units for physical quantities, the appropriate units for economics or commerce, and dimensionless where appropriate. Never impose physical units on mathematical identities.',
+    '- "unit": explain every physical quantity as quantity | symbol | unit used in the source | SI unit | source-supported conversion if needed, up to 64 lines. Include SI base-unit form where supported. For economics/commerce use the appropriate units; label dimensionless quantities. Never impose physical units on mathematical identities.',
+    '- "basis": for each definition or empirical relation that has no source derivation, explain its meaning, why it is used, assumptions and conditions from the evidence. Identify it as a definition or empirical law where applicable. Do not invent a proof. Account for each formula either in derivations or basis.',
     '- "derivation": source-supported steps for the main relation, or an empty array if the source does not derive it.',
     '- "derivations": entries only for derivations actually supported by these excerpts, as {"formula":"<formula in LaTeX>","steps":["Step 1: ..."]}. Show intermediate equations and assumptions. Definitions and empirical laws need no manufactured proof; return an empty array when no derivation is supplied.',
     "",
@@ -243,6 +246,7 @@ export async function aiFormulaSheet(opts: {
     "- Chemistry: balanced equations with \\rightarrow or \\rightleftharpoons and states $(s)$, $(l)$, $(g)$, $(aq)$, e.g. $$\\mathrm{CH_4 + 2O_2 \\rightarrow CO_2 + 2H_2O}$$.",
     "- Maths/Biology/Economics: standard notation of that subject in LaTeX (e.g. $\\frac{dy}{dx}$, $^nC_r$, $E_d = \\frac{\\Delta Q/Q}{\\Delta P/P}$).",
     "- No markdown fences, no bracket soup, no repeated '=' runs, no unbalanced braces.",
+    "- Use aligned LaTeX rows for long equations and one justified transformation per derivation step. Include the starting assumptions, substitutions, intermediate algebra, final result and a units check where applicable. Never abbreviate a source proof to 'rearrange' or skip to the answer.",
     "- Every formula must be dimensionally correct and within this class's NCERT scope; if a slide has no formula, return empty arrays for it.",
     "",
     'Return STRICT JSON only: {"slides":[{"index":0,"formula":["..."],"variables":["..."],"unit":["..."],"derivation":["Step 1: ...","Step 2: ..."],"derivations":[{"formula":"...","steps":["Step 1: ...","Step 2: ..."]}]}]}',
@@ -274,12 +278,13 @@ export async function aiFormulaSheet(opts: {
           items: {
             type: "object",
             additionalProperties: false,
-            required: ["index", "formula", "variables", "unit", "derivation", "derivations"],
+            required: ["index", "formula", "variables", "unit", "basis", "derivation", "derivations"],
             properties: {
               index: { type: "number" },
               formula: STR_ARR,
               variables: STR_ARR,
               unit: STR_ARR,
+              basis: STR_ARR,
               derivation: STR_ARR,
               derivations: {
                 type: "array",
@@ -317,6 +322,7 @@ export async function aiFormulaSheet(opts: {
       .filter((d: { formula: string; steps: string[] }) => d.steps.length > 0)
       .slice(0, 24);
     out.set(i, {
+      basis: clean((s as any).basis, 24),
       formula: clean((s as any).formula, 24),
       variables: clean((s as any).variables, 64),
       unit: clean((s as any).unit, 64),

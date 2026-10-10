@@ -17,7 +17,7 @@ const formulaIdentity = (line: string) => {
   const cells = body.split(" | ");
   const expression = cells.length === 3 ? cells[1] : body;
   const math = expression.match(/\$\$?([^$]+)\$\$?/g)?.join(" ") || expression;
-  return math.replace(/[\s${}]/g, "").toLowerCase();
+  return math.replace(/[\s$]/g, "");
 };
 
 /** One unbreakable unit of notes: a heading fragment with some of its lines. */

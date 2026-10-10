@@ -1,11 +1,20 @@
 import { currentElectricityDiagram, wrapTextbookDrawing } from "@/lib/current-electricity-diagrams";
 import { renderSourceConceptMap, sourceConceptFacts, svgDataUrl, type ConceptMapInput } from "@/lib/source-concept-map";
 import { geometryDiagram } from "@/lib/geometry-diagrams";
+import { learningProfile } from "@/lib/learning-design";
+import { MathText } from "@/components/MathText";
 
 /** The same atomic figures are used in the document, guided projector and PDF. */
 export function TopicVisualStructures({ input, subject }: { input: ConceptMapInput; subject?: string }) {
   const facts = sourceConceptFacts(input);
   if (!facts.length) return null;
+  if (learningProfile(subject).family === "language") return <section className="guided-group literature-storyboard">
+    <h3>Reading path: {input.title}</h3>
+    <p>Follow these ideas through the passage. Use the author's words to explain your interpretation.</p>
+    <ol className="literature-reading-path">{facts.slice(0, 6).map((fact, index) => <li key={index}>
+      <p><MathText text={fact} /></p>
+    </li>)}</ol>
+  </section>;
   const electrical = /^(physics|science)$/i.test(subject || "") ? currentElectricityDiagram(input.title) : null;
   const diagrams = electrical ? [{ title: "Labelled topic diagram", svg: wrapTextbookDrawing(electrical.drawing, "guided-topic"), caption: electrical.caption }] : [];
   const geometry = geometryDiagram(input.title, subject);
