@@ -19,6 +19,7 @@ type Props = {
   subject?: string;
   onClose: () => void;
   onPdf: () => void;
+  downloading?: boolean;
   onPresent?: () => void;
   inline?: boolean;
   mode?: "notes" | "slides";
@@ -34,6 +35,7 @@ export function GuidedNotesPresentation({
   subject,
   onClose,
   onPdf,
+  downloading = false,
   onPresent,
   inline = false,
   mode = "notes",
@@ -216,10 +218,12 @@ export function GuidedNotesPresentation({
           <button
             className="presentation-icon-button"
             onClick={onPdf}
+            disabled={downloading}
+            aria-busy={downloading}
             aria-label={`Download ${mode} PDF`}
-            title="Download PDF"
+            title={downloading ? "Preparing PDF..." : "Download PDF"}
           >
-            <Download size={18} />
+            {downloading ? <span role="status">Preparing PDF...</span> : <Download size={18} />}
           </button>
           {inline && onPresent && (
             <button className="presentation-present-button" onClick={onPresent}>

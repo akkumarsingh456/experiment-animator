@@ -1,3 +1,4 @@
+import { prepareExportImages } from "@/lib/export-images";
 import { paginateGuidedArticles, PRESENTATION_WIDTH, PRESENTATION_HEIGHT } from "@/lib/guided-slides";
 
 /** Use the same measured content for the projector, slide PDF and PowerPoint. */
@@ -5,7 +6,7 @@ export async function prepareSlideExport(root: HTMLElement) {
   if (root.dataset.presentationStyle === "lovable") {
     root.style.width = `${PRESENTATION_WIDTH}px`;
     await document.fonts.ready;
-    await Promise.all(Array.from(root.querySelectorAll("img")).map((image) => image.decode().catch(() => {})));
+    await prepareExportImages(root);
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     const frames = Array.from(root.querySelectorAll<HTMLElement>(":scope > .lesson-export-slide"));
     if (!frames.length) throw new Error("No generated PPT slides are available to export.");
@@ -16,7 +17,7 @@ export async function prepareSlideExport(root: HTMLElement) {
   root.style.width = `${PRESENTATION_WIDTH}px`;
   root.querySelectorAll("details").forEach((node) => { node.open = true; });
   await document.fonts.ready;
-  await Promise.all(Array.from(root.querySelectorAll("img")).map((image) => image.decode().catch(() => {})));
+  await prepareExportImages(root);
   const pages = paginateGuidedArticles(root, PRESENTATION_HEIGHT);
   if (!pages.length) throw new Error("No lesson slides are available to export.");
   const frames = pages.map((page) => {

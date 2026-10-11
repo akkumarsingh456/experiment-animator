@@ -1,3 +1,4 @@
+import { prepareExportImages } from "@/lib/export-images";
 /** Split a long rendered worksheet at block boundaries, without losing content. */
 export function worksheetSlices(height: number, pageHeight: number, boundaries: number[], protectedRanges: Array<[number, number]> = []): Array<[number, number]> {
   const result: Array<[number, number]> = [];
@@ -14,7 +15,7 @@ export function worksheetSlices(height: number, pageHeight: number, boundaries: 
 export async function downloadLessonPdf(root: HTMLElement, mode: "notes" | "slides", title: string) {
   const [{ jsPDF }, { toCanvas, getFontEmbedCSS }] = await Promise.all([import("jspdf"), import("html-to-image")]);
   await document.fonts.ready;
-  await Promise.all(Array.from(root.querySelectorAll("img")).map(async (img) => { if (!img.complete) await img.decode(); }));
+  await prepareExportImages(root);
   // Expand revision panels in the export copy only.
   root.querySelectorAll("details").forEach((node) => { node.open = true; });
   const fontEmbedCSS = await getFontEmbedCSS(root, { preferredFontFormat: "woff2" });

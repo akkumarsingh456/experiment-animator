@@ -578,7 +578,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 <Button size="sm" variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("guided-slides")}>Guided presentation PDF</Button>
               </div>
               {guidedDisplay === "page" ? <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} /> :
-                <GuidedNotesPresentation inline mode="notes" slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} pageIndex={presentationPage} onPageChange={setPresentationPage} onPresent={presentSelectedView} onClose={closePresentation} onPdf={() => downloadPDF("guided-slides")} />}
+                <GuidedNotesPresentation inline mode="notes" slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} pageIndex={presentationPage} onPageChange={setPresentationPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("guided-slides")} />}
             </>}
             <div className={lessonView === "slides" ? "lesson-slides" : "hidden"}>
 
@@ -596,7 +596,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 imageLoading={!!imgLoading[activeIdx]}
                 onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
                 subject={result.source_books[0]?.subject}
-              /> : <GuidedNotesPresentation inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} pageIndex={originalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} onPdf={() => downloadPDF("slides")} />}
+              /> : <GuidedNotesPresentation inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} pageIndex={originalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("slides")} />}
             </div>
 
             <details className="lesson-presentation-checks mt-4 rounded-xl border border-border/60 bg-card/60 print:hidden">
@@ -787,7 +787,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         {exportMode === "slides" ? originalPages.map((slide, index) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} subject={result.source_books[0]?.subject || search.subject} staticView /></div>) :
           <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} />}
       </div>}
-      {presenting && <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
+      {presenting && <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
 
     </>
   );
