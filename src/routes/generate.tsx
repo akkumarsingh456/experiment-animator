@@ -473,7 +473,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     const sections = slide.sections?.filter((section) => section.kind !== "diagram");
     const fallback = slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...slide.bullets, ...slide.notes];
     const sourceSections = sections?.length ? sections : [{ heading: "Teacher Notes", kind: "bullets", lines: fallback }];
-    return paginateLectureSections(sourceSections, 12).map((page, pageIndex) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
+    return paginateLectureSections(sourceSections, 18).map((page, pageIndex) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
       title: pageIndex ? `${slide.title} · continued ${pageIndex + 1}` : slide.title }));
   }), [slides]);
   const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, section: "NCERT notes & illustration",

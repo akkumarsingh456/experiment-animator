@@ -93,10 +93,14 @@ export function PagedNoteSections({
     const measure = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
+        content.style.setProperty("--note-block-gap", "0px");
+        const inset = getComputedStyle(box);
+        const availableHeight = box.clientHeight - parseFloat(inset.paddingTop) - parseFloat(inset.paddingBottom);
+        const availableWidth = box.clientWidth - parseFloat(inset.paddingLeft) - parseFloat(inset.paddingRight);
         const fits = (px: number, cols: 1 | 2) => {
           content.style.fontSize = `${px}px`;
           content.style.columnCount = String(cols);
-          return content.scrollHeight <= box.clientHeight + 1 && content.scrollWidth <= box.clientWidth + 1;
+          return content.scrollHeight <= availableHeight + 1 && content.scrollWidth <= availableWidth + 1;
         };
         const search = (cols: 1 | 2) => {
           if (!fits(MIN_PX, cols)) return 0;
@@ -115,6 +119,12 @@ export function PagedNoteSections({
         const next = two > one ? { px: two, cols: 2 as const } : { px: one || MIN_PX, cols: 1 as const };
         content.style.fontSize = `${next.px}px`;
         content.style.columnCount = String(next.cols);
+        // Spread short pages gently while leaving dense pages enough room.
+        // Reset first so measuring never counts spacing from the previous pass.
+        content.style.setProperty("--note-block-gap", "0px");
+        const spare = Math.max(0, availableHeight - content.scrollHeight - 24);
+        const gap = Math.min(28, spare / Math.max(1, blocks.length));
+        content.style.setProperty("--note-block-gap", `${gap}px`);
         setFit((prev) => (Math.abs(prev.px - next.px) < 0.2 && prev.cols === next.cols ? prev : next));
       });
     };
@@ -135,6 +145,7 @@ export function PagedNoteSections({
       <div ref={boxRef} data-note-sheet className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-2">
         <div
           ref={contentRef}
+          data-note-content
           style={{ fontSize: `${fit.px}px`, columnCount: fit.cols, columnGap: "1.5em" }}
          
         >
