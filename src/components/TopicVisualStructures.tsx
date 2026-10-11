@@ -1,3 +1,5 @@
+import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
+import { isMathematics } from "@/lib/mathematics-presentation";
 import { currentElectricityDiagram, wrapTextbookDrawing } from "@/lib/current-electricity-diagrams";
 import { sourceConceptFacts, svgDataUrl, type ConceptMapInput } from "@/lib/source-concept-map";
 import { geometryDiagram } from "@/lib/geometry-diagrams";
@@ -12,6 +14,7 @@ export function TopicVisualStructures({
   input: ConceptMapInput;
   subject?: string;
 }) {
+  if (isMathematics(subject)) return <div className="guided-explanation guided-visual-structures"><figure><MathematicsTopicVisual input={input} /></figure></div>;
   const facts = sourceConceptFacts(input);
   if (!facts.length) return null;
   if (learningProfile(subject).family === "language")

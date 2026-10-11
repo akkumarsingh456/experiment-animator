@@ -40,7 +40,7 @@ export function paginateGuidedArticles(root: HTMLElement, maxHeight: number): HT
           Array.from(parent.children).forEach((heading) => outer.appendChild(heading.cloneNode(true))); outer.appendChild(block); block = outer;
         } return block;
       };
-      if (node.matches("section, .guided-explanation, .guided-learning-tasks, details")) {
+      if (node.matches("section, .guided-explanation, .guided-learning-tasks, details") && !node.classList.contains("mathematics-source-review")) {
         const heading = node.querySelector(":scope > h3, :scope > summary");
         for (const child of Array.from(node.children) as HTMLElement[]) {
           if (child === heading) continue;

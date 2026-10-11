@@ -1,3 +1,5 @@
+import { MathematicsProse } from "@/components/MathematicsProse";
+import { isMathematics, mathematicsPresentationSlide } from "@/lib/mathematics-presentation";
 import { omitContentsListings } from "@/lib/note-source-noise";
 import { repairSourceMathSlide } from "@/lib/source-math-repair";
 import { MathText } from "@/components/MathText";
@@ -8,19 +10,19 @@ import { TopicVisualStructures } from "@/components/TopicVisualStructures";
 import { FormulaMindMap } from "@/components/FormulaMindMap";
 import { FormulaDerivation } from "@/components/FormulaDerivation";
 
-function NotesGroup({ group }: { group: GuidedGroup }) {
+function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }) {
   return <section className={`guided-group guided-${group.kind}`}>
     <h3>{group.heading}</h3>
     {group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula / relation</th><th>Unit / SI unit</th></tr></thead><tbody>
       {group.lines.map((line, i) => { const row = guidedFormulaRow(line); return <tr key={i}><td><MathText text={row.concept} /></td><td><MathText text={row.expression} /></td><td><MathText text={row.unit} /></td></tr>; })}
-    </tbody></table></div> : group.kind === "prose" ? group.lines.map((line, i) => <p key={i}><MathText text={line} /></p>) :
+    </tbody></table></div> : group.kind === "prose" ? group.lines.map((line, i) => isMathematics(subject) ? <div className="mathematics-prose" key={i}><MathematicsProse text={line} /></div> : <p key={i}><MathText text={line} /></p>) :
       group.kind === "derivation" ? <FormulaDerivation lines={group.lines} /> :
-      <ul>{group.lines.map((line, i) => <li key={i}><MathText text={line} /></li>)}</ul>}
+      <ul>{group.lines.map((line, i) => <li key={i}>{isMathematics(subject) ? <MathematicsProse text={line} /> : <MathText text={line} />}</li>)}</ul>}
   </section>;
 }
 
 export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks = false }: { slides: Slide[]; title: string; subject?: string; klass?: string; includeBreaks?: boolean }) {
-  slides = slides.map(omitContentsListings).map(repairSourceMathSlide);
+  slides = slides.map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, subject)).map(repairSourceMathSlide);
   const content = slides.filter((slide) => (slide.kind ?? "content") === "content" || slide.kind === "chapter" || (includeBreaks && slide.kind === "break"));
   const questions = slides.flatMap((slide) => slide.mcq ? [slide.mcq] : []);
   const topicGroups = uniqueTopicGroups(content.map((slide) => guidedGroups(slide.sections, slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...(slide.bullets || []), ...(slide.notes || [])])));
@@ -37,12 +39,12 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
       return <article className="guided-topic" key={`${index}:${slide.title}`}>
         <div className="guided-student-line"><span>Name: ____________________</span><span>Date: ____________________</span></div>
         <h2><span className="guided-topic-number">{String(index + 1).padStart(2, "0")}</span>{slide.title}</h2>
-        {goals.map((group, i) => <NotesGroup group={group} key={`goals:${i}`} />)}
+        {goals.map((group, i) => <NotesGroup subject={subject} group={group} key={`goals:${i}`} />)}
         {slide.notes_quality?.issues.length ? <p className="guided-quality-note">Source review: {slide.notes_quality.issues.join(" ")}</p> : null}
-        {explanation.map((group, i) => <NotesGroup key={`prose:${i}`} group={group} />)}
-        {terms.map((group, i) => <NotesGroup group={group} key={`terms:${i}`} />)}
+        {explanation.map((group, i) => <NotesGroup subject={subject} key={`prose:${i}`} group={group} />)}
+        {terms.map((group, i) => <NotesGroup subject={subject} group={group} key={`terms:${i}`} />)}
         <TopicVisualStructures input={{ ...slide, keyTerms: slide.key_terms }} subject={subject} />
-        {rest.map((group, i) => <NotesGroup group={group} key={`body:${i}`} />)}
+        {rest.map((group, i) => <NotesGroup subject={subject} group={group} key={`body:${i}`} />)}
         {!groups.length && <p>No verified source notes are available for this topic. Regenerate the lesson after uploading the relevant textbook pages.</p>}
         {!!groups.length && <><TopicLearningTasks title={slide.title} groups={groups} /><TopicRecap groups={groups} /></>}
         <footer>{subject} · Class {klass} · Topic {index + 1} of {content.length}</footer>

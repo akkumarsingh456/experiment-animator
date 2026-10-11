@@ -359,3 +359,18 @@
 
 /* Bullet hanging indents belong to prose, never to inline mathematical symbols. */
 [data-note-content] li > span.inline-block { text-indent: 0; }
+
+/* Mathematics-only representations; other subject layouts stay unchanged. */
+.mathematics-topic-visual { width: 100%; padding: 28px 24px; color: #174455; font-size: 16px; line-height: 1.6; min-width: 0; }
+.mathematics-topic-visual h3 { font-size: 22px !important; margin: 0 0 22px; font-weight: 700; }
+.mathematics-topic-visual ul { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 16px; }
+.mathematics-topic-visual li { padding: 14px 16px; border: 1px solid #bdd4db; background: #edf7f6; border-radius: 10px; overflow-wrap: anywhere; }
+.mathematics-matrix-structure, .mathematics-visual-relation { padding: 22px 16px; border: 1px solid #bdd4db; border-radius: 12px; background: #f8fbff; text-align: center; }
+.mathematics-matrix-structure > span:first-child, .mathematics-matrix-structure small { display: block; margin: 0 0 18px; font: 14px/1.5 Arial,sans-serif; color: #456176; }
+.mathematics-matrix-structure > span.inline-block, .mathematics-visual-relation { font-size: 30px; }
+.mathematics-matrix-structure small { margin: 18px 0 0; }
+.mathematics-source-review { padding: 10px 12px; border: 1px solid #dacdaf; border-radius: 8px; background: #fffaf0; text-indent: 0; }
+.mathematics-source-review summary { cursor: pointer; font-weight: 600; }
+.mathematics-source-review p { font-size: .85em; line-height: 1.6; white-space: normal; overflow-wrap: anywhere; margin-top: 10px; }
+.mathematics-prose { margin-bottom: 12px; }
+.lesson-export-root .mathematics-source-review > details { display: none; }

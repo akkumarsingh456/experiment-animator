@@ -1,3 +1,5 @@
+import { MathematicsProse } from "@/components/MathematicsProse";
+import { isMathematics } from "@/lib/mathematics-presentation";
 /**
  * Teacher Notes sheet for the current slide.
  *
@@ -35,7 +37,7 @@ export function groupNoteLabels(sections: NoteSectionLike[] | undefined): NoteSe
   return out;
 }
 
-function BlockView({ block, showHeading }: { block: NoteBlock; showHeading: boolean }) {
+function BlockView({ block, showHeading, subject }: { block: NoteBlock; showHeading: boolean; subject?: string }) {
   const isDeriv = block.lines.some((l) => /derivation (of|step)/i.test(l));
   return (
     <div className={`break-inside-avoid ${showHeading ? "pt-[0.4em] first:pt-0" : ""}`}>
@@ -59,7 +61,7 @@ function BlockView({ block, showHeading }: { block: NoteBlock; showHeading: bool
               {/^(?:\*\*)?(?:formula|equation|relation):/i.test(line) ? (() => {
                 const row = guidedFormulaRow(line.replace(/^\*\*[^*]+:\*\*\s*/, ""));
                 return <div className="note-formula-card"><strong><MathText text={row.concept} /></strong><div><MathText text={row.expression} /></div>{row.unit && <small>Unit: <MathText text={row.unit} /></small>}</div>;
-              })() : <>• <MathText text={line} /></>}
+              })() : <>• {isMathematics(subject) ? <MathematicsProse text={line} /> : <MathText text={line} />}</>}
             </li>
           ))}
         </ul>
@@ -74,10 +76,12 @@ export function PagedNoteSections({
   sections,
   scale,
   header,
+  subject,
 }: {
   sections?: NoteSectionLike[];
   scale?: "card" | "present";
   header?: React.ReactNode;
+  subject?: string;
 }) {
   const blocks = useMemo(() => toNoteBlocks(groupNoteLabels(sections)), [sections]);
   const maxPx = scale === "present" ? 22 : 18;
@@ -154,6 +158,7 @@ export function PagedNoteSections({
             return (
               <BlockView
                 key={`${block.sectionIndex}:${index}:${block.lines[0]}`}
+                subject={subject}
                 block={block}
                 showHeading={!previous || previous.sectionIndex !== block.sectionIndex}
               />

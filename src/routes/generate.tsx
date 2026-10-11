@@ -1,3 +1,5 @@
+import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
+import { isMathematics, mathematicsPresentationSlide } from "@/lib/mathematics-presentation";
 import { omitContentsListings } from "@/lib/note-source-noise";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -248,7 +250,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       caption: `Class ${search.klass} · ${search.subject} · Topic: ${search.topic || title} · Chapter: ${search.chapter || "—"}`,
     };
   };
-  const withCoverSlide = (items: Slide[]) => [makeCoverSlide(), ...items.map(omitContentsListings).map(repairSourceMathSlide)];
+  const withCoverSlide = (items: Slide[]) => [makeCoverSlide(), ...items.map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, result.source_books[0]?.subject || search.subject)).map(repairSourceMathSlide)];
   const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
@@ -1110,6 +1112,7 @@ function SlideCanvas({
               ) : null}
               <PagedNoteSections
                 sections={slide.sections?.filter((section) => section.kind !== "diagram")}
+                subject={subject}
                 header={<PenNotesBlock index={sourceIndex} slide={slide} subject={subject} editable={!staticView} />}
               />
 
@@ -1151,7 +1154,7 @@ function SlideCanvas({
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0" style={lang ? { display: "none" } : undefined}>
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
               <div className="lesson-figure-panel relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 grid place-items-center">
-                {imageUrl ? (
+                {isMathematics(subject) ? <MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} /> : imageUrl ? (
                   <img src={imageUrl} alt={`${slide.title} — NCERT 2D infographic`} className="w-full h-full object-contain" />
                 ) : imageLoading ? (
                   <div className="flex flex-col items-center gap-2 text-[10px] text-muted-foreground">
