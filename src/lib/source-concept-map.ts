@@ -17,7 +17,8 @@ export function sourceConceptFacts(input: ConceptMapInput): string[] {
     /^\*\*/.test(line) || section.heading === "Teacher Notes" ? line : `**${section.heading}:** ${line}`)) || [];
   const factual = sections.filter((line) => !/^\*\*(?:learning objective|prerequisite|activity|experiment|discussion|support practice|core practice|challenge practice|exit ticket|check your understanding|practice|answer|solution|derivation|formula|equation|variable|si unit|unit|dimension)/i.test(line));
   const lines = factual.length ? factual : [...(input.bullets || []), ...(input.notes || []), ...(input.keyTerms || []).map((term) => `${term.term}: ${term.meaning}`)];
-  return [...new Set(lines.map((line) => text(line.replace(/^\*\*([^*]+):\*\*\s*/, ""))).filter(Boolean))];
+  // Retain authored LaTeX for HTML study maps. Only the SVG fallback flattens it.
+  return [...new Set(lines.map((line) => line.replace(/^\*\*([^*]+):\*\*\s*/, "").trim()).filter(Boolean))];
 }
 
 function wrap(value: string, width: number): string[] {
@@ -40,7 +41,7 @@ export function renderSourceConceptMap(input: ConceptMapInput, facts = sourceCon
   const top = 42 + heading.length * 32;
   let y = top + 28;
   const cards = facts.map((fact, index) => {
-    const lines = wrap(fact, 57);
+    const lines = wrap(text(fact), 57);
     const height = 38 + lines.length * 27;
     const middle = y + height / 2;
     const svg = `<path d="M42 ${top} V${middle} H90" stroke="#56858d" stroke-width="3" fill="none"/><rect x="90" y="${y}" width="640" height="${height}" rx="12" fill="${index % 2 ? "#fff6e7" : "#edf7f5"}" stroke="#adc8c8"/><circle cx="42" cy="${middle}" r="7" fill="#246f80"/>${lines.map((line, i) => `<text x="112" y="${y + 32 + i * 27}" font-size="21" fill="#183541">${escape(line)}</text>`).join("")}`;

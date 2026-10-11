@@ -321,3 +321,28 @@
   body[data-lesson-view="notes"] .guided-topic li { break-inside: avoid; }
   body[data-lesson-view="notes"] .guided-print-url { display: block; font-size: 9pt; overflow-wrap: anywhere; }
 }
+
+/* Typeset concept branches and derivations remain native HTML in both exports. */
+.source-concept-content { padding: 22px 24px; }
+.source-concept-content h3 { margin: 0 0 20px; font-size: 1.2em; color: #18576a; }
+.source-concept-content ul { list-style: none; margin: 0 0 0 8px; padding: 0 0 0 30px; border-left: 3px solid #6a939c; }
+.source-concept-content li { position: relative; margin: 0 0 16px; padding: 16px 20px; border: 1px solid #bdd4db; border-radius: 10px; background: #edf7f6; }
+.source-concept-content li:nth-child(even) { background: #fff7e8; }
+.source-concept-content li:last-child { margin-bottom: 0; }
+.source-concept-content li::before { content: ''; position: absolute; width: 30px; height: 2px; background: #6a939c; left: -32px; top: 50%; }
+.source-concept-content li::after { content: ''; position: absolute; width: 10px; height: 10px; border-radius: 50%; background: #246f80; left: -37px; top: calc(50% - 4px); }
+.formula-derivation-target { display: grid; gap: 10px; padding: 14px 18px; border: 1px solid #bdd4db; border-radius: 10px; background: #e7f1f8; margin-bottom: 16px; }
+.formula-derivation-target strong { color: #18576a; }
+.formula-derivation .guided-derivation-flow { list-style: none; padding-left: 22px; margin: 0 0 0 14px; }
+.formula-derivation .guided-derivation-flow li { display: flex; gap: 14px; align-items: flex-start; padding: 12px 14px; }
+.formula-step-number { display: grid; place-items: center; width: 26px; height: 26px; flex: 0 0 26px; border-radius: 50%; background: #246f80; color: white; font-size: 14px; font-weight: 700; }
+.original-slide-display .lesson-slide-canvas { height: 720px !important; min-height: 720px !important; width: 1280px; border-radius: 0; box-shadow: none; }
+.original-slide-display .lesson-slide-body { grid-template-columns: 3fr 2fr; }
+.original-slide-display .lesson-slide-body > div:first-child { padding: 28px 32px; }
+.original-slide-display .lesson-slide-body h3 { font-size: 32px; }
+.original-slide-display .formula-derivation-target { padding: 10px 12px; gap: 6px; margin-bottom: 10px; }
+.original-slide-display .guided-derivation-flow li { padding: 8px 10px; margin: 8px 0 14px; }
+.original-slide-display .katex-display { margin: .4em 0; }
+.original-slide-display .lesson-figure-panel { flex: 1; }
+.note-formula-card { display: grid; gap: 10px; padding: 14px 18px; margin: 6px 0; border: 1px solid #bdd4db; border-radius: 10px; background: #edf7f6; text-indent: 0; }
+.note-formula-card small { color: #456176; font-size: .9em; }

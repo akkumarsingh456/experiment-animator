@@ -6,9 +6,13 @@ import {
   PRESENTATION_HEIGHT,
 } from "@/lib/guided-slides";
 import { GuidedLessonNotes } from "@/components/GuidedLessonNotes";
+import type { ReactNode } from "react";
 import type { Slide } from "@/lib/generate.functions";
 
+export type PresentationSlide = { title: string; section?: string; content: ReactNode };
+
 type Props = {
+  presentationSlides?: PresentationSlide[];
   slides: Slide[];
   title: string;
   klass: string;
@@ -24,6 +28,7 @@ type Props = {
 
 export function GuidedNotesPresentation({
   slides,
+  presentationSlides,
   title,
   klass,
   subject,
@@ -44,19 +49,21 @@ export function GuidedNotesPresentation({
   const [localIndex, setLocalIndex] = useState(0);
   const [showOutline, setShowOutline] = useState(false);
   const [scale, setScale] = useState(0.5);
-  const index = Math.min(pageIndex ?? localIndex, Math.max(0, pages.length - 1));
+  const pageCount = presentationSlides?.length ?? pages.length;
+  const index = Math.min(pageIndex ?? localIndex, Math.max(0, pageCount - 1));
   const goTo = useCallback(
     (next: number) => {
-      const target = Math.max(0, Math.min(pages.length - 1, next));
+      const target = Math.max(0, Math.min(pageCount - 1, next));
       setLocalIndex(target);
       onPageChange?.(target);
     },
-    [pages.length, onPageChange],
+    [pageCount, onPageChange],
   );
 
   // Measure at the same widescreen size as PDF and PowerPoint exports.
   // Resizing scales the canvas without changing slide count or position.
   useLayoutEffect(() => {
+    if (presentationSlides) return;
     let cancelled = false;
     setPages([]);
     Promise.all([
@@ -73,7 +80,7 @@ export function GuidedNotesPresentation({
     return () => {
       cancelled = true;
     };
-  }, [slides, title, klass, subject, mode]);
+  }, [slides, title, klass, subject, mode, presentationSlides]);
 
   useLayoutEffect(() => {
     if (!stage.current) return;
@@ -96,10 +103,11 @@ export function GuidedNotesPresentation({
   }, []);
 
   useLayoutEffect(() => {
+    if (presentationSlides) return;
     if (display.current)
       display.current.replaceChildren(...(pages[index] ? [pages[index].cloneNode(true)] : []));
     activeNavigation.current?.scrollIntoView({ block: "nearest" });
-  }, [index, pages, showOutline]);
+  }, [index, pages, showOutline, presentationSlides]);
 
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -121,14 +129,14 @@ export function GuidedNotesPresentation({
           event.key === "Home"
             ? 0
             : event.key === "End"
-              ? pages.length - 1
+              ? pageCount - 1
               : index + (event.key === "ArrowLeft" ? -1 : 1),
         );
       }
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [inline, index, pages.length, onClose, goTo]);
+  }, [inline, index, pageCount, onClose, goTo]);
 
   useEffect(() => {
     if (inline) return;
@@ -168,15 +176,17 @@ export function GuidedNotesPresentation({
     };
   }, [inline]);
 
-  const pageTitle = (page: HTMLElement) => page.querySelector("h2")?.textContent || title;
-  const sectionTitle = pages[index]?.querySelector(
-    "h3, .guided-figure-heading strong, summary",
-  )?.textContent;
+  const pageTitle = (at: number) =>
+    presentationSlides?.[at]?.title || pages[at]?.querySelector("h2")?.textContent || title;
+  const pageSection = (at: number) =>
+    presentationSlides?.[at]?.section ||
+    pages[at]?.querySelector("h3, .guided-figure-heading strong, summary")?.textContent;
+  const sectionTitle = pageSection(index);
   return (
     <div
       ref={shell}
       tabIndex={0}
-      className={`guided-presentation guided-slide-deck ${mode === "slides" ? "lecture-deck" : ""} ${inline ? "presentation-inline" : "presentation-overlay"}`}
+      className={`guided-presentation guided-slide-deck ${presentationSlides ? "original-slide-deck" : mode === "slides" ? "lecture-deck" : ""} ${inline ? "presentation-inline" : "presentation-overlay"}`}
       role={inline ? "region" : "dialog"}
       aria-modal={inline ? undefined : true}
       aria-label="Lesson presentation"
@@ -187,7 +197,7 @@ export function GuidedNotesPresentation({
             {[
               klass && `Class ${klass}`,
               subject,
-              mode === "slides" ? "Presentation" : "Guided notes",
+              presentationSlides ? "Generate PPT & Notes" : "Guided notes presentation",
             ]
               .filter(Boolean)
               .join(" / ")}
@@ -232,9 +242,9 @@ export function GuidedNotesPresentation({
         {showOutline && (
           <nav className="presentation-outline" aria-label="Slide navigator">
             <div className="presentation-outline-heading">
-              Lesson outline <span>{pages.length} slides</span>
+              Lesson outline <span>{pageCount} slides</span>
             </div>
-            {pages.map((page, at) => (
+            {Array.from({ length: pageCount }, (_, at) => (
               <button
                 key={at}
                 ref={at === index ? activeNavigation : undefined}
@@ -246,11 +256,8 @@ export function GuidedNotesPresentation({
               >
                 <span className="presentation-slide-number">{String(at + 1).padStart(2, "0")}</span>
                 <span>
-                  <strong>{pageTitle(page)}</strong>
-                  <small>
-                    {page.querySelector("h3, .guided-figure-heading strong, summary")
-                      ?.textContent || "Overview"}
-                  </small>
+                  <strong>{pageTitle(at)}</strong>
+                  <small>{pageSection(at) || "Overview"}</small>
                 </span>
               </button>
             ))}
@@ -262,8 +269,9 @@ export function GuidedNotesPresentation({
             style={{ width: PRESENTATION_WIDTH * scale, height: PRESENTATION_HEIGHT * scale }}
           >
             <div
+              key={presentationSlides ? "original" : "guided"}
               ref={display}
-              className="guided-notes guided-slide-display"
+              className={`guided-notes guided-slide-display ${presentationSlides ? "original-slide-display" : ""}`}
               style={{
                 width: PRESENTATION_WIDTH,
                 height: PRESENTATION_HEIGHT,
@@ -271,12 +279,12 @@ export function GuidedNotesPresentation({
               }}
               aria-live="polite"
               aria-label={
-                pages.length
-                  ? `Slide ${index + 1}: ${pageTitle(pages[index])}`
-                  : "Preparing presentation"
+                pageCount ? `Slide ${index + 1}: ${pageTitle(index)}` : "Preparing presentation"
               }
-            />
-            {!pages.length && (
+            >
+              {presentationSlides?.[index]?.content}
+            </div>
+            {!pageCount && (
               <div className="presentation-loading" role="status">
                 Preparing your slides…
               </div>
@@ -292,19 +300,19 @@ export function GuidedNotesPresentation({
         <div className="presentation-navigation">
           <button
             className="presentation-icon-button"
-            disabled={!pages.length || !index}
+            disabled={!pageCount || !index}
             onClick={() => goTo(index - 1)}
             aria-label="Previous slide"
           >
             <ChevronLeft size={20} />
           </button>
           <span className="presentation-page-count" role="status">
-            {pages.length ? index + 1 : "—"}
-            <span> / {pages.length || "—"}</span>
+            {pageCount ? index + 1 : "—"}
+            <span> / {pageCount || "—"}</span>
           </span>
           <button
             className="presentation-icon-button"
-            disabled={!pages.length || index >= pages.length - 1}
+            disabled={!pageCount || index >= pageCount - 1}
             onClick={() => goTo(index + 1)}
             aria-label="Next slide"
           >
@@ -316,26 +324,28 @@ export function GuidedNotesPresentation({
           role="progressbar"
           aria-label="Lesson progress"
           aria-valuemin={0}
-          aria-valuemax={pages.length || 1}
-          aria-valuenow={pages.length ? index + 1 : 0}
+          aria-valuemax={pageCount || 1}
+          aria-valuenow={pageCount ? index + 1 : 0}
         >
-          <span style={{ width: pages.length ? `${((index + 1) / pages.length) * 100}%` : "0%" }} />
+          <span style={{ width: pageCount ? `${((index + 1) / pageCount) * 100}%` : "0%" }} />
         </div>
       </footer>
-      <div
-        ref={source}
-        className="guided-slide-source"
-        style={{ width: PRESENTATION_WIDTH }}
-        aria-hidden="true"
-      >
-        <GuidedLessonNotes
-          slides={slides}
-          title={title}
-          klass={klass}
-          subject={subject}
-          includeBreaks={mode === "slides"}
-        />
-      </div>
+      {!presentationSlides && (
+        <div
+          ref={source}
+          className="guided-slide-source"
+          style={{ width: PRESENTATION_WIDTH }}
+          aria-hidden="true"
+        >
+          <GuidedLessonNotes
+            slides={slides}
+            title={title}
+            klass={klass}
+            subject={subject}
+            includeBreaks={mode === "slides"}
+          />
+        </div>
+      )}
     </div>
   );
 }

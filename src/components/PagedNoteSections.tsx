@@ -8,6 +8,8 @@
  */
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import MathText from "@/components/MathText";
+import { FormulaDerivation } from "@/components/FormulaDerivation";
+import { guidedFormulaRow } from "@/lib/guided-notes";
 import { toNoteBlocks, type NoteBlock, type NoteSectionLike } from "@/lib/notes-paging";
 
 // Present repeated prose labels as a single heading, keeping mathematical
@@ -34,7 +36,7 @@ export function groupNoteLabels(sections: NoteSectionLike[] | undefined): NoteSe
 }
 
 function BlockView({ block, showHeading }: { block: NoteBlock; showHeading: boolean }) {
-  const isDeriv = block.lines.some((l) => /derivation of/i.test(l));
+  const isDeriv = block.lines.some((l) => /derivation (of|step)/i.test(l));
   return (
     <div className={`break-inside-avoid ${showHeading ? "pt-[0.4em] first:pt-0" : ""}`}>
       {showHeading && (
@@ -46,7 +48,7 @@ function BlockView({ block, showHeading }: { block: NoteBlock; showHeading: bool
         <pre className="text-[0.85em] font-mono leading-[1.4] whitespace-pre overflow-x-auto text-foreground/90 rounded-md border border-border/50 bg-secondary/40 p-[0.7em]">
           {block.lines.join("\n")}
         </pre>
-      ) : (
+      ) : isDeriv ? <FormulaDerivation lines={block.lines} /> : (
         <ul
           className={`leading-relaxed space-y-[0.4em] text-foreground/90 break-words ${
             isDeriv ? "rounded-md border-l-2 border-primary/50 bg-secondary/30 py-[0.2em] pr-[0.3em]" : ""
@@ -54,7 +56,10 @@ function BlockView({ block, showHeading }: { block: NoteBlock; showHeading: bool
         >
           {block.lines.map((line, index) => (
             <li key={index} className="pl-[1em] -indent-[1em] [&_.katex-display]:my-[0.15em] [&_.katex-display]:indent-0 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden">
-              • <MathText text={line} />
+              {/^(?:\*\*)?(?:formula|equation|relation):/i.test(line) ? (() => {
+                const row = guidedFormulaRow(line.replace(/^\*\*[^*]+:\*\*\s*/, ""));
+                return <div className="note-formula-card"><strong><MathText text={row.concept} /></strong><div><MathText text={row.expression} /></div>{row.unit && <small>Unit: <MathText text={row.unit} /></small>}</div>;
+              })() : <>• <MathText text={line} /></>}
             </li>
           ))}
         </ul>
@@ -127,7 +132,7 @@ export function PagedNoteSections({
   return (
     <div className="flex-1 min-h-0 flex flex-col gap-1.5">
       {header}
-      <div ref={boxRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-2">
+      <div ref={boxRef} data-note-sheet className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-2">
         <div
           ref={contentRef}
           style={{ fontSize: `${fit.px}px`, columnCount: fit.cols, columnGap: "1.5em" }}

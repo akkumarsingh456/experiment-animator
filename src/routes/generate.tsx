@@ -48,11 +48,13 @@ import {
   GraduationCap,
 } from "lucide-react";
 
+import { repairSourceMathSlide } from "@/lib/source-math-repair";
 import { MathText } from "@/components/MathText";
 import { PenPaperEditor } from "@/components/PenPaperEditor";
 import { usePenNotes, getPenNotes } from "@/lib/pen-notes";
 import PagedNoteSections from "@/components/PagedNoteSections";
 import { GuidedLessonNotes } from "@/components/GuidedLessonNotes";
+import { paginateLectureSections } from "@/lib/lecture-pages";
 import { GuidedNotesPresentation } from "@/components/GuidedNotesPresentation";
 import { downloadLessonPdf } from "@/lib/lesson-pdf";
 import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
@@ -245,19 +247,20 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       caption: `Class ${search.klass} · ${search.subject} · Topic: ${search.topic || title} · Chapter: ${search.chapter || "—"}`,
     };
   };
-  const withCoverSlide = (items: Slide[]) => [makeCoverSlide(), ...items];
+  const withCoverSlide = (items: Slide[]) => [makeCoverSlide(), ...items.map(repairSourceMathSlide)];
   const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
   const [presentationPage, setPresentationPage] = useState(0);
+  const [originalPage, setOriginalPage] = useState(0);
+  const [guidedDisplay, setGuidedDisplay] = useState<"page" | "presentation">("page");
   const closePresentation = useCallback(() => setPresenting(false), []);
-  const [exportMode, setExportMode] = useState<"notes" | "slides" | null>(null);
+  const [exportMode, setExportMode] = useState<"notes" | "slides" | "guided-slides" | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [lessonView, setLessonView] = useState<"notes" | "slides">("notes");
   useEffect(() => {
     document.body.dataset.lessonView = lessonView;
-    setPresentationPage(0);
     return () => { delete document.body.dataset.lessonView; };
   }, [lessonView]);
   // English / Hindi / Sanskrit chapters have no experiment to verify —
@@ -274,7 +277,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const imgHashRef = useRef<Record<number, string>>({});
   const dupRetryRef = useRef<Record<number, number>>({});
 
-  useEffect(() => { setSlides(withCoverSlide(result.slides)); setVerified(skipVerify); setActiveIdx(0); setPresentationPage(0); setImages({}); setImgLoading({}); setImgStatus({}); imgHashRef.current = {}; dupRetryRef.current = {}; }, [result]);
+  useEffect(() => { setSlides(withCoverSlide(result.slides)); setVerified(skipVerify); setActiveIdx(0); setPresentationPage(0); setOriginalPage(0); setImages({}); setImgLoading({}); setImgStatus({}); imgHashRef.current = {}; dupRetryRef.current = {}; }, [result]);
 
   function updateSlide(idx: number, patch: Partial<Slide>) {
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
@@ -464,14 +467,27 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
 
 
-  async function downloadPDF(mode: "notes" | "slides" = lessonView) {
+  // Retain Lovable's notes-and-illustration layout independently of guided worksheets.
+  const originalPages = useMemo(() => slides.flatMap((slide, sourceIndex) => {
+    if (slide.kind === "break" || slide.kind === "mcq") return [{ ...slide, sourceIndex }];
+    const sections = slide.sections?.filter((section) => section.kind !== "diagram");
+    const fallback = slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...slide.bullets, ...slide.notes];
+    const sourceSections = sections?.length ? sections : [{ heading: "Teacher Notes", kind: "bullets", lines: fallback }];
+    return paginateLectureSections(sourceSections, 12).map((page, pageIndex) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
+      title: pageIndex ? `${slide.title} · continued ${pageIndex + 1}` : slide.title }));
+  }), [slides]);
+  const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, section: "NCERT notes & illustration",
+    content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} subject={result.source_books[0]?.subject || search.subject} staticView />,
+  }));
+
+  async function downloadPDF(mode: "notes" | "slides" | "guided-slides" = lessonView) {
     if (exportMode) return;
     setExportMode(mode);
     try {
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       if (!exportRef.current) throw new Error("The PDF pages are not ready.");
-      if (mode === "slides") await prepareSlideExport(exportRef.current);
-      await downloadLessonPdf(exportRef.current, mode, title);
+      if (mode !== "notes") await prepareSlideExport(exportRef.current);
+      await downloadLessonPdf(exportRef.current, mode === "notes" ? "notes" : "slides", mode === "notes" ? title : `${title}-${mode === "guided-slides" ? "guided" : "ppt"}`);
     } catch (error) {
       toast.error(`PDF download failed: ${error instanceof Error ? error.message : "Please try again."}`);
     } finally { setExportMode(null); }
@@ -484,11 +500,11 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
   async function downloadPPTX() {
     if (exportMode) return;
-    setExportMode("slides");
+    setExportMode(lessonView === "notes" ? "guided-slides" : "slides");
     try {
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       if (!exportRef.current) throw new Error("The slides are not ready.");
-      await downloadRenderedPptx(exportRef.current, title);
+      await downloadRenderedPptx(exportRef.current, `${title}-${lessonView === "notes" ? "guided-notes" : "ppt"}`);
     } catch (error) {
       toast.error(`PPTX export failed: ${error instanceof Error ? error.message : "Please try again."}`);
     } finally { setExportMode(null); }
@@ -498,11 +514,11 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   return (
     <>
       <div className="lesson-view-controls flex flex-wrap items-center gap-2 mb-4 print:hidden" aria-label="Choose lesson view">
-        <Button variant={lessonView === "notes" ? "default" : "outline"} aria-pressed={lessonView === "notes"} onClick={() => setLessonView("notes")}>Guided notes · page view</Button>
-        <Button variant={lessonView === "slides" ? "default" : "outline"} aria-pressed={lessonView === "slides"} onClick={() => setLessonView("slides")}>Presentation slides</Button>
-        <Button variant="outline" onClick={presentSelectedView}><Maximize2 className="h-4 w-4" />Present {lessonView === "notes" ? "notes" : "slides"}</Button>
+        <Button variant={lessonView === "notes" ? "default" : "outline"} aria-pressed={lessonView === "notes"} onClick={() => setLessonView("notes")}>Guided Notes</Button>
+        <Button variant={lessonView === "slides" ? "default" : "outline"} aria-pressed={lessonView === "slides"} onClick={() => setLessonView("slides")}>Generate PPT &amp; Notes</Button>
+        <Button variant="outline" onClick={presentSelectedView}><Maximize2 className="h-4 w-4" />Present {lessonView === "notes" ? "guided notes" : "PPT slides"}</Button>
         <Button variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("notes")}><Download className="h-4 w-4" />{exportMode === "notes" ? "Preparing notes…" : "Notes PDF"}</Button>
-        <Button variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("slides")}><Download className="h-4 w-4" />{exportMode === "slides" ? "Preparing slides…" : "Slides PDF"}</Button>
+        <Button variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("slides")}><Download className="h-4 w-4" />{exportMode === "slides" ? "Preparing slides…" : "PPT slides PDF"}</Button>
       </div>
       {/* Step 1 — Activity verification (skipped for language chapters) */}
       {!skipVerify && lessonView === "slides" && (
@@ -528,18 +544,26 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           {/* Slides */}
           <section className="mb-10 print:m-0">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
-              <h2 className="font-semibold text-lg">{lessonView === "notes" ? "Complete guided notes" : "Complete lecture slides"}</h2>
+              <h2 className="font-semibold text-lg">{lessonView === "notes" ? "Guided Notes · reading & presentation" : "Generate PPT & Notes · Lovable slide style"}</h2>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => { setLessonView("slides"); setEditing((v) => !v); }}>
+                {lessonView === "slides" && <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => { setLessonView("slides"); setEditing((v) => !v); }}>
                   <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
-                </Button>
+                </Button>}
                 <Button size="sm" disabled={!!exportMode} onClick={downloadPPTX} title="PowerPoint with rendered equations; slide text is also included in speaker notes">
                   <Download className="h-4 w-4" />PPTX
                 </Button>
               </div>
             </div>
 
-            {lessonView === "notes" && <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} />}
+            {lessonView === "notes" && <>
+              <div className="flex flex-wrap gap-2 mb-4 print:hidden" aria-label="Guided notes layout">
+                <Button size="sm" variant={guidedDisplay === "page" ? "default" : "outline"} onClick={() => setGuidedDisplay("page")}>Read guided notes</Button>
+                <Button size="sm" variant={guidedDisplay === "presentation" ? "default" : "outline"} onClick={() => setGuidedDisplay("presentation")}>Guided notes presentation</Button>
+                <Button size="sm" variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("guided-slides")}>Guided presentation PDF</Button>
+              </div>
+              {guidedDisplay === "page" ? <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} /> :
+                <GuidedNotesPresentation inline mode="notes" slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} pageIndex={presentationPage} onPageChange={setPresentationPage} onPresent={presentSelectedView} onClose={closePresentation} onPdf={() => downloadPDF("guided-slides")} />}
+            </>}
             <div className={lessonView === "slides" ? "lesson-slides" : "hidden"}>
 
             <div
@@ -556,7 +580,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 imageLoading={!!imgLoading[activeIdx]}
                 onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
                 subject={result.source_books[0]?.subject}
-              /> : <GuidedNotesPresentation inline mode="slides" slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} pageIndex={presentationPage} onPageChange={setPresentationPage} onPresent={presentSelectedView} onClose={closePresentation} onPdf={() => downloadPDF("slides")} />}
+              /> : <GuidedNotesPresentation inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} pageIndex={originalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} onPdf={() => downloadPDF("slides")} />}
             </div>
 
             <details className="lesson-presentation-checks mt-4 rounded-xl border border-border/60 bg-card/60 print:hidden">
@@ -743,10 +767,11 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         Source: {result.source_books.map((b) => `${b.subject} · Class ${b.class} · ${b.chapter}`).join(", ")} ({result.context_chars.toLocaleString()} chars of NCERT text)
       </p>
 
-      {exportMode && <div ref={exportRef} className={`lesson-export-root lesson-export-${exportMode}`} aria-hidden="true">
-        <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} includeBreaks={exportMode === "slides"} />
+      {exportMode && <div ref={exportRef} className={`lesson-export-root lesson-export-${exportMode === "notes" ? "notes" : "slides"} ${exportMode === "slides" ? "original-slide-deck" : ""}`} data-presentation-style={exportMode === "slides" ? "lovable" : "guided"} aria-hidden="true">
+        {exportMode === "slides" ? originalPages.map((slide, index) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} subject={result.source_books[0]?.subject || search.subject} staticView /></div>) :
+          <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} />}
       </div>}
-      {presenting && <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} mode={lessonView} pageIndex={presentationPage} onPageChange={setPresentationPage} onClose={closePresentation} onPdf={() => downloadPDF(lessonView)} />}
+      {presenting && <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
 
     </>
   );
@@ -880,14 +905,14 @@ function DiagramFrame({ src, alt, mode }: { src: string; alt: string; mode: "pre
   );
 }
 
-function McqSlideBody({ slide }: { slide: Slide }) {
-  const [reveal, setReveal] = useState(false);
-  useEffect(() => { setReveal(false); }, [slide]);
+function McqSlideBody({ slide, staticView = false }: { slide: Slide; staticView?: boolean }) {
+  const [reveal, setReveal] = useState(staticView);
+  useEffect(() => { setReveal(staticView); }, [slide, staticView]);
   const mcq = slide.mcq;
   if (!mcq) return null;
   return (
     <div className="p-6 flex flex-col gap-3 min-h-0 overflow-hidden">
-      <p className="font-display text-base sm:text-lg font-semibold leading-snug">{mcq.question}</p>
+      <p className="font-display text-base sm:text-lg font-semibold leading-snug"><MathText text={mcq.question} /></p>
       <ol className="grid sm:grid-cols-2 gap-2">
         {mcq.options.map((o) => {
           const isCorrect = reveal && o.key === mcq.answer;
@@ -896,15 +921,15 @@ function McqSlideBody({ slide }: { slide: Slide }) {
               className={`rounded-md border p-2.5 text-sm flex gap-2 ${isCorrect ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-border/60 bg-card"}`}
             >
               <span className="font-mono font-bold">{o.key}.</span>
-              <span>{o.text}</span>
+              <span><MathText text={o.text} /></span>
             </li>
           );
         })}
       </ol>
       <div className="flex flex-wrap items-center gap-2 mt-1">
-        <Button size="sm" variant={reveal ? "outline" : "default"} onClick={() => setReveal((v) => !v)}>
+        {!staticView && <Button size="sm" variant={reveal ? "outline" : "default"} onClick={() => setReveal((v) => !v)}>
           {reveal ? "Hide answer" : "Show answer"}
-        </Button>
+        </Button>}
         {reveal && (
           <Badge className="rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-500/30">
             Correct: {mcq.answer}
@@ -912,7 +937,7 @@ function McqSlideBody({ slide }: { slide: Slide }) {
         )}
       </div>
       {reveal && mcq.explanation && (
-        <p className="text-xs text-muted-foreground italic border-l-2 border-primary/40 pl-2">{mcq.explanation}</p>
+        <p className="text-xs text-muted-foreground italic border-l-2 border-primary/40 pl-2"><MathText text={mcq.explanation} /></p>
       )}
     </div>
   );
@@ -990,7 +1015,7 @@ function SlideCanvas({
             </div>
             <div className="min-h-0 overflow-hidden">
               <h3 className="px-6 pt-3 font-display text-lg sm:text-xl font-bold tracking-tight leading-tight line-clamp-2">{slide.title}</h3>
-              {kind === "mcq" && <McqSlideBody slide={slide} />}
+              {kind === "mcq" && <McqSlideBody slide={slide} staticView={staticView} />}
               {kind === "chapter" && <ChapterSlideBody slide={slide} />}
               {kind === "break" && <BreakSlideBody slide={slide} />}
             </div>
@@ -1076,7 +1101,7 @@ function SlideCanvas({
                           className="min-h-[32px] resize-none text-xs"
                         />
                       ) : (
-                        <p className="text-[12px] leading-snug">{b}</p>
+                        <p className="text-[12px] leading-snug"><MathText text={b} /></p>
                       )}
                     </li>
                   ))}
@@ -1092,7 +1117,7 @@ function SlideCanvas({
                 <div className="rounded-md bg-secondary/50 border border-border/50 p-2 overflow-hidden">
                   <div className="text-[9px] font-semibold uppercase tracking-wider text-primary mb-1">NCERT notes</div>
                   <ol className="space-y-0.5 list-decimal list-inside text-[11px] leading-snug text-foreground/85">
-                    {slide.notes.map((n, i) => <li key={i}>{n}</li>)}
+                    {slide.notes.map((n, i) => <li key={i}><MathText text={n} /></li>)}
                   </ol>
                 </div>
               ) : null}

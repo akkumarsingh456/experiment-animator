@@ -1,9 +1,11 @@
+import { repairSourceMathSlide } from "@/lib/source-math-repair";
 import { MathText } from "@/components/MathText";
 import { guidedFormulaRow, guidedGroups, uniqueTopicGroups, type GuidedGroup } from "@/lib/guided-notes";
 import { LessonNotesPlanner, TopicLearningTasks, TopicRecap } from "@/components/LessonNotesPlanner";
 import type { Slide } from "@/lib/generate.functions";
 import { TopicVisualStructures } from "@/components/TopicVisualStructures";
 import { FormulaMindMap } from "@/components/FormulaMindMap";
+import { FormulaDerivation } from "@/components/FormulaDerivation";
 
 function NotesGroup({ group }: { group: GuidedGroup }) {
   return <section className={`guided-group guided-${group.kind}`}>
@@ -11,15 +13,13 @@ function NotesGroup({ group }: { group: GuidedGroup }) {
     {group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula / relation</th><th>Unit / SI unit</th></tr></thead><tbody>
       {group.lines.map((line, i) => { const row = guidedFormulaRow(line); return <tr key={i}><td><MathText text={row.concept} /></td><td><MathText text={row.expression} /></td><td><MathText text={row.unit} /></td></tr>; })}
     </tbody></table></div> : group.kind === "prose" ? group.lines.map((line, i) => <p key={i}><MathText text={line} /></p>) :
-      group.kind === "derivation" ? <>
-        {group.lines.filter((line) => /^\*\*derivation of/i.test(line)).map((line, i) => <p key={i}><MathText text={line} /></p>)}
-        <ol className="guided-derivation-flow">{group.lines.filter((line) => !/^\*\*(formula|derivation of)/i.test(line)).map((line, i) => <li key={i}><MathText text={line.replace(/^\*\*derivation step\s*\d*:\*\*\s*/i, "")} /></li>)}</ol>
-      </> :
+      group.kind === "derivation" ? <FormulaDerivation lines={group.lines} /> :
       <ul>{group.lines.map((line, i) => <li key={i}><MathText text={line} /></li>)}</ul>}
   </section>;
 }
 
 export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks = false }: { slides: Slide[]; title: string; subject?: string; klass?: string; includeBreaks?: boolean }) {
+  slides = slides.map(repairSourceMathSlide);
   const content = slides.filter((slide) => (slide.kind ?? "content") === "content" || slide.kind === "chapter" || (includeBreaks && slide.kind === "break"));
   const questions = slides.flatMap((slide) => slide.mcq ? [slide.mcq] : []);
   const topicGroups = uniqueTopicGroups(content.map((slide) => guidedGroups(slide.sections, slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...(slide.bullets || []), ...(slide.notes || [])])));

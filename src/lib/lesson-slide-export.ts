@@ -2,6 +2,16 @@ import { paginateGuidedArticles, PRESENTATION_WIDTH, PRESENTATION_HEIGHT } from 
 
 /** Use the same measured content for the projector, slide PDF and PowerPoint. */
 export async function prepareSlideExport(root: HTMLElement) {
+  if (root.dataset.presentationStyle === "lovable") {
+    root.style.width = `${PRESENTATION_WIDTH}px`;
+    await document.fonts.ready;
+    await Promise.all(Array.from(root.querySelectorAll("img")).map((image) => image.decode().catch(() => {})));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    const frames = Array.from(root.querySelectorAll<HTMLElement>(":scope > .lesson-export-slide"));
+    if (!frames.length) throw new Error("No generated PPT slides are available to export.");
+    frames.forEach((frame) => Object.assign(frame.style, { width: `${PRESENTATION_WIDTH}px`, height: `${PRESENTATION_HEIGHT}px`, overflow: "hidden", background: "white", position: "relative" }));
+    return frames;
+  }
   root.classList.add("guided-slide-deck", "lecture-deck");
   root.style.width = `${PRESENTATION_WIDTH}px`;
   root.querySelectorAll("details").forEach((node) => { node.open = true; });

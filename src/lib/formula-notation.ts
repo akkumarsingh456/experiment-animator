@@ -12,6 +12,7 @@
 
 import { hasMath, mapOutsideMath, normalizeLine } from "@/lib/latex-notation";
 import { gatewayJSON, hasGatewayKey } from "@/lib/ai-gateway-json";
+import { repairSourceMathLine } from "@/lib/source-math-repair";
 
 /* ---------------- deterministic layer ---------------- */
 
@@ -45,7 +46,7 @@ const SYMBOL_MAP: Array<[RegExp, string]> = [
 /** Light, always-safe cleanup of math punctuation and symbols. */
 export function repairNotation(raw: string): string {
   // LaTeX spans ($...$ / $$...$$) are authored notation — never touch them.
-  return mapOutsideMath(String(raw || ""), (t) => {
+  return mapOutsideMath(repairSourceMathLine(String(raw || "")), (t) => {
     const lead = /^\s/.test(t) ? " " : "";
     const tail = /\s$/.test(t) ? " " : "";
     const body = repairPlainNotation(t);
@@ -73,7 +74,7 @@ function repairPlainNotation(raw: string): string {
     .replace(/(?:\s[-–—]\s){2,}/g, " ");
 
   // Re-join letters that were exploded one character apart ("d e m a n d").
-  s = s.replace(/(?:\b[a-z]\s){2,}\b[a-z]\b/g, (m) => m.replace(/\s+/g, ""));
+  s = s.replace(/(?:\b[a-z]\s){5,}\b[a-z]\b/g, (m) => m.replace(/\s+/g, ""));
 
   for (const [re, rep] of SYMBOL_MAP) s = s.replace(re, rep);
 
@@ -153,12 +154,12 @@ export async function aiFixFormulas(opts: {
     "- Re-join words broken into single letters (e.g. 'd e m a n d' → 'demand').",
     "- Standard chapter formulas may be written correctly (e.g. $v = u + at$, $s = ut + \\frac{1}{2}at^2$, $PV = nRT$) ONLY if the damaged line clearly refers to that relation.",
     "- If the maths in a line is unrecoverable, return an empty string for that line so it can be dropped.",
-    "- Return the line as plain text with LaTeX spans, max 30 words, no markdown fences.",
+    "- Return the line as plain text with LaTeX spans, preserving all meaningful explanation and conditions, no markdown fences.",
     "",
     'Return STRICT JSON: {"lines":[{"index":0,"text":"..."}]}',
     "",
     "DAMAGED LINES:",
-    JSON.stringify(payload).slice(0, 12000),
+    JSON.stringify(payload),
   ].join("\n");
 
   const parsed = await gatewayJSON<{ lines?: Array<{ index?: number; text?: string }> }>({
