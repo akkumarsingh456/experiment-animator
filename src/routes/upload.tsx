@@ -319,7 +319,7 @@ function UploadPage() {
       step({ name: "chunk", label: "Build memory chunks", status: "start" });
       const chunks = extracted.pages.flatMap(page => {
         const source = splitReferenceContent(page.text);
-        return [...(source.text ? chunkText(source.text) : []), ...(source.visuals.length ? [encodeReferenceVisuals("", source.visuals)] : [])];
+        return [...(source.text ? chunkText(source.text).map(text => encodeReferenceVisuals(text, [], source.context)) : []), ...(source.visuals.length ? [encodeReferenceVisuals("", source.visuals, source.context)] : [])];
       });
       step({ name: "chunk", label: "Build memory chunks", status: "ok", msg: `${chunks.length} chunks` });
 

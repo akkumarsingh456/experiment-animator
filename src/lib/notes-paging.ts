@@ -10,6 +10,8 @@
  * pipeline is untouched.
  */
 
+import { sectionPoints } from "@/lib/note-points";
+
 export type NoteSectionLike = { heading: string; kind: string; lines: string[] };
 
 const formulaIdentity = (line: string) => {
@@ -42,7 +44,7 @@ const FORMULA_LABEL = /^\s*\*{0,2}\s*(formula|equation|relation|result)\b/i;
 export function toNoteBlocks(sections: NoteSectionLike[] | undefined): NoteBlock[] {
   const blocks: NoteBlock[] = [];
   (sections || []).forEach((sec, sectionIndex) => {
-    const lines = sec.lines || [];
+    const lines = sectionPoints(sec.heading, sec.kind, sec.lines || []);
     if (sec.kind === "diagram") {
       if (lines.length) {
         blocks.push({ sectionIndex, heading: sec.heading, kind: sec.kind, lines });

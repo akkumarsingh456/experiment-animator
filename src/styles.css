@@ -388,3 +388,10 @@
 .book-figure-compact .book-reference-figure { padding: .8rem; }
 .book-figure-compact .book-reference-figure p { font-size: 12px; }
 @media print { .book-figure-compact { max-height: none; overflow: visible; } }
+.book-map-slide { grid-column: 1 / -1; display: flex; flex-direction: column; gap: .8rem; padding: 1.2rem 2rem; min-height: 0; overflow: auto; background: #fff; }
+.book-map-slide > h3 { font-size: clamp(22px, 2.2vw, 32px); font-weight: 700; line-height: 1.2; }
+.book-figure-presentation { flex: 1; min-height: 0; }
+.book-figure-presentation .book-reference-figure { padding: .85rem 1rem; display: flex; flex-direction: column; min-height: 0; }
+.book-figure-presentation .book-reference-figure p { margin: .5rem 0; }
+.book-map-image-space { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+@media (max-width: 640px) { .book-map-slide { padding: 1rem; } }

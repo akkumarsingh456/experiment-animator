@@ -6,7 +6,7 @@ export const saveExtractedReferencePage = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) => z.object({ book_id: z.string().uuid(), page: z.number().int().positive(), text: z.string().max(100_000) }).parse(raw))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const pageContent = encodeReferenceVisuals(data.text, []);
+    const pageContent = encodeReferenceVisuals(data.text, [], { chapter: "" });
     const { error: chunkError } = await supabaseAdmin.from("ncert_chunks").upsert({ book_id: data.book_id, chunk_index: data.page - 1, content: pageContent }, { onConflict: "book_id,chunk_index" });
     if (chunkError) throw new Error(chunkError.message);
     const { error } = await supabaseAdmin.from("ncert_pages").upsert({ book_id: data.book_id, page_number: data.page, text: "[SOURCE_OCR_PAGE]\n" + pageContent }, { onConflict: "book_id,page_number" });
@@ -15,14 +15,14 @@ export const saveExtractedReferencePage = createServerFn({ method: "POST" })
   });
 
 export const readScannedPage = createServerFn({ method: "POST" })
-  .inputValidator((raw: unknown) => z.object({ image: z.string().max(8_000_000).regex(/^data:image\/jpeg;base64,/), page: z.number().int().positive(), book_id: z.string().uuid().optional(), source_path: z.string().max(500).regex(/^[a-zA-Z0-9_./-]+\.pdf$/i).refine(path => !path.includes(".."), "Invalid source path").optional(), aspect: z.number().positive().max(5).optional() }).parse(raw))
+  .inputValidator((raw: unknown) => z.object({ image: z.string().max(8_000_000).regex(/^data:image\/jpeg;base64,/), page: z.number().int().positive(), book_id: z.string().uuid().optional(), source_path: z.string().max(500).regex(/^[a-zA-Z0-9_./-]+\.pdf$/i).refine(path => !path.includes(".."), "Invalid source path").optional(), aspect: z.number().positive().max(5).optional(), chapter_hint: z.string().max(200).optional() }).parse(raw))
   .handler(async ({ data }) => {
     const { gatewayJSON, hasGatewayKey } = await import("@/lib/ai-gateway-json");
     if (!hasGatewayKey()) throw new Error("Scanned-book reading is unavailable. Configure the website’s AI connection to read these handwritten pages.");
-    const out = await gatewayJSON<{ text: string; visuals: Array<{ title: string; kind: "reaction" | "structure" | "diagram"; description: string; x: number; y: number; width: number; height: number }> }>({
+    const out = await gatewayJSON<{ text: string; chapter: string; visuals: Array<{ title: string; kind: "reaction" | "structure" | "diagram"; description: string; x: number; y: number; width: number; height: number }> }>({
       images: [data.image], schemaName: "source_page_transcription",
-      schema: { type: "object", additionalProperties: false, required: ["text", "visuals"], properties: { text: { type: "string" }, visuals: { type: "array", items: { type: "object", additionalProperties: false, required: ["title", "kind", "description", "x", "y", "width", "height"], properties: { title: { type: "string" }, kind: { type: "string", enum: ["reaction", "structure", "diagram"] }, description: { type: "string" }, x: { type: "number" }, y: { type: "number" }, width: { type: "number" }, height: { type: "number" } } } } } },
-      prompt: "Transcribe this uploaded textbook page faithfully. Preserve the original wording and paragraph order. Typeset clearly readable mathematical symbols with inline $...$ or display $$...$$ LaTeX, retaining matrix rows and columns. Never solve, summarise, add facts or invent missing notation. Omit advertisements, watermarks and unreadable fragments. Return empty text for an illustration-only or cover page. Also locate up to six useful reaction schemes, organic molecular structures, inorganic geometries, apparatus diagrams or physics graphs. For each supply a short topic title, kind, a faithful description of its visible labels and bounding box x/y/width/height in fractions of the full image (0–1). Include all bonds, charges, arrows, reagents and conditions inside the box with a little padding. Never reconstruct an unreadable structure. Keep paragraphs separated by blank lines. Do not describe a normal prose paragraph as a diagram. Return JSON text and visuals.",
+      schema: { type: "object", additionalProperties: false, required: ["text", "chapter", "visuals"], properties: { text: { type: "string" }, chapter: { type: "string" }, visuals: { type: "array", items: { type: "object", additionalProperties: false, required: ["title", "kind", "description", "x", "y", "width", "height"], properties: { title: { type: "string" }, kind: { type: "string", enum: ["reaction", "structure", "diagram"] }, description: { type: "string" }, x: { type: "number" }, y: { type: "number" }, width: { type: "number" }, height: { type: "number" } } } } } },
+      prompt: "Transcribe this uploaded textbook page faithfully. Preserve the original wording and paragraph order. Typeset clearly readable mathematical symbols with inline $...$ or display $$...$$ LaTeX, retaining matrix rows and columns. Never solve, summarise, add facts or invent missing notation. Omit advertisements, watermarks and unreadable fragments. Return empty text for an illustration-only or cover page. Also locate up to six useful reaction schemes, organic molecular structures, inorganic geometries, apparatus diagrams or physics graphs. For each supply a short topic title, kind, a faithful description of its visible labels and bounding box x/y/width/height in fractions of the full image (0–1). Include all bonds, charges, arrows, reagents and conditions inside the box with a little padding. Never reconstruct an unreadable structure. Keep paragraphs separated by blank lines. Do not describe a normal prose paragraph as a diagram. Keep a complete reaction map together: include its central compound, every branch, product structure, named reaction, reagent, condition and comparison panel in one crop; do not split its branches into separate figures. Use descriptive topic titles such as Chlorine reaction map or Haloalkane reaction pathways rather than generic Chemical properties. Return a separate chapter indexing field using the corresponding standard NCERT chapter name when confidently identifiable; otherwise an empty string. This metadata must never replace or rewrite the transcribed source text. For a continuation page with no new chapter heading, the previous chapter hint may help; a visible new chapter takes precedence. Return JSON text, chapter and visuals. Previous chapter hint: " + (data.chapter_hint || "none"),
     });
     if (!out || typeof out.text !== "string") throw new Error(`Could not read scanned page ${data.page}. Try again; already read pages are retained.`);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -33,7 +33,7 @@ export const readScannedPage = createServerFn({ method: "POST" })
       sourcePath = book.storage_path;
     }
     const visuals: ReferenceVisual[] = (out.visuals || []).slice(0, 6).filter(v => v.x >= 0 && v.y >= 0 && v.width > .05 && v.height > .05 && v.x + v.width <= 1.001 && v.y + v.height <= 1.001).map(v => ({
-      title: v.title, kind: v.kind, description: v.description, page: data.page, book_id: data.book_id,
+      title: v.title, kind: v.kind, description: v.description, page: data.page, book_id: data.book_id, chapter: (out.chapter || "").slice(0, 200),
       aspect: data.aspect || .707, storage_path: sourcePath ? `${sourcePath}.page-${data.page}.jpg` : "",
       crop: { x: v.x, y: v.y, width: v.width, height: v.height },
     })).filter(v => !!v.storage_path);
@@ -49,7 +49,7 @@ export const readScannedPage = createServerFn({ method: "POST" })
       const { error } = await supabaseAdmin.storage.from("ncert-pdfs").upload(visuals[0].storage_path, bytes, { contentType: "image/jpeg", upsert: true });
       if (error) throw new Error(error.message);
     }
-    const pageContent = encodeReferenceVisuals(out.text, visuals);
+    const pageContent = encodeReferenceVisuals(out.text, visuals, { chapter: (out.chapter || "").slice(0, 200) });
     if (data.book_id) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { error: chunkError } = await supabaseAdmin.from("ncert_chunks").upsert({ book_id: data.book_id, chunk_index: data.page - 1, content: pageContent }, { onConflict: "book_id,chunk_index" });

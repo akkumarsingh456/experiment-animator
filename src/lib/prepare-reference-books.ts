@@ -3,6 +3,7 @@ import { combinedReferenceMatches } from "@/lib/reference-books";
 import { extractPdfText } from "@/lib/pdf-extract";
 import { signDownload } from "@/lib/ingest.functions";
 import { readScannedPage, finishReferenceReading, saveExtractedReferencePage } from "@/lib/reference-ocr.functions";
+import { splitReferenceContent } from "@/lib/reference-visuals";
 
 /** Read the existing uploaded scans once, checkpointing each page for resumption. */
 export async function prepareScannedReferenceBooks(klass: string, subject: string, progress: (message: string) => void, cancelled: () => boolean = () => false) {
@@ -20,13 +21,17 @@ export async function prepareScannedReferenceBooks(klass: string, subject: strin
     progress(`Reading scanned reference notes: ${book.file_name}`);
     const { data: saved, error: savedError } = await supabase.from("ncert_pages").select("page_number,text").eq("book_id", book.id).order("page_number").limit(1000);
     if (savedError) throw new Error(savedError.message);
-    const savedPages = new Map((saved || []).filter(page => page.text.startsWith("[SOURCE_OCR_PAGE]\n") && page.text.includes("[REFERENCE_VISUALS_V1]")).map(page => [page.page_number, page.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "")]));
+    const savedPages = new Map((saved || []).filter(page => page.text.startsWith("[SOURCE_OCR_PAGE]\n") && page.text.includes("[REFERENCE_CONTEXT_V1]")).map(page => [page.page_number, page.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "")]));
     if (savedPages.size === book.num_pages && (book.num_chunks || 0) === book.num_pages) continue;
     const ticket = await signDownload({ data: { path: book.storage_path } });
     const response = await fetch(ticket.signedUrl);
     if (!response.ok) throw new Error(`Could not read the uploaded ${book.file_name}.`);
     const file = await response.blob();
-    const extracted = await extractPdfText(file, (page, total) => progress(`Reading ${book.file_name} · page ${page} of ${total}`), {
+    let chapterHint = "";
+    const extracted = await extractPdfText(file, (page, total) => {
+      chapterHint = splitReferenceContent(savedPages.get(page) || "").context?.chapter || chapterHint;
+      progress(`Reading ${book.file_name} · page ${page} of ${total}`);
+    }, {
       savedPages,
       savePage: async (text, page) => {
         if (cancelled()) throw new Error("Reference-book reading paused. Completed pages are saved.");
@@ -34,7 +39,9 @@ export async function prepareScannedReferenceBooks(klass: string, subject: strin
       },
       recognizePage: async (image, page, aspect) => {
         if (cancelled()) throw new Error("Reference-book reading paused. Completed pages are saved.");
-        return readScannedPage({ data: { image, page, aspect, book_id: book.id } });
+        const content = await readScannedPage({ data: { image, page, aspect, book_id: book.id, chapter_hint: chapterHint } });
+        chapterHint = splitReferenceContent(content).context?.chapter || chapterHint;
+        return content;
       },
     });
     await finishReferenceReading({ data: { book_id: book.id, num_pages: extracted.numPages } });

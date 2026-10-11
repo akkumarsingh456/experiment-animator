@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { appendUploadedReferenceNotes } from "@/lib/uploaded-reference-notes";
 import { encodeReferenceVisuals, splitReferenceContent, type ReferenceVisual } from "@/lib/reference-visuals";
 import { BookReferenceFigures } from "@/components/BookReferenceFigures";
+import { BookMapSlide } from "@/components/BookMapSlide";
 
 const figure: ReferenceVisual = { title: "Nucleophilic substitution reaction", kind: "reaction", description: "Nucleophilic substitution: reactant, reagent, reaction arrow and product.", page: 169, storage_path: "Class11/Chemistry/book.pdf.page-169.jpg", aspect: .707, crop: { x: .1, y: .2, width: .8, height: .25 } };
 function book(id: string, subject: string, klass = "Class 11", ncert = false) {
@@ -21,6 +22,50 @@ function lesson(title: string) {
 }
 
 describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
+  it("assigns all matching chapter maps once, with unrelated chapters excluded", async () => {
+    const original = lesson("Introduction to Haloalkanes");
+    original.slides.push({...original.slides[0], title:"Nucleophilic substitution"});
+    const maps = Array.from({length:10},(_,i)=>({...figure,title:`Reaction pathways ${i+1}`, chapter:"Haloalkanes and Haloarenes"}));
+    const wrong = {...figure,title:"Aldehyde reaction map",chapter:"Aldehydes, Ketones and Carboxylic Acids"};
+    const db = mockDb([book("med","Chemistry")],{med:[encodeReferenceVisuals("These are the original uploaded structures.",[...maps,wrong],{chapter:"Haloalkanes and Haloarenes"})]});
+    const result = await appendUploadedReferenceNotes(original,db,"12","Chemistry","Haloalkanes and Haloarenes");
+    const figures = result.slides.flatMap((slide:any)=>slide.reference_visuals || []);
+    expect(figures).toHaveLength(10);
+    expect(new Set(figures.map((v:any)=>v.title)).size).toBe(10);
+    expect(figures.every((v:any)=>v.chapter === "Haloalkanes and Haloarenes")).toBe(true);
+    expect(result.slides[0].sections[0]).toBe(original.slides[0].sections[0]);
+  });
+  it("preserves exact source wording outside chapter indexing metadata",()=>{
+    const source="Keep this source sentence and its $V=IR$ notation unchanged.";
+    const parsed=splitReferenceContent(encodeReferenceVisuals(source,[figure],{chapter:"Current Electricity"}));
+    expect(parsed.text).toBe(source);
+    expect(parsed.context?.chapter).toBe("Current Electricity");
+    expect(parsed.text).not.toContain("REFERENCE_CONTEXT");
+  });
+  it("uses the full slide width for the complete source map with its original image",()=>{
+    const html=renderToStaticMarkup(<BookMapSlide title="Haloalkanes" subject="Chemistry" figures={[{...figure,url:"https://example.test/original.jpg",chapter:"Haloalkanes and Haloarenes"}]} />);
+    expect(html).toContain("book-map-slide");
+    expect(html).toContain("book-figure-presentation");
+    expect(html).toContain("https://example.test/original.jpg");
+    expect(html).toContain("Haloalkanes and Haloarenes");
+    expect(html).not.toContain("book-figure-compact");
+  });
+  it("refreshes cached reference paragraphs as topic-specific points, preserving original formulas", async () => {
+    const original = lesson("Ohm’s Law");
+    const formula = original.slides[0].sections[0];
+    const points = [
+      "Ohm’s law relates the current through a conductor to the potential difference across it at constant temperature.",
+      "Atmospheric electricity arises due to the separation of electric charges and has no place under this topic.",
+      "Kirchhoff’s law describes a different relationship for closed loops in an electrical circuit with multiple branches.",
+      "Ohm’s law is often stated in an equivalent form for the same conductor when its physical conditions remain unchanged.",
+    ];
+    original.slides[0].sections.push({heading:"Reference notes — NCERT Physics", kind:"bullets", lines:[points.join(" ")]});
+    const db = mockDb([book("ncert","Physics","Class 12",true)], {ncert:[points.join(" ")]});
+    const result = await appendUploadedReferenceNotes(original,db,"12","Physics","Current Electricity");
+    expect(result.slides[0].sections[0]).toBe(formula);
+    expect(result.slides[0].sections[1].lines).toEqual([points[0],points[3]]);
+    expect(result.slides[0].sections).toHaveLength(2);
+  });
   it.each(["11", "12"])("adds organic notes and figures for Class %s without changing existing formulas or derivations", async grade => {
     const original = lesson("Nucleophilic substitution"); const formula = original.slides[0].sections[0];
     const passages = Array.from({length:8}, (_,i) => `Nucleophilic substitution reference passage ${i+1}: a distinct source detail retained verbatim.`);

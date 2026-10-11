@@ -16,7 +16,7 @@ function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }
     <h3>{group.heading}</h3>
     {group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula / relation</th><th>Unit / SI unit</th></tr></thead><tbody>
       {group.lines.map((line, i) => { const row = guidedFormulaRow(line); return <tr key={i}><td><MathText text={row.concept} /></td><td><MathText text={row.expression} /></td><td><MathText text={row.unit} /></td></tr>; })}
-    </tbody></table></div> : group.kind === "prose" ? group.lines.map((line, i) => isMathematics(subject) ? <div className="mathematics-prose" key={i}><MathematicsProse text={line} /></div> : <p key={i}><MathText text={line} /></p>) :
+    </tbody></table></div> : group.kind === "prose" && group.lines.length === 1 ? group.lines.map((line, i) => isMathematics(subject) ? <div className="mathematics-prose" key={i}><MathematicsProse text={line} /></div> : <p key={i}><MathText text={line} /></p>) :
       group.kind === "derivation" ? <FormulaDerivation lines={group.lines} /> :
       <ul>{group.lines.map((line, i) => <li key={i}>{isMathematics(subject) ? <MathematicsProse text={line} /> : <MathText text={line} />}</li>)}</ul>}
   </section>;

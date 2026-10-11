@@ -1,4 +1,5 @@
 import { BookReferenceFigures } from "@/components/BookReferenceFigures";
+import { BookMapSlide } from "@/components/BookMapSlide";
 import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
 import { isMathematics, mathematicsPresentationSlide } from "@/lib/mathematics-presentation";
 import { omitContentsListings } from "@/lib/note-source-noise";
@@ -1010,6 +1011,7 @@ function SlideCanvas({
   imageUrl = renderLessonIllustrationDataUrl({ ...slide, subject, slideIndex: sourceIndex });
   const kind = slide.kind === "chapter" && slide.sections?.length ? "content" : slide.kind || "content";
   const lang = isLanguageSubject(subject);
+  const bookFigurePage = slide.sections?.some(section => section.heading === "Book structure and explanation") && slide.reference_visuals?.some(figure => figure.url);
   const v = slide.verification;
   const vTone = !v ? "" :
     v.coverage >= 80 ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" :
@@ -1090,6 +1092,7 @@ function SlideCanvas({
           </div>
 
           <div className="lesson-slide-body grid grid-cols-1 md:grid-cols-[3fr_2fr] min-h-0 overflow-hidden" style={lang ? { gridTemplateColumns: "1fr" } : undefined}>
+            {bookFigurePage ? <BookMapSlide title={slide.title} figures={slide.reference_visuals} subject={subject} /> : <>
             <div className="px-5 sm:px-8 py-5 flex flex-col gap-3 min-h-0 overflow-hidden">
               {editing ? (
                 <Input
@@ -1187,6 +1190,7 @@ function SlideCanvas({
                 </div>
               )}
             </div>
+            </>}
           </div>
 
           <div className="px-4 sm:px-6 py-2 border-t border-border/60 bg-secondary/40 flex items-center justify-between text-[10px] text-muted-foreground">
