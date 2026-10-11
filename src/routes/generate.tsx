@@ -249,6 +249,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
+  const [presentationPage, setPresentationPage] = useState(0);
   const closePresentation = useCallback(() => setPresenting(false), []);
   const [exportMode, setExportMode] = useState<"notes" | "slides" | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -256,6 +257,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const [lessonView, setLessonView] = useState<"notes" | "slides">("notes");
   useEffect(() => {
     document.body.dataset.lessonView = lessonView;
+    setPresentationPage(0);
     return () => { delete document.body.dataset.lessonView; };
   }, [lessonView]);
   // English / Hindi / Sanskrit chapters have no experiment to verify —
@@ -272,7 +274,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const imgHashRef = useRef<Record<number, string>>({});
   const dupRetryRef = useRef<Record<number, number>>({});
 
-  useEffect(() => { setSlides(withCoverSlide(result.slides)); setVerified(skipVerify); setActiveIdx(0); setImages({}); setImgLoading({}); setImgStatus({}); imgHashRef.current = {}; dupRetryRef.current = {}; }, [result]);
+  useEffect(() => { setSlides(withCoverSlide(result.slides)); setVerified(skipVerify); setActiveIdx(0); setPresentationPage(0); setImages({}); setImgLoading({}); setImgStatus({}); imgHashRef.current = {}; dupRetryRef.current = {}; }, [result]);
 
   function updateSlide(idx: number, patch: Partial<Slide>) {
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
@@ -540,6 +542,29 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
             {lessonView === "notes" && <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} />}
             <div className={lessonView === "slides" ? "lesson-slides" : "hidden"}>
 
+            <div
+              key={`slide-${activeIdx}`}
+              className="animate-in fade-in slide-in-from-right-4 duration-500 mx-auto grid w-full place-items-center print:hidden"
+                          >
+              {editing ? <SlideCanvas
+                slide={slides[activeIdx]}
+                index={activeIdx}
+                total={slides.length}
+                editing={editing}
+                onChange={(patch) => updateSlide(activeIdx, patch)}
+                imageUrl={images[activeIdx]}
+                imageLoading={!!imgLoading[activeIdx]}
+                onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
+                subject={result.source_books[0]?.subject}
+              /> : <GuidedNotesPresentation inline mode="slides" slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} pageIndex={presentationPage} onPageChange={setPresentationPage} onPresent={presentSelectedView} onClose={closePresentation} onPdf={() => downloadPDF("slides")} />}
+            </div>
+
+            <details className="lesson-presentation-checks mt-4 rounded-xl border border-border/60 bg-card/60 print:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-medium">
+                <span>Lesson checks <span className="ml-2 text-xs font-normal text-muted-foreground">Sources, visuals and figure references</span></span>
+                {(failedCount > 0 || (result.figures_report && !result.figures_report.pass)) && <span className="text-xs text-amber-700">Review needed</span>}
+              </summary>
+              <div className="px-4 pb-4">
             {/* Live auto-gen status — proves the 2D pipeline is running for
                 every subject and every slide, not just Physics. */}
             <div className="mb-3 flex flex-wrap items-center gap-2 text-xs print:hidden">
@@ -674,22 +699,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
             )}
 
 
-            <div
-              key={`slide-${activeIdx}`}
-              className="animate-in fade-in slide-in-from-right-4 duration-500 mx-auto grid w-full place-items-center print:hidden"
-                          >
-              {editing ? <SlideCanvas
-                slide={slides[activeIdx]}
-                index={activeIdx}
-                total={slides.length}
-                editing={editing}
-                onChange={(patch) => updateSlide(activeIdx, patch)}
-                imageUrl={images[activeIdx]}
-                imageLoading={!!imgLoading[activeIdx]}
-                onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
-                subject={result.source_books[0]?.subject}
-              /> : <GuidedNotesPresentation inline mode="slides" slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} onClose={closePresentation} onPdf={() => downloadPDF("slides")} />}
-            </div>
+              </div>
+            </details>
 
             {editing && <>
             <div className="flex items-center justify-between mt-4 print:hidden">
@@ -733,9 +744,9 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       </p>
 
       {exportMode && <div ref={exportRef} className={`lesson-export-root lesson-export-${exportMode}`} aria-hidden="true">
-        <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} includeBreaks={exportMode === "slides"} />
+        <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} includeBreaks={exportMode === "slides"} />
       </div>}
-      {presenting && <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} mode={lessonView} onClose={closePresentation} onPdf={() => downloadPDF(lessonView)} />}
+      {presenting && <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} mode={lessonView} pageIndex={presentationPage} onPageChange={setPresentationPage} onClose={closePresentation} onPdf={() => downloadPDF(lessonView)} />}
 
     </>
   );
@@ -759,16 +770,18 @@ function ActivityVerification({
 
   return (
     <section className="mb-8 print:hidden">
-      <Card className="border-primary/30 shadow-soft">
-        <CardContent className="p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <Card className="border-border/60 shadow-soft">
+        <CardContent className="p-0">
+          <details className="activity-source-review" open={!verified}>
+          <summary className="cursor-pointer list-none p-4 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
                 <FlaskConical className="h-4 w-4 text-primary" />
-                <h2 className="font-semibold text-lg">Step 1 — Verify the matched NCERT Activity</h2>
+                <h2 className="font-semibold text-base">{verified ? "NCERT source verified" : "Verify your NCERT activity"}</h2>
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                Confirm the activity below is the correct working before the PPT and 3D video are generated.
+                {verified ? "Source passages and activity details · click to review" : "Confirm the source activity to unlock your presentation."}
               </p>
             </div>
             {verified ? (
@@ -781,9 +794,10 @@ function ActivityVerification({
               </Badge>
             )}
           </div>
-
+          </summary>
+          <div className="px-4 pb-5 sm:px-6">
           {matches?.length ? (
-            <ol className="space-y-3">
+            <ol className="space-y-3 max-h-80 overflow-y-auto pr-2">
               {matches.map((m, i) => (
                 <li key={`${m.book_id}:${m.chunk_index}`} className="rounded-lg border border-border/60 p-3 bg-card/40">
                   <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -821,6 +835,8 @@ function ActivityVerification({
               </Button>
             </div>
           )}
+          </div>
+          </details>
         </CardContent>
       </Card>
     </section>

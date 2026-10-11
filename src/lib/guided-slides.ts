@@ -1,3 +1,6 @@
+export const PRESENTATION_WIDTH = 1280;
+export const PRESENTATION_HEIGHT = 720;
+
 /** Paginate the rendered notes, retaining text, list numbering and mathematical nodes. */
 export function paginateGuidedArticles(root: HTMLElement, maxHeight: number): HTMLElement[] {
   maxHeight = Math.max(1, maxHeight);

@@ -1,42 +1,341 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { paginateGuidedArticles } from "@/lib/guided-slides";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Download, LayoutList, Maximize2, X } from "lucide-react";
+import {
+  paginateGuidedArticles,
+  PRESENTATION_WIDTH,
+  PRESENTATION_HEIGHT,
+} from "@/lib/guided-slides";
 import { GuidedLessonNotes } from "@/components/GuidedLessonNotes";
 import type { Slide } from "@/lib/generate.functions";
 
-export function GuidedNotesPresentation({ slides, title, klass, subject, onClose, onPdf, inline = false, mode = "notes" }: { slides: Slide[]; title: string; klass: string; subject?: string; onClose: () => void; onPdf: () => void; inline?: boolean; mode?: "notes" | "slides" }) {
-  const source = useRef<HTMLDivElement>(null), display = useRef<HTMLDivElement>(null), frame = useRef<HTMLDivElement>(null);
-  const [pages, setPages] = useState<HTMLElement[]>([]), [index, setIndex] = useState(0);
+type Props = {
+  slides: Slide[];
+  title: string;
+  klass: string;
+  subject?: string;
+  onClose: () => void;
+  onPdf: () => void;
+  onPresent?: () => void;
+  inline?: boolean;
+  mode?: "notes" | "slides";
+  pageIndex?: number;
+  onPageChange?: (index: number) => void;
+};
+
+export function GuidedNotesPresentation({
+  slides,
+  title,
+  klass,
+  subject,
+  onClose,
+  onPdf,
+  onPresent,
+  inline = false,
+  mode = "notes",
+  pageIndex,
+  onPageChange,
+}: Props) {
+  const source = useRef<HTMLDivElement>(null),
+    display = useRef<HTMLDivElement>(null),
+    stage = useRef<HTMLDivElement>(null);
+  const shell = useRef<HTMLDivElement>(null),
+    activeNavigation = useRef<HTMLButtonElement>(null);
+  const [pages, setPages] = useState<HTMLElement[]>([]);
+  const [localIndex, setLocalIndex] = useState(0);
+  const [showOutline, setShowOutline] = useState(false);
+  const [scale, setScale] = useState(0.5);
+  const index = Math.min(pageIndex ?? localIndex, Math.max(0, pages.length - 1));
+  const goTo = useCallback(
+    (next: number) => {
+      const target = Math.max(0, Math.min(pages.length - 1, next));
+      setLocalIndex(target);
+      onPageChange?.(target);
+    },
+    [pages.length, onPageChange],
+  );
+
+  // Measure at the same widescreen size as PDF and PowerPoint exports.
+  // Resizing scales the canvas without changing slide count or position.
   useLayoutEffect(() => {
     let cancelled = false;
-    const measure = () => { if (!source.current || !frame.current || cancelled) return;
-      if (!frame.current.clientWidth || !frame.current.clientHeight) return;
-      source.current.style.width = `${frame.current.clientWidth}px`;
-      const next = paginateGuidedArticles(source.current, frame.current.clientHeight);
-      setPages(next); setIndex((i) => Math.min(i, Math.max(0, next.length - 1)));
+    setPages([]);
+    Promise.all([
+      document.fonts.ready,
+      ...Array.from(source.current?.querySelectorAll("img") || []).map((img) =>
+        img.decode().catch(() => {}),
+      ),
+    ]).then(() => {
+      if (cancelled || !source.current) return;
+      const next = paginateGuidedArticles(source.current, PRESENTATION_HEIGHT);
+      setPages(next);
+      setLocalIndex((value) => Math.min(value, Math.max(0, next.length - 1)));
+    });
+    return () => {
+      cancelled = true;
     };
-    Promise.all([document.fonts.ready, ...Array.from(source.current?.querySelectorAll("img") || []).map((img) => img.decode().catch(() => {}))]).then(measure);
-    const observer = new ResizeObserver(measure); if (frame.current) observer.observe(frame.current);
-    return () => { cancelled = true; observer.disconnect(); };
   }, [slides, title, klass, subject, mode]);
-  useLayoutEffect(() => { if (display.current && pages[index]) { display.current.replaceChildren(pages[index].cloneNode(true)); display.current.scrollTop = 0; } }, [index, pages]);
+
+  useLayoutEffect(() => {
+    if (!stage.current) return;
+    const resize = () => {
+      const area = stage.current!;
+      setScale(
+        Math.max(
+          0.01,
+          Math.min(
+            (area.clientWidth - 32) / PRESENTATION_WIDTH,
+            (area.clientHeight - 32) / PRESENTATION_HEIGHT,
+          ),
+        ),
+      );
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(stage.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useLayoutEffect(() => {
+    if (display.current)
+      display.current.replaceChildren(...(pages[index] ? [pages[index].cloneNode(true)] : []));
+    activeNavigation.current?.scrollIntoView({ block: "nearest" });
+  }, [index, pages, showOutline]);
+
   useEffect(() => {
-    if (inline) return;
-    const key = (event: KeyboardEvent) => { if (event.key === "Escape") onClose();
-      if (event.key === "ArrowRight" || event.key === " ") { event.preventDefault(); setIndex((i) => Math.max(0, Math.min(pages.length - 1, i + 1))); }
-      if (event.key === "ArrowLeft") { event.preventDefault(); setIndex((i) => Math.max(0, i - 1)); }
+    const key = (event: KeyboardEvent) => {
+      if (
+        inline &&
+        (!shell.current?.contains(document.activeElement) ||
+          document.querySelector('[role="dialog"][aria-label="Lesson presentation"]'))
+      )
+        return;
+      if ((event.target as HTMLElement)?.closest("input, textarea, select, [contenteditable=true]"))
+        return;
+      if (event.key === "Escape" && !inline) onClose();
+      if (
+        ["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key) ||
+        (event.key === " " && (event.target === shell.current || event.target === document.body))
+      ) {
+        event.preventDefault();
+        goTo(
+          event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? pages.length - 1
+              : index + (event.key === "ArrowLeft" ? -1 : 1),
+        );
+      }
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [onClose, pages.length, inline]);
+  }, [inline, index, pages.length, onClose, goTo]);
+
   useEffect(() => {
     if (inline) return;
-    const previous = document.body.style.overflow; document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = previous; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); };
+    const previous = document.body.style.overflow,
+      previousFocus = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
+    shell.current?.focus();
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const buttons = Array.from(
+        shell.current?.querySelectorAll<HTMLElement>(
+          "button:not(:disabled), a[href], [tabindex='0']",
+        ) || [],
+      ).filter((node) => !node.closest('[aria-hidden="true"]'));
+      const first = buttons[0],
+        last = buttons[buttons.length - 1];
+      if (
+        event.shiftKey &&
+        (document.activeElement === first || document.activeElement === shell.current)
+      ) {
+        event.preventDefault();
+        last?.focus();
+      } else if (
+        !event.shiftKey &&
+        (document.activeElement === last || document.activeElement === shell.current)
+      ) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    window.addEventListener("keydown", trapFocus);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", trapFocus);
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      previousFocus?.focus();
+    };
   }, [inline]);
-  return <div className={`guided-presentation guided-slide-deck ${mode === "slides" ? "lecture-deck" : ""} ${inline ? "relative w-full h-[min(80dvh,800px)] min-h-[360px]" : "fixed inset-0 z-50"} flex flex-col bg-slate-100`} role={inline ? "region" : "dialog"} aria-modal={inline ? undefined : true} aria-label="Lesson presentation">
-    <div className="shrink-0 flex items-center justify-between gap-3 bg-slate-900 text-white px-5 py-3 text-sm"><strong>{mode === "notes" ? "Guided notes" : "Lecture"} · slide {index + 1} / {pages.length || "…"}</strong><div className="flex gap-4"><button onClick={onPdf}>Download {mode === "notes" ? "notes" : "slides"} PDF</button>{!inline && <button onClick={onClose}>Exit ✕</button>}</div></div>
-    <div className="guided-slide-frame" ref={frame}><div ref={display} className="guided-notes guided-slide-display" aria-live="polite" /></div>
-    <div className="shrink-0 flex justify-between items-center bg-slate-900 text-white px-5 py-3"><button disabled={!index} onClick={() => setIndex(index - 1)}>← Previous</button><span>{index + 1} / {pages.length || "…"}</span><button disabled={index >= pages.length - 1} onClick={() => setIndex(index + 1)}>Next →</button></div>
-    <div ref={source} className="guided-slide-source" aria-hidden="true"><GuidedLessonNotes slides={slides} title={title} klass={klass} subject={subject} includeBreaks={mode === "slides"} /></div>
-  </div>;
+
+  const pageTitle = (page: HTMLElement) => page.querySelector("h2")?.textContent || title;
+  const sectionTitle = pages[index]?.querySelector(
+    "h3, .guided-figure-heading strong, summary",
+  )?.textContent;
+  return (
+    <div
+      ref={shell}
+      tabIndex={0}
+      className={`guided-presentation guided-slide-deck ${mode === "slides" ? "lecture-deck" : ""} ${inline ? "presentation-inline" : "presentation-overlay"}`}
+      role={inline ? "region" : "dialog"}
+      aria-modal={inline ? undefined : true}
+      aria-label="Lesson presentation"
+    >
+      <header className="presentation-toolbar">
+        <div className="presentation-heading">
+          <span className="presentation-eyebrow">
+            {[
+              klass && `Class ${klass}`,
+              subject,
+              mode === "slides" ? "Presentation" : "Guided notes",
+            ]
+              .filter(Boolean)
+              .join(" / ")}
+          </span>
+          <strong title={title}>{title}</strong>
+        </div>
+        <div className="presentation-actions">
+          <button
+            className="presentation-icon-button"
+            onClick={() => setShowOutline((value) => !value)}
+            aria-label="Toggle slide navigator"
+            aria-expanded={showOutline}
+          >
+            <LayoutList size={18} />
+          </button>
+          <button
+            className="presentation-icon-button"
+            onClick={onPdf}
+            aria-label={`Download ${mode} PDF`}
+            title="Download PDF"
+          >
+            <Download size={18} />
+          </button>
+          {inline && onPresent && (
+            <button className="presentation-present-button" onClick={onPresent}>
+              <Maximize2 size={16} />
+              <span>Present</span>
+            </button>
+          )}
+          {!inline && (
+            <button
+              className="presentation-icon-button"
+              onClick={onClose}
+              aria-label="Exit presentation"
+            >
+              <X size={20} />
+            </button>
+          )}
+        </div>
+      </header>
+      <div className="presentation-workspace">
+        {showOutline && (
+          <nav className="presentation-outline" aria-label="Slide navigator">
+            <div className="presentation-outline-heading">
+              Lesson outline <span>{pages.length} slides</span>
+            </div>
+            {pages.map((page, at) => (
+              <button
+                key={at}
+                ref={at === index ? activeNavigation : undefined}
+                onClick={() => {
+                  goTo(at);
+                  if (window.matchMedia("(max-width: 640px)").matches) setShowOutline(false);
+                }}
+                aria-current={at === index ? "step" : undefined}
+              >
+                <span className="presentation-slide-number">{String(at + 1).padStart(2, "0")}</span>
+                <span>
+                  <strong>{pageTitle(page)}</strong>
+                  <small>
+                    {page.querySelector("h3, .guided-figure-heading strong, summary")
+                      ?.textContent || "Overview"}
+                  </small>
+                </span>
+              </button>
+            ))}
+          </nav>
+        )}
+        <div className="presentation-stage" ref={stage}>
+          <div
+            className="guided-slide-frame"
+            style={{ width: PRESENTATION_WIDTH * scale, height: PRESENTATION_HEIGHT * scale }}
+          >
+            <div
+              ref={display}
+              className="guided-notes guided-slide-display"
+              style={{
+                width: PRESENTATION_WIDTH,
+                height: PRESENTATION_HEIGHT,
+                transform: `scale(${scale})`,
+              }}
+              aria-live="polite"
+              aria-label={
+                pages.length
+                  ? `Slide ${index + 1}: ${pageTitle(pages[index])}`
+                  : "Preparing presentation"
+              }
+            />
+            {!pages.length && (
+              <div className="presentation-loading" role="status">
+                Preparing your slides…
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <footer className="presentation-footer">
+        <div className="presentation-page-context">
+          <strong>{sectionTitle || "Lesson overview"}</strong>
+          <span>Use ← → to move between slides</span>
+        </div>
+        <div className="presentation-navigation">
+          <button
+            className="presentation-icon-button"
+            disabled={!pages.length || !index}
+            onClick={() => goTo(index - 1)}
+            aria-label="Previous slide"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <span className="presentation-page-count" role="status">
+            {pages.length ? index + 1 : "—"}
+            <span> / {pages.length || "—"}</span>
+          </span>
+          <button
+            className="presentation-icon-button"
+            disabled={!pages.length || index >= pages.length - 1}
+            onClick={() => goTo(index + 1)}
+            aria-label="Next slide"
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+        <div
+          className="presentation-progress"
+          role="progressbar"
+          aria-label="Lesson progress"
+          aria-valuemin={0}
+          aria-valuemax={pages.length || 1}
+          aria-valuenow={pages.length ? index + 1 : 0}
+        >
+          <span style={{ width: pages.length ? `${((index + 1) / pages.length) * 100}%` : "0%" }} />
+        </div>
+      </footer>
+      <div
+        ref={source}
+        className="guided-slide-source"
+        style={{ width: PRESENTATION_WIDTH }}
+        aria-hidden="true"
+      >
+        <GuidedLessonNotes
+          slides={slides}
+          title={title}
+          klass={klass}
+          subject={subject}
+          includeBreaks={mode === "slides"}
+        />
+      </div>
+    </div>
+  );
 }

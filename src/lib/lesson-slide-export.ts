@@ -1,18 +1,18 @@
-import { paginateGuidedArticles } from "@/lib/guided-slides";
+import { paginateGuidedArticles, PRESENTATION_WIDTH, PRESENTATION_HEIGHT } from "@/lib/guided-slides";
 
 /** Use the same measured content for the projector, slide PDF and PowerPoint. */
 export async function prepareSlideExport(root: HTMLElement) {
   root.classList.add("guided-slide-deck", "lecture-deck");
-  root.style.width = "1280px";
+  root.style.width = `${PRESENTATION_WIDTH}px`;
   root.querySelectorAll("details").forEach((node) => { node.open = true; });
   await document.fonts.ready;
   await Promise.all(Array.from(root.querySelectorAll("img")).map((image) => image.decode().catch(() => {})));
-  const pages = paginateGuidedArticles(root, 720);
+  const pages = paginateGuidedArticles(root, PRESENTATION_HEIGHT);
   if (!pages.length) throw new Error("No lesson slides are available to export.");
   const frames = pages.map((page) => {
     const frame = document.createElement("div");
     frame.className = "lesson-export-slide guided-notes";
-    Object.assign(frame.style, { width: "1280px", height: "720px", overflow: "hidden", background: "white", position: "relative" });
+    Object.assign(frame.style, { width: `${PRESENTATION_WIDTH}px`, height: `${PRESENTATION_HEIGHT}px`, overflow: "hidden", background: "white", position: "relative" });
     frame.appendChild(page); return frame;
   });
   root.replaceChildren(...frames);
