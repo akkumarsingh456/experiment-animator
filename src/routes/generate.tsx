@@ -1,3 +1,4 @@
+import { omitContentsListings } from "@/lib/note-source-noise";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
@@ -247,7 +248,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       caption: `Class ${search.klass} · ${search.subject} · Topic: ${search.topic || title} · Chapter: ${search.chapter || "—"}`,
     };
   };
-  const withCoverSlide = (items: Slide[]) => [makeCoverSlide(), ...items.map(repairSourceMathSlide)];
+  const withCoverSlide = (items: Slide[]) => [makeCoverSlide(), ...items.map(omitContentsListings).map(repairSourceMathSlide)];
   const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);

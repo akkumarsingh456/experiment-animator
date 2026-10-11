@@ -1,3 +1,4 @@
+import { omitContentsListings } from "@/lib/note-source-noise";
 import { repairSourceMathSlide } from "@/lib/source-math-repair";
 import { MathText } from "@/components/MathText";
 import { guidedFormulaRow, guidedGroups, uniqueTopicGroups, type GuidedGroup } from "@/lib/guided-notes";
@@ -19,7 +20,7 @@ function NotesGroup({ group }: { group: GuidedGroup }) {
 }
 
 export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks = false }: { slides: Slide[]; title: string; subject?: string; klass?: string; includeBreaks?: boolean }) {
-  slides = slides.map(repairSourceMathSlide);
+  slides = slides.map(omitContentsListings).map(repairSourceMathSlide);
   const content = slides.filter((slide) => (slide.kind ?? "content") === "content" || slide.kind === "chapter" || (includeBreaks && slide.kind === "break"));
   const questions = slides.flatMap((slide) => slide.mcq ? [slide.mcq] : []);
   const topicGroups = uniqueTopicGroups(content.map((slide) => guidedGroups(slide.sections, slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...(slide.bullets || []), ...(slide.notes || [])])));

@@ -1,3 +1,4 @@
+import { isContentsListing } from "@/lib/note-source-noise";
 /**
  * NCERT teacher-style structured notes.
  *
@@ -57,6 +58,7 @@ const JUNK_LINE = [
 
 /** Strip NCERT print noise: edition years, figure/page refs, watermarks. */
 export function cleanNcertLine(raw: string): string {
+  if (isContentsListing(raw)) return "";
   // A clipped extraction is not a complete teaching statement.
   if (/(?:\.{3}|…)\s*$/.test(String(raw || ""))) return "";
   // Page identifiers and collapsed OCR equations are not valid formulas.
@@ -94,7 +96,7 @@ function sentences(text: string): string[] {
 
 /** Include more topic-specific chapter evidence for detailed guided notes. */
 export function selectSlideExcerpts(slide: NoteSourceSlide, context: string): string[] {
-  const own = dedupe([...(slide.bullets || []), ...(slide.notes || []), ...sentences(slide.chapter_text || ""), ...sentences(slide.grounding || "")]).filter(Boolean);
+  const own = dedupe([...(slide.bullets || []), ...(slide.notes || []), ...sentences(slide.chapter_text || ""), ...sentences(slide.grounding || "")]).filter(line => !!line && !isContentsListing(line));
   const stop = new Set(["chapter", "introduction", "important", "concept", "current", "electricity", "the", "and", "for", "with", "from", "ncert", "point", "overview", "core", "definitions", "symbols", "quantities", "units", "activity", "working", "relationships", "applications", "interpretation", "common", "exam", "points", "final", "revision"]);
   const terms = norm(slide.title).split(" ").filter((word) => word.length > 3 && !stop.has(word));
   if (!terms.length) return own;
