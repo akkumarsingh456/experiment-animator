@@ -356,3 +356,6 @@
 .formula-derivation .guided-derivation-flow li > div { min-width: 0; flex: 1; }
 .note-formula-card > div, .formula-derivation-target > div { min-width: 0; max-width: 100%; }
 .original-slide-display [data-note-sheet] h4 { padding-bottom: 8px; margin-bottom: 12px; }
+
+/* Bullet hanging indents belong to prose, never to inline mathematical symbols. */
+[data-note-content] li > span.inline-block { text-indent: 0; }
