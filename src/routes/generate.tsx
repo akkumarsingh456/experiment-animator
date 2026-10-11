@@ -155,31 +155,36 @@ function GeneratePage() {
   const nav = useNavigate();
   const run = useServerFn(generateLesson);
   const requestIdRef = useRef(0);
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  useEffect(() => () => { requestIdRef.current += 1; }, []);
   const [loading, setLoading] = useState(false);
   const readingStatus = "Preparing your PPT and teacher notes…";
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!search.topic || search.go !== "1") return;
+    if (!search.topic || (search.go !== "1" && retryAttempt === 0)) return;
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     setLoading(true);
     setError(null);
-    run({ data: search })
+    let timeout: ReturnType<typeof setTimeout>;
+    const deadline = new Promise<never>((_, reject) => {
+      timeout = setTimeout(() => reject(new Error("This request took too long. Please retry; any completed lesson is saved and will be reused.")), 180_000);
+    });
+    Promise.race([run({ data: search }), deadline])
       .then((r) => { if (requestIdRef.current === requestId) setResult(r as GenerationResult); })
       .catch((e) => { if (requestIdRef.current === requestId) setError(e?.message ?? String(e)); })
-      .finally(() => { if (requestIdRef.current === requestId) setLoading(false); });
-    // Clear the trigger without router navigation; router navigation rerenders
-    // this component and cancels the in-flight server function result.
+      .finally(() => { clearTimeout(timeout); if (requestIdRef.current === requestId) setLoading(false); });
+    // Clear the one-shot URL trigger while retaining the pending request.
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.set("go", "");
       window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
     }
-    return () => { if (requestIdRef.current === requestId) requestIdRef.current += 1; };
+    // Clearing go must not invalidate this request: its result still belongs to this page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.go]);
+  }, [search.go, retryAttempt]);
 
   return (
     <div className="min-h-screen">
@@ -221,6 +226,7 @@ function GeneratePage() {
               <p className="font-semibold text-destructive">Generation failed</p>
               <p className="text-sm mt-1">{error}</p>
               <div className="mt-4 flex gap-2">
+                <Button size="sm" onClick={() => setRetryAttempt(value => value + 1)}>Retry generation</Button>
                 <Button size="sm" onClick={() => nav({ to: "/upload" })}>Go to Upload</Button>
                 <Button size="sm" variant="outline" onClick={() => nav({ to: "/" })}>Back home</Button>
               </div>
