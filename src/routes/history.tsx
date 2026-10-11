@@ -22,7 +22,8 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { signDownload } from "@/lib/ingest.functions";
+import { signDownload, classifyMedEasyLibrary } from "@/lib/ingest.functions";
+import { medEasyLibraryMetadata, combinedReferenceMatches } from "@/lib/reference-books";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -62,9 +63,12 @@ function HistoryPage() {
   const [klass, setKlass] = useState<string>("all");
   const [subject, setSubject] = useState<string>("all");
   const [signing, setSigning] = useState<string | null>(null);
+  const [classificationError, setClassificationError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    try { await classifyMedEasyLibrary(); setClassificationError(null); }
+    catch { setClassificationError("Med Easy class labels could not be saved. Displaying the combined Class 11 & 12 classification; refresh to retry saving."); }
     const { data } = await supabase
       .from("ncert_books")
       .select(
@@ -72,7 +76,7 @@ function HistoryPage() {
       )
       .order("created_at", { ascending: false })
       .limit(500);
-    setRows((data as Row[]) ?? []);
+    setRows(((data as Row[]) ?? []).map(medEasyLibraryMetadata));
     setLoading(false);
   }, []);
 
@@ -81,7 +85,7 @@ function HistoryPage() {
   }, [load]);
 
   const classes = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.class))).sort(),
+    () => Array.from(new Set(rows.flatMap((r) => r.class === "Class 11 & 12" ? [r.class, "Class 11", "Class 12"] : [r.class]))).sort(),
     [rows],
   );
   const subjects = useMemo(
@@ -92,7 +96,7 @@ function HistoryPage() {
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return rows.filter((r) => {
-      if (klass !== "all" && r.class !== klass) return false;
+      if (klass !== "all" && r.class !== klass && !combinedReferenceMatches(r, klass, r.subject)) return false;
       if (subject !== "all" && r.subject !== subject) return false;
       if (!needle) return true;
       return (
@@ -204,6 +208,7 @@ function HistoryPage() {
               </Select>
             </div>
 
+            {classificationError && <p className="text-sm text-muted-foreground" role="status">{classificationError}</p>}
             <div className="rounded-lg border border-border overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">

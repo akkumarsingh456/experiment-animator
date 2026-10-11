@@ -126,5 +126,14 @@ export function combinedReferenceSubject(book: { file_name?: string | null; chap
 export function combinedReferenceMatches(book: { file_name?: string | null; chapter?: string | null }, klass: string, subject: string): boolean {
   const grade = Number(klass.replace(/[^0-9]/g, ""));
   const inferred = combinedReferenceSubject(book);
+  if (/^botany$/i.test(subject) && !/botany/i.test(`${book.file_name || ""} ${book.chapter || ""}`)) return false;
+  if (/^zoology$/i.test(subject) && !/zoology/i.test(`${book.file_name || ""} ${book.chapter || ""}`)) return false;
   return (grade === 11 || grade === 12) && !!inferred && inferred === subjectKey(subject);
+}
+
+/** Combined Med Easy volumes belong to both senior classes, regardless of upload tags. */
+export function medEasyLibraryMetadata<T extends { class: string; subject: string; file_name?: string | null; chapter?: string | null }>(book: T): T {
+  const inferred = combinedReferenceSubject(book);
+  if (!inferred) return book;
+  return { ...book, class: "Class 11 & 12", subject: inferred === "biology" ? "Biology" : inferred === "chemistry" ? "Chemistry" : "Physics" };
 }

@@ -4,6 +4,7 @@ import { appendUploadedReferenceNotes } from "@/lib/uploaded-reference-notes";
 import { encodeReferenceVisuals, splitReferenceContent, type ReferenceVisual } from "@/lib/reference-visuals";
 import { BookReferenceFigures } from "@/components/BookReferenceFigures";
 import { BookMapSlide } from "@/components/BookMapSlide";
+import { combinedReferenceMatches, medEasyLibraryMetadata } from "@/lib/reference-books";
 
 const figure: ReferenceVisual = { title: "Nucleophilic substitution reaction", kind: "reaction", description: "Nucleophilic substitution: reactant, reagent, reaction arrow and product.", page: 169, storage_path: "Class11/Chemistry/book.pdf.page-169.jpg", aspect: .707, crop: { x: .1, y: .2, width: .8, height: .25 } };
 function book(id: string, subject: string, klass = "Class 11", ncert = false) {
@@ -22,6 +23,45 @@ function lesson(title: string) {
 }
 
 describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
+  it.each(["Physics", "Chemistry", "Botany", "Zoology"])("labels the combined %s PDF for both senior classes and preserves its content and storage",subject=>{
+    const original={class:"Unspecified Class",subject:"General",file_name:`${subject.toUpperCase()} MED EASY.pdf`,chapter:"Uploaded reference",storage_path:"UnspecifiedClass/original.pdf",full_text:"Unchanged source notes and formulas."};
+    const classified=medEasyLibraryMetadata(original);
+    expect(classified.class).toBe("Class 11 & 12");
+    expect(classified.subject).toBe(/Botany|Zoology/.test(subject)?"Biology":subject);
+    expect(classified.storage_path).toBe(original.storage_path);
+    expect(classified.full_text).toBe(original.full_text);
+    expect(medEasyLibraryMetadata(classified)).toEqual(classified);
+    expect(combinedReferenceMatches(classified,"11",classified.subject)).toBe(true);
+    expect(combinedReferenceMatches(classified,"12",classified.subject)).toBe(true);
+  });
+  it("leaves NCERT book classification unchanged",()=>{
+    const original={class:"Class 12",subject:"Physics",file_name:"NCERT_CLASS_12_PHYSICS.pdf"};
+    expect(medEasyLibraryMetadata(original)).toBe(original);
+  });
+  it.each(["11", "12"])("includes both Botany and Zoology screenshots in Biology for Class %s", async grade => {
+    const original = lesson("Cell structure");
+    const botany = {...book("botany","Biology","Unspecified"),file_name:"BOTANY MED EASY.pdf"};
+    const zoology = {...book("zoology","Biology","Class 12"),file_name:"COMPLETE ZOOLOGY MED EASY.pdf"};
+    const pictures = [botany,zoology].map((b,i)=>({...figure,kind:"diagram" as const,title:`Cell structure ${i+1}`,description:"Cell structure with original labels and connecting arrows.",chapter:"Cell: The Unit of Life",storage_path:`Biology/${b.id}.pdf.page-10.jpg`}));
+    const chunks = Object.fromEntries([botany,zoology].map((b,i)=>[b.id,[encodeReferenceVisuals("Cell structure reference notes retained in their genuine wording.",[pictures[i]],{chapter:"Cell: The Unit of Life",visuals_checked:true})]]));
+    const result = await appendUploadedReferenceNotes(original,mockDb([botany,zoology],chunks),grade,"Biology","Cell: The Unit of Life");
+    expect(result.slides[0].reference_visuals).toHaveLength(2);
+    expect(result.slides[0].sections).toHaveLength(3);
+    expect(result.slides[0].sections[0]).toBe(original.slides[0].sections[0]);
+    expect(result.source_books.map((b:any)=>b.id)).toEqual(["botany","zoology"]);
+  });
+  it("keeps separately requested Botany and Zoology within their subject",()=>{
+    const botany={file_name:"BOTANY MED EASY.pdf"};
+    const zoology={file_name:"COMPLETE ZOOLOGY MED EASY.pdf"};
+    expect(combinedReferenceMatches(botany,"11","Botany")).toBe(true);
+    expect(combinedReferenceMatches(zoology,"12","Zoology")).toBe(true);
+    expect(combinedReferenceMatches(botany,"12","Zoology")).toBe(false);
+    expect(combinedReferenceMatches(zoology,"11","Botany")).toBe(false);
+  });
+  it("distinguishes pages actually inspected for screenshots from older text-only pages",()=>{
+    expect(splitReferenceContent(encodeReferenceVisuals("Source text",[],{chapter:"Cell"})).context?.visuals_checked).not.toBe(true);
+    expect(splitReferenceContent(encodeReferenceVisuals("Source text",[],{chapter:"Cell",visuals_checked:true})).context?.visuals_checked).toBe(true);
+  });
   it("assigns all matching chapter maps once, with unrelated chapters excluded", async () => {
     const original = lesson("Introduction to Haloalkanes");
     original.slides.push({...original.slides[0], title:"Nucleophilic substitution"});

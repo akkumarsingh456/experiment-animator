@@ -1,5 +1,5 @@
 import { encodeReferenceVisuals, splitReferenceContent } from "@/lib/reference-visuals";
-import { prepareScannedReferenceBooks } from "@/lib/prepare-reference-books";
+import { prepareScannedReferenceBooks, type ReferenceReadSummary } from "@/lib/prepare-reference-books";
 import { readScannedPage } from "@/lib/reference-ocr.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -42,7 +42,9 @@ import {
   insertBook,
   insertPages,
   insertChunks,
+  classifyMedEasyLibrary,
 } from "@/lib/ingest.functions";
+import { medEasyLibraryMetadata } from "@/lib/reference-books";
 
 export const Route = createFileRoute("/upload")({
   head: () => ({
@@ -99,6 +101,8 @@ function UploadPage() {
   const [library, setLibrary] = useState<LibraryBook[]>([]);
   const [referenceReading, setReferenceReading] = useState(false);
   const [referenceStatus, setReferenceStatus] = useState("");
+  const [classificationError, setClassificationError] = useState<string | null>(null);
+  const medEasyClassified = useRef(false);
   const referenceCancelled = useRef(false);
   useEffect(() => () => { referenceCancelled.current = true; }, []);
   async function readReferenceLibrary(subjects = ["Chemistry", "Physics", "Biology"]) {
@@ -106,11 +110,12 @@ function UploadPage() {
     setReferenceReading(true);
     setReferenceStatus("Opening scanned reference books…");
     try {
+      const summaries: ReferenceReadSummary[] = [];
       for (const subject of subjects) {
         if (referenceCancelled.current) break;
-        await prepareScannedReferenceBooks("Class 11", subject, setReferenceStatus, () => referenceCancelled.current);
+        summaries.push(...await prepareScannedReferenceBooks("Class 11", subject, setReferenceStatus, () => referenceCancelled.current));
       }
-      setReferenceStatus(referenceCancelled.current ? "Reading paused. Completed pages are saved." : "Reference notes are ready for new lessons.");
+      setReferenceStatus(referenceCancelled.current ? "Reading paused. Completed pages are saved." : summaries.length ? `${summaries.length} Med Easy books inspected · ${summaries.reduce((sum,book) => sum + book.pages, 0)} pages · ${summaries.reduce((sum,book) => sum + book.figures, 0)} screenshots saved. Available in teacher notes and Generate PPT & Notes for Classes 11 and 12.` : "No matching Med Easy books were found. Upload the reference PDFs first.");
       await refreshLibrary();
     } catch (error) {
       setReferenceStatus(error instanceof Error ? error.message : String(error));
@@ -165,6 +170,10 @@ function UploadPage() {
 
   const refreshLibrary = useCallback(async () => {
     setLibraryVerify((v) => ({ ...v, checking: true, message: "Verifying library…" }));
+    if (!medEasyClassified.current) {
+      try { await classifyMedEasyLibrary(); medEasyClassified.current = true; setClassificationError(null); }
+      catch { setClassificationError("Med Easy class labels could not be saved. Displaying the combined Class 11 & 12 classification; verify again to retry saving."); }
+    }
     // 1. Get authoritative total count
     const { count } = await supabase
       .from("ncert_books")
@@ -188,7 +197,7 @@ function UploadPage() {
       all.push(...(data as LibraryBook[]));
       if (data.length < pageSize) break;
     }
-    setLibrary(all);
+    setLibrary(all.map(medEasyLibraryMetadata));
     setLibraryVerify({
       checking: false,
       total,
@@ -305,7 +314,7 @@ function UploadPage() {
       try {
         extracted = await extractPdfText(f, (p, total) =>
           setProgress((p / total) * 100),
-          { recognizePage: (image, page, aspect) => readScannedPage({ data: { image, page, aspect, source_path: path } }) },
+          { inspectEveryPage: /med\s*easy/i.test(f.name), recognizePage: (image, page, aspect) => readScannedPage({ data: { image, page, aspect, source_path: path } }) },
         );
       } catch (e) {
         step({ name: "parse", label: "Parse PDF pages", status: "error", msg: e instanceof Error ? e.message : "parse failed" });
@@ -1098,10 +1107,12 @@ function UploadPage() {
 
           <CardContent>
             <div className="mb-5 rounded-xl border border-border p-4 space-y-2">
-              <p className="text-sm">Read the uploaded Med Easy pages to add detailed notes and original reaction structures, molecular diagrams and Physics figures for Classes 11 and 12. Large books take time; progress is saved and lesson generation works separately.</p>
+              {classificationError && <p className="text-sm text-muted-foreground" role="status">{classificationError}</p>}
+              <p className="text-sm">Inspect every page of Physics, Chemistry, Botany and Zoology Med Easy books to save original diagrams, reaction maps, structures and labelled biology screenshots. They are added by chapter and topic to teacher notes and Generate PPT &amp; Notes for Classes 11 and 12. Existing formulas, derivations and wording are preserved. Large books take time; completed pages are saved so reading can resume.</p>
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => readReferenceLibrary(["Chemistry"])} disabled={referenceReading || library.length === 0}><FlaskConical className="h-4 w-4 mr-2" />Read / resume Chemistry</Button>
                 <Button onClick={() => readReferenceLibrary(["Physics"])} disabled={referenceReading || library.length === 0}><Zap className="h-4 w-4 mr-2" />Read / resume Physics</Button>
+                <Button onClick={() => readReferenceLibrary(["Biology"])} disabled={referenceReading || library.length === 0}><BookOpen className="h-4 w-4 mr-2" />Read / resume Botany & Zoology</Button>
                 <Button variant="outline" onClick={() => readReferenceLibrary()} disabled={referenceReading || library.length === 0}>
                   {referenceReading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <BookOpen className="h-4 w-4 mr-2" />}
                   All reference books

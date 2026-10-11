@@ -17,7 +17,7 @@ const topicScore = (title: string, text: string) => {
 
 /** Append source excerpts to the existing lesson; never rewrite its sections. */
 export async function appendUploadedReferenceNotes(result: GenerationResult, db: SupabaseClient<Database>, klass: string, subject: string, chapter: string): Promise<GenerationResult> {
-  const detailed = /^(chemistry|physics)$/i.test(subject) && /^(?:Class\s*)?(11|12)$/i.test(klass);
+  const detailed = /^(chemistry|physics|biology|botany|zoology)$/i.test(subject) && /^(?:Class\s*)?(11|12)$/i.test(klass);
   const chapterFits = (source?: string) => !source?.trim() || topicScore(chapter, source) > 0;
   const { data: books, error } = await db.from("ncert_books").select("id,class,subject,chapter,file_name,num_chunks").limit(500);
   if (error) throw new Error(error.message);

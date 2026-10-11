@@ -6,7 +6,7 @@ export type ReferenceVisual = {
   crop: { x: number; y: number; width: number; height: number };
 };
 const START = "[REFERENCE_VISUALS_V1]", END = "[/REFERENCE_VISUALS_V1]";
-export type ReferenceContext = { chapter: string };
+export type ReferenceContext = { chapter: string; visuals_checked?: boolean };
 export function encodeReferenceVisuals(text: string, visuals: ReferenceVisual[], context?: ReferenceContext): string {
   return text + "\n\n" + START + JSON.stringify(visuals) + END + (context ? "\n[REFERENCE_CONTEXT_V1]" + JSON.stringify(context) + "[/REFERENCE_CONTEXT_V1]" : "");
 }
@@ -14,7 +14,7 @@ export function splitReferenceContent(content: string): { text: string; visuals:
   const visuals: ReferenceVisual[] = [];
   let context: ReferenceContext | undefined;
   const text = content.replace(/\[REFERENCE_CONTEXT_V1\]([\s\S]*?)\[\/REFERENCE_CONTEXT_V1\]/g, (_, json) => {
-    try { const value = JSON.parse(json); if (typeof value.chapter === "string") context = { chapter: value.chapter.slice(0, 200) }; } catch { /* Ignore invalid indexing metadata. */ }
+    try { const value = JSON.parse(json); if (typeof value.chapter === "string") context = { chapter: value.chapter.slice(0, 200), ...(value.visuals_checked === true ? { visuals_checked: true } : {}) }; } catch { /* Ignore invalid indexing metadata. */ }
     return "";
   }).replace(/\[REFERENCE_VISUALS_V1\]([\s\S]*?)\[\/REFERENCE_VISUALS_V1\]/g, (_, json) => {
     try { for (const item of JSON.parse(json)) {

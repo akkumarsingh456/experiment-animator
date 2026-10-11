@@ -27,7 +27,7 @@ async function loadPdfjs() {
 export async function extractPdfText(
   file: File | Blob,
   onProgress?: (page: number, total: number) => void,
-  options?: { recognizePage: (image: string, page: number, aspect: number) => Promise<string>; savedPages?: Map<number, string>; savePage?: (text: string, page: number) => Promise<void> },
+  options?: { recognizePage: (image: string, page: number, aspect: number) => Promise<string>; savedPages?: Map<number, string>; savePage?: (text: string, page: number) => Promise<void>; inspectEveryPage?: boolean },
 ): Promise<ExtractedPdf> {
   const pdfjs = await loadPdfjs();
   const buffer = await file.arrayBuffer();
@@ -42,7 +42,9 @@ export async function extractPdfText(
       .join(" ")
       .replace(/\s+/g, " ")
       .trim();
-    if (options && text.replace(/scanned.*|oken.*|camscanner.*/gi, "").trim().length < 100) {
+    // Med Easy diagrams must be inspected even when a page has a usable text
+    // layer. Text extraction alone cannot recover its structures or mind maps.
+    if (options && (options.inspectEveryPage || text.replace(/scanned.*|oken.*|camscanner.*/gi, "").trim().length < 100)) {
       const saved = options.savedPages?.get(i);
       if (saved !== undefined) text = saved;
       else {

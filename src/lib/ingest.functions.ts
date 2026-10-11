@@ -1,7 +1,25 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { medEasyLibraryMetadata } from "@/lib/reference-books";
 
 const BUCKET = "ncert-pdfs";
+
+/** Repair all existing copies of the four combined Med Easy volumes. */
+export const classifyMedEasyLibrary = createServerFn({ method: "POST" })
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: books, error } = await supabaseAdmin.from("ncert_books").select("id,class,subject,file_name,chapter").or("file_name.ilike.%MED EASY%,file_name.ilike.%MEDEASY%").limit(500);
+    if (error) throw new Error(error.message);
+    let updated = 0;
+    for (const book of books || []) {
+      const classified = medEasyLibraryMetadata(book);
+      if (book.class === classified.class && book.subject === classified.subject) continue;
+      const { error: updateError } = await supabaseAdmin.from("ncert_books").update({ class: classified.class, subject: classified.subject }).eq("id", book.id);
+      if (updateError) throw new Error(updateError.message);
+      updated++;
+    }
+    return { updated };
+  });
 
 export const createUploadTicket = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
@@ -50,11 +68,12 @@ export const insertBook = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const metadata = medEasyLibraryMetadata({ class: data.klass, subject: data.subject, file_name: data.file_name, chapter: data.chapter });
     const { data: row, error } = await supabaseAdmin
       .from("ncert_books")
       .insert({
-        class: data.klass,
-        subject: data.subject,
+        class: metadata.class,
+        subject: metadata.subject,
         chapter: data.chapter,
         file_name: data.file_name,
         file_size: data.file_size,
