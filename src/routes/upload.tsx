@@ -1,3 +1,4 @@
+import { prepareScannedReferenceBooks } from "@/lib/prepare-reference-books";
 import { readScannedPage } from "@/lib/reference-ocr.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -93,6 +94,26 @@ function UploadPage() {
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [library, setLibrary] = useState<LibraryBook[]>([]);
+  const [referenceReading, setReferenceReading] = useState(false);
+  const [referenceStatus, setReferenceStatus] = useState("");
+  const referenceCancelled = useRef(false);
+  useEffect(() => () => { referenceCancelled.current = true; }, []);
+  async function readReferenceLibrary() {
+    referenceCancelled.current = false;
+    setReferenceReading(true);
+    setReferenceStatus("Opening scanned reference books…");
+    try {
+      for (const subject of ["Physics", "Chemistry", "Biology"]) {
+        if (referenceCancelled.current) break;
+        await prepareScannedReferenceBooks("Class 11", subject, setReferenceStatus, () => referenceCancelled.current);
+      }
+      setReferenceStatus(referenceCancelled.current ? "Reading paused. Completed pages are saved." : "Reference notes are ready for new lessons.");
+      await refreshLibrary();
+    } catch (error) {
+      setReferenceStatus(error instanceof Error ? error.message : String(error));
+    } finally { setReferenceReading(false); }
+  }
+
 
   // Per-step audit log entry for each PDF
   type StepName =
@@ -1070,6 +1091,17 @@ function UploadPage() {
           </CardHeader>
 
           <CardContent>
+            <div className="mb-5 rounded-xl border border-border p-4 space-y-2">
+              <p className="text-sm">Read scanned Med Easy books once to include their reference notes in future lessons. Large books take time; lesson generation works separately.</p>
+              <div className="flex gap-2">
+                <Button onClick={readReferenceLibrary} disabled={referenceReading || library.length === 0}>
+                  {referenceReading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <BookOpen className="h-4 w-4 mr-2" />}
+                  Read / resume reference books
+                </Button>
+                {referenceReading && <Button variant="outline" onClick={() => { referenceCancelled.current = true; setReferenceStatus("Pausing after the current page…"); }}>Pause</Button>}
+              </div>
+              {referenceStatus && <p className="text-sm text-muted-foreground" role="status">{referenceStatus}</p>}
+            </div>
             {library.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No books uploaded yet. Your library will appear here, grouped by

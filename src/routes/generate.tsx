@@ -1,4 +1,3 @@
-import { prepareScannedReferenceBooks } from "@/lib/prepare-reference-books";
 import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
 import { isMathematics, mathematicsPresentationSlide } from "@/lib/mathematics-presentation";
 import { omitContentsListings } from "@/lib/note-source-noise";
@@ -157,7 +156,7 @@ function GeneratePage() {
   const run = useServerFn(generateLesson);
   const requestIdRef = useRef(0);
   const [loading, setLoading] = useState(false);
-  const [readingStatus, setReadingStatus] = useState("Reading your NCERT chapter…");
+  const readingStatus = "Preparing your PPT and teacher notes…";
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -167,8 +166,7 @@ function GeneratePage() {
     requestIdRef.current = requestId;
     setLoading(true);
     setError(null);
-    prepareScannedReferenceBooks(String(search.klass || ""), String(search.subject || ""), message => { if (requestIdRef.current === requestId) setReadingStatus(message); }, () => requestIdRef.current !== requestId)
-      .then(() => { if (requestIdRef.current !== requestId) throw new Error("Reading cancelled"); setReadingStatus("Preparing your PPT and teacher notes…"); return run({ data: search }); })
+    run({ data: search })
       .then((r) => { if (requestIdRef.current === requestId) setResult(r as GenerationResult); })
       .catch((e) => { if (requestIdRef.current === requestId) setError(e?.message ?? String(e)); })
       .finally(() => { if (requestIdRef.current === requestId) setLoading(false); });
@@ -211,7 +209,7 @@ function GeneratePage() {
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
               <p className="mt-4 font-medium">{readingStatus}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Matching your chapter with uploaded books. Scanned reference pages are saved as they are read and reused next time.
+                Using your chapter and already-read reference notes. Scanned books can be read separately from the upload library.
               </p>
             </CardContent>
           </Card>
