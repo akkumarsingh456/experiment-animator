@@ -112,3 +112,19 @@ export function referenceBooksPrompt(klass: string, subject: string): string[] {
 /** Filename/chapter pattern used to detect uploaded reference-book PDFs. */
 export const REF_BOOK_PATTERN =
   /\b(pw|physics\s*wallah|shobhit|nirwan|med\s*easy|medeasy|chemhack|biohack|mind\s*map|mindmap|short\s*notes?|revision|one\s*shot|formula|hc\s*verma|verma|rs\s*aggarwal|rd\s*sharma|ml\s*aggarwal|aggarwal|sharma|lakhmir|manjit|s\.?\s*chand|schand|arihant|all\s*in\s*one|sl\s*arora|arora|pradeep|tandon|trueman|truemans|grb|bathla)\b/i;
+
+/** The uploaded Med Easy volumes span both senior classes, including untagged copies. */
+export function combinedReferenceSubject(book: { file_name?: string | null; chapter?: string | null }): string | null {
+  const name = `${book.file_name || ""} ${book.chapter || ""}`;
+  if (!/med\s*easy/i.test(name)) return null;
+  if (/chemistry/i.test(name)) return "chemistry";
+  if (/physics/i.test(name)) return "physics";
+  if (/botany|zoology|biology/i.test(name)) return "biology";
+  return null;
+}
+
+export function combinedReferenceMatches(book: { file_name?: string | null; chapter?: string | null }, klass: string, subject: string): boolean {
+  const grade = Number(klass.replace(/[^0-9]/g, ""));
+  const inferred = combinedReferenceSubject(book);
+  return (grade === 11 || grade === 12) && !!inferred && inferred === subjectKey(subject);
+}

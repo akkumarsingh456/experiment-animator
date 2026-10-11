@@ -1,3 +1,4 @@
+import { prepareScannedReferenceBooks } from "@/lib/prepare-reference-books";
 import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
 import { isMathematics, mathematicsPresentationSlide } from "@/lib/mathematics-presentation";
 import { omitContentsListings } from "@/lib/note-source-noise";
@@ -156,6 +157,7 @@ function GeneratePage() {
   const run = useServerFn(generateLesson);
   const requestIdRef = useRef(0);
   const [loading, setLoading] = useState(false);
+  const [readingStatus, setReadingStatus] = useState("Reading your NCERT chapter…");
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -165,7 +167,8 @@ function GeneratePage() {
     requestIdRef.current = requestId;
     setLoading(true);
     setError(null);
-    run({ data: search })
+    prepareScannedReferenceBooks(String(search.klass || ""), String(search.subject || ""), message => { if (requestIdRef.current === requestId) setReadingStatus(message); }, () => requestIdRef.current !== requestId)
+      .then(() => { if (requestIdRef.current !== requestId) throw new Error("Reading cancelled"); setReadingStatus("Preparing your PPT and teacher notes…"); return run({ data: search }); })
       .then((r) => { if (requestIdRef.current === requestId) setResult(r as GenerationResult); })
       .catch((e) => { if (requestIdRef.current === requestId) setError(e?.message ?? String(e)); })
       .finally(() => { if (requestIdRef.current === requestId) setLoading(false); });
@@ -176,6 +179,7 @@ function GeneratePage() {
       url.searchParams.set("go", "");
       window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
     }
+    return () => { if (requestIdRef.current === requestId) requestIdRef.current += 1; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.go]);
 
@@ -205,9 +209,9 @@ function GeneratePage() {
           <Card className="border-dashed">
             <CardContent className="p-12 text-center">
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-              <p className="mt-4 font-medium">Reading your NCERT chapter…</p>
+              <p className="mt-4 font-medium">{readingStatus}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Filtering matching PDFs, ranking passages, and building a 10-slide lesson locally from saved NCERT text.
+                Matching your chapter with uploaded books. Scanned reference pages are saved as they are read and reused next time.
               </p>
             </CardContent>
           </Card>

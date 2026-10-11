@@ -1,3 +1,4 @@
+import { appendUploadedReferenceNotes } from "@/lib/uploaded-reference-notes";
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
@@ -6,7 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
-import { REF_BOOK_PATTERN } from "@/lib/reference-books";
+import { REF_BOOK_PATTERN, combinedReferenceMatches } from "@/lib/reference-books";
 import { sourceDiscussion, reviewNotes, learningScaffold } from "@/lib/learning-design";
 import { verifyNoteSections, normalizeForGrounding, autoFixAndVerifyNotes, type NotesCheck } from "@/lib/notes-verification";
 
@@ -1033,8 +1034,8 @@ export function subjectMatches(actual: string, requested: string, klass?: string
   });
 }
 
-export function bookMatchesLesson(book: { class: string; subject: string }, klass: string, subject: string) {
-  return classNumber(book.class) === classNumber(klass) && subjectMatches(book.subject, subject, klass);
+export function bookMatchesLesson(book: { class: string; subject: string; file_name?: string | null; chapter?: string | null }, klass: string, subject: string) {
+  return combinedReferenceMatches(book, klass, subject) || (classNumber(book.class) === classNumber(klass) && subjectMatches(book.subject, subject, klass));
 }
 
 /**
@@ -1688,7 +1689,7 @@ export const generateLesson = createServerFn({ method: "POST" })
           }
           const freshMcqs = buildMcqsFromContext(data.topic, seedSentences, data.subject, 10);
           const mcqSlides: Slide[] = freshMcqs.map((m, i) => makeMcqSlide(m, i, freshMcqs.length, data.topic));
-          return { ...cached, slides: [...contentOnly, ...mcqSlides] };
+          return appendUploadedReferenceNotes({ ...cached, slides: [...contentOnly, ...mcqSlides] }, supa(), data.klass, data.subject, data.chapter || data.topic);
         }
       } catch {
         /* miss */
@@ -1906,7 +1907,7 @@ export const generateLesson = createServerFn({ method: "POST" })
         const hits = scored.filter((c) => c._s > 0);
         // Never come back empty-handed: when nothing scores, still pass the
         // book's own excerpts so PW / Med Easy material always reaches the notes.
-        const refRanked = (hits.length ? hits : scored).sort((a, z) => z._s - a._s).slice(0, 32);
+        const refRanked = hits.sort((a, z) => z._s - a._s).slice(0, 32);
         const refNames = new Map(refTop.map((b) => [b.id, b.file_name || "reference book"]));
         refContext = refRanked
           .map((c) => `[${refNames.get(c.book_id)}] ${String(c.content || "").replace(/\s+/g, " ").trim()}`)
@@ -2018,7 +2019,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       };
     });
 
-    const out: GenerationResult = {
+    const out: GenerationResult = await appendUploadedReferenceNotes({
       source_books: selectedBooks.map((b) => ({ id: b.id, chapter: b.chapter, class: b.class, subject: b.subject })),
       context_chars: context.length,
       slides,
@@ -2027,7 +2028,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       video,
       figures_report: figCheck.report,
       notes_report,
-    };
+    }, s, data.klass, data.subject, data.chapter || data.topic);
 
     // Save lesson cache (best-effort)
     try {

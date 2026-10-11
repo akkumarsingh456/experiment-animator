@@ -1,3 +1,4 @@
+import { readScannedPage } from "@/lib/reference-ocr.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -280,11 +281,13 @@ function UploadPage() {
       try {
         extracted = await extractPdfText(f, (p, total) =>
           setProgress((p / total) * 100),
+          { recognizePage: (image, page) => readScannedPage({ data: { image, page } }) },
         );
       } catch (e) {
         step({ name: "parse", label: "Parse PDF pages", status: "error", msg: e instanceof Error ? e.message : "parse failed" });
         throw e;
       }
+      if (!extracted.fullText.trim()) throw new Error("No readable notes were found in this PDF. Please check the scanned pages.");
       step({ name: "parse", label: "Parse PDF pages", status: "ok", msg: `${extracted.numPages} pages` });
 
       setStage("chunking");

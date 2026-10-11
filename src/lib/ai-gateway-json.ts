@@ -16,6 +16,7 @@ export async function gatewayJSON<T>(opts: {
   schemaName: string;
   schema: Record<string, unknown>;
   reasoningEffort?: "low" | "medium" | "high";
+  images?: string[];
 }): Promise<T | null> {
   const key = process.env.LOVABLE_API_KEY;
   if (!key) return null;
@@ -30,7 +31,7 @@ export async function gatewayJSON<T>(opts: {
       },
       body: JSON.stringify({
         model: MODEL,
-        input: [{ role: "user", content: opts.prompt }],
+        input: [{ role: "user", content: opts.images?.length ? [{ type: "input_text", text: opts.prompt }, ...opts.images.map(image_url => ({ type: "input_image", image_url }))] : opts.prompt }],
         stream: true,
         store: false,
         reasoning: { effort: opts.reasoningEffort || "low", summary: "auto" },

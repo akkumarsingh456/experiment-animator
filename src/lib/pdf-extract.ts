@@ -27,6 +27,7 @@ async function loadPdfjs() {
 export async function extractPdfText(
   file: File | Blob,
   onProgress?: (page: number, total: number) => void,
+  options?: { recognizePage: (image: string, page: number) => Promise<string>; savedPages?: Map<number, string>; savePage?: (text: string, page: number) => Promise<void> },
 ): Promise<ExtractedPdf> {
   const pdfjs = await loadPdfjs();
   const buffer = await file.arrayBuffer();
@@ -36,11 +37,25 @@ export async function extractPdfText(
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
-    const text = content.items
+    let text = content.items
       .map((it) => ("str" in it ? it.str : ""))
       .join(" ")
       .replace(/\s+/g, " ")
       .trim();
+    if (options && text.replace(/scanned.*|oken.*|camscanner.*/gi, "").trim().length < 100) {
+      const saved = options.savedPages?.get(i);
+      if (saved !== undefined) text = saved;
+      else {
+        const natural = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({ scale: Math.min(2, 1800 / natural.width) });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+        try {
+          await page.render({ canvas, viewport }).promise;
+          text = await options.recognizePage(canvas.toDataURL("image/jpeg", .9), i);
+        } finally { canvas.width = canvas.height = 0; }
+      }
+    } else if (options?.savePage) await options.savePage(text, i);
     pages.push({ page: i, text });
     onProgress?.(i, doc.numPages);
   }

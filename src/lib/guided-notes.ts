@@ -48,6 +48,7 @@ export function guidedGroups(sections: NoteSection[] | undefined, fallback: stri
     for (const line of block.lines) {
       const match = line.match(/^\*\*([^*]+):\*\*\s*(.*)$/s);
       const label = match?.[1] || "Explanation";
+      if (/^Reference notes —/.test(label)) { get(label, "list").lines.push(match?.[2] || line); continue; }
       const category = categories.find(([pattern]) => pattern.test(label));
       let [heading, kind] = category ? [category[1], category[2]] : ["Important points", "list" as const];
       const body = match?.[2] || line;
