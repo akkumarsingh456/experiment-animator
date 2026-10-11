@@ -27,7 +27,7 @@ async function loadPdfjs() {
 export async function extractPdfText(
   file: File | Blob,
   onProgress?: (page: number, total: number) => void,
-  options?: { recognizePage: (image: string, page: number) => Promise<string>; savedPages?: Map<number, string>; savePage?: (text: string, page: number) => Promise<void> },
+  options?: { recognizePage: (image: string, page: number, aspect: number) => Promise<string>; savedPages?: Map<number, string>; savePage?: (text: string, page: number) => Promise<void> },
 ): Promise<ExtractedPdf> {
   const pdfjs = await loadPdfjs();
   const buffer = await file.arrayBuffer();
@@ -52,7 +52,7 @@ export async function extractPdfText(
         canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
         try {
           await page.render({ canvas, viewport }).promise;
-          text = await options.recognizePage(canvas.toDataURL("image/jpeg", .9), i);
+          text = await options.recognizePage(canvas.toDataURL("image/jpeg", .9), i, canvas.width / canvas.height);
         } finally { canvas.width = canvas.height = 0; }
       }
     } else if (options?.savePage) await options.savePage(text, i);

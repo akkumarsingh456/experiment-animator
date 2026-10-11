@@ -1,3 +1,4 @@
+import { BookReferenceFigures } from "@/components/BookReferenceFigures";
 import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
 import { isMathematics, mathematicsPresentationSlide } from "@/lib/mathematics-presentation";
 import { omitContentsListings } from "@/lib/note-source-noise";
@@ -484,8 +485,11 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     const sections = slide.sections?.filter((section) => section.kind !== "diagram");
     const fallback = slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...slide.bullets, ...slide.notes];
     const sourceSections = sections?.length ? sections : [{ heading: "Teacher Notes", kind: "bullets", lines: fallback }];
-    return paginateLectureSections(sourceSections, 18).map((page) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
+    const notePages = paginateLectureSections(sourceSections, 18).map((page) => ({ ...slide, reference_visuals: undefined, sections: page as Slide["sections"], sourceIndex,
       title: slide.title }));
+    const figurePages = (slide.reference_visuals || []).filter(figure => figure.url).map(figure => ({ ...slide, reference_visuals: [figure], sourceIndex,
+      sections: [{ heading: "Book structure and explanation", kind: "bullets" as const, lines: [figure.description, `${figure.book || "Uploaded textbook"} · PDF page ${figure.page}`] }], title: slide.title }));
+    return [...notePages, ...figurePages];
   }), [slides]);
   const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, section: "NCERT notes & illustration",
     content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} subject={result.source_books[0]?.subject || search.subject} staticView />,
@@ -1162,7 +1166,7 @@ function SlideCanvas({
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0" style={lang ? { display: "none" } : undefined}>
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
               <div className="lesson-figure-panel relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 grid place-items-center">
-                {isMathematics(subject) ? <MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} /> : imageUrl ? (
+                {slide.reference_visuals?.some(figure => figure.url) ? <BookReferenceFigures figures={slide.reference_visuals} compact subject={subject} /> : isMathematics(subject) ? <MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} /> : imageUrl ? (
                   <img src={imageUrl} alt={`${slide.title} — NCERT 2D infographic`} className="w-full h-full object-contain" />
                 ) : imageLoading ? (
                   <div className="flex flex-col items-center gap-2 text-[10px] text-muted-foreground">

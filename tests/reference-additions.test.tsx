@@ -1,0 +1,68 @@
+import { describe, it, expect } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+import { appendUploadedReferenceNotes } from "@/lib/uploaded-reference-notes";
+import { encodeReferenceVisuals, splitReferenceContent, type ReferenceVisual } from "@/lib/reference-visuals";
+import { BookReferenceFigures } from "@/components/BookReferenceFigures";
+
+const figure: ReferenceVisual = { title: "Nucleophilic substitution reaction", kind: "reaction", description: "Nucleophilic substitution: reactant, reagent, reaction arrow and product.", page: 169, storage_path: "Class11/Chemistry/book.pdf.page-169.jpg", aspect: .707, crop: { x: .1, y: .2, width: .8, height: .25 } };
+function book(id: string, subject: string, klass = "Class 11", ncert = false) {
+  return { id, class: klass, subject, chapter: ncert ? "NCERT" : `${subject} MED EASY`, file_name: `${ncert ? "NCERT" : "MED EASY"} ${subject}.pdf`, num_chunks: 247 };
+}
+function mockDb(books: ReturnType<typeof book>[], chunks: Record<string,string[]>) {
+  return { storage: { from: () => ({ createSignedUrl: async (path: string) => ({ data: { signedUrl: `https://example.test/${path}` } }) }) }, from(table: string) {
+    let id = ""; const query = { select: () => query, eq: (_key: string, value: string) => { id = value; return query; }, order: () => query,
+      limit: async () => ({ data: table === "ncert_books" ? books : (chunks[id] || []).map((content,chunk_index) => ({ content, chunk_index })) }) };
+    return query;
+  } } as any;
+}
+function lesson(title: string) {
+  const formula = { heading: "Teacher Notes", kind: "bullets", lines: ["**Formula:** $P=IV=I^2R$", "**Derivation step 1:** Use the original relation."] };
+  return { source_books: [], slides: [{ title, kind: "content", sections: [formula], bullets: [], notes: [], key_terms: [] }], activities: [] } as any;
+}
+
+describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
+  it.each(["11", "12"])("adds organic notes and figures for Class %s without changing existing formulas or derivations", async grade => {
+    const original = lesson("Nucleophilic substitution"); const formula = original.slides[0].sections[0];
+    const passages = Array.from({length:8}, (_,i) => `Nucleophilic substitution reference passage ${i+1}: a distinct source detail retained verbatim.`);
+    const db = mockDb([book("med", "Chemistry"),book("ncert", "Chemistry", `Class ${grade}`,true), book("physics", "Physics")], { med: [encodeReferenceVisuals(passages.join("\n\n"),[figure])], ncert: ["Nucleophilic substitution NCERT passage: the matching topic is included."], physics: ["Nucleophilic substitution irrelevant cross-subject passage."] });
+    const result = await appendUploadedReferenceNotes(original,db,`Class ${grade}`,"Chemistry","Haloalkanes and Haloarenes");
+    expect(result.slides[0].sections[0]).toBe(formula);
+    expect(JSON.stringify(formula)).toBe(JSON.stringify(original.slides[0].sections[0]));
+    expect(result.slides[0].sections[1].lines).toEqual(passages);
+    expect(result.slides[0].reference_visuals).toHaveLength(1);
+    expect(result.slides[0].reference_visuals[0].page).toBe(169);
+    expect(result.source_books.map((b:any)=>b.id)).toEqual(["med","ncert"]);
+    const repeated = await appendUploadedReferenceNotes(result,db,`Class ${grade}`,"Chemistry","Haloalkanes and Haloarenes");
+    expect(repeated.slides[0].sections).toHaveLength(result.slides[0].sections.length);
+    expect(repeated.slides[0].reference_visuals).toHaveLength(1);
+  });
+  it("adds inorganic structural evidence without mixing neighbouring chapters", async () => {
+    const original=lesson("Coordination compounds");
+    const db=mockDb([book("med","Chemistry")],{med:["Coordination compounds have identifiable ligand and central-metal labels in the source.\n\nHydrocarbons are a separate chapter with unrelated passages."]});
+    const result=await appendUploadedReferenceNotes(original,db,"12","Chemistry","Coordination Compounds");
+    expect(result.slides[0].sections[1].lines).toHaveLength(1);
+    expect(result.slides[0].sections[1].lines[0]).not.toContain("Hydrocarbons");
+  });
+  it.each(["11","12"])("adds Physics detail for Class %s while preserving original note objects", async grade => {
+    const original=lesson("Drift velocity");
+    const db=mockDb([book("med","Physics")],{med:["Drift velocity describes the mean motion of charge carriers in the reference passage."]});
+    const result=await appendUploadedReferenceNotes(original,db,grade,"Physics","Current Electricity");
+    expect(result.slides[0].sections[0]).toBe(original.slides[0].sections[0]);
+    expect(result.slides[0].sections).toHaveLength(2);
+  });
+  it("does not add Chemistry/Physics supplements to junior classes or Mathematics", async()=>{
+    const original=lesson("Drift velocity");const db=mockDb([book("med","Physics")],{med:["Drift velocity reference detail that belongs only to Physics."]});
+    expect(await appendUploadedReferenceNotes(original,db,"10","Physics","Current Electricity")).toBe(original);
+    expect(await appendUploadedReferenceNotes(original,db,"12","Mathematics","Determinants")).toBe(original);
+  });
+  it("keeps visual metadata out of genuine source wording and rejects out-of-page crops",()=>{
+    const source="Keep this genuine source sentence unchanged.";
+    const parsed=splitReferenceContent(encodeReferenceVisuals(source,[figure,{...figure,crop:{x:.9,y:.2,width:.8,height:.25}}]));
+    expect(parsed.text).toBe(source);expect(parsed.visuals).toEqual([figure]);
+    expect(splitReferenceContent(source+"[REFERENCE_VISUALS_V1]broken[/REFERENCE_VISUALS_V1]").text).toBe(source);
+  });
+  it("renders exact source images, readable captions, source pages and reaction icons",()=>{
+    const html=renderToStaticMarkup(<BookReferenceFigures figures={[{...figure,url:"https://example.test/page.jpg",book:"Chemistry Med Easy"}]} subject="Chemistry" />);
+    expect(html).toContain("Reaction scheme");expect(html).toContain("PDF page 169");expect(html).toContain("Chemistry Med Easy");expect(html).toContain("book-figure-crop");expect(html).toContain("crossorigin=\"anonymous\"");
+  });
+});

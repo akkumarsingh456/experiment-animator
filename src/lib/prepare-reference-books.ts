@@ -17,11 +17,11 @@ export async function prepareScannedReferenceBooks(klass: string, subject: strin
   }
   for (const book of unique.values()) {
     if (cancelled()) return;
-    if ((book.num_chunks || 0) >= Math.max(2, (book.num_pages || 0) / 12)) continue;
     progress(`Reading scanned reference notes: ${book.file_name}`);
     const { data: saved, error: savedError } = await supabase.from("ncert_pages").select("page_number,text").eq("book_id", book.id).order("page_number").limit(1000);
     if (savedError) throw new Error(savedError.message);
-    const savedPages = new Map((saved || []).filter(page => page.text.startsWith("[SOURCE_OCR_PAGE]\n")).map(page => [page.page_number, page.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "")]));
+    const savedPages = new Map((saved || []).filter(page => page.text.startsWith("[SOURCE_OCR_PAGE]\n") && page.text.includes("[REFERENCE_VISUALS_V1]")).map(page => [page.page_number, page.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "")]));
+    if (savedPages.size === book.num_pages && (book.num_chunks || 0) === book.num_pages) continue;
     const ticket = await signDownload({ data: { path: book.storage_path } });
     const response = await fetch(ticket.signedUrl);
     if (!response.ok) throw new Error(`Could not read the uploaded ${book.file_name}.`);
@@ -32,9 +32,9 @@ export async function prepareScannedReferenceBooks(klass: string, subject: strin
         if (cancelled()) throw new Error("Reference-book reading paused. Completed pages are saved.");
         if (!savedPages.has(page)) await saveExtractedReferencePage({ data: { book_id: book.id, page, text } });
       },
-      recognizePage: async (image, page) => {
+      recognizePage: async (image, page, aspect) => {
         if (cancelled()) throw new Error("Reference-book reading paused. Completed pages are saved.");
-        return readScannedPage({ data: { image, page, book_id: book.id } });
+        return readScannedPage({ data: { image, page, aspect, book_id: book.id } });
       },
     });
     await finishReferenceReading({ data: { book_id: book.id, num_pages: extracted.numPages } });

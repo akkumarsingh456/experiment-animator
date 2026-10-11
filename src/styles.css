@@ -374,3 +374,17 @@
 .mathematics-source-review p { font-size: .85em; line-height: 1.6; white-space: normal; overflow-wrap: anywhere; margin-top: 10px; }
 .mathematics-prose { margin-bottom: 12px; }
 .lesson-export-root .mathematics-source-review > details { display: none; }
+
+/* Supplemental book figures keep their original chemistry/physics notation. */
+.book-figure-stack { display: grid; gap: 1.2rem; width: 100%; min-width: 0; }
+.book-reference-figure { margin: 0; padding: 1.1rem; border: 1px solid #cbdfe7; border-radius: 14px; background: #fff; break-inside: avoid; min-width: 0; }
+.book-reference-figure figcaption { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; color: #176176; margin-bottom: .8rem; }
+.book-reference-figure figcaption span { font-size: .72em; padding: .2rem .55rem; background: #eef7f9; border-radius: 20px; }
+.book-figure-crop { position: relative; overflow: hidden; width: 100%; background: #fff; }
+.book-figure-crop img { position: absolute; max-width: none; object-fit: fill; }
+.book-reference-figure p { font-size: .88em; line-height: 1.6; margin: .8rem 0; overflow-wrap: anywhere; }
+.book-reference-figure small { display: flex; align-items: center; gap: .4rem; color: #64748b; font-size: .7em; }
+.book-figure-compact { max-height: 100%; overflow: auto; padding: .6rem; font-size: 14px; }
+.book-figure-compact .book-reference-figure { padding: .8rem; }
+.book-figure-compact .book-reference-figure p { font-size: 12px; }
+@media print { .book-figure-compact { max-height: none; overflow: visible; } }

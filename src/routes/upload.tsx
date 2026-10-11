@@ -1,3 +1,4 @@
+import { encodeReferenceVisuals, splitReferenceContent } from "@/lib/reference-visuals";
 import { prepareScannedReferenceBooks } from "@/lib/prepare-reference-books";
 import { readScannedPage } from "@/lib/reference-ocr.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -18,6 +19,8 @@ import {
 } from "@/components/ui/select";
 import {
   Upload,
+  FlaskConical,
+  Zap,
   FileText,
   CheckCircle2,
   Loader2,
@@ -98,12 +101,12 @@ function UploadPage() {
   const [referenceStatus, setReferenceStatus] = useState("");
   const referenceCancelled = useRef(false);
   useEffect(() => () => { referenceCancelled.current = true; }, []);
-  async function readReferenceLibrary() {
+  async function readReferenceLibrary(subjects = ["Chemistry", "Physics", "Biology"]) {
     referenceCancelled.current = false;
     setReferenceReading(true);
     setReferenceStatus("Opening scanned reference books…");
     try {
-      for (const subject of ["Physics", "Chemistry", "Biology"]) {
+      for (const subject of subjects) {
         if (referenceCancelled.current) break;
         await prepareScannedReferenceBooks("Class 11", subject, setReferenceStatus, () => referenceCancelled.current);
       }
@@ -302,19 +305,22 @@ function UploadPage() {
       try {
         extracted = await extractPdfText(f, (p, total) =>
           setProgress((p / total) * 100),
-          { recognizePage: (image, page) => readScannedPage({ data: { image, page } }) },
+          { recognizePage: (image, page, aspect) => readScannedPage({ data: { image, page, aspect, source_path: path } }) },
         );
       } catch (e) {
         step({ name: "parse", label: "Parse PDF pages", status: "error", msg: e instanceof Error ? e.message : "parse failed" });
         throw e;
       }
-      if (!extracted.fullText.trim()) throw new Error("No readable notes were found in this PDF. Please check the scanned pages.");
+      if (!splitReferenceContent(extracted.fullText).text.trim()) throw new Error("No readable notes were found in this PDF. Please check the scanned pages.");
       step({ name: "parse", label: "Parse PDF pages", status: "ok", msg: `${extracted.numPages} pages` });
 
       setStage("chunking");
       setStatusMsg(`Chunking ${extracted.numPages} pages for AI memory…`);
       step({ name: "chunk", label: "Build memory chunks", status: "start" });
-      const chunks = chunkText(extracted.fullText);
+      const chunks = extracted.pages.flatMap(page => {
+        const source = splitReferenceContent(page.text);
+        return [...(source.text ? chunkText(source.text) : []), ...(source.visuals.length ? [encodeReferenceVisuals("", source.visuals)] : [])];
+      });
       step({ name: "chunk", label: "Build memory chunks", status: "ok", msg: `${chunks.length} chunks` });
 
       setStage("saving");
@@ -333,7 +339,7 @@ function UploadPage() {
             download_url: downloadUrl,
             num_pages: extracted.numPages,
             num_chunks: chunks.length,
-            full_text: extracted.fullText.slice(0, 1_000_000),
+            full_text: splitReferenceContent(extracted.fullText).text.slice(0, 1_000_000),
             learner_name: meta.learnerName || null,
             learner_goal: meta.learnerGoals || null,
           },
@@ -1092,11 +1098,13 @@ function UploadPage() {
 
           <CardContent>
             <div className="mb-5 rounded-xl border border-border p-4 space-y-2">
-              <p className="text-sm">Read scanned Med Easy books once to include their reference notes in future lessons. Large books take time; lesson generation works separately.</p>
-              <div className="flex gap-2">
-                <Button onClick={readReferenceLibrary} disabled={referenceReading || library.length === 0}>
+              <p className="text-sm">Read the uploaded Med Easy pages to add detailed notes and original reaction structures, molecular diagrams and Physics figures for Classes 11 and 12. Large books take time; progress is saved and lesson generation works separately.</p>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => readReferenceLibrary(["Chemistry"])} disabled={referenceReading || library.length === 0}><FlaskConical className="h-4 w-4 mr-2" />Read / resume Chemistry</Button>
+                <Button onClick={() => readReferenceLibrary(["Physics"])} disabled={referenceReading || library.length === 0}><Zap className="h-4 w-4 mr-2" />Read / resume Physics</Button>
+                <Button variant="outline" onClick={() => readReferenceLibrary()} disabled={referenceReading || library.length === 0}>
                   {referenceReading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <BookOpen className="h-4 w-4 mr-2" />}
-                  Read / resume reference books
+                  All reference books
                 </Button>
                 {referenceReading && <Button variant="outline" onClick={() => { referenceCancelled.current = true; setReferenceStatus("Pausing after the current page…"); }}>Pause</Button>}
               </div>

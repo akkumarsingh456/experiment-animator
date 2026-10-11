@@ -1,3 +1,4 @@
+import { BookReferenceFigures } from "@/components/BookReferenceFigures";
 import { MathematicsProse } from "@/components/MathematicsProse";
 import { isMathematics, mathematicsPresentationSlide } from "@/lib/mathematics-presentation";
 import { omitContentsListings } from "@/lib/note-source-noise";
@@ -45,6 +46,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
         {terms.map((group, i) => <NotesGroup subject={subject} group={group} key={`terms:${i}`} />)}
         <TopicVisualStructures input={{ ...slide, keyTerms: slide.key_terms }} subject={subject} />
         {rest.map((group, i) => <NotesGroup subject={subject} group={group} key={`body:${i}`} />)}
+        <BookReferenceFigures figures={slide.reference_visuals} subject={subject} />
         {!groups.length && <p>No verified source notes are available for this topic. Regenerate the lesson after uploading the relevant textbook pages.</p>}
         {!!groups.length && <><TopicLearningTasks title={slide.title} groups={groups} /><TopicRecap groups={groups} /></>}
         <footer>{subject} · Class {klass} · Topic {index + 1} of {content.length}</footer>

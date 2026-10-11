@@ -1,3 +1,4 @@
+import { splitReferenceContent } from "@/lib/reference-visuals";
 import { appendUploadedReferenceNotes } from "@/lib/uploaded-reference-notes";
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
@@ -683,6 +684,7 @@ export type Mcq = {
 };
 
 export type Slide = {
+  reference_visuals?: import("@/lib/reference-visuals").ReferenceVisual[];
   notes_quality?: ReturnType<typeof reviewNotes>;
   title: string;
   bullets: string[];
@@ -1859,9 +1861,9 @@ export const generateLesson = createServerFn({ method: "POST" })
 
     const pickedMap = new Map<string, string>();
     for (const chunk of [...ranked.slice(0, 28), ...activityChunks]) {
-      pickedMap.set(`${chunk.book_id}:${chunk.chunk_index}`, chunk.content);
+      pickedMap.set(`${chunk.book_id}:${chunk.chunk_index}`, splitReferenceContent(chunk.content).text);
     }
-    const picked = [...pickedMap.values()].length > 0 ? [...pickedMap.values()] : selectedChunks.slice(0, 24).map((c) => c.content);
+    const picked = [...pickedMap.values()].length > 0 ? [...pickedMap.values()] : selectedChunks.slice(0, 24).map((c) => splitReferenceContent(c.content).text);
     const context = picked.join("\n---\n").slice(0, 30000);
     if (!context.trim()) {
       throw new Error(`The matching Class ${data.klass} ${data.subject} PDF was found, but no readable text chunks were saved. Re-ingest that PDF from Upload.`);
@@ -1910,7 +1912,7 @@ export const generateLesson = createServerFn({ method: "POST" })
         const refRanked = hits.sort((a, z) => z._s - a._s).slice(0, 32);
         const refNames = new Map(refTop.map((b) => [b.id, b.file_name || "reference book"]));
         refContext = refRanked
-          .map((c) => `[${refNames.get(c.book_id)}] ${String(c.content || "").replace(/\s+/g, " ").trim()}`)
+          .map((c) => `[${refNames.get(c.book_id)}] ${splitReferenceContent(String(c.content || "")).text.replace(/\s+/g, " ").trim()}`)
           .join("\n---\n")
           .slice(0, 20000);
       }
