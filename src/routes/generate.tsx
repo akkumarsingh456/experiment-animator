@@ -270,6 +270,9 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const closePresentation = useCallback(() => setPresenting(false), []);
   const [exportMode, setExportMode] = useState<"notes" | "slides" | "guided-slides" | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
+  const [exportProgress, setExportProgress] = useState("");
+  const [readyPdf, setReadyPdf] = useState<{ url: string; filename: string } | null>(null);
+  useEffect(() => () => { if (readyPdf) URL.revokeObjectURL(readyPdf.url); }, [readyPdf]);
   const [editing, setEditing] = useState(false);
   const [lessonView, setLessonView] = useState<"notes" | "slides">("notes");
   useEffect(() => {
@@ -499,14 +502,24 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   async function downloadPDF(mode: "notes" | "slides" | "guided-slides" = lessonView) {
     if (exportMode) return;
     setExportMode(mode);
+    setExportProgress("Preparing PDF...");
     try {
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       if (!exportRef.current) throw new Error("The PDF pages are not ready.");
       if (mode !== "notes") await prepareSlideExport(exportRef.current);
-      await downloadLessonPdf(exportRef.current, mode === "notes" ? "notes" : "slides", mode === "notes" ? title : `${title}-${mode === "guided-slides" ? "guided" : "ppt"}`);
+      await downloadLessonPdf(exportRef.current, mode === "notes" ? "notes" : "slides", mode === "notes" ? title : `${title}-${mode === "guided-slides" ? "guided" : "ppt"}`, {
+        onProgress: (done, total) => setExportProgress(`Preparing PDF: ${done} / ${total} pages`),
+        onReady: (blob, filename) => {
+          const url = URL.createObjectURL(blob);
+          setReadyPdf({ url, filename });
+          const link = document.createElement("a"); link.href = url; link.download = filename;
+          document.body.appendChild(link); link.click(); link.remove();
+          toast.success("PDF ready. Use Save PDF if your browser did not download it automatically.");
+        },
+      });
     } catch (error) {
       toast.error(`PDF download failed: ${error instanceof Error ? error.message : "Please try again."}`);
-    } finally { setExportMode(null); }
+    } finally { setExportMode(null); setExportProgress(""); }
   }
 
   function presentSelectedView() {
@@ -523,7 +536,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       await downloadRenderedPptx(exportRef.current, `${title}-${lessonView === "notes" ? "guided-notes" : "ppt"}`);
     } catch (error) {
       toast.error(`PPTX export failed: ${error instanceof Error ? error.message : "Please try again."}`);
-    } finally { setExportMode(null); }
+    } finally { setExportMode(null); setExportProgress(""); }
   }
 
 
@@ -557,6 +570,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         </p><Button variant="outline" size="sm" onClick={() => setLessonView("notes")}>Back to guided notes</Button></div>
       ) : (
         <>
+          {exportProgress && <p role="status" className="print:hidden mb-3">{exportProgress}</p>}
+          {readyPdf && <a className="print:hidden inline-flex rounded-lg border px-4 py-2 mb-3 text-primary" href={readyPdf.url} download={readyPdf.filename}>Save PDF</a>}
           {/* Slides */}
           <section className="mb-10 print:m-0">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">

@@ -1,3 +1,4 @@
+import { exportFontCss } from "@/lib/export-fonts";
 import { prepareExportImages } from "@/lib/export-images";
 import { paginateGuidedArticles, PRESENTATION_WIDTH, PRESENTATION_HEIGHT } from "@/lib/guided-slides";
 
@@ -31,9 +32,9 @@ export async function prepareSlideExport(root: HTMLElement) {
 }
 
 export async function downloadRenderedPptx(root: HTMLElement, title: string) {
-  const [{ default: PptxGenJS }, { toPng, getFontEmbedCSS }] = await Promise.all([import("pptxgenjs"), import("html-to-image")]);
+  const [{ default: PptxGenJS }, { toPng }] = await Promise.all([import("pptxgenjs"), import("html-to-image")]);
   const pages = await prepareSlideExport(root);
-  const fontEmbedCSS = await getFontEmbedCSS(root, { preferredFontFormat: "woff2" });
+  const fontEmbedCSS = await exportFontCss(root);
   const pptx = new PptxGenJS(); pptx.layout = "LAYOUT_WIDE";
   pptx.subject = "Complete lesson notes with rendered LaTeX"; pptx.title = title;
   for (const page of pages) {

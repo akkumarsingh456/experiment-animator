@@ -1,3 +1,4 @@
+import { exportFontCss } from "@/lib/export-fonts";
 import { prepareExportImages } from "@/lib/export-images";
 /** Split a long rendered worksheet at block boundaries, without losing content. */
 export function worksheetSlices(height: number, pageHeight: number, boundaries: number[], protectedRanges: Array<[number, number]> = []): Array<[number, number]> {
@@ -12,19 +13,21 @@ export function worksheetSlices(height: number, pageHeight: number, boundaries: 
   return result;
 }
 
-export async function downloadLessonPdf(root: HTMLElement, mode: "notes" | "slides", title: string) {
-  const [{ jsPDF }, { toCanvas, getFontEmbedCSS }] = await Promise.all([import("jspdf"), import("html-to-image")]);
+export async function downloadLessonPdf(root: HTMLElement, mode: "notes" | "slides", title: string, options?: { onProgress?: (done: number, total: number) => void; onReady?: (blob: Blob, filename: string) => void }) {
+  const [{ jsPDF }, { toCanvas }] = await Promise.all([import("jspdf"), import("html-to-image")]);
   await document.fonts.ready;
   await prepareExportImages(root);
   // Expand revision panels in the export copy only.
   root.querySelectorAll("details").forEach((node) => { node.open = true; });
-  const fontEmbedCSS = await getFontEmbedCSS(root, { preferredFontFormat: "woff2" });
+  const fontEmbedCSS = await exportFontCss(root);
   const pdf = new jsPDF({ orientation: mode === "notes" ? "portrait" : "landscape", unit: "mm", format: "a4", compress: true });
   const width = pdf.internal.pageSize.getWidth(), height = pdf.internal.pageSize.getHeight();
   const margin = 12, usableWidth = width - 2 * margin, usableHeight = height - 2 * margin - 7;
   const pages = Array.from(root.querySelectorAll<HTMLElement>(mode === "notes" ? ".guided-topic" : ".lesson-export-slide"));
   if (!pages.length) throw new Error("No lesson pages are available to export.");
   let count = 0;
+  let rendered = 0;
+  options?.onProgress?.(0, pages.length);
   for (const page of pages) {
     const canvas = await toCanvas(page, { pixelRatio: 2, backgroundColor: "#ffffff", cacheBust: false, fontEmbedCSS });
     const pagePx = usableHeight / usableWidth * canvas.width;
@@ -40,7 +43,7 @@ export async function downloadLessonPdf(root: HTMLElement, mode: "notes" | "slid
       ctx.drawImage(canvas, 0, start, canvas.width, end - start, 0, 0, crop.width, end - start);
       const factor = Math.min(usableWidth / crop.width, usableHeight / crop.height);
       const drawWidth = crop.width * factor, drawHeight = crop.height * factor;
-      pdf.addImage(crop.toDataURL("image/png"), "PNG", margin, margin, drawWidth, drawHeight, undefined, "FAST");
+      pdf.addImage(crop.toDataURL("image/jpeg", 0.95), "JPEG", margin, margin, drawWidth, drawHeight, undefined, "FAST");
       // Retain clickable official resource links in the rendered PDF.
       page.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((link) => {
         const r = link.getBoundingClientRect();
@@ -54,6 +57,9 @@ export async function downloadLessonPdf(root: HTMLElement, mode: "notes" | "slid
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
     canvas.width = canvas.height = 0;
+    options?.onProgress?.(++rendered, pages.length);
   }
-  pdf.save(`${title.replace(/[<>:"/\\|?*]/g, "-") || "lesson"}-${mode === "notes" ? "guided-notes" : "presentation-slides"}.pdf`);
+  const filename = `${title.replace(/[<>:"/\\|?*]/g, "-") || "lesson"}-${mode === "notes" ? "guided-notes" : "presentation-slides"}.pdf`;
+  if (options?.onReady) options.onReady(pdf.output("blob"), filename);
+  else pdf.save(filename);
 }
