@@ -4,13 +4,14 @@ import { extractPdfText } from "@/lib/pdf-extract";
 import { signDownload, classifyMedEasyLibrary } from "@/lib/ingest.functions";
 import { readScannedPage, finishReferenceReading, saveExtractedReferencePage } from "@/lib/reference-ocr.functions";
 import { splitReferenceContent } from "@/lib/reference-visuals";
+import { retryBookRead } from "@/lib/book-read-recovery";
 export type ReferenceReadSummary = { book: string; pages: number; figures: number; chapters: number };
 
 /** Read the existing uploaded scans once, checkpointing each page for resumption. */
 export async function prepareScannedReferenceBooks(klass: string, subject: string, progress: (message: string) => void, cancelled: () => boolean = () => false) {
   const summaries: ReferenceReadSummary[] = [];
   if (!/11|12/.test(klass)) return summaries;
-  await classifyMedEasyLibrary();
+  await retryBookRead(() => classifyMedEasyLibrary(), { stopped: cancelled, progress, label: "Preparing book labels" });
   const { data: inventory, error } = await supabase.from("ncert_books").select("id,class,subject,chapter,file_name,storage_path,num_pages,num_chunks").or("file_name.ilike.%MED EASY%,file_name.ilike.%MEDEASY%").limit(100);
   if (error) throw new Error(error.message);
   const unique = new Map<string, NonNullable<typeof inventory>[number]>();
@@ -30,10 +31,12 @@ export async function prepareScannedReferenceBooks(klass: string, subject: strin
       summaries.push({ book: book.file_name, pages: savedPages.size, figures: pages.reduce((sum,page) => sum + page.visuals.length, 0), chapters: new Set(pages.map(page => page.context?.chapter).filter(Boolean)).size });
       continue;
     }
-    const ticket = await signDownload({ data: { path: book.storage_path } });
-    const response = await fetch(ticket.signedUrl);
-    if (!response.ok) throw new Error(`Could not read the uploaded ${book.file_name}.`);
-    const file = await response.blob();
+    const file = await retryBookRead(async () => {
+      const ticket = await signDownload({ data: { path: book.storage_path } });
+      const response = await fetch(ticket.signedUrl);
+      if (!response.ok) throw new Error(`Could not read the uploaded ${book.file_name}.`);
+      return response.blob();
+    }, { stopped: cancelled, progress, label: `Opening ${book.file_name}` });
     let chapterHint = "";
     const extracted = await extractPdfText(file, (page, total) => {
       chapterHint = splitReferenceContent(savedPages.get(page) || "").context?.chapter || chapterHint;
@@ -47,13 +50,13 @@ export async function prepareScannedReferenceBooks(klass: string, subject: strin
       },
       recognizePage: async (image, page, aspect) => {
         if (cancelled()) throw new Error("Reference-book reading paused. Completed pages are saved.");
-        const content = await readScannedPage({ data: { image, page, aspect, book_id: book.id, chapter_hint: chapterHint } });
+        const content = await retryBookRead(() => readScannedPage({ data: { image, page, aspect, book_id: book.id, chapter_hint: chapterHint } }), { stopped: cancelled, progress, label: `${book.file_name} · page ${page}` });
         savedPages.set(page, content);
         chapterHint = splitReferenceContent(content).context?.chapter || chapterHint;
         return content;
       },
     });
-    const completed = await finishReferenceReading({ data: { book_id: book.id, num_pages: extracted.numPages } });
+    const completed = await retryBookRead(() => finishReferenceReading({ data: { book_id: book.id, num_pages: extracted.numPages } }), { stopped: cancelled, progress, label: `Saving ${book.file_name}` });
     summaries.push({ book: book.file_name, ...completed });
     progress(`${book.file_name}: ${completed.pages} pages inspected, ${completed.figures} book screenshots saved across ${completed.chapters} chapters.`);
   }

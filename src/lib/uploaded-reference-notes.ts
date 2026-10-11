@@ -19,7 +19,7 @@ const topicScore = (title: string, text: string) => {
 export async function appendUploadedReferenceNotes(result: GenerationResult, db: SupabaseClient<Database>, klass: string, subject: string, chapter: string): Promise<GenerationResult> {
   const detailed = /^(chemistry|physics|biology|botany|zoology)$/i.test(subject) && /^(?:Class\s*)?(11|12)$/i.test(klass);
   const chapterFits = (source?: string) => !source?.trim() || topicScore(chapter, source) > 0;
-  const { data: books, error } = await db.from("ncert_books").select("id,class,subject,chapter,file_name,num_chunks").limit(500);
+  const { data: books, error } = await db.from("ncert_books").select("id,class,subject,chapter,file_name,num_chunks,storage_path").limit(500);
   if (error) throw new Error(error.message);
   const unique = new Map<string, NonNullable<typeof books>[number]>();
   for (const book of books || []) {
@@ -29,7 +29,7 @@ export async function appendUploadedReferenceNotes(result: GenerationResult, db:
     if (!unique.has(name) || (unique.get(name)!.num_chunks || 0) < (book.num_chunks || 0)) unique.set(name, book);
   }
   const selected = [...unique.values()];
-  if (!selected.length) return result;
+  if (!selected.length) return result.slides.some(slide => slide.reference_visuals?.length) ? { ...result, slides: result.slides.map(slide => slide.reference_visuals?.length ? { ...slide, reference_visuals: [] } : slide) } : result;
   const rows = await Promise.all(selected.map(async book => {
     const { data, error: chunkError } = await db.from("ncert_chunks").select("chunk_index,content").eq("book_id", book.id).order("chunk_index").limit(1000);
     if (chunkError) throw new Error(chunkError.message);
@@ -38,21 +38,21 @@ export async function appendUploadedReferenceNotes(result: GenerationResult, db:
       .filter(line => !isContentsListing(line) && !/^\[SOURCE_OCR_PAGE\]/.test(line))
       .flatMap(prosePoints)
       .filter(line => line.length >= 30 && line.length <= (detailed ? 1800 : 900) && (line.includes("$") || !/(?:\.{3,}|…|·{3,})\s*\d+(?:\s*[-–]\s*\d+)?\s*$/.test(line)));
-    return { book, visuals: parsed.flatMap(row => row.visuals.map(v => ({ ...v, book: book.file_name, book_id: book.id }))), paragraphs };
+    return { book, visuals: combinedReferenceMatches(book, klass, subject) ? parsed.flatMap(row => row.visuals.filter(v => Number.isInteger(v.page) && v.page > 0 && v.storage_path === `${book.storage_path}.page-${v.page}.jpg`).map(v => ({ ...v, chapter: v.chapter || row.context?.chapter, book: book.file_name, book_id: book.id }))) : [], paragraphs };
 
   }));
   const signed = new Map<string, string>();
   const used = new Set<string>();
   // Give each complete book map one home in the chapter, rather than repeating
-  // its branches on unrelated slides. A chapter-only match goes on its first topic.
+  // its branches on unrelated slides. Both chapter and topic must match.
   const figureOwners = new Map<string, number>();
   const figureKey = (visual: { storage_path: string; title: string }) => `${visual.storage_path}:${visual.title}`;
   for (const { visuals } of rows) for (const visual of visuals) {
-    if (!chapterFits(visual.chapter)) continue;
+    if (!visual.chapter?.trim() || !chapterFits(visual.chapter)) continue;
     const scores = result.slides.map((slide, index) => ({ index, score: topicScore(slide.title, `${visual.title} ${visual.description}`) }))
       .filter(item => !["break", "mcq"].includes(result.slides[item.index].kind || ""));
     const best = scores.sort((a, b) => b.score - a.score)[0];
-    if (best && (best.score > 0 || (visual.chapter && chapterFits(visual.chapter)))) figureOwners.set(figureKey(visual), best.index);
+    if (best && best.score > 0) figureOwners.set(figureKey(visual), best.index);
   }
   const slides = result.slides.map((slide, slideIndex) => {
     if (slide.kind === "break" || slide.kind === "mcq") return slide;
@@ -86,8 +86,8 @@ export async function appendUploadedReferenceNotes(result: GenerationResult, db:
       return [{ heading, kind: "bullets" as const, lines }];
     });
     const candidates = detailed ? rows.flatMap(({ book, visuals }) => visuals.filter(visual => figureOwners.get(figureKey(visual)) === slideIndex).map(visual => { used.add(book.id); return visual; })) : [];
-    const figures = [...(slide.reference_visuals || []).filter(visual => chapterFits(visual.chapter) && (!figureOwners.has(figureKey(visual)) || figureOwners.get(figureKey(visual)) === slideIndex)), ...candidates].filter((v,i,all) => all.findIndex(other => other.storage_path === v.storage_path && other.title === v.title) === i);
-    return extra.length || figures.length || originalSections.length !== (slide.sections || []).length ? { ...slide, sections: [...originalSections, ...extra], reference_visuals: figures.map(figure => ({ ...figure })) } : slide;
+    const figures = candidates.filter((v,i,all) => all.findIndex(other => other.storage_path === v.storage_path && other.title === v.title) === i);
+    return extra.length || figures.length || (slide.reference_visuals || []).length || originalSections.length !== (slide.sections || []).length ? { ...slide, sections: [...originalSections, ...extra], reference_visuals: figures.map(figure => ({ ...figure })) } : slide;
   });
   const paths = [...new Set(slides.flatMap(slide => (slide.reference_visuals || []).map(figure => figure.storage_path)))];
   for (let start = 0; start < paths.length; start += 8) {

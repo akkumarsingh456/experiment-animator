@@ -314,7 +314,7 @@ function UploadPage() {
       try {
         extracted = await extractPdfText(f, (p, total) =>
           setProgress((p / total) * 100),
-          { inspectEveryPage: /med\s*easy/i.test(f.name), recognizePage: (image, page, aspect) => readScannedPage({ data: { image, page, aspect, source_path: path } }) },
+          { inspectEveryPage: /med\s*easy/i.test(f.name), recognizePage: (image, page, aspect) => readScannedPage({ data: { image, page, aspect, source_path: path, source_file_name: f.name } }) },
         );
       } catch (e) {
         step({ name: "parse", label: "Parse PDF pages", status: "error", msg: e instanceof Error ? e.message : "parse failed" });

@@ -6,9 +6,9 @@ import { BookReferenceFigures } from "@/components/BookReferenceFigures";
 import { BookMapSlide } from "@/components/BookMapSlide";
 import { combinedReferenceMatches, medEasyLibraryMetadata } from "@/lib/reference-books";
 
-const figure: ReferenceVisual = { title: "Nucleophilic substitution reaction", kind: "reaction", description: "Nucleophilic substitution: reactant, reagent, reaction arrow and product.", page: 169, storage_path: "Class11/Chemistry/book.pdf.page-169.jpg", aspect: .707, crop: { x: .1, y: .2, width: .8, height: .25 } };
+const figure: ReferenceVisual = { title: "Nucleophilic substitution reaction", kind: "reaction", description: "Nucleophilic substitution: reactant, reagent, reaction arrow and product.", page: 169, chapter: "Haloalkanes and Haloarenes", storage_path: "Class11/Chemistry/book.pdf.page-169.jpg", aspect: .707, crop: { x: .1, y: .2, width: .8, height: .25 } };
 function book(id: string, subject: string, klass = "Class 11", ncert = false) {
-  return { id, class: klass, subject, chapter: ncert ? "NCERT" : `${subject} MED EASY`, file_name: `${ncert ? "NCERT" : "MED EASY"} ${subject}.pdf`, num_chunks: 247 };
+  return { id, class: klass, subject, chapter: ncert ? "NCERT" : `${subject} MED EASY`, file_name: `${ncert ? "NCERT" : "MED EASY"} ${subject}.pdf`, num_chunks: 247, storage_path: "Class11/Chemistry/book.pdf" };
 }
 function mockDb(books: ReturnType<typeof book>[], chunks: Record<string,string[]>) {
   return { storage: { from: () => ({ createSignedUrl: async (path: string) => ({ data: { signedUrl: `https://example.test/${path}` } }) }) }, from(table: string) {
@@ -23,6 +23,17 @@ function lesson(title: string) {
 }
 
 describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
+  it("excludes NCERT screenshots, wrong topics, missing chapters and foreign image paths, including cached images",async()=>{
+    const original=lesson("Nucleophilic substitution");
+    original.slides[0].reference_visuals=[{...figure,title:"Cached unverified image"}];
+    const wrongTopic={...figure,title:"Elimination reactions",description:"Elimination with loss of hydrogen halide."};
+    const noChapter={...figure,title:"Unindexed nucleophilic substitution",chapter:""};
+    const foreign={...figure,title:"Foreign nucleophilic substitution",storage_path:"NCERT/book.pdf.page-169.jpg"};
+    const db=mockDb([book("med","Chemistry"),book("ncert","Chemistry","Class 12",true)],{med:[encodeReferenceVisuals("",[figure,wrongTopic,noChapter,foreign])],ncert:[encodeReferenceVisuals("",[{...figure,title:"NCERT nucleophilic substitution"}])]});
+    const result=await appendUploadedReferenceNotes(original,db,"12","Chemistry","Haloalkanes and Haloarenes");
+    expect(result.slides[0].reference_visuals?.map((v:any)=>v.title)).toEqual([figure.title]);
+    expect(result.slides[0].sections[0]).toBe(original.slides[0].sections[0]);
+  });
   it.each(["Physics", "Chemistry", "Botany", "Zoology"])("labels the combined %s PDF for both senior classes and preserves its content and storage",subject=>{
     const original={class:"Unspecified Class",subject:"General",file_name:`${subject.toUpperCase()} MED EASY.pdf`,chapter:"Uploaded reference",storage_path:"UnspecifiedClass/original.pdf",full_text:"Unchanged source notes and formulas."};
     const classified=medEasyLibraryMetadata(original);
@@ -40,9 +51,9 @@ describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
   });
   it.each(["11", "12"])("includes both Botany and Zoology screenshots in Biology for Class %s", async grade => {
     const original = lesson("Cell structure");
-    const botany = {...book("botany","Biology","Unspecified"),file_name:"BOTANY MED EASY.pdf"};
-    const zoology = {...book("zoology","Biology","Class 12"),file_name:"COMPLETE ZOOLOGY MED EASY.pdf"};
-    const pictures = [botany,zoology].map((b,i)=>({...figure,kind:"diagram" as const,title:`Cell structure ${i+1}`,description:"Cell structure with original labels and connecting arrows.",chapter:"Cell: The Unit of Life",storage_path:`Biology/${b.id}.pdf.page-10.jpg`}));
+    const botany = {...book("botany","Biology","Unspecified"),file_name:"BOTANY MED EASY.pdf",storage_path:"Biology/botany.pdf"};
+    const zoology = {...book("zoology","Biology","Class 12"),file_name:"COMPLETE ZOOLOGY MED EASY.pdf",storage_path:"Biology/zoology.pdf"};
+    const pictures = [botany,zoology].map((b,i)=>({...figure,kind:"diagram" as const,title:`Cell structure ${i+1}`,description:"Cell structure with original labels and connecting arrows.",chapter:"Cell: The Unit of Life",page:10,storage_path:`Biology/${b.id}.pdf.page-10.jpg`}));
     const chunks = Object.fromEntries([botany,zoology].map((b,i)=>[b.id,[encodeReferenceVisuals("Cell structure reference notes retained in their genuine wording.",[pictures[i]],{chapter:"Cell: The Unit of Life",visuals_checked:true})]]));
     const result = await appendUploadedReferenceNotes(original,mockDb([botany,zoology],chunks),grade,"Biology","Cell: The Unit of Life");
     expect(result.slides[0].reference_visuals).toHaveLength(2);
@@ -51,8 +62,8 @@ describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
     expect(result.source_books.map((b:any)=>b.id)).toEqual(["botany","zoology"]);
   });
   it("keeps separately requested Botany and Zoology within their subject",()=>{
-    const botany={file_name:"BOTANY MED EASY.pdf"};
-    const zoology={file_name:"COMPLETE ZOOLOGY MED EASY.pdf"};
+    const botany={file_name:"BOTANY MED EASY.pdf",storage_path:"Biology/botany.pdf"};
+    const zoology={file_name:"COMPLETE ZOOLOGY MED EASY.pdf",storage_path:"Biology/zoology.pdf"};
     expect(combinedReferenceMatches(botany,"11","Botany")).toBe(true);
     expect(combinedReferenceMatches(zoology,"12","Zoology")).toBe(true);
     expect(combinedReferenceMatches(botany,"12","Zoology")).toBe(false);

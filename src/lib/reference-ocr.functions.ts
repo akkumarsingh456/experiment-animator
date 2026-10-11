@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { combinedReferenceSubject } from "@/lib/reference-books";
 import { encodeReferenceVisuals, splitReferenceContent, type ReferenceVisual } from "@/lib/reference-visuals";
 
 export const saveExtractedReferencePage = createServerFn({ method: "POST" })
@@ -15,24 +16,31 @@ export const saveExtractedReferencePage = createServerFn({ method: "POST" })
   });
 
 export const readScannedPage = createServerFn({ method: "POST" })
-  .inputValidator((raw: unknown) => z.object({ image: z.string().max(8_000_000).regex(/^data:image\/jpeg;base64,/), page: z.number().int().positive(), book_id: z.string().uuid().optional(), source_path: z.string().max(500).regex(/^[a-zA-Z0-9_./-]+\.pdf$/i).refine(path => !path.includes(".."), "Invalid source path").optional(), aspect: z.number().positive().max(5).optional(), chapter_hint: z.string().max(200).optional() }).parse(raw))
+  .inputValidator((raw: unknown) => z.object({ image: z.string().max(8_000_000).regex(/^data:image\/jpeg;base64,/), page: z.number().int().positive(), book_id: z.string().uuid().optional(), source_path: z.string().max(500).regex(/^[a-zA-Z0-9_./-]+\.pdf$/i).refine(path => !path.includes(".."), "Invalid source path").optional(), aspect: z.number().positive().max(5).optional(), chapter_hint: z.string().max(200).optional(), source_file_name: z.string().max(500).optional() }).parse(raw))
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let sourcePath = data.source_path;
+    let medEasy = !!combinedReferenceSubject({ file_name: data.source_file_name });
+    if (data.book_id) {
+      const { data: book, error } = await supabaseAdmin.from("ncert_books").select("storage_path,file_name,chapter").eq("id", data.book_id).single();
+      if (error) throw new Error(error.message);
+      sourcePath = book.storage_path;
+      medEasy = !!combinedReferenceSubject(book);
+      // A response can be cancelled after its page was successfully saved.
+      // Reuse that checkpoint instead of running the page reader again.
+      const { data: saved, error: savedError } = await supabaseAdmin.from("ncert_pages").select("text").eq("book_id", data.book_id).eq("page_number", data.page).maybeSingle();
+      if (savedError) throw new Error(savedError.message);
+      if (saved?.text.startsWith("[SOURCE_OCR_PAGE]\n") && splitReferenceContent(saved.text).context?.visuals_checked) return saved.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "");
+    }
     const { gatewayJSON, hasGatewayKey } = await import("@/lib/ai-gateway-json");
     if (!hasGatewayKey()) throw new Error("Scanned-book reading is unavailable. Configure the website’s AI connection to read these handwritten pages.");
     const out = await gatewayJSON<{ text: string; chapter: string; visuals: Array<{ title: string; kind: "reaction" | "structure" | "diagram"; description: string; x: number; y: number; width: number; height: number }> }>({
       images: [data.image], schemaName: "source_page_transcription",
       schema: { type: "object", additionalProperties: false, required: ["text", "chapter", "visuals"], properties: { text: { type: "string" }, chapter: { type: "string" }, visuals: { type: "array", items: { type: "object", additionalProperties: false, required: ["title", "kind", "description", "x", "y", "width", "height"], properties: { title: { type: "string" }, kind: { type: "string", enum: ["reaction", "structure", "diagram"] }, description: { type: "string" }, x: { type: "number" }, y: { type: "number" }, width: { type: "number" }, height: { type: "number" } } } } } },
-      prompt: "Transcribe this uploaded textbook page faithfully. Preserve the original wording and paragraph order. Typeset clearly readable mathematical symbols with inline $...$ or display $$...$$ LaTeX, retaining matrix rows and columns. Never solve, summarise, add facts or invent missing notation. Omit advertisements, watermarks and unreadable fragments. Return empty text for an illustration-only or cover page. Also locate up to six useful reaction schemes, organic molecular structures, inorganic geometries, apparatus diagrams, physics graphs, Botany and Zoology labelled anatomy, life cycles, classification charts, comparison panels, processes and complete mind maps. For each supply a short topic title, kind, a faithful description of its visible labels and bounding box x/y/width/height in fractions of the full image (0–1). Include all bonds, charges, arrows, reagents and conditions inside the box with a little padding. Never reconstruct an unreadable structure. Keep paragraphs separated by blank lines. Do not describe a normal prose paragraph as a diagram. Biology crops must include every visible label, legend, stage and connecting arrow. A complete Botany or Zoology process map belongs in one crop. All four Med Easy books cover Classes 11 and 12; identify the actual page chapter rather than relying on the book upload class tag. Keep a complete reaction map together: include its central compound, every branch, product structure, named reaction, reagent, condition and comparison panel in one crop; do not split its branches into separate figures. Use descriptive topic titles such as Chlorine reaction map or Haloalkane reaction pathways rather than generic Chemical properties. Return a separate chapter indexing field using the corresponding standard NCERT chapter name when confidently identifiable; otherwise an empty string. This metadata must never replace or rewrite the transcribed source text. For a continuation page with no new chapter heading, the previous chapter hint may help; a visible new chapter takes precedence. Return JSON text, chapter and visuals. Previous chapter hint: " + (data.chapter_hint || "none"),
+      prompt: "Transcribe this uploaded textbook page faithfully. Preserve the original wording and paragraph order. Typeset clearly readable mathematical symbols with inline $...$ or display $$...$$ LaTeX, retaining matrix rows and columns. Never solve, summarise, add facts or invent missing notation. Omit advertisements, watermarks and unreadable fragments. Return empty text for an illustration-only or cover page. Also locate up to six useful reaction schemes, organic molecular structures, inorganic geometries, apparatus diagrams, physics graphs, Botany and Zoology labelled anatomy, life cycles, classification charts, comparison panels, processes and complete mind maps. For each supply a short topic title, kind, a faithful description of its visible labels and bounding box x/y/width/height in fractions of the full image (0–1). Include all bonds, charges, arrows, reagents and conditions inside the box with a little padding. Never reconstruct an unreadable structure. Keep paragraphs separated by blank lines. Do not describe a normal prose paragraph as a diagram. Biology crops must include every visible label, legend, stage and connecting arrow. A complete Botany or Zoology process map belongs in one crop. All four Med Easy books cover Classes 11 and 12; identify the actual page chapter rather than relying on the book upload class tag. Keep a complete reaction map together: include its central compound, every branch, product structure, named reaction, reagent, condition and comparison panel in one crop; do not split its branches into separate figures. Use descriptive topic titles such as Chlorine reaction map or Haloalkane reaction pathways rather than generic Chemical properties. Return a separate chapter indexing field using the corresponding standard NCERT chapter name when confidently identifiable; otherwise an empty string. This metadata must never replace or rewrite the transcribed source text. For a continuation page with no new chapter heading, the previous chapter hint may help; a visible new chapter takes precedence. Return JSON text, chapter and visuals. Previous chapter hint: " + (data.chapter_hint || "none") + (medEasy ? "" : " This is not a Med Easy source: transcribe text only and return an empty visuals array."),
     });
     if (!out || typeof out.text !== "string") throw new Error(`Could not read scanned page ${data.page}. Try again; already read pages are retained.`);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    let sourcePath = data.source_path;
-    if (data.book_id) {
-      const { data: book, error } = await supabaseAdmin.from("ncert_books").select("storage_path").eq("id", data.book_id).single();
-      if (error) throw new Error(error.message);
-      sourcePath = book.storage_path;
-    }
-    const visuals: ReferenceVisual[] = (out.visuals || []).slice(0, 6).filter(v => v.x >= 0 && v.y >= 0 && v.width > .05 && v.height > .05 && v.x + v.width <= 1.001 && v.y + v.height <= 1.001).map(v => ({
+    const visuals: ReferenceVisual[] = (medEasy ? out.visuals || [] : []).slice(0, 6).filter(v => v.x >= 0 && v.y >= 0 && v.width > .05 && v.height > .05 && v.x + v.width <= 1.001 && v.y + v.height <= 1.001).map(v => ({
       title: v.title, kind: v.kind, description: v.description, page: data.page, book_id: data.book_id, chapter: (out.chapter || "").slice(0, 200),
       aspect: data.aspect || .707, storage_path: sourcePath ? `${sourcePath}.page-${data.page}.jpg` : "",
       crop: { x: v.x, y: v.y, width: v.width, height: v.height },
