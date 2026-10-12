@@ -4,6 +4,20 @@ import {topicScienceDrawing} from '@/lib/topic-science-visuals';
 import {renderLessonIllustration} from '@/lib/napkin-infographic';
 
 describe('all senior science chapters receive a chapter model',()=>{
+ it.each([
+  ['Biology','Respiration in Plants','cellular-respiration'],
+  ['Botany','Cellular respiration','cellular-respiration'],
+  ['Zoology','Animal Kingdom','classification-tree'],
+  ['Biology','Meiosis','meiosis'],['Biology','Cell cycle','cell-cycle'],
+  ['Physics','Plane mirror','mirror-reflection'],['Physics','Transformer','transformer'],
+  ['Physics','Alternating current','alternating-current'],['Physics','Photoelectric effect','photoelectric-effect'],
+  ['Physics','Projectile motion','projectile-motion'],['Physics','Kinetic Theory','gas-particles'],
+  ['Chemistry','Molecular structure','atomic-bonding'],['Chemistry','Biomolecules','molecular-arrangement'],
+  ['Chemistry','Phenol','phenol-structure'],['Chemistry','Arrhenius equation','arrhenius-plot'],
+  ['Science','Plane mirror','mirror-reflection'],['Science','Animal Kingdom','classification-tree'],
+ ])('selects a specific %s %s visual',(subject,title,id)=>{
+  expect(topicScienceDrawing({title},subject)?.id).toBe(id);
+ });
  for(const klass of ['11','12'])for(const subject of ['Physics','Chemistry','Biology'])for(const chapter of chaptersFor(klass,subject)) {
   it(`${klass} ${subject}: ${chapter.chapter}`,()=>{
    const drawing=topicScienceDrawing({title:'Applications',chapter:chapter.chapter},subject);
