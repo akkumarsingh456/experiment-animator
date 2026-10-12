@@ -1,3 +1,4 @@
+import { topicScienceDrawing, topicIconOverview } from "@/lib/topic-science-visuals";
 import { plainMathText } from "@/lib/latex-notation";
 import { currentElectricityDiagram, wrapTextbookDrawing } from "@/lib/current-electricity-diagrams";
 import { renderSourceConceptMap, sourceConceptFacts, type ConceptMapInput } from "@/lib/source-concept-map";
@@ -357,11 +358,13 @@ export function renderNapkinInfographicDataUrl(input: FactInput): string {
 /** Large reference-style figure without a miniature duplicate of the notes. */
 export function renderLessonIllustration(input: FactInput & ConceptMapInput): string {
   const identity = stableHash(`${input.subject}|${input.title}|${input.slideIndex ?? 0}`).toString(16);
-  const textbook = /^(physics|science)$/i.test(input.subject || "") ? currentElectricityDiagram(input.title) : null;
+  const textbook = /^(physics|science)$/i.test(input.subject || "") && /ohm|wheatstone|kirchhoff|drift|mobility|resist|combination.*resist|series|parallel|current/i.test(input.title) ? currentElectricityDiagram(input.title) : null;
   if (textbook) return wrapTextbookDrawing(textbook.drawing, identity);
+  const topic = topicScienceDrawing(input, input.subject);
+  if (topic) return wrapTextbookDrawing(topic.drawing, identity);
   const geometry = geometryDiagram(input.title, input.subject);
   if (geometry) return geometry.svg;
-  return renderSourceConceptMap(input, sourceConceptFacts(input).slice(0, 4));
+  return wrapTextbookDrawing(topicIconOverview(input, input.subject).drawing, identity);
 }
 
 export function renderLessonIllustrationDataUrl(input: FactInput & ConceptMapInput): string {
@@ -371,5 +374,5 @@ export function renderLessonIllustrationDataUrl(input: FactInput & ConceptMapInp
 }
 
 export function lessonIllustrationCaption(title: string, subject?: string): string {
-  return (/^(physics|science)$/i.test(subject || "") ? currentElectricityDiagram(title)?.caption : undefined) || geometryDiagram(title, subject)?.caption || `${title} · Source-based concept map`;
+  return topicScienceDrawing({ title }, subject)?.caption || (/^(physics|science)$/i.test(subject || "") ? currentElectricityDiagram(title)?.caption : undefined) || geometryDiagram(title, subject)?.caption || topicIconOverview({ title }, subject).caption;
 }

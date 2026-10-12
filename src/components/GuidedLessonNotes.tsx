@@ -47,6 +47,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
         <TopicVisualStructures input={{ ...slide, keyTerms: slide.key_terms }} subject={subject} />
         {rest.map((group, i) => <NotesGroup subject={subject} group={group} key={`body:${i}`} />)}
         <BookReferenceFigures figures={slide.reference_visuals} subject={subject} />
+        {slide.context_illustration && <figure className="guided-context-illustration"><img src={slide.context_illustration.url} alt={slide.context_illustration.description} /><figcaption>AI context illustration · {slide.context_illustration.provider}. Exact relationships are shown in the labelled diagram and source notes.</figcaption></figure>}
         {!groups.length && <p>No verified source notes are available for this topic. Regenerate the lesson after uploading the relevant textbook pages.</p>}
         {!!groups.length && <><TopicLearningTasks title={slide.title} groups={groups} /><TopicRecap groups={groups} /></>}
         <footer>{subject} · Class {klass} · Topic {index + 1} of {content.length}</footer>

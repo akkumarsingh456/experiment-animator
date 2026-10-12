@@ -286,7 +286,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         if (!run.stopped && bookCaptureRun.current === run) setBookCaptureMessage(message);
       }, () => run.stopped, async () => {
         if (!run.stopped && bookCaptureRun.current === run) await refresh();
-      });
+      }, search.chapter || title);
       const matched = await refresh();
       const reviewPages = summaries.reduce((total, book) => total + (book.unmatchedPages || 0), 0);
       if (bookCaptureRun.current === run) setBookCaptureMessage(run.stopped ? "Capture paused. Completed pages are saved; resume to continue." : summaries.length ? (matched ? `${matched} original Med Easy pictures added to this chapter’s topics in both lesson views.` : "Pages saved. No confidently matched picture was found for the current chapter and topics.") + (reviewPages ? ` ${reviewPages} pages need chapter review.` : "") : "No matching uploaded Med Easy book was found for this subject.");
@@ -441,15 +441,9 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         const hash = await perceptualHash(r.url);
         const dup = findDuplicate(idx, r.url, hash);
         const tries = dupRetryRef.current[idx] ?? 0;
-        if (dup !== null && tries < 2) {
-          dupRetryRef.current[idx] = tries + 1;
-          setImgStatus((m) => ({ ...m, [idx]: { state: "loading", duplicateOf: dup } }));
-          setImgLoading((m) => ({ ...m, [idx]: false }));
-          // Force a fresh, uncached render so the layout differs.
-          return await ensureImage(idx, { force: true });
-        }
         if (hash) imgHashRef.current[idx] = hash;
         setImages((m) => ({ ...m, [idx]: r.url }));
+        if (r.contextUrl) setSlides(current => current.map((slide,index)=>index===idx && slide.title===s.title ? { ...slide, context_illustration: { url:r.contextUrl!, provider:"Hugging Face" as const, description:`AI context illustration for ${s.title}; use the labelled diagram and source notes for exact relationships.` } } : slide));
         setImgStatus((m) => ({
           ...m,
           [idx]: {
@@ -1113,7 +1107,7 @@ function SlideCanvas({
 }) {
   if (!slide) return null;
   const sourceIndex = (slide as Slide & { sourceIndex?: number }).sourceIndex ?? index;
-  imageUrl = renderLessonIllustrationDataUrl({ ...slide, subject, slideIndex: sourceIndex });
+  imageUrl = renderLessonIllustrationDataUrl({ ...slide, keyTerms: slide.key_terms, subject, slideIndex: sourceIndex });
   const kind = slide.kind === "chapter" && slide.sections?.length ? "content" : slide.kind || "content";
   const lang = isLanguageSubject(subject);
   const bookFigurePage = slide.sections?.some(section => section.heading === "Book structure and explanation") && slide.reference_visuals?.some(figure => figure.url);
@@ -1288,6 +1282,10 @@ function SlideCanvas({
                   </button>
                 )}
               </div>
+              {slide.context_illustration && <figure className="flex-1 min-h-0 bg-white rounded-lg overflow-hidden flex flex-col">
+                <img className="w-full min-h-0 flex-1 object-contain" src={slide.context_illustration.url} alt={slide.context_illustration.description} />
+                <figcaption className="text-[10px] text-center px-2 pb-1">AI context illustration · {slide.context_illustration.provider}</figcaption>
+              </figure>}
               {/* Hide the 3D / simulation panel entirely for language subjects. */}
               {!lang && !staticView && (
                 <div className="lesson-simulation-panel relative w-full flex-[2] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0">

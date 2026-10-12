@@ -61,7 +61,8 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     // v13: topic-aware textbook renderer with large labels and visual models.
     const cacheKey = hashKey([
-      "img-v16-textbook-topic-illustrations",
+      "img-v18-science-diagrams-and-context-images",
+      process.env.HF_IMAGES_FREE_ONLY === "true" && !!process.env.HF_IMAGE_TOKEN ? "hf-enabled" : "local-only",
       data.klass,
       data.subject,
       String(data.slideIndex),
@@ -113,7 +114,9 @@ export const generateSlideImage = createServerFn({ method: "POST" })
           .maybeSingle();
         if (hit?.image_url && !data.avoidUrls.includes(hit.image_url)) {
           await logAudit({ status: "cache_hit", cached: true, image_url: hit.image_url });
-          return { url: hit.image_url as string, cached: true };
+          if (hit.image_url.startsWith("[CONTEXT_IMAGE_V1]")) {
+            try { const saved = JSON.parse(hit.image_url.slice("[CONTEXT_IMAGE_V1]".length)); return { url: saved.diagram as string, contextUrl: saved.context as string, cached: true }; } catch { /* Render a valid new image below. */ }
+          } else return { url: hit.image_url as string, contextUrl: undefined as string | undefined, cached: true };
         }
       } catch {
         /* ignore cache miss */
@@ -122,7 +125,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
 
     if (data.cacheOnly) {
       await logAudit({ status: "cache_miss_skipped", cached: false });
-      return { url: "", cached: false, skipped: true };
+      return { url: "", contextUrl: undefined as string | undefined, cached: false, skipped: true };
     }
 
     // FREE pipeline: render the reference-style infographic locally from the
@@ -151,11 +154,13 @@ export const generateSlideImage = createServerFn({ method: "POST" })
 
     if (!url) {
       await logAudit({ status: "no_image", cached: false, error: renderError || "render_failed" });
-      return { url: "", cached: false, error: renderError || "render_failed" };
+      return { url: "", contextUrl: undefined as string | undefined, cached: false, error: renderError || "render_failed" };
     }
 
 
 
+    const { createFreeContextIllustration } = await import("@/lib/hf-image-provider.server");
+    const contextUrl = await createFreeContextIllustration(data.subject, data.title, (data.key_terms || []).map(item=>item.term));
     try {
       await (db as any).from("slide_image_cache").upsert({
         cache_key: cacheKey,
@@ -163,14 +168,14 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         subject: String(data.subject || ""),
         title: String(data.title || ""),
         visual_prompt: String(data.visual_prompt || ""),
-        image_url: url,
+        image_url: contextUrl ? "[CONTEXT_IMAGE_V1]" + JSON.stringify({ diagram: url, context: contextUrl }) : url,
       });
     } catch (e) {
       console.warn("slide image cache write failed", e);
     }
 
     await logAudit({ status: "success", cached: false, image_url: url.slice(0, 200), error: renderError });
-    return { url, cached: false, source };
+    return { url, contextUrl, cached: false, source };
   });
 
 function generateDiagramSVG(title: string, bullets: string[], visualPrompt: string, subject = "", grounding = "", slideIndex = 0): string {
@@ -686,6 +691,7 @@ export type Mcq = {
 };
 
 export type Slide = {
+  context_illustration?: { url: string; provider: "Hugging Face"; description: string };
   reference_visuals?: import("@/lib/reference-visuals").ReferenceVisual[];
   notes_quality?: ReturnType<typeof reviewNotes>;
   title: string;
@@ -1664,7 +1670,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v43-source-formulas-book-captures",
+      "lesson-v44-topic-diagrams-source-derivations",
       data.klass,
       data.subject,
       data.chapter,

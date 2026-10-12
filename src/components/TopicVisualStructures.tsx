@@ -1,3 +1,4 @@
+import { topicScienceDrawing } from "@/lib/topic-science-visuals";
 import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
 import { isMathematics } from "@/lib/mathematics-presentation";
 import { currentElectricityDiagram, wrapTextbookDrawing } from "@/lib/current-electricity-diagrams";
@@ -16,7 +17,6 @@ export function TopicVisualStructures({
 }) {
   if (isMathematics(subject)) return <div className="guided-explanation guided-visual-structures"><figure><MathematicsTopicVisual input={input} /></figure></div>;
   const facts = sourceConceptFacts(input);
-  if (!facts.length) return null;
   if (learningProfile(subject).family === "language")
     return (
       <section className="guided-group literature-storyboard">
@@ -36,6 +36,14 @@ export function TopicVisualStructures({
         </ol>
       </section>
     );
+  const currentTopic = /^(physics|science)$/i.test(subject || "") && /ohm|wheatstone|kirchhoff|drift|mobility|resist|combination.*resist|series|parallel|current/i.test(input.title);
+  const topic = currentTopic ? null : topicScienceDrawing(input, subject);
+  if (topic) return <div className="guided-explanation guided-visual-structures"><figure>
+    <div className="guided-figure-heading"><strong>Labelled topic illustration</strong><span>2D diagram</span></div>
+    <img src={svgDataUrl(wrapTextbookDrawing(topic.drawing, topic.id))} alt={`${input.title}: ${topic.caption}`} />
+    <figcaption>{topic.caption}</figcaption>
+  </figure></div>;
+  if (!facts.length) return null;
   const electrical = /^(physics|science)$/i.test(subject || "")
     ? currentElectricityDiagram(input.title)
     : null;

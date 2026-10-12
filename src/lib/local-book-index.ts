@@ -68,7 +68,8 @@ export function indexLocalBookPage(subject: string, text: string, previousChapte
   if (frontMatter) return { chapter: "", needsReview: false, matchText: "" };
   const headings = lines.slice(0, 12).filter(line => line.length < 140).map(line =>
     normal(chapterName(line)).replace(/^\d+(?: \d+)* /, "").replace(/ \d+$/, ""));
-  const matches = [...unique].filter(([key]) => [key, ...(aliases[key] || [])].some(alias => headings.includes(alias)));
+  const compact = (value: string) => value.replace(/\s/g, "");
+  const matches = [...unique].filter(([key]) => [key, ...(aliases[key] || [])].some(alias => headings.some(heading => heading === alias || compact(heading) === compact(alias))));
   const explicitNewChapter = lines.slice(0, 12).some(line => /^\s*(?:chapter|unit)\s*(?:\d+|[ivx]+)\b/i.test(line));
   const previous = unique.get(normal(chapterName(previousChapter)));
   const chapter = matches.length === 1 ? matches[0][1] : matches.length > 1 || explicitNewChapter ? "" : previous || "";

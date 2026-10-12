@@ -29,23 +29,26 @@ export async function appendUploadedReferenceNotes(result: GenerationResult, db:
   const chapterFits = (source?: string) => !!requestedChapter && !!source?.trim() && requestedChapter === chapterKey(source);
   const { data: books, error } = await db.from("ncert_books").select("id,class,subject,chapter,file_name,num_chunks,storage_path").limit(500);
   if (error) throw new Error(error.message);
-  const unique = new Map<string, NonNullable<typeof books>[number]>();
-  for (const book of books || []) {
-    if (!combinedReferenceMatches(book, klass, subject)) continue;
-    const name = book.file_name.trim().toLowerCase();
-    if (!unique.has(name) || (unique.get(name)!.num_chunks || 0) < (book.num_chunks || 0)) unique.set(name, book);
-  }
-  const selected = [...unique.values()];
+  const selected = (books || []).filter(book => combinedReferenceMatches(book, klass, subject));
   // Remove only sections created by the retired raw-reference importer. Core
   // Teacher Notes, formulas, derivations and their original objects stay intact.
   const headings = new Set((books || []).filter(book => combinedReferenceMatches(book, klass, subject) || (/ncert/i.test(book.file_name) && book.subject.toLowerCase() === subject.toLowerCase())).map(book => `Reference notes — ${book.file_name.replace(/\.pdf$/i, "").trim()}`));
-  const rows = await Promise.all(selected.map(async book => {
+  const loadedRows = await Promise.all(selected.map(async book => {
     const { data, error: chunkError } = await db.from("ncert_chunks").select("chunk_index,content").eq("book_id", book.id).order("chunk_index").limit(1000);
     if (chunkError) throw new Error(chunkError.message);
     const parsed = (data || []).map(row => splitReferenceContent(row.content));
     return { book, visuals: parsed.flatMap(row => row.visuals.filter(v => Number.isInteger(v.page) && v.page > 0 && v.storage_path === `${book.storage_path}.page-${v.page}.jpg`).map(v => ({ ...v, chapter: v.chapter || row.context?.chapter, book: book.file_name, book_id: book.id }))) };
 
   }));
+  // Book counters are finalised only after reading finishes. Prefer actual saved
+  // figures over an empty duplicate with the same filename and stale counters.
+  const uniqueRows = new Map<string, typeof loadedRows[number]>();
+  for (const row of loadedRows) {
+    const key = row.book.file_name.trim().toLowerCase();
+    const current = uniqueRows.get(key);
+    if (!current || row.visuals.length > current.visuals.length) uniqueRows.set(key, row);
+  }
+  const rows = [...uniqueRows.values()];
   const signed = new Map<string, string>();
   const used = new Set<string>();
   // Give each complete book map one home in the chapter, rather than repeating

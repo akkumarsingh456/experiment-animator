@@ -1,6 +1,6 @@
 import { splitMath, isValidLatex } from "@/lib/latex-notation";
 
-type Rule = { subjects: string; topic: string; cue: string; name: string; formula: string };
+export type Rule = { subjects: string; topic: string; cue: string; name: string; formula: string };
 const rule = (subjects: string, topic: string, cue: string, name: string, formula: string): Rule => ({ subjects, topic, cue, name, formula });
 const P = "physics", C = "chemistry", PC = "physics chemistry";
 // Canonical school relations are used only when the supplied source attests
@@ -72,6 +72,13 @@ export const SOURCE_FORMULA_RULES: readonly Rule[] = [
   rule(C, "osmotic|colligative", "osmotic", "Osmotic pressure", String.raw`$\Pi=i cRT$`),
   rule(C, "nernst|cell potential", "nernst", "Nernst equation", String.raw`$E_{\mathrm{cell}}=E_{\mathrm{cell}}^\circ-\frac{RT}{nF}\ln Q$`),
   rule(C, "conductiv|conductance", "conductiv|conductance", "Molar conductivity", String.raw`$\Lambda_m=\frac{\kappa}{c}$`),
+  rule(C, "galvanic|electrochemical|cell potential|electrode", "cathode|anode|electrode potential", "Cell potential", String.raw`$E_{\mathrm{cell}}=E_{\mathrm{cathode}}-E_{\mathrm{anode}}$`),
+  rule(C, "nernst|gibbs|galvanic|cell potential", "gibbs|free energy|maximum work", "Cell potential and Gibbs energy", String.raw`$\Delta_r G=-nFE_{\mathrm{cell}},\quad\Delta_r G^\circ=-nFE_{\mathrm{cell}}^\circ$`),
+  rule(C, "nernst|equilibrium|cell potential", "electrochemical equilibrium|cell.*equilibrium|equilibrium.*cell|nernst", "Cell potential and equilibrium", String.raw`$\ln K=\frac{nFE_{\mathrm{cell}}^\circ}{RT}$`),
+  rule(C, "conduct|resistiv", "resistance|resistivity|conductance", "Conductance and cell constant", String.raw`$G=\frac{1}{R},\quad\kappa=\frac{l}{RA}=G\frac{l}{A}$`),
+  rule(C, "kohlrausch|conduct", "kohlrausch|independent migration", "Kohlrausch's law", String.raw`$\Lambda_m^\circ=\nu_+\lambda_+^\circ+\nu_-\lambda_-^\circ$`),
+  rule(C, "dissociation|weak electrolyte|conduct", "degree of dissociation|weak electrolyte", "Degree of dissociation from conductivity", String.raw`$\alpha=\frac{\Lambda_m}{\Lambda_m^\circ}$`),
+  rule(C, "electrolys|faraday", "faraday|charge.*deposit|mass.*deposit", "Faraday's law of electrolysis", String.raw`$Q=It,\quad m=\frac{MIt}{zF}$`),
   rule(C, "first order|integrated rate", "first order", "First-order reaction", String.raw`$\ln\frac{[A]_0}{[A]_t}=kt,\quad t_{1/2}=\frac{\ln2}{k}$`),
   rule(C, "arrhenius|temperature.*rate", "arrhenius", "Arrhenius equation", String.raw`$k=Ae^{-E_a/(RT)}$`),
   rule(C, "magnetic|transition", "magnetic moment|unpaired electrons", "Spin-only magnetic moment", String.raw`$\mu=\sqrt{n(n+2)}\,\mu_B$`),
@@ -81,6 +88,11 @@ export const SOURCE_FORMULA_RULES: readonly Rule[] = [
 const normal = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 export function formulaIdentity(line: string): string {
   return splitMath(line).filter(part => part.type !== "text").map(part => part.value.replace(/\s+/g, "")).join(" ");
+}
+
+export function matchingSourceRules(title: string, subject: string, excerpts: string[]): Rule[] {
+  const titleText = normal(title), evidence = normal(excerpts.join("\n"));
+  return SOURCE_FORMULA_RULES.filter(entry => entry.subjects.split(" ").includes(subject.toLowerCase().trim()) && new RegExp(entry.topic).test(titleText) && new RegExp(entry.cue).test(evidence));
 }
 
 /** Append only valid, source-attested relations; existing strings are retained. */

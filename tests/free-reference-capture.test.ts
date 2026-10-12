@@ -48,7 +48,7 @@ describe("Saving original book pictures without paid AI", () => {
     expect(fixture.upsert).toHaveBeenCalledTimes(2);
   });
   it("reuses an existing checkpoint without replacing saved pictures", async () => {
-    const saved = encodeReferenceVisuals("Approved source text", [], { chapter: "Current Electricity", visuals_checked: true });
+    const saved = encodeReferenceVisuals("Approved source text", [], { chapter: "Current Electricity", visuals_checked: true, index_version: 2 });
     fixture.saved = { text: "[SOURCE_OCR_PAGE]\n" + saved };
     expect(await saveCapturedReferencePage({ data: { ...source, text: "new text" } })).toBe(saved);
     expect(fixture.upload).not.toHaveBeenCalled(); expect(fixture.paidReader).not.toHaveBeenCalled();

@@ -9,7 +9,7 @@ export type ReferenceVisual = {
   match_text?: string;
 };
 const START = "[REFERENCE_VISUALS_V1]", END = "[/REFERENCE_VISUALS_V1]";
-export type ReferenceContext = { chapter: string; visuals_checked?: boolean; reader?: "local"; capture_saved?: boolean; needs_review?: boolean };
+export type ReferenceContext = { chapter: string; visuals_checked?: boolean; reader?: "local"; capture_saved?: boolean; needs_review?: boolean; index_version?: number; match_text?: string };
 export function encodeReferenceVisuals(text: string, visuals: ReferenceVisual[], context?: ReferenceContext): string {
   return text + "\n\n" + START + JSON.stringify(visuals) + END + (context ? "\n[REFERENCE_CONTEXT_V1]" + JSON.stringify(context) + "[/REFERENCE_CONTEXT_V1]" : "");
 }
@@ -18,7 +18,7 @@ export function splitReferenceContent(content: string): { text: string; visuals:
   let context: ReferenceContext | undefined;
   const text = content.replace(/\[REFERENCE_CONTEXT_V1\]([\s\S]*?)\[\/REFERENCE_CONTEXT_V1\]/g, (_, json) => {
     try { const value = JSON.parse(json); if (typeof value.chapter === "string") context = {
-      chapter: value.chapter.slice(0, 200), ...(value.visuals_checked === true ? { visuals_checked: true } : {}),
+      chapter: value.chapter.slice(0, 200), ...(value.index_version === 2 ? { index_version: 2 } : {}), ...(typeof value.match_text === "string" ? { match_text: value.match_text.slice(0,20000) } : {}), ...(value.visuals_checked === true ? { visuals_checked: true } : {}),
       ...(value.reader === "local" ? { reader: "local" as const, capture_saved: value.capture_saved === true, needs_review: value.needs_review === true } : {}),
     }; } catch { /* Ignore invalid indexing metadata. */ }
     return "";

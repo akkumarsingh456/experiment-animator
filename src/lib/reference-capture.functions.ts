@@ -24,7 +24,7 @@ export const saveCapturedReferencePage = createServerFn({ method: "POST" })
       fileName = book.file_name;
       const { data: saved, error: savedError } = await supabaseAdmin.from("ncert_pages").select("text").eq("book_id", data.book_id).eq("page_number", data.page).maybeSingle();
       if (savedError) throw new Error(savedError.message);
-      if (saved?.text.startsWith("[SOURCE_OCR_PAGE]\n") && splitReferenceContent(saved.text).context?.visuals_checked) return saved.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "");
+      if (saved?.text.startsWith("[SOURCE_OCR_PAGE]\n") && splitReferenceContent(saved.text).context?.index_version === 2) return saved.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "");
     }
     const subject = combinedReferenceSubject({ file_name: fileName });
     if (!subject || !sourcePath) throw new Error("Free book pictures are available for your uploaded Med Easy PDFs.");
@@ -47,7 +47,7 @@ export const saveCapturedReferencePage = createServerFn({ method: "POST" })
       aspect: data.aspect, crop: { x: 0, y: 0, width: 1, height: 1 }, capture: "page", match_text: index.matchText,
     }] : [];
     // Index text stays in picture metadata, never in the lesson's note paragraphs.
-    const content = encodeReferenceVisuals("", visuals, { chapter: index.chapter, visuals_checked: true, reader: "local", capture_saved: true, needs_review: index.needsReview });
+    const content = encodeReferenceVisuals("", visuals, { chapter: index.chapter, visuals_checked: true, reader: "local", capture_saved: true, needs_review: index.needsReview, index_version: 2, match_text: index.matchText });
     if (data.book_id) {
       const { error: chunkError } = await supabaseAdmin.from("ncert_chunks").upsert({ book_id: data.book_id, chunk_index: data.page - 1, content }, { onConflict: "book_id,chunk_index" });
       if (chunkError) throw new Error(chunkError.message);

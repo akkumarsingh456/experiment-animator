@@ -19,7 +19,7 @@ import { mapOutsideMath, splitMath } from "@/lib/latex-notation";
 import { DIAGRAM_HEADING, aiNoteDiagrams, buildLocalDiagram } from "@/lib/note-diagram";
 import { PW_EXTRACTION_RULES, normalizeNoteLine } from "@/lib/pwNotesNormalizer";
 import { referenceBooksPrompt } from "@/lib/reference-books";
-import { sourceFormulaLines } from "@/lib/source-formula-supplements";
+import { sourceFormulaBlocks } from "@/lib/source-derivations";
 
 
 export type NoteSectionKind = "text" | "bullets" | "formula" | "terms" | "tip" | "diagram";
@@ -652,10 +652,10 @@ export async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: s
   const supplemented = slides.map(slide => {
     if (!["content", "chapter"].includes(slide.kind || "content")) return slide;
     const existing = (slide.sections || []).filter(section => section.kind !== "diagram").flatMap(section => section.lines);
-    const additions = sourceFormulaLines(slide.title, opts.subject, [
+    const additions = sourceFormulaBlocks(slide.title, opts.subject, [
       slide.grounding || "", slide.chapter_text || "", ...(slide.bullets || []), ...(slide.notes || []), ...existing,
       formulaReferenceContextForTopic(opts.refContext, slide.title),
-    ], existing.filter(line => /^\*\*(?:formula|equation|relation):/i.test(line)));
+    ], existing);
     if (!additions.length) return slide;
     const first = slide.sections?.[0] || { heading: NOTE_HEADING, kind: "bullets" as const, lines: [] };
     return { ...slide, sections: [{ ...first, lines: [...first.lines, ...additions] }, ...(slide.sections?.slice(1) || [])] };

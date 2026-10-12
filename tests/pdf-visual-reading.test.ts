@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 const fixture = vi.hoisted(()=>({ render:vi.fn(()=>({promise:Promise.resolve()})) }));
-vi.mock("pdfjs-dist",()=>({GlobalWorkerOptions:{},getDocument:()=>({promise:Promise.resolve({numPages:1,getPage:async()=>({getTextContent:async()=>({items:[{str:"Readable text covering more than one hundred characters must not cause the original reaction schemes, diagrams, labelled anatomy or graphs on this page to be skipped."}]}),getViewport:()=>({width:1000,height:1400}),render:fixture.render})})})}));
+vi.mock("pdfjs-dist",()=>({GlobalWorkerOptions:{},getDocument:()=>({destroy:async()=>{},promise:Promise.resolve({numPages:1,getPage:async()=>({getTextContent:async()=>({items:[{str:"Readable text covering more than one hundred characters must not cause the original reaction schemes, diagrams, labelled anatomy or graphs on this page to be skipped."}]}),getViewport:()=>({width:1000,height:1400}),render:fixture.render})})})}));
 vi.mock("pdfjs-dist/build/pdf.worker.min.mjs?url",()=>({default:"/mock-worker.js"}));
 import { extractPdfText } from "@/lib/pdf-extract";
 describe("Med Easy whole-page screenshot inspection",()=>{

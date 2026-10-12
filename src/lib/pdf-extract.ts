@@ -1,3 +1,5 @@
+import { parseBookContents, canonicalBookChapter, chapterReadingOrder, contentsHeadingMatches } from "@/lib/book-chapter-priority";
+import { indexLocalBookPage } from "@/lib/local-book-index";
 // Client-side PDF text extraction using pdfjs-dist.
 // pdfjs is imported dynamically so SSR (which lacks DOMMatrix) doesn't crash.
 
@@ -27,14 +29,70 @@ async function loadPdfjs() {
 export async function extractPdfText(
   file: File | Blob,
   onProgress?: (page: number, total: number) => void,
-  options?: { recognizePage: (image: string, page: number, aspect: number, nativeText?: string) => Promise<string>; savedPages?: Map<number, string>; savePage?: (text: string, page: number) => Promise<void>; inspectEveryPage?: boolean },
+  options?: { recognizePage: (image: string, page: number, aspect: number, nativeText?: string) => Promise<string>; savedPages?: Map<number, string>; savePage?: (text: string, page: number) => Promise<void>; inspectEveryPage?: boolean; priorityChapter?: { subject: string; chapter: string }; recognizeIndex?: (image: string, nativeText: string, page: number) => Promise<string>; beforePage?: (page: number, previousPage: number) => void; cancelled?: () => boolean },
 ): Promise<ExtractedPdf> {
   const pdfjs = await loadPdfjs();
   const buffer = await file.arrayBuffer();
-  const doc = await pdfjs.getDocument({ data: buffer }).promise;
+  const loadingTask = pdfjs.getDocument({ data: buffer });
+  const doc = await loadingTask.promise;
   const pages: { page: number; text: string }[] = [];
 
-  for (let i = 1; i <= doc.numPages; i++) {
+  try {
+  let order = Array.from({length: doc.numPages}, (_,i)=>i+1);
+  const indexText = new Map<number, string>();
+  async function inspectIndex(number: number) {
+    if (options?.cancelled?.()) throw new Error("Reference-book reading paused. Completed pages are saved.");
+    if (indexText.has(number)) return indexText.get(number)!;
+    const page = await doc.getPage(number);
+    const content = await page.getTextContent();
+    const native = content.items.map(it => "str" in it ? it.str + (it.hasEOL ? "\n" : " ") : "").join("");
+    const natural = page.getViewport({scale:1});
+    const viewport = page.getViewport({scale:2400/natural.width});
+    const canvas = document.createElement("canvas"); canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+    try {
+      await page.render({canvas,viewport}).promise;
+      const text = await options!.recognizeIndex!(canvas.toDataURL("image/jpeg",.9),native,number);
+      indexText.set(number,text); return text;
+    } finally {canvas.width=canvas.height=0;}
+  }
+  if (options?.priorityChapter && options.recognizeIndex) {
+    const {subject,chapter} = options.priorityChapter;
+    const wanted = canonicalBookChapter(subject,chapter);
+    // TOC page numbers belong to the printed book. Verify a chapter header in
+    // the actual PDF before using any offset; never assign a guessed chapter.
+    const ranges: ReturnType<typeof parseBookContents> = [];
+    let lastContents = 0;
+    for (let page=2;page<=Math.min(10,doc.numPages);page++) {
+      onProgress?.(page,doc.numPages);
+      const text = await inspectIndex(page);
+      const found = parseBookContents(subject,text);
+      if (found.length >= 2) {ranges.push(...found);lastContents=page;}
+      else if (lastContents && page>lastContents+1) break;
+    }
+    const target = ranges.find(range=>canonicalBookChapter(subject,range.chapter)===wanted);
+    const first = [...ranges].sort((a,b)=>a.start-b.start)[0];
+    if(target && first) {
+      let offset: number | undefined;
+      for(let page=lastContents+1;page<=Math.min(doc.numPages,lastContents+12);page++) {
+        const heading=await inspectIndex(page);
+        const anchor=ranges.filter(range=>range.start<=first.start+12).find(range=>contentsHeadingMatches(subject,heading,range.chapter));
+        if(anchor) {offset=page-anchor.start;break;}
+      }
+      if(offset!==undefined) {
+        const expected=target.start+offset;
+        for(let page=Math.max(1,expected-3);page<=Math.min(doc.numPages,expected+4);page++) {
+          if(contentsHeadingMatches(subject, await inspectIndex(page), target.chapter)) {
+            order=chapterReadingOrder(doc.numPages,page,page+target.end-target.start); break;
+          }
+        }
+      }
+    }
+  }
+  let previousPage=0;
+  for (const i of order) {
+    if (options?.cancelled?.()) throw new Error("Reference-book reading paused. Completed pages are saved.");
+    options?.beforePage?.(i,previousPage); previousPage=i;
+
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
     const nativeText = content.items.map((it) => "str" in it ? it.str + (it.hasEOL ? "\n" : " ") : "").join("");
@@ -48,12 +106,12 @@ export async function extractPdfText(
       if (saved !== undefined) text = saved;
       else {
         const natural = page.getViewport({ scale: 1 });
-        const viewport = page.getViewport({ scale: Math.min(2, 1800 / natural.width) });
+        const viewport = page.getViewport({ scale: 1800 / natural.width });
         const canvas = document.createElement("canvas");
         canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
         try {
           await page.render({ canvas, viewport }).promise;
-          text = await options.recognizePage(canvas.toDataURL("image/jpeg", .9), i, canvas.width / canvas.height, nativeText);
+          text = await options.recognizePage(canvas.toDataURL("image/jpeg", .9), i, canvas.width / canvas.height, indexText.get(i) || nativeText);
         } finally { canvas.width = canvas.height = 0; }
       }
     } else if (options?.savePage) await options.savePage(text, i);
@@ -61,11 +119,14 @@ export async function extractPdfText(
     onProgress?.(i, doc.numPages);
   }
 
+  pages.sort((a,b)=>a.page-b.page);
+  const numPages = doc.numPages;
   return {
-    numPages: doc.numPages,
+    numPages,
     pages,
     fullText: pages.map((p) => p.text).join("\n\n"),
   };
+  } finally { await loadingTask.destroy(); }
 }
 
 export function chunkText(text: string, size = 1200, overlap = 150): string[] {

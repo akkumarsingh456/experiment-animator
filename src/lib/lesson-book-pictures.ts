@@ -11,8 +11,24 @@ export function mergeLessonBookPictures(slides: Slide[], pictures: Array<{ title
   return slides.map((slide, index) => {
     const match = pictures[index];
     if (!match || match.title !== slide.title || slide.kind === 'break' || slide.kind === 'mcq') return slide;
-    const known = new Set((slide.sections || []).flatMap(section => section.lines).filter(line => /^\*\*(?:formula|equation|relation):/i.test(line)).map(formulaIdentity));
-    const add = (match.formula_lines || []).filter(line => { const identity = formulaIdentity(line); if (!identity || known.has(identity)) return false; known.add(identity); return true; });
+    const existing = (slide.sections || []).flatMap(section => section.lines);
+    const knownLines = new Set(existing.map(line => line.trim()));
+    const knownFormulas = new Set(existing.filter(line => /^\*\*(?:formula|equation|relation):/i.test(line)).map(formulaIdentity));
+    const knownHeads = new Set(existing.filter(line => /^\*\*derivation of/i.test(line)).map(line => line.replace(/:\*\*.*$/, "").toLowerCase()));
+    const add: string[] = [];
+    let skipSteps = false;
+    for (const line of match.formula_lines || []) {
+      if (/^\*\*derivation of/i.test(line)) {
+        const head = line.replace(/:\*\*.*$/, "").toLowerCase();
+        skipSteps = knownHeads.has(head);
+        if (!skipSteps) { knownHeads.add(head); add.push(line); }
+      } else if (/^\*\*derivation step/i.test(line)) {
+        if (!skipSteps) add.push(line);
+      } else if (/^\*\*(?:formula|equation|relation):/i.test(line)) {
+        const identity = formulaIdentity(line);
+        if (identity && !knownFormulas.has(identity)) { knownFormulas.add(identity); add.push(line); }
+      } else if (line.trim() && !knownLines.has(line.trim())) { knownLines.add(line.trim()); add.push(line); }
+    }
     if (!add.length) return { ...slide, reference_visuals: match.visuals };
     const first = slide.sections?.[0] || { heading: 'Teacher Notes', kind: 'bullets' as const, lines: [] };
     return { ...slide, reference_visuals: match.visuals, sections: [{ ...first, lines: [...first.lines, ...add] }, ...(slide.sections?.slice(1) || [])] };
