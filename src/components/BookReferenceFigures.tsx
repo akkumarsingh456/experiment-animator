@@ -28,7 +28,7 @@ export function BookReferenceFigures({ figures, compact = false, presentation = 
     {available.slice(0, compact || presentation ? 1 : available.length).map((figure, index) => {
       const Icon = figure.kind === "reaction" ? FlaskConical : /physics/i.test(subject || "") ? Zap : Atom;
       return <figure className="book-reference-figure" key={`${figure.storage_path}:${index}`}>
-        <figcaption><Icon size={20} aria-hidden="true" /><strong>{figure.title}</strong><span>{figure.kind === "reaction" ? "Reaction scheme" : figure.kind === "structure" ? "Molecular structure" : "Labelled diagram"}</span></figcaption>
+        <figcaption><Icon size={20} aria-hidden="true" /><strong>{figure.title}</strong><span>{figure.capture === "page" ? "Original book page" : figure.kind === "reaction" ? "Reaction scheme" : figure.kind === "structure" ? "Molecular structure" : "Labelled diagram"}</span></figcaption>
         <SourceCrop figure={figure} presentation={presentation} compact={compact} />
         <p>{figure.description}</p>
         <small><BookOpen size={13} aria-hidden="true" />{figure.book || "Uploaded book"} · {figure.chapter ? `${figure.chapter} · ` : ""}PDF page {figure.page}</small>

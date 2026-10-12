@@ -4,9 +4,12 @@ export type ReferenceVisual = {
   description: string; page: number; book?: string; book_id?: string; chapter?: string;
   storage_path: string; url?: string; aspect: number;
   crop: { x: number; y: number; width: number; height: number };
+  /** Local OCR supports matching only; never show it as replacement note text. */
+  capture?: "page";
+  match_text?: string;
 };
 const START = "[REFERENCE_VISUALS_V1]", END = "[/REFERENCE_VISUALS_V1]";
-export type ReferenceContext = { chapter: string; visuals_checked?: boolean };
+export type ReferenceContext = { chapter: string; visuals_checked?: boolean; reader?: "local"; capture_saved?: boolean; needs_review?: boolean };
 export function encodeReferenceVisuals(text: string, visuals: ReferenceVisual[], context?: ReferenceContext): string {
   return text + "\n\n" + START + JSON.stringify(visuals) + END + (context ? "\n[REFERENCE_CONTEXT_V1]" + JSON.stringify(context) + "[/REFERENCE_CONTEXT_V1]" : "");
 }
@@ -14,7 +17,10 @@ export function splitReferenceContent(content: string): { text: string; visuals:
   const visuals: ReferenceVisual[] = [];
   let context: ReferenceContext | undefined;
   const text = content.replace(/\[REFERENCE_CONTEXT_V1\]([\s\S]*?)\[\/REFERENCE_CONTEXT_V1\]/g, (_, json) => {
-    try { const value = JSON.parse(json); if (typeof value.chapter === "string") context = { chapter: value.chapter.slice(0, 200), ...(value.visuals_checked === true ? { visuals_checked: true } : {}) }; } catch { /* Ignore invalid indexing metadata. */ }
+    try { const value = JSON.parse(json); if (typeof value.chapter === "string") context = {
+      chapter: value.chapter.slice(0, 200), ...(value.visuals_checked === true ? { visuals_checked: true } : {}),
+      ...(value.reader === "local" ? { reader: "local" as const, capture_saved: value.capture_saved === true, needs_review: value.needs_review === true } : {}),
+    }; } catch { /* Ignore invalid indexing metadata. */ }
     return "";
   }).replace(/\[REFERENCE_VISUALS_V1\]([\s\S]*?)\[\/REFERENCE_VISUALS_V1\]/g, (_, json) => {
     try { for (const item of JSON.parse(json)) {

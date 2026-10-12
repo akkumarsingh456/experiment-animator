@@ -9,7 +9,7 @@ describe("Med Easy whole-page screenshot inspection",()=>{
     const recognize=vi.fn(async()=>"Source text with saved diagram metadata.");
     const file={arrayBuffer:async()=>new ArrayBuffer(1)} as Blob;
     const result=await extractPdfText(file,undefined,{recognizePage:recognize,inspectEveryPage:true});
-    expect(recognize).toHaveBeenCalledWith("data:image/jpeg;base64,fixture",1,1000/1400);
+    expect(recognize).toHaveBeenCalledWith("data:image/jpeg;base64,fixture",1,1000/1400,expect.stringContaining("Readable text"));
     expect(result.pages[0].text).toBe("Source text with saved diagram metadata.");
     recognize.mockClear();
     await extractPdfText(file,undefined,{recognizePage:recognize,inspectEveryPage:true,savedPages:new Map([[1,"Saved completed page"]])});

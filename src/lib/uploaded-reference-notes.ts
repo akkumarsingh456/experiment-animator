@@ -49,12 +49,12 @@ export async function appendUploadedReferenceNotes(result: GenerationResult, db:
   for (const { visuals } of rows) for (const visual of visuals) {
     if (!visual.chapter?.trim() || !chapterFits(visual.chapter)) continue;
     const scores = result.slides.map((slide, index) => {
-      const direct = topicScore(slide.title, `${visual.title} ${visual.description}`);
+      const direct = topicScore(slide.title, visual.capture === "page" ? visual.match_text || "" : `${visual.title} ${visual.description}`);
       // Generic slide headings still contain specific topic evidence in their
       // approved notes. Match the picture's subject, never chapter keywords alone.
       const pictureTopic = visual.title.replace(/\b(?:reaction|reactions|map|pathways|diagram|structure|properties|chemical|preparation|comparison)\b/gi, " ");
       const evidence = [...(slide.key_terms || []), ...(slide.notes || []), ...(slide.bullets || []), ...(slide.sections || []).filter(section => !section.heading.startsWith("Reference notes")).flatMap(section => section.lines)].join(" ");
-      const bodyScore = topicTerms(pictureTopic).length ? topicScore(pictureTopic, evidence) : 0;
+      const bodyScore = visual.capture !== "page" && topicTerms(pictureTopic).length ? topicScore(pictureTopic, evidence) : 0;
       return { index, score: direct * 10 + bodyScore };
     })
       .filter(item => !["break", "mcq"].includes(result.slides[item.index].kind || ""));

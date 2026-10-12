@@ -27,7 +27,7 @@ async function loadPdfjs() {
 export async function extractPdfText(
   file: File | Blob,
   onProgress?: (page: number, total: number) => void,
-  options?: { recognizePage: (image: string, page: number, aspect: number) => Promise<string>; savedPages?: Map<number, string>; savePage?: (text: string, page: number) => Promise<void>; inspectEveryPage?: boolean },
+  options?: { recognizePage: (image: string, page: number, aspect: number, nativeText?: string) => Promise<string>; savedPages?: Map<number, string>; savePage?: (text: string, page: number) => Promise<void>; inspectEveryPage?: boolean },
 ): Promise<ExtractedPdf> {
   const pdfjs = await loadPdfjs();
   const buffer = await file.arrayBuffer();
@@ -37,9 +37,8 @@ export async function extractPdfText(
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
-    let text = content.items
-      .map((it) => ("str" in it ? it.str : ""))
-      .join(" ")
+    const nativeText = content.items.map((it) => "str" in it ? it.str + (it.hasEOL ? "\n" : " ") : "").join("");
+    let text = nativeText
       .replace(/\s+/g, " ")
       .trim();
     // Med Easy diagrams must be inspected even when a page has a usable text
@@ -54,7 +53,7 @@ export async function extractPdfText(
         canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
         try {
           await page.render({ canvas, viewport }).promise;
-          text = await options.recognizePage(canvas.toDataURL("image/jpeg", .9), i, canvas.width / canvas.height);
+          text = await options.recognizePage(canvas.toDataURL("image/jpeg", .9), i, canvas.width / canvas.height, nativeText);
         } finally { canvas.width = canvas.height = 0; }
       }
     } else if (options?.savePage) await options.savePage(text, i);

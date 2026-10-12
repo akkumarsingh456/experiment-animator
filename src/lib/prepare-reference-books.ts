@@ -2,10 +2,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { combinedReferenceMatches } from "@/lib/reference-books";
 import { extractPdfText } from "@/lib/pdf-extract";
 import { signDownload, classifyMedEasyLibrary } from "@/lib/ingest.functions";
-import { readScannedPage, finishReferenceReading, saveExtractedReferencePage } from "@/lib/reference-ocr.functions";
+import { finishReferenceReading, saveExtractedReferencePage } from "@/lib/reference-ocr.functions";
+import { saveCapturedReferencePage } from "@/lib/reference-capture.functions";
+import { createLocalBookReader } from "@/lib/local-book-reader";
 import { splitReferenceContent } from "@/lib/reference-visuals";
 import { retryBookRead } from "@/lib/book-read-recovery";
-export type ReferenceReadSummary = { book: string; pages: number; figures: number; chapters: number };
+export type ReferenceReadSummary = { book: string; pages: number; figures: number; chapters: number; unmatchedPages?: number };
 
 /** Read the existing uploaded scans once, checkpointing each page for resumption. */
 export async function prepareScannedReferenceBooks(klass: string, subject: string, progress: (message: string) => void, cancelled: () => boolean = () => false, onPicturesSaved?: () => Promise<void>) {
@@ -20,7 +22,8 @@ export async function prepareScannedReferenceBooks(klass: string, subject: strin
     const name = book.file_name.trim().toLowerCase();
     if (!unique.has(name) || (unique.get(name)!.num_chunks || 0) < (book.num_chunks || 0)) unique.set(name, book);
   }
-  for (const book of unique.values()) {
+  const reader = createLocalBookReader(progress);
+  try { for (const book of unique.values()) {
     if (cancelled()) return summaries;
     progress(`Reading scanned reference notes: ${book.file_name}`);
     const { data: saved, error: savedError } = await supabase.from("ncert_pages").select("page_number,text").eq("book_id", book.id).order("page_number").limit(1000);
@@ -28,7 +31,7 @@ export async function prepareScannedReferenceBooks(klass: string, subject: strin
     const savedPages = new Map((saved || []).filter(page => page.text.startsWith("[SOURCE_OCR_PAGE]\n") && splitReferenceContent(page.text).context?.visuals_checked === true).map(page => [page.page_number, page.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "")]));
     if (savedPages.size === book.num_pages && (book.num_chunks || 0) === book.num_pages) {
       const pages = [...savedPages.values()].map(splitReferenceContent);
-      summaries.push({ book: book.file_name, pages: savedPages.size, figures: pages.reduce((sum,page) => sum + page.visuals.length, 0), chapters: new Set(pages.map(page => page.context?.chapter).filter(Boolean)).size });
+      summaries.push({ book: book.file_name, pages: savedPages.size, figures: pages.reduce((sum,page) => sum + page.visuals.length, 0), chapters: new Set(pages.map(page => page.context?.chapter).filter(Boolean)).size, unmatchedPages: pages.filter(page => page.context?.needs_review).length });
       continue;
     }
     const file = await retryBookRead(async () => {
@@ -39,7 +42,7 @@ export async function prepareScannedReferenceBooks(klass: string, subject: strin
     }, { stopped: cancelled, progress, label: `Opening ${book.file_name}` });
     let chapterHint = "";
     const extracted = await extractPdfText(file, (page, total) => {
-      chapterHint = splitReferenceContent(savedPages.get(page) || "").context?.chapter || chapterHint;
+      if (savedPages.has(page)) chapterHint = splitReferenceContent(savedPages.get(page) || "").context?.chapter || "";
       progress(`Reading ${book.file_name} · page ${page} of ${total}`);
     }, {
       inspectEveryPage: true,
@@ -48,12 +51,15 @@ export async function prepareScannedReferenceBooks(klass: string, subject: strin
         if (cancelled()) throw new Error("Reference-book reading paused. Completed pages are saved.");
         if (!savedPages.has(page)) await saveExtractedReferencePage({ data: { book_id: book.id, page, text } });
       },
-      recognizePage: async (image, page, aspect) => {
+      recognizePage: async (image, page, aspect, nativeText) => {
         if (cancelled()) throw new Error("Reference-book reading paused. Completed pages are saved.");
-        const content = await retryBookRead(() => readScannedPage({ data: { image, page, aspect, book_id: book.id, chapter_hint: chapterHint } }), { stopped: cancelled, progress, label: `${book.file_name} · page ${page}` });
+        let text = "";
+        try { text = await reader.recognize(image, nativeText); }
+        catch { progress(`Saving ${book.file_name} · page ${page}; chapter matching needs review.`); }
+        const content = await retryBookRead(() => saveCapturedReferencePage({ data: { image, text, page, aspect, book_id: book.id, chapter_hint: chapterHint } }), { stopped: cancelled, progress, label: `${book.file_name} · page ${page}` });
         savedPages.set(page, content);
         const captured = splitReferenceContent(content);
-        chapterHint = captured.context?.chapter || chapterHint;
+        chapterHint = captured.context?.chapter || "";
         // The server has saved the original page and crop coordinates already.
         // Attach useful images immediately, without waiting for the whole book.
         if (captured.visuals.length && !cancelled()) await onPicturesSaved?.();
@@ -62,7 +68,7 @@ export async function prepareScannedReferenceBooks(klass: string, subject: strin
     });
     const completed = await retryBookRead(() => finishReferenceReading({ data: { book_id: book.id, num_pages: extracted.numPages } }), { stopped: cancelled, progress, label: `Saving ${book.file_name}` });
     summaries.push({ book: book.file_name, ...completed });
-    progress(`${book.file_name}: ${completed.pages} pages inspected, ${completed.figures} book screenshots saved across ${completed.chapters} chapters.`);
-  }
+    progress(`${book.file_name}: ${completed.pages} pages saved without AI credits, ${completed.figures} indexed screenshots across ${completed.chapters} chapters.${completed.unmatchedPages ? ` ${completed.unmatchedPages} pages need chapter review.` : ""}`);
+  } } finally { await reader.close(); }
   return summaries;
 }

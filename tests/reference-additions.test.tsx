@@ -23,6 +23,20 @@ function lesson(title: string) {
 }
 
 describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
+  it("matches a free full-page capture by OCR index without displaying or appending OCR paragraphs", async () => {
+    const original = lesson("Nucleophilic substitution");
+    const page = { ...figure, title: "Haloalkanes and Haloarenes — original book page", description: "Original Med Easy page.", capture: "page" as const,
+      match_text: "Nucleophilic substitution. PRIVATE_OCR_INDEX_ONLY. Original reaction conditions.", crop: { x: 0, y: 0, width: 1, height: 1 } };
+    const db = mockDb([book("med", "Chemistry")], { med: [encodeReferenceVisuals("", [page], { chapter: page.chapter!, reader: "local", capture_saved: true, visuals_checked: true })] });
+    const result = await appendUploadedReferenceNotes(original, db, "12", "Chemistry", "Haloalkanes and Haloarenes");
+    expect(result.slides[0].reference_visuals).toHaveLength(1);
+    expect(result.slides[0].sections).toBe(original.slides[0].sections);
+    const html = renderToStaticMarkup(<BookReferenceFigures figures={result.slides[0].reference_visuals} />);
+    expect(html).toContain("Original book page");
+    expect(html).not.toContain("PRIVATE_OCR_INDEX_ONLY");
+    const unrelated = await appendUploadedReferenceNotes(lesson("Elimination reactions"), db, "12", "Chemistry", "Haloalkanes and Haloarenes");
+    expect(unrelated.slides[0].reference_visuals || []).toEqual([]);
+  });
   it("does not confuse s-block and p-block chapters even when topic words overlap", async () => {
     const original = lesson("Chemical Properties");
     original.slides[0].notes = ["Chlorine reacts with metals."];

@@ -1,6 +1,8 @@
 import { encodeReferenceVisuals, splitReferenceContent } from "@/lib/reference-visuals";
 import { prepareScannedReferenceBooks, type ReferenceReadSummary } from "@/lib/prepare-reference-books";
 import { readScannedPage } from "@/lib/reference-ocr.functions";
+import { saveCapturedReferencePage } from "@/lib/reference-capture.functions";
+import { createLocalBookReader } from "@/lib/local-book-reader";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -44,7 +46,7 @@ import {
   insertChunks,
   classifyMedEasyLibrary,
 } from "@/lib/ingest.functions";
-import { medEasyLibraryMetadata } from "@/lib/reference-books";
+import { medEasyLibraryMetadata, combinedReferenceSubject } from "@/lib/reference-books";
 
 export const Route = createFileRoute("/upload")({
   head: () => ({
@@ -311,22 +313,33 @@ function UploadPage() {
       setStatusMsg(`Reading every page of ${f.name}…`);
       step({ name: "parse", label: "Parse PDF pages", status: "start" });
       let extracted;
+      const referenceSubject = combinedReferenceSubject({ file_name: f.name });
+      const localReader = referenceSubject ? createLocalBookReader(setStatusMsg) : null;
+      let referenceChapter = "";
       try {
         extracted = await extractPdfText(f, (p, total) =>
           setProgress((p / total) * 100),
-          { inspectEveryPage: /med\s*easy/i.test(f.name), recognizePage: (image, page, aspect) => readScannedPage({ data: { image, page, aspect, source_path: path, source_file_name: f.name } }) },
+          { inspectEveryPage: !!localReader, recognizePage: async (image, page, aspect, nativeText) => {
+            if (!localReader) return readScannedPage({ data: { image, page, aspect, source_path: path, source_file_name: f.name } });
+            let text = "";
+            try { text = await localReader.recognize(image, nativeText); }
+            catch { setStatusMsg(`Saving page ${page}; chapter matching needs review.`); }
+            const content = await saveCapturedReferencePage({ data: { image, text, page, aspect, source_path: path, source_file_name: f.name, chapter_hint: referenceChapter } });
+            referenceChapter = splitReferenceContent(content).context?.chapter || "";
+            return content;
+          } },
         );
       } catch (e) {
         step({ name: "parse", label: "Parse PDF pages", status: "error", msg: e instanceof Error ? e.message : "parse failed" });
         throw e;
-      }
-      if (!splitReferenceContent(extracted.fullText).text.trim()) throw new Error("No readable notes were found in this PDF. Please check the scanned pages.");
+      } finally { await localReader?.close(); }
+      if (!referenceSubject && !splitReferenceContent(extracted.fullText).text.trim()) throw new Error("No readable notes were found in this PDF. Please check the scanned pages.");
       step({ name: "parse", label: "Parse PDF pages", status: "ok", msg: `${extracted.numPages} pages` });
 
       setStage("chunking");
       setStatusMsg(`Chunking ${extracted.numPages} pages for AI memory…`);
       step({ name: "chunk", label: "Build memory chunks", status: "start" });
-      const chunks = extracted.pages.flatMap(page => {
+      const chunks = referenceSubject ? extracted.pages.map(page => page.text) : extracted.pages.flatMap(page => {
         const source = splitReferenceContent(page.text);
         return [...(source.text ? chunkText(source.text).map(text => encodeReferenceVisuals(text, [], source.context)) : []), ...(source.visuals.length ? [encodeReferenceVisuals("", source.visuals, source.context)] : [])];
       });
@@ -365,7 +378,7 @@ function UploadPage() {
       for (let i = 0; i < extracted.pages.length; i += PAGE_BATCH) {
         const slice = extracted.pages.slice(i, i + PAGE_BATCH).map((p) => ({
           page_number: p.page,
-          text: p.text,
+          text: referenceSubject ? "[SOURCE_OCR_PAGE]\n" + p.text : p.text,
         }));
         try {
           await insertPages({ data: { book_id: bookId, pages: slice } });

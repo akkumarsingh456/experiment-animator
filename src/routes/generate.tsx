@@ -287,7 +287,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         if (!run.stopped && bookCaptureRun.current === run) await refresh();
       });
       const matched = await refresh();
-      if (bookCaptureRun.current === run) setBookCaptureMessage(run.stopped ? "Capture paused. Completed pages are saved; resume to continue." : summaries.length ? (matched ? `${matched} original Med Easy pictures added to this chapter’s topics in both lesson views.` : "Books inspected. No verified picture matches this chapter’s current topics; unrelated pictures are excluded.") : "No matching uploaded Med Easy book was found for this subject.");
+      const reviewPages = summaries.reduce((total, book) => total + (book.unmatchedPages || 0), 0);
+      if (bookCaptureRun.current === run) setBookCaptureMessage(run.stopped ? "Capture paused. Completed pages are saved; resume to continue." : summaries.length ? (matched ? `${matched} original Med Easy pictures added to this chapter’s topics in both lesson views.` : "Pages saved. No confidently matched picture was found for the current chapter and topics.") + (reviewPages ? ` ${reviewPages} pages need chapter review.` : "") : "No matching uploaded Med Easy book was found for this subject.");
     } catch (error) {
       if (bookCaptureRun.current === run) setBookCaptureMessage(error instanceof Error ? error.message : "Book capture could not finish. Resume to try again.");
     } finally {
@@ -612,7 +613,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           {readyPdf && <a className="print:hidden inline-flex rounded-lg border px-4 py-2 mb-3 text-primary" href={readyPdf.url} download={readyPdf.filename}>Save PDF</a>}
           {captureEligible && <div className="print:hidden mb-4 rounded-lg border p-3" aria-live="polite">
             <p className="font-medium">Original Med Easy book pictures</p>
-            <p className="text-sm text-muted-foreground">{bookCaptureMessage || "Preparing chapter and topic captures..."}</p>
+            <p className="text-sm text-muted-foreground">Free book-picture capture · no AI credits required. {bookCaptureMessage || "Preparing chapter and topic captures..."}</p>
             <Button className="mt-2" size="sm" variant="outline" onClick={() => {
               if (bookCaptureBusy) { if (bookCaptureRun.current) bookCaptureRun.current.stopped = true; setBookCaptureMessage("Pausing after the current page is saved..."); }
               else void captureBookPictures();

@@ -79,8 +79,10 @@ export const finishReferenceReading = createServerFn({ method: "POST" })
     const figures = recovered.reduce((sum, page) => sum + page.visuals.length, 0);
     const chapters = new Set(recovered.map(page => page.context?.chapter).filter(Boolean)).size;
     const full = recovered.map(page => page.text).join("\n\n");
-    if (full.trim().length < data.num_pages * 100 && !figures) throw new Error("Not enough readable notes were recovered. The original PDF is retained for review.");
+    const localPages = recovered.filter(page => page.context?.reader === "local");
+    const capturedLocally = localPages.length > 0 && localPages.every(page => page.context?.capture_saved);
+    if (full.trim().length < data.num_pages * 100 && !figures && !capturedLocally) throw new Error("Not enough readable notes were recovered. The original PDF is retained for review.");
     const { error: updateError } = await supabaseAdmin.from("ncert_books").update({ full_text: full.slice(0, 1_000_000), num_chunks: pages.length, status: "ready" }).eq("id", data.book_id);
     if (updateError) throw new Error(updateError.message);
-    return { pages: pages.length, figures, chapters };
+    return { pages: pages.length, figures, chapters, unmatchedPages: recovered.filter(page => page.context?.needs_review).length };
   });
