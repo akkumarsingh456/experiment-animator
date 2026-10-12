@@ -162,3 +162,16 @@ describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
     expect(html).toContain("Reaction scheme");expect(html).toContain("PDF page 169");expect(html).toContain("Chemistry Med Easy");expect(html).toContain("book-figure-crop");expect(html).toContain("crossorigin=\"anonymous\"");
   });
 });
+
+ describe("picture matching within approved topic notes", () => {
+  it("places the chlorine map under its chemical properties topic without rewriting the notes", async () => {
+    const original = lesson("Chemical Properties");
+    original.slides[0].notes = ["Chlorine reacts with metals and non-metals under the specified conditions."];
+    const map = {...figure,title:"Chlorine reaction map",description:"Original chlorine branches, reagents and products.",chapter:"The p-Block Elements"};
+    const db = mockDb([book("med","Chemistry")],{med:[encodeReferenceVisuals("",[map],{chapter:"The p-Block Elements",visuals_checked:true})]});
+    const result = await appendUploadedReferenceNotes(original,db,"12","Chemistry","The p-Block Elements");
+    expect(result.slides[0].reference_visuals?.[0].title).toBe(map.title);
+    expect(result.slides[0].notes).toBe(original.slides[0].notes);
+    expect(result.slides[0].sections[0]).toBe(original.slides[0].sections[0]);
+  });
+ });

@@ -1,3 +1,6 @@
+import { prepareScannedReferenceBooks } from "@/lib/prepare-reference-books";
+import { loadLessonBookPictures } from "@/lib/lesson-book-pictures.functions";
+import { mergeLessonBookPictures } from "@/lib/lesson-book-pictures";
 import { BookReferenceFigures } from "@/components/BookReferenceFigures";
 import { BookMapSlide } from "@/components/BookMapSlide";
 import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
@@ -262,6 +265,46 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   };
   const withCoverSlide = (items: Slide[]) => [makeCoverSlide(), ...items.map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, result.source_books[0]?.subject || search.subject)).map(repairSourceMathSlide)];
   const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
+  const [bookCaptureBusy, setBookCaptureBusy] = useState(false);
+  const [bookCaptureMessage, setBookCaptureMessage] = useState("");
+  const bookCaptureRun = useRef<{ stopped: boolean } | null>(null);
+  const captureEligible = /^(11|12)$/.test(search.klass.replace(/[^0-9]/g, "")) && /^(physics|chemistry|biology|botany|zoology)$/i.test(search.subject);
+  async function captureBookPictures() {
+    if (!captureEligible || (bookCaptureRun.current && !bookCaptureRun.current.stopped)) return;
+    const run = { stopped: false }; bookCaptureRun.current = run;
+    setBookCaptureBusy(true);
+    let lastRefresh = 0;
+    let refreshing: Promise<void> | null = null;
+    const refresh = async () => {
+      const pictures = await loadLessonBookPictures({ data: { klass: search.klass, subject: search.subject, chapter: search.chapter || title, slides: withCoverSlide(result.slides).map(slide => ({ title: slide.title, kind: slide.kind, topic_text: [...slide.key_terms, ...slide.notes, ...slide.bullets, ...(slide.sections || []).flatMap(section => section.lines)].join(" ").slice(0, 30000) })) } });
+      if (bookCaptureRun.current === run) setSlides(current => mergeLessonBookPictures(current, pictures));
+      return pictures.reduce((count, picture) => count + picture.visuals.length, 0);
+    };
+    try {
+      const summaries = await prepareScannedReferenceBooks(search.klass, search.subject, message => {
+        if (run.stopped) return;
+        setBookCaptureMessage(message);
+        const page = Number(/page (\d+) of/.exec(message)?.[1] || 0);
+        if (page >= lastRefresh + 20 && !refreshing) {
+          lastRefresh = page;
+          refreshing = refresh().then(() => {}).catch(() => {}).finally(() => { refreshing = null; });
+        }
+      }, () => run.stopped);
+      if (refreshing) await refreshing;
+      const matched = await refresh();
+      if (bookCaptureRun.current === run) setBookCaptureMessage(run.stopped ? "Capture paused. Completed pages are saved; resume to continue." : summaries.length ? (matched ? `${matched} original Med Easy pictures added to this chapter’s topics in both lesson views.` : "Books inspected. No verified picture matches this chapter’s current topics; unrelated pictures are excluded.") : "No matching uploaded Med Easy book was found for this subject.");
+    } catch (error) {
+      if (bookCaptureRun.current === run) setBookCaptureMessage(error instanceof Error ? error.message : "Book capture could not finish. Resume to try again.");
+    } finally {
+      run.stopped = true;
+      if (bookCaptureRun.current === run) setBookCaptureBusy(false);
+    }
+  }
+  useEffect(() => {
+    // Start after the approved lesson is visible; reading never blocks its display.
+    const task = setTimeout(() => { void captureBookPictures(); }, 0);
+    return () => { clearTimeout(task); if (bookCaptureRun.current) bookCaptureRun.current.stopped = true; bookCaptureRun.current = null; };
+  }, [result]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
   const [presentationPage, setPresentationPage] = useState(0);
@@ -572,6 +615,14 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         <>
           {exportProgress && <p role="status" className="print:hidden mb-3">{exportProgress}</p>}
           {readyPdf && <a className="print:hidden inline-flex rounded-lg border px-4 py-2 mb-3 text-primary" href={readyPdf.url} download={readyPdf.filename}>Save PDF</a>}
+          {captureEligible && <div className="print:hidden mb-4 rounded-lg border p-3" aria-live="polite">
+            <p className="font-medium">Original Med Easy book pictures</p>
+            <p className="text-sm text-muted-foreground">{bookCaptureMessage || "Preparing chapter and topic captures..."}</p>
+            <Button className="mt-2" size="sm" variant="outline" onClick={() => {
+              if (bookCaptureBusy) { if (bookCaptureRun.current) bookCaptureRun.current.stopped = true; setBookCaptureMessage("Pausing after the current page is saved..."); }
+              else void captureBookPictures();
+            }}>{bookCaptureBusy ? "Pause capture" : "Read / resume book pictures"}</Button>
+          </div>}
           {/* Slides */}
           <section className="mb-10 print:m-0">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
