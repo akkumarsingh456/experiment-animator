@@ -220,8 +220,8 @@ export function GuidedNotesPresentation({
             onClick={onPdf}
             disabled={downloading}
             aria-busy={downloading}
-            aria-label={`Download ${mode} PDF`}
-            title={downloading ? "Preparing PDF..." : "Download PDF"}
+            aria-label="Download lesson notes PDF"
+            title={downloading ? "Preparing download..." : "Download lesson notes PDF"}
           >
             {downloading ? <span role="status">Preparing PDF...</span> : <Download size={18} />}
           </button>

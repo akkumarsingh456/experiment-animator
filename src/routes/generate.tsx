@@ -1,6 +1,6 @@
 import { prepareScannedReferenceBooks } from "@/lib/prepare-reference-books";
 import { loadLessonBookPictures } from "@/lib/lesson-book-pictures.functions";
-import { mergeLessonBookPictures, bookPicturesExportNotice } from "@/lib/lesson-book-pictures";
+import { mergeLessonBookPictures } from "@/lib/lesson-book-pictures";
 import { BookReferenceFigures } from "@/components/BookReferenceFigures";
 import { BookMapSlide } from "@/components/BookMapSlide";
 import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
@@ -561,8 +561,6 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     setExportProgress("Preparing PDF...");
     let exportCopy: HTMLElement | undefined;
     try {
-      const notice = bookPicturesExportNotice(captureEligible, slides.reduce((count, slide) => count + (slide.reference_visuals?.length || 0), 0));
-      if (notice) toast.info(notice);
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       if (!exportRef.current) throw new Error("The PDF pages are not ready.");
       exportCopy = exportRef.current.cloneNode(true) as HTMLElement;
@@ -594,8 +592,6 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     setExportMode(lessonView === "notes" ? "guided-slides" : "slides");
     let exportCopy: HTMLElement | undefined;
     try {
-      const notice = bookPicturesExportNotice(captureEligible, slides.reduce((count, slide) => count + (slide.reference_visuals?.length || 0), 0));
-      if (notice) toast.info(notice);
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       if (!exportRef.current) throw new Error("The slides are not ready.");
       exportCopy = exportRef.current.cloneNode(true) as HTMLElement;
@@ -619,7 +615,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         <Button variant={lessonView === "notes" ? "default" : "outline"} aria-pressed={lessonView === "notes"} onClick={() => setLessonView("notes")}>Guided Notes</Button>
         <Button variant={lessonView === "slides" ? "default" : "outline"} aria-pressed={lessonView === "slides"} onClick={() => setLessonView("slides")}>Generate PPT &amp; Notes</Button>
         <Button variant="outline" onClick={presentSelectedView}><Maximize2 className="h-4 w-4" />Present {lessonView === "notes" ? "guided notes" : "PPT slides"}</Button>
-        <Button variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("notes")}><Download className="h-4 w-4" />{exportMode === "notes" ? "Preparing notes…" : "Notes PDF"}</Button>
+        <Button variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("notes")}><Download className="h-4 w-4" />{exportMode === "notes" ? "Preparing notes…" : "Download notes PDF"}</Button>
         <Button variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("slides")}><Download className="h-4 w-4" />{exportMode === "slides" ? "Preparing slides…" : "PPT slides PDF"}</Button>
       </div>
       {/* Step 1 — Activity verification (skipped for language chapters) */}
@@ -646,14 +642,15 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
           {exportProgress && <p role="status" className="print:hidden mb-3">{exportProgress}</p>}
           {readyPdf && <a className="print:hidden inline-flex rounded-lg border px-4 py-2 mb-3 text-primary" href={readyPdf.url} download={readyPdf.filename}>Save PDF</a>}
           {readyPptx && <a className="print:hidden inline-flex rounded-lg border px-4 py-2 mb-3 text-primary" href={readyPptx.url} download={readyPptx.filename}>Save PPTX</a>}
-          {captureEligible && <div className="print:hidden mb-4 rounded-lg border p-3" aria-live="polite">
-            <p className="font-medium">Original Med Easy book pictures</p>
+          {captureEligible && <details className="print:hidden mb-4 rounded-lg border p-3">
+            <summary className="cursor-pointer font-medium">Med Easy book pictures · background reading</summary>
+            <p className="text-sm mt-2">Use Download notes PDF to save the current lesson. Book reading can continue separately.</p>
             <p className="text-sm text-muted-foreground">Free book-picture capture · no AI credits required. {bookCaptureMessage || "Preparing chapter and topic captures..."}</p>
             <Button className="mt-2" size="sm" variant="outline" onClick={() => {
               if (bookCaptureBusy) { if (bookCaptureRun.current) bookCaptureRun.current.stopped = true; setBookCaptureMessage("Pausing after the current page is saved..."); }
               else void captureBookPictures();
             }}>{bookCaptureBusy ? "Pause capture" : "Read / resume book pictures"}</Button>
-          </div>}
+          </details>}
           {/* Slides */}
           <section className="mb-10 print:m-0">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
@@ -662,6 +659,9 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 {lessonView === "slides" && <Button size="sm" variant={editing ? "default" : "outline"} onClick={() => { setLessonView("slides"); setEditing((v) => !v); }}>
                   <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
                 </Button>}
+                <Button size="sm" variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("notes")}>
+                  <Download className="h-4 w-4" />{exportMode === "notes" ? "Preparing notes…" : "Download notes PDF"}
+                </Button>
                 <Button size="sm" disabled={!!exportMode} onClick={downloadPPTX} title="PowerPoint with rendered equations; slide text is also included in speaker notes">
                   <Download className="h-4 w-4" />{exportMode ? "Preparing download…" : "PPTX"}
                 </Button>
@@ -681,7 +681,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 <Button size="sm" variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("guided-slides")}>Guided presentation PDF</Button>
               </div>
               {guidedDisplay === "page" ? <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} /> :
-                <GuidedNotesPresentation inline mode="notes" slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} pageIndex={presentationPage} onPageChange={setPresentationPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("guided-slides")} />}
+                <GuidedNotesPresentation inline mode="notes" slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} pageIndex={presentationPage} onPageChange={setPresentationPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("notes")} />}
             </>}
             <div className={lessonView === "slides" ? "lesson-slides" : "hidden"}>
 
@@ -699,7 +699,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 imageLoading={!!imgLoading[activeIdx]}
                 onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
                 subject={result.source_books[0]?.subject}
-              /> : <GuidedNotesPresentation inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} pageIndex={originalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("slides")} />}
+              /> : <GuidedNotesPresentation inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} pageIndex={originalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("notes")} />}
             </div>
 
             <details className="lesson-presentation-checks mt-4 rounded-xl border border-border/60 bg-card/60 print:hidden">
@@ -890,7 +890,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         {exportMode === "slides" ? originalPages.map((slide, index) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} subject={result.source_books[0]?.subject || search.subject} staticView /></div>) :
           <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} />}
       </div>}
-      {presenting && <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
+      {presenting && <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("notes")} />}
 
     </>
   );
