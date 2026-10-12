@@ -70,20 +70,17 @@ export async function extractPdfText(
       else if (lastContents && page>lastContents+1) break;
     }
     const target = ranges.find(range=>canonicalBookChapter(subject,range.chapter)===wanted);
-    const first = [...ranges].sort((a,b)=>a.start-b.start)[0];
-    if(target && first) {
-      let offset: number | undefined;
-      for(let page=lastContents+1;page<=Math.min(doc.numPages,lastContents+12);page++) {
-        const heading=await inspectIndex(page);
-        const anchor=ranges.filter(range=>range.start<=first.start+12).find(range=>contentsHeadingMatches(subject,heading,range.chapter));
-        if(anchor) {offset=page-anchor.start;break;}
-      }
-      if(offset!==undefined) {
-        const expected=target.start+offset;
-        for(let page=Math.max(1,expected-3);page<=Math.min(doc.numPages,expected+4);page++) {
-          if(contentsHeadingMatches(subject, await inspectIndex(page), target.chapter)) {
-            order=chapterReadingOrder(doc.numPages,page,page+target.end-target.start); break;
-          }
+    if(target) {
+      // Front matter suggests where to look, but only the actual chapter
+      // heading authorizes prioritising a page. A damaged earlier TOC entry
+      // must not prevent a correctly recognised requested chapter being read.
+      const expected=target.start+lastContents;
+      const candidates=Array.from({length:25},(_,i)=>target.start-3+i)
+        .filter(page=>page>=1 && page<=doc.numPages)
+        .sort((a,b)=>Math.abs(a-expected)-Math.abs(b-expected));
+      for(const page of candidates) {
+        if(contentsHeadingMatches(subject, await inspectIndex(page), target.chapter)) {
+          order=chapterReadingOrder(doc.numPages,page,page+target.end-target.start); break;
         }
       }
     }
