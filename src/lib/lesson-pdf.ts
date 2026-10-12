@@ -29,7 +29,7 @@ export async function downloadLessonPdf(root: HTMLElement, mode: "notes" | "slid
   let rendered = 0;
   options?.onProgress?.(0, pages.length);
   for (const page of pages) {
-    const canvas = await toCanvas(page, { pixelRatio: 2, backgroundColor: "#ffffff", cacheBust: false, fontEmbedCSS });
+    const canvas = await toCanvas(page, { pixelRatio: 1.5, backgroundColor: "#ffffff", cacheBust: false, fontEmbedCSS });
     const pagePx = usableHeight / usableWidth * canvas.width;
     const rect = page.getBoundingClientRect();
     const scale = canvas.width / rect.width;
@@ -43,7 +43,7 @@ export async function downloadLessonPdf(root: HTMLElement, mode: "notes" | "slid
       ctx.drawImage(canvas, 0, start, canvas.width, end - start, 0, 0, crop.width, end - start);
       const factor = Math.min(usableWidth / crop.width, usableHeight / crop.height);
       const drawWidth = crop.width * factor, drawHeight = crop.height * factor;
-      pdf.addImage(crop.toDataURL("image/jpeg", 0.95), "JPEG", margin, margin, drawWidth, drawHeight, undefined, "FAST");
+      pdf.addImage(crop.toDataURL("image/jpeg", 0.9), "JPEG", margin, margin, drawWidth, drawHeight, undefined, "FAST");
       // Retain clickable official resource links in the rendered PDF.
       page.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((link) => {
         const r = link.getBoundingClientRect();

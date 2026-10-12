@@ -312,7 +312,21 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const exportRef = useRef<HTMLDivElement>(null);
   const [exportProgress, setExportProgress] = useState("");
   const [readyPdf, setReadyPdf] = useState<{ url: string; filename: string } | null>(null);
-  useEffect(() => () => { if (readyPdf) URL.revokeObjectURL(readyPdf.url); }, [readyPdf]);
+  const [readyPptx, setReadyPptx] = useState<{ url: string; filename: string } | null>(null);
+  const downloadCache = useRef(new Map<string, { slides: Slide[]; url: string; filename: string }>());
+  useEffect(() => () => { downloadCache.current.forEach(file => URL.revokeObjectURL(file.url)); }, []);
+  function savePreparedFile(file: { url: string; filename: string }) {
+    const link = document.createElement("a"); link.href = file.url; link.download = file.filename;
+    document.body.appendChild(link); link.click(); link.remove();
+  }
+  function rememberDownload(key: string, blob: Blob, filename: string) {
+    const previous = downloadCache.current.get(key);
+    if (previous) URL.revokeObjectURL(previous.url);
+    const file = { slides, url: URL.createObjectURL(blob), filename };
+    downloadCache.current.set(key, file);
+    savePreparedFile(file);
+    return file;
+  }
   const [editing, setEditing] = useState(false);
   const [lessonView, setLessonView] = useState<"notes" | "slides">("notes");
   useEffect(() => {
@@ -541,6 +555,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
   async function downloadPDF(mode: "notes" | "slides" | "guided-slides" = lessonView) {
     if (exportMode) return;
+    const cached = downloadCache.current.get(`pdf-${mode}`);
+    if (cached?.slides === slides) { setReadyPdf(cached); savePreparedFile(cached); return; }
     setExportMode(mode);
     setExportProgress("Preparing PDF...");
     let exportCopy: HTMLElement | undefined;
@@ -555,10 +571,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       await downloadLessonPdf(exportCopy, mode === "notes" ? "notes" : "slides", mode === "notes" ? title : `${title}-${mode === "guided-slides" ? "guided" : "ppt"}`, {
         onProgress: (done, total) => setExportProgress(`Preparing PDF: ${done} / ${total} pages`),
         onReady: (blob, filename) => {
-          const url = URL.createObjectURL(blob);
-          setReadyPdf({ url, filename });
-          const link = document.createElement("a"); link.href = url; link.download = filename;
-          document.body.appendChild(link); link.click(); link.remove();
+          setReadyPdf(rememberDownload(`pdf-${mode}`, blob, filename));
           toast.success("PDF ready. Use Save PDF if your browser did not download it automatically.");
         },
       });
@@ -574,6 +587,10 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
   async function downloadPPTX() {
     if (exportMode) return;
+    const key = `pptx-${lessonView === "notes" ? "guided" : "slides"}`;
+    const cached = downloadCache.current.get(key);
+    if (cached?.slides === slides) { setReadyPptx(cached); savePreparedFile(cached); return; }
+    setExportProgress("Preparing PowerPoint...");
     setExportMode(lessonView === "notes" ? "guided-slides" : "slides");
     let exportCopy: HTMLElement | undefined;
     try {
@@ -583,7 +600,13 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       if (!exportRef.current) throw new Error("The slides are not ready.");
       exportCopy = exportRef.current.cloneNode(true) as HTMLElement;
       document.body.appendChild(exportCopy);
-      await downloadRenderedPptx(exportCopy, `${title}-${lessonView === "notes" ? "guided-notes" : "ppt"}`);
+      await downloadRenderedPptx(exportCopy, `${title}-${lessonView === "notes" ? "guided-notes" : "ppt"}`, {
+        onProgress: (done, total) => setExportProgress(`Preparing PowerPoint: ${done} / ${total} slides`),
+        onReady: (blob, filename) => {
+          setReadyPptx(rememberDownload(key, blob, filename));
+          toast.success("PowerPoint ready. Use Save PPTX if the automatic download did not start.");
+        },
+      });
     } catch (error) {
       toast.error(`PPTX export failed: ${error instanceof Error ? error.message : "Please try again."}`);
     } finally { exportCopy?.remove(); setExportMode(null); setExportProgress(""); }
@@ -622,6 +645,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         <>
           {exportProgress && <p role="status" className="print:hidden mb-3">{exportProgress}</p>}
           {readyPdf && <a className="print:hidden inline-flex rounded-lg border px-4 py-2 mb-3 text-primary" href={readyPdf.url} download={readyPdf.filename}>Save PDF</a>}
+          {readyPptx && <a className="print:hidden inline-flex rounded-lg border px-4 py-2 mb-3 text-primary" href={readyPptx.url} download={readyPptx.filename}>Save PPTX</a>}
           {captureEligible && <div className="print:hidden mb-4 rounded-lg border p-3" aria-live="polite">
             <p className="font-medium">Original Med Easy book pictures</p>
             <p className="text-sm text-muted-foreground">Free book-picture capture · no AI credits required. {bookCaptureMessage || "Preparing chapter and topic captures..."}</p>
