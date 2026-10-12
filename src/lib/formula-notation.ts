@@ -115,7 +115,7 @@ export function cleanFormulaLine(raw: string): string {
 
 /* ---------------- AI layer ---------------- */
 
-const MATHY = /[=∝±×÷√Δ]|[A-Za-z]\s*=|\b(formula|equation|unit|per second|derivation)\b/i;
+const MATHY = /[=∝≈±×÷√Δ∫∑→⇌⇒↔≠≤≥]|\\(?:frac|propto|rightarrow|rightleftharpoons|int|sum)|[A-Za-z]\s*=|\b(formula|equation|unit|per second|derivation)\b/i;
 
 /** Lines worth sending to the formula AI. */
 export function needsFormulaAI(line: string): boolean {
@@ -336,12 +336,17 @@ export async function aiFormulaSheet(opts: {
 
 const STR_ARR = { type: "array", items: { type: "string" } };
 
+/** Detect source-supported equations in every subject, including reaction arrows. */
+export function hasQuantitativeFormulaEvidence(source: string): boolean {
+  return /[=∝≈±×÷√Δ∫∑→⇌⇒↔≠≤≥]|\\(?:frac|propto|rightarrow|rightleftharpoons|int|sum)/.test(source);
+}
+
 /** Keep late equations and their neighbouring explanations, without cutting JSON. */
 export function formulaEvidence(excerpts: string[]): string[] {
   const unique = [...new Set(excerpts.map((line) => line.trim()).filter(Boolean))];
   const relevant = new Set<number>();
   unique.forEach((line, index) => {
-    if (/[=∝]|\\(?:frac|propto|rightarrow|rightleftharpoons)|\b(?:deriv|proof|prove|substitut|therefore|hence)/i.test(line)) {
+    if (hasQuantitativeFormulaEvidence(line) || /\b(?:deriv|proof|prove|substitut|therefore|hence)\b/i.test(line)) {
       for (let at = Math.max(0, index - 1); at <= Math.min(unique.length - 1, index + 1); at++) relevant.add(at);
     }
   });

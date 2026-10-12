@@ -4,14 +4,16 @@ import { TopicVisualStructures } from "@/components/TopicVisualStructures";
 import { renderSourceConceptMap, sourceConceptFacts } from "@/lib/source-concept-map";
 import { geometryDiagram } from "@/lib/geometry-diagrams";
 import { renderLessonIllustration } from "@/lib/napkin-infographic";
-import { aiFormulaSheet, formulaEvidence } from "@/lib/formula-notation";
+import { aiFormulaSheet, formulaEvidence, hasQuantitativeFormulaEvidence } from "@/lib/formula-notation";
+import { mapWithConcurrency } from "@/lib/ncert-teacher-notes";
 
 describe("More source-based structures across subjects", () => {
   it.each(["Physics", "Chemistry", "Biology", "Mathematics", "History", "Geography", "Political Science", "Economics", "Accountancy", "Computer Science", "English", "Hindi"])("shows factual study maps for %s", (subject) => {
     const input = { title: "Selected topic", sections: [{ heading: "Teacher Notes", lines: ["**Explanation:** A factual explanation from the selected source.", "**Key point:** A second supported idea.", "**Definition:** A third supported idea.", "**Activity:** Discuss with a partner."] }] };
     const html = renderToStaticMarkup(<TopicVisualStructures subject={subject} input={input} />);
-    expect(html).toContain(/English|Hindi/.test(subject) ? "Reading path:" : "Source-based concept map");
-    if (!/English|Hindi/.test(subject)) expect(html.match(/<figure/g)).toHaveLength(2);
+    expect(html).toContain(/English|Hindi/.test(subject) ? "Reading path:" : /Mathematics/.test(subject) ? "mathematics-topic-visual" : "Source-based concept map");
+    if (/Mathematics/.test(subject)) expect(html.match(/<figure/g)).toHaveLength(1);
+    else if (!/English|Hindi/.test(subject)) expect(html.match(/<figure/g)).toHaveLength(2);
     expect(sourceConceptFacts(input)).toHaveLength(3);
   });
   it("preserves Hindi, escapes source markup, and wraps without ellipses", () => {
@@ -34,6 +36,26 @@ describe("More source-based structures across subjects", () => {
 });
 
 describe("Expanded formula and derivation coverage", () => {
+  it.each([
+    ["Physics", "$v=u+at$"], ["Chemistry", "C_2H_5Br + OH^- → C_2H_5OH + Br^-"],
+    ["Mathematics", "\\int_0^1 x^2 dx = 1/3"], ["Biology", "frequency ≥ 10 kHz"],
+  ])("detects source formulas for %s in any chapter", (_subject, source) => {
+    expect(hasQuantitativeFormulaEvidence(source)).toBe(true);
+    expect(formulaEvidence(["Prerequisite explanation", source, "Source derivation follows."])).toContain(source);
+  });
+  it("does not treat ordinary prose as formula evidence", () => {
+    expect(hasQuantitativeFormulaEvidence("The chapter explains patterns in the reaction process.")).toBe(false);
+  });
+  it("limits simultaneous formula batches and preserves chapter order", async () => {
+    let active = 0, peak = 0;
+    const results = await mapWithConcurrency([0,1,2,3,4,5,6],3,async value => {
+      active++; peak = Math.max(peak,active);
+      await new Promise(resolve=>setTimeout(resolve,2));
+      active--; return value * 2;
+    });
+    expect(peak).toBeLessThanOrEqual(3);
+    expect(results).toEqual([0,2,4,6,8,10,12]);
+  });
   it("keeps late equations and neighbouring steps in a complete JSON payload", () => {
     const source = [...Array.from({ length: 20 }, (_, i) => `Introductory statement ${i}.`), "Start from the definition.", "$a = (v-u)/t$", "Hence multiply both sides by t.", "$v = u+at$"];
     const evidence = formulaEvidence(source);

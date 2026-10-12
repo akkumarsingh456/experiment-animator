@@ -12,7 +12,7 @@ import { isContentsListing } from "@/lib/note-source-noise";
  * lexical support in the NCERT context, that line is dropped.
  */
 
-import { aiFixFormulas, aiFormulaSheet, cleanFormulaLine, needsFormulaAI, repairNotation } from "@/lib/formula-notation";
+import { aiFixFormulas, aiFormulaSheet, cleanFormulaLine, needsFormulaAI, repairNotation, hasQuantitativeFormulaEvidence } from "@/lib/formula-notation";
 import { gatewayJSON, hasGatewayKey } from "@/lib/ai-gateway-json";
 import { learningProfile } from "@/lib/learning-design";
 import { mapOutsideMath, splitMath } from "@/lib/latex-notation";
@@ -623,6 +623,21 @@ async function attachNoteDiagrams<T extends NoteSourceSlide & { kind?: string; s
   });
 }
 
+/** Run chapter-wide AI batches with bounded concurrency and stable result order. */
+export async function mapWithConcurrency<T, R>(items: T[], limit: number, task: (item: T) => Promise<R>): Promise<R[]> {
+  const output = new Array<R>(items.length);
+  let next = 0;
+  const worker = async () => {
+    for (;;) {
+      const index = next++;
+      if (index >= items.length) return;
+      output[index] = await task(items[index]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(items.length, Math.max(1, Math.floor(limit))) }, worker));
+  return output;
+}
+
 /**
  * Guarantee that every quantitative slide carries correctly typeset Formula,
  * SI unit and step-by-step Derivation lines. Works for every subject: slides
@@ -641,7 +656,7 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
     if (!["content", "chapter"].includes(s.kind ?? "content")) return;
     const lines = s.sections?.[0]?.lines || [];
     const source = [s.grounding || "", s.chapter_text || "", ...lines, ...(s.bullets || []), ...(s.notes || [])].join(" ");
-    const quantitative = /[=∝]|\\(?:frac|propto|rightarrow|rightleftharpoons)/.test(source);
+    const quantitative = hasQuantitativeFormulaEvidence(source);
     // Review completeness even if one formula, unit and derivation already exist.
     if (!quantitative) return;
     targets.push({
@@ -655,7 +670,16 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
   const CHUNK = 2;
   const chunks: Array<typeof targets> = [];
   for (let i = 0; i < targets.length; i += CHUNK) chunks.push(targets.slice(i, i + CHUNK));
-  const maps = await Promise.all(chunks.map((c) => aiFormulaSheet({ ...opts, slides: c })));
+  // Long lessons can have dozens of formula batches. Bound concurrency so the
+  // AI service can return formula sheets across the entire chapter consistently.
+  const maps = await mapWithConcurrency(chunks, 3, async (chunk) => {
+    let result = await aiFormulaSheet({ ...opts, slides: chunk });
+    for (let retry = 0; result.size === 0 && retry < 2; retry++) {
+      await new Promise(resolve => setTimeout(resolve, 300 * (retry + 1)));
+      result = await aiFormulaSheet({ ...opts, slides: chunk });
+    }
+    return result;
+  });
 
   const out = slides.map((s) => ({ ...s }));
   for (const map of maps) {
