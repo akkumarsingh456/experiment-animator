@@ -422,6 +422,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     try {
       const r = await genImage({ data: {
         title: s.title,
+        chapter: search.chapter || title,
         bullets: s.bullets || [],
         notes: s.notes || [],
         key_terms: s.key_terms || [],
@@ -544,7 +545,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     return [...notePages, ...figurePages];
   }), [slides]);
   const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, section: "NCERT notes & illustration",
-    content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} subject={result.source_books[0]?.subject || search.subject} staticView />,
+    content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} subject={search.subject} chapter={search.chapter || title} staticView />,
   }));
 
   async function downloadPDF(mode: "notes" | "slides" | "guided-slides" = lessonView) {
@@ -676,8 +677,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 <Button size="sm" variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("guided-slides")}>Guided presentation PDF</Button>
                 <Button size="sm" variant="outline" disabled={!!exportMode} onClick={() => downloadPPTX("guided-slides")}>Guided presentation PPTX</Button>
               </div>
-              {guidedDisplay === "page" ? <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} /> :
-                <GuidedNotesPresentation inline mode="notes" slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} pageIndex={presentationPage} onPageChange={setPresentationPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("guided-slides")} />}
+              {guidedDisplay === "page" ? <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} /> :
+                <GuidedNotesPresentation inline mode="notes" slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={presentationPage} onPageChange={setPresentationPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("guided-slides")} />}
             </>}
             <div className={lessonView === "slides" ? "lesson-slides" : "hidden"}>
 
@@ -694,8 +695,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 imageUrl={images[activeIdx]}
                 imageLoading={!!imgLoading[activeIdx]}
                 onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
-                subject={result.source_books[0]?.subject}
-              /> : <GuidedNotesPresentation inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} pageIndex={originalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("slides")} />}
+                subject={search.subject} chapter={search.chapter || title}
+              /> : <GuidedNotesPresentation inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={originalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("slides")} />}
             </div>
 
             <details className="lesson-presentation-checks mt-4 rounded-xl border border-border/60 bg-card/60 print:hidden">
@@ -883,10 +884,10 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       </p>
 
       {exportMode && <div ref={exportRef} className={`lesson-export-root lesson-export-${exportMode === "notes" ? "notes" : "slides"} ${exportMode === "slides" ? "original-slide-deck" : ""}`} data-presentation-style={exportMode === "slides" ? "lovable" : "guided"} aria-hidden="true">
-        {exportMode === "slides" ? originalPages.map((slide, index) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} subject={result.source_books[0]?.subject || search.subject} staticView /></div>) :
-          <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} />}
+        {exportMode === "slides" ? originalPages.map((slide, index) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} subject={search.subject} chapter={search.chapter || title} staticView /></div>) :
+          <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} />}
       </div>}
-      {presenting && <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={result.source_books[0]?.subject || search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
+      {presenting && <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
 
     </>
   );
@@ -1100,14 +1101,14 @@ function BreakSlideBody({ slide }: { slide: Slide }) {
 }
 
 function SlideCanvas({
-  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage, subject, staticView,
+  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage, subject, chapter, staticView,
 }: {
   slide: Slide; index: number; total: number; editing: boolean; onChange: (p: Partial<Slide>) => void;
-  imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void; subject?: string; staticView?: boolean;
+  imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void; subject?: string; chapter?: string; staticView?: boolean;
 }) {
   if (!slide) return null;
   const sourceIndex = (slide as Slide & { sourceIndex?: number }).sourceIndex ?? index;
-  imageUrl = renderLessonIllustrationDataUrl({ ...slide, keyTerms: slide.key_terms, subject, slideIndex: sourceIndex });
+  imageUrl = renderLessonIllustrationDataUrl({ ...slide, keyTerms: slide.key_terms, chapter, subject, slideIndex: sourceIndex });
   const kind = slide.kind === "chapter" && slide.sections?.length ? "content" : slide.kind || "content";
   const lang = isLanguageSubject(subject);
   const bookFigurePage = slide.sections?.some(section => section.heading === "Book structure and explanation") && slide.reference_visuals?.some(figure => figure.url);

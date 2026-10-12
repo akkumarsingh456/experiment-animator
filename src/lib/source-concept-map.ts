@@ -2,6 +2,7 @@ import { plainMathText } from "@/lib/latex-notation";
 
 export type ConceptMapInput = {
   title: string;
+  chapter?: string;
   bullets?: string[];
   notes?: string[];
   sections?: Array<{ heading: string; kind?: string; lines: string[] }>;

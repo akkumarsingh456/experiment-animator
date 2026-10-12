@@ -44,7 +44,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
         {slide.notes_quality?.issues.length ? <p className="guided-quality-note">Source review: {slide.notes_quality.issues.join(" ")}</p> : null}
         {explanation.map((group, i) => <NotesGroup subject={subject} key={`prose:${i}`} group={group} />)}
         {terms.map((group, i) => <NotesGroup subject={subject} group={group} key={`terms:${i}`} />)}
-        <TopicVisualStructures input={{ ...slide, keyTerms: slide.key_terms }} subject={subject} />
+        <TopicVisualStructures input={{ ...slide, chapter: title, keyTerms: slide.key_terms }} subject={subject} />
         {rest.map((group, i) => <NotesGroup subject={subject} group={group} key={`body:${i}`} />)}
         <BookReferenceFigures figures={slide.reference_visuals} subject={subject} />
         {slide.context_illustration && <figure className="guided-context-illustration"><img src={slide.context_illustration.url} alt={slide.context_illustration.description} /><figcaption>AI context illustration · {slide.context_illustration.provider}. Exact relationships are shown in the labelled diagram and source notes.</figcaption></figure>}

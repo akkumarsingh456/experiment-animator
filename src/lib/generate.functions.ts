@@ -39,6 +39,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     z
       .object({
         title: z.string().default(""),
+        chapter: z.string().optional().default(""),
         bullets: z.array(z.string()).default([]),
         caption: z.string().optional().default(""),
         subject: z.string().optional().default(""),
@@ -61,12 +62,13 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     // v13: topic-aware textbook renderer with large labels and visual models.
     const cacheKey = hashKey([
-      "img-v18-science-diagrams-and-context-images",
+      "img-v19-chapter-aware-topic-diagrams",
       process.env.HF_IMAGES_FREE_ONLY === "true" && !!process.env.HF_IMAGE_TOKEN ? "hf-enabled" : "local-only",
       data.klass,
       data.subject,
       String(data.slideIndex),
       data.title,
+      data.chapter,
       data.visual_prompt,
       data.grounding.slice(0, 500),
       (data.bullets || []).join(" "),
@@ -142,6 +144,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
         .slice(0, 18);
       url = renderLessonIllustrationDataUrl({
         title: data.title,
+        chapter: data.chapter,
         bullets: data.bullets,
         notes: visualNotes,
         keyTerms: data.key_terms,
@@ -160,7 +163,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
 
 
     const { createFreeContextIllustration } = await import("@/lib/hf-image-provider.server");
-    const contextUrl = await createFreeContextIllustration(data.subject, data.title, (data.key_terms || []).map(item=>item.term));
+    const contextUrl = await createFreeContextIllustration(data.subject, [data.chapter,data.title].filter(Boolean).join(' — '), (data.key_terms || []).map(item=>item.term));
     try {
       await (db as any).from("slide_image_cache").upsert({
         cache_key: cacheKey,

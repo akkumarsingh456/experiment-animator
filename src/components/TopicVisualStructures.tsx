@@ -36,8 +36,7 @@ export function TopicVisualStructures({
         </ol>
       </section>
     );
-  const currentTopic = /^(physics|science)$/i.test(subject || "") && /ohm|wheatstone|kirchhoff|drift|mobility|resist|combination.*resist|series|parallel|current/i.test(input.title);
-  const topic = currentTopic ? null : topicScienceDrawing(input, subject);
+  const topic = topicScienceDrawing(input, subject);
   if (topic) return <div className="guided-explanation guided-visual-structures"><figure>
     <div className="guided-figure-heading"><strong>Labelled topic illustration</strong><span>2D diagram</span></div>
     <img src={svgDataUrl(wrapTextbookDrawing(topic.drawing, topic.id))} alt={`${input.title}: ${topic.caption}`} />

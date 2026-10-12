@@ -24,7 +24,7 @@ describe("More source-based structures across subjects", () => {
   });
   it("does not invent a graph, chronology or current circuit from ambiguous keywords", () => {
     const svg = renderLessonIllustration({ title: "Current affairs", subject: "Political Science", notes: ["An idea from this chapter."] });
-    expect(svg).toContain("An idea from this chapter."); expect(svg).not.toContain("ammeter"); expect(svg).not.toContain("dependent variable");
+    expect(svg).toContain("Current affairs"); expect(svg).not.toContain("An idea from this chapter."); expect(svg).not.toContain("ammeter"); expect(svg).not.toContain("dependent variable");
     expect(geometryDiagram("Right triangles", "History")).toBeNull();
     expect(geometryDiagram("Triangles", "Mathematics")).toBeNull();
     expect(geometryDiagram("Pythagoras theorem", "Mathematics")?.svg).toContain("hypotenuse");

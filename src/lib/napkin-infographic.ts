@@ -358,8 +358,6 @@ export function renderNapkinInfographicDataUrl(input: FactInput): string {
 /** Large reference-style figure without a miniature duplicate of the notes. */
 export function renderLessonIllustration(input: FactInput & ConceptMapInput): string {
   const identity = stableHash(`${input.subject}|${input.title}|${input.slideIndex ?? 0}`).toString(16);
-  const textbook = /^(physics|science)$/i.test(input.subject || "") && /ohm|wheatstone|kirchhoff|drift|mobility|resist|combination.*resist|series|parallel|current/i.test(input.title) ? currentElectricityDiagram(input.title) : null;
-  if (textbook) return wrapTextbookDrawing(textbook.drawing, identity);
   const topic = topicScienceDrawing(input, input.subject);
   if (topic) return wrapTextbookDrawing(topic.drawing, identity);
   const geometry = geometryDiagram(input.title, input.subject);

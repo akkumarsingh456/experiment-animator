@@ -1,5 +1,7 @@
 import type { ConceptMapInput } from '@/lib/source-concept-map';
 import { plainMathText } from '@/lib/latex-notation';
+import { additionalTopicDrawing } from '@/lib/chapter-topic-diagrams';
+import { currentElectricityDiagram } from '@/lib/current-electricity-diagrams';
 
 export type TopicDrawing = { id: string; caption: string; drawing: string };
 const ink = '#173d50', teal = '#247f91', orange = '#d97842';
@@ -27,12 +29,34 @@ const benzene = (label:string) => {
 
 /** Topic selection is shared by all lesson views and exports. No copied paragraphs. */
 export function topicScienceDrawing(input: ConceptMapInput, subject=''): TopicDrawing | null {
- const title=input.title.toLowerCase();
- const body=[...(input.notes||[]),...(input.bullets||[]),...(input.sections||[]).flatMap(s=>s.lines)].join(' ').toLowerCase();
+ const direct=topicDrawingByTitle(input.title,subject);
+ if(direct)return direct;
+ // A generic title must retain its chapter context in every render/export.
+ // Key terms resolve a topic before falling back to a labelled chapter model.
+ const candidates=(input.keyTerms||[]).map(term=>topicDrawingByTitle(term.term,subject)).filter((drawing):drawing is TopicDrawing=>!!drawing);
+ const unique=new Map(candidates.map(drawing=>[drawing.id,drawing]));
+ if(unique.size===1)return [...unique.values()][0];
+ const evidence=[...(input.notes||[]),...(input.bullets||[]),...(input.sections||[]).filter(section=>!/^Reference notes/i.test(section.heading)).flatMap(section=>section.lines)].slice(0,4);
+ const models=evidence.map(line=>topicDrawingByTitle(plainMathText(line).slice(0,180),subject)).filter((drawing):drawing is TopicDrawing=>!!drawing);
+ const distinct=new Map(models.map(drawing=>[drawing.id,drawing]));
+ if(distinct.size===1)return [...distinct.values()][0];
+ if(input.chapter){const chapter=topicDrawingByTitle(input.chapter,subject);if(chapter)return {...chapter,caption:`Chapter overview: ${chapter.caption}`};}
+ return null;
+}
+
+function topicDrawingByTitle(heading:string, subject:string): TopicDrawing | null {
+ if(/^(physics|science)$/i.test(subject) && !/alternating|magnet/i.test(heading) && /ohm|wheatstone|kirchhoff|drift|mobility|resist|series|parallel|current/i.test(heading)) {
+  const current=currentElectricityDiagram(heading);
+  if(current)return {id:'current-electricity',...current};
+ }
+ const specific=additionalTopicDrawing(heading,subject);
+ if(specific)return specific;
+ const title=heading.toLowerCase();
  const match=(pattern:RegExp)=>pattern.test(title);
- const chem=/chem/i.test(subject), phys=/phys|^science$/i.test(subject), bio=/bio|botan|zoolog/i.test(subject);
+ const mixed=/^science$/i.test(subject);
+ const chem=/chem/i.test(subject) || mixed && /chemistry|atom|molecul|chemical|acid|metal|carbon|solution/.test(title), bio=/bio|botan|zoolog/i.test(subject) || mixed && /biology|life|cell|tissue|organism|reproduct|heredit|environment/.test(title), phys=/phys/i.test(subject) || mixed && !chem && !bio;
  if(chem){
-  if(match(/galvanic|daniell|electrochemical cell/))return {id:'galvanic-cell',caption:'Daniell cell: zinc oxidises at the negative anode; copper ions reduce at the positive cathode. Electrons travel through the external wire.',drawing:electrodeCell(true)};
+  if(match(/galvanic|daniell|electrochem/))return {id:'galvanic-cell',caption:'Daniell cell: zinc oxidises at the negative anode; copper ions reduce at the positive cathode. Electrons travel through the external wire.',drawing:electrodeCell(true)};
   if(match(/electrolys|faraday/))return {id:'electrolytic-cell',caption:'Electrolytic cell polarity differs from a galvanic cell. Oxidation remains at the anode and reduction at the cathode.',drawing:electrodeCell(false)};
   if(match(/nernst|cell potential/))return {id:'nernst-graph',...graph('M150 170L625 370','ln Q','Ecell','Fixed T and n; slope = −RT/(nF)')};
   if(match(/conduct|kohlrausch|dissociation/))return {id:'conductivity-cell',caption:'Electrolyte ions carry charge between electrodes. Electrode separation l and cross-sectional area A define the cell constant l/A.',drawing:box(110,220,550,215)+box(175,195,24,205,'#9baeb7')+box(570,195,24,205,'#9baeb7')+ions()+line(210,160,558,160,orange,true)+line(558,160,210,160,orange,true)+t(380,135,'Electrode separation l',22)+t(130,195,'Area A',20)+line(300,315,340,315,orange,true)+line(470,370,425,370,teal,true)+t(380,475,'Cations and anions move in opposite directions',20)};
