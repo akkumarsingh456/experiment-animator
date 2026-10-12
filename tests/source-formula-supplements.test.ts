@@ -3,7 +3,7 @@ import { sourceFormulaLines, SOURCE_FORMULA_RULES } from "@/lib/source-formula-s
 import { scopeTextbookPages, referenceFormulaEvidence } from "@/lib/lesson-source-scope";
 import { encodeReferenceVisuals } from "@/lib/reference-visuals";
 import { splitMath, isValidLatex } from "@/lib/latex-notation";
-import { mergeLessonBookPictures, assertBookPicturesForExport } from "@/lib/lesson-book-pictures";
+import { mergeLessonBookPictures, bookPicturesExportNotice } from "@/lib/lesson-book-pictures";
 import type { Slide } from "@/lib/generate.functions";
 
 describe("Chapter-wide source formula completeness", () => {
@@ -14,10 +14,10 @@ describe("Chapter-wide source formula completeness", () => {
       for (const part of math) expect(isValidLatex(part.value), entry.name).toBe(true);
     }
   });
-  it("prevents an eligible PDF/PPTX export from silently omitting every book picture", () => {
-    expect(() => assertBookPicturesForExport(true, 0)).toThrow("Med Easy");
-    expect(() => assertBookPicturesForExport(true, 2)).not.toThrow();
-    expect(() => assertBookPicturesForExport(false, 0)).not.toThrow();
+  it("allows downloads while book captures are pending and explains missing pictures", () => {
+    expect(bookPicturesExportNotice(true, 0)).toContain("pictures are still pending");
+    expect(bookPicturesExportNotice(true, 2)).toBeUndefined();
+    expect(bookPicturesExportNotice(false, 0)).toBeUndefined();
   });
   it.each([
     ["Physics", "Coulomb's Law", "Coulomb's law describes the force between two point charges.", "q_1q_2"],

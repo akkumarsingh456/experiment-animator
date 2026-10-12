@@ -1,6 +1,6 @@
 import { prepareScannedReferenceBooks } from "@/lib/prepare-reference-books";
 import { loadLessonBookPictures } from "@/lib/lesson-book-pictures.functions";
-import { mergeLessonBookPictures, assertBookPicturesForExport } from "@/lib/lesson-book-pictures";
+import { mergeLessonBookPictures, bookPicturesExportNotice } from "@/lib/lesson-book-pictures";
 import { BookReferenceFigures } from "@/components/BookReferenceFigures";
 import { BookMapSlide } from "@/components/BookMapSlide";
 import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
@@ -543,12 +543,16 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     if (exportMode) return;
     setExportMode(mode);
     setExportProgress("Preparing PDF...");
+    let exportCopy: HTMLElement | undefined;
     try {
-      if (captureEligible) assertBookPicturesForExport(true, await refreshBookPictures());
+      const notice = bookPicturesExportNotice(captureEligible, slides.reduce((count, slide) => count + (slide.reference_visuals?.length || 0), 0));
+      if (notice) toast.info(notice);
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       if (!exportRef.current) throw new Error("The PDF pages are not ready.");
-      if (mode !== "notes") await prepareSlideExport(exportRef.current);
-      await downloadLessonPdf(exportRef.current, mode === "notes" ? "notes" : "slides", mode === "notes" ? title : `${title}-${mode === "guided-slides" ? "guided" : "ppt"}`, {
+      exportCopy = exportRef.current.cloneNode(true) as HTMLElement;
+      document.body.appendChild(exportCopy);
+      if (mode !== "notes") await prepareSlideExport(exportCopy);
+      await downloadLessonPdf(exportCopy, mode === "notes" ? "notes" : "slides", mode === "notes" ? title : `${title}-${mode === "guided-slides" ? "guided" : "ppt"}`, {
         onProgress: (done, total) => setExportProgress(`Preparing PDF: ${done} / ${total} pages`),
         onReady: (blob, filename) => {
           const url = URL.createObjectURL(blob);
@@ -560,7 +564,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       });
     } catch (error) {
       toast.error(`PDF download failed: ${error instanceof Error ? error.message : "Please try again."}`);
-    } finally { setExportMode(null); setExportProgress(""); }
+    } finally { exportCopy?.remove(); setExportMode(null); setExportProgress(""); }
   }
 
   function presentSelectedView() {
@@ -571,14 +575,18 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   async function downloadPPTX() {
     if (exportMode) return;
     setExportMode(lessonView === "notes" ? "guided-slides" : "slides");
+    let exportCopy: HTMLElement | undefined;
     try {
-      if (captureEligible) assertBookPicturesForExport(true, await refreshBookPictures());
+      const notice = bookPicturesExportNotice(captureEligible, slides.reduce((count, slide) => count + (slide.reference_visuals?.length || 0), 0));
+      if (notice) toast.info(notice);
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       if (!exportRef.current) throw new Error("The slides are not ready.");
-      await downloadRenderedPptx(exportRef.current, `${title}-${lessonView === "notes" ? "guided-notes" : "ppt"}`);
+      exportCopy = exportRef.current.cloneNode(true) as HTMLElement;
+      document.body.appendChild(exportCopy);
+      await downloadRenderedPptx(exportCopy, `${title}-${lessonView === "notes" ? "guided-notes" : "ppt"}`);
     } catch (error) {
       toast.error(`PPTX export failed: ${error instanceof Error ? error.message : "Please try again."}`);
-    } finally { setExportMode(null); setExportProgress(""); }
+    } finally { exportCopy?.remove(); setExportMode(null); setExportProgress(""); }
   }
 
 

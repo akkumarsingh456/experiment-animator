@@ -2,8 +2,8 @@ import type { Slide } from '@/lib/generate.functions';
 import type { ReferenceVisual } from '@/lib/reference-visuals';
 import { formulaIdentity } from '@/lib/source-formula-supplements';
 
-export function assertBookPicturesForExport(eligible: boolean, count: number) {
-  if (eligible && count === 0) throw new Error('No matching Med Easy pages are ready for this chapter. Resume book pictures and wait for the chapter captures before downloading.');
+export function bookPicturesExportNotice(eligible: boolean, count: number): string | undefined {
+  if (eligible && count === 0) return 'Downloading the available notes. Med Easy pictures are still pending; resume book pictures and download again to include them.';
 }
 
 /** Refresh captures and append missing source formulas without rewriting approved lines. */
