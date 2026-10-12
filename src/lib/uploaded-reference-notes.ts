@@ -1,11 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { GenerationResult } from "@/lib/generate.functions";
+import { indexLocalBookPage } from "@/lib/local-book-index";
 import { combinedReferenceMatches } from "@/lib/reference-books";
 import { splitReferenceContent } from "@/lib/reference-visuals";
 
-const normal = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{M}0-9]+/gu, " ").trim();
-const stop = new Set(["the", "and", "of", "chapter", "introduction", "properties", "notes", "class", "physics", "chemistry", "biology", "law", "laws", "continued"]);
+const normal = (text: string) => text.toLowerCase().replace(/[’']s\b/g, "").replace(/[^\p{L}\p{M}0-9]+/gu, " ").trim();
+const stop = new Set(["the", "and", "of", "chapter", "introduction", "properties", "notes", "class", "physics", "chemistry", "biology", "law", "laws", "continued", "chemical", "preparation", "important", "points", "example", "examples", "this", "that", "with", "from", "which", "have", "their", "these", "those", "also", "are", "for", "into", "when", "than", "can", "will", "under", "between", "formula", "relation", "original", "source", "page", "diagram", "structure", "book"]);
 const topicTerms = (text: string) => [...new Set(normal(text).split(" ").filter(word => word.length >= 3 && !stop.has(word)))];
 const topicScore = (title: string, text: string) => {
   const terms = topicTerms(title), words = new Set(normal(text).split(" "));
@@ -19,8 +20,13 @@ export async function appendUploadedReferenceNotes(result: GenerationResult, db:
   if (!detailed) return result;
   // Keep significant short names such as s-block / p-block distinct. Loose
   // keyword overlap can otherwise attach a different chapter's diagrams.
-  const chapterKey = (value: string) => normal(value).split(" ").filter(word => word && !/^(?:chapter|the|and|of|[0-9]+)$/.test(word)).join(" ");
-  const chapterFits = (source?: string) => !!chapterKey(chapter) && !!source?.trim() && chapterKey(chapter) === chapterKey(source);
+  const chapterKeys = new Map<string, string>();
+  const chapterKey = (value: string) => {
+    if (!chapterKeys.has(value)) chapterKeys.set(value, normal(indexLocalBookPage(subject, value).chapter || value).split(" ").filter(word => word && !/^(?:chapter|the|and|of|[0-9]+)$/.test(word)).join(" "));
+    return chapterKeys.get(value)!;
+  };
+  const requestedChapter = chapterKey(chapter);
+  const chapterFits = (source?: string) => !!requestedChapter && !!source?.trim() && requestedChapter === chapterKey(source);
   const { data: books, error } = await db.from("ncert_books").select("id,class,subject,chapter,file_name,num_chunks,storage_path").limit(500);
   if (error) throw new Error(error.message);
   const unique = new Map<string, NonNullable<typeof books>[number]>();
@@ -54,7 +60,15 @@ export async function appendUploadedReferenceNotes(result: GenerationResult, db:
       // approved notes. Match the picture's subject, never chapter keywords alone.
       const pictureTopic = visual.title.replace(/\b(?:reaction|reactions|map|pathways|diagram|structure|properties|chemical|preparation|comparison)\b/gi, " ");
       const evidence = [...(slide.key_terms || []), ...(slide.notes || []), ...(slide.bullets || []), ...(slide.sections || []).filter(section => !section.heading.startsWith("Reference notes")).flatMap(section => section.lines)].join(" ");
-      const bodyScore = visual.capture !== "page" && topicTerms(pictureTopic).length ? topicScore(pictureTopic, evidence) : 0;
+      // Full pages use their OCR solely as an index. Generic headings such as
+      // "Important points" can still match specific vocabulary in approved notes.
+      const chapterWords = new Set(topicTerms(chapter));
+      const evidenceTerms = topicTerms(evidence).filter(term => !chapterWords.has(term));
+      const pageWords = new Set(topicTerms(visual.match_text || ""));
+      const overlap = evidenceTerms.filter(term => pageWords.has(term));
+      const bodyScore = visual.capture === "page"
+        ? (overlap.length >= 3 ? overlap.length : 0)
+        : topicTerms(pictureTopic).length ? topicScore(pictureTopic, evidence) : 0;
       return { index, score: direct * 10 + bodyScore };
     })
       .filter(item => !["break", "mcq"].includes(result.slides[item.index].kind || ""));

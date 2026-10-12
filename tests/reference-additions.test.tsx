@@ -208,3 +208,23 @@ describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
     expect(result.slides[0].sections[0]).toBe(original.slides[0].sections[0]);
   });
  });
+
+describe("book images across senior subjects and chapter aliases", () => {
+  it.each([
+    ["11", "Physics", "Motion in a Straight Line", "Motion in 1-D", "Displacement velocity acceleration describe linear motion."],
+    ["12", "Physics", "Electrostatic Potential and Capacitance", "Electric potential", "Potential energy equipotential surfaces describe electric fields."],
+    ["11", "Chemistry", "Equilibrium", "Ionic equilibrium", "Hydrogen hydroxide concentration determines acidity."],
+    ["12", "Chemistry", "Haloalkanes and Haloarenes", "Haloalkane and haloarene", "Nucleophilic substitution bromide reagents and products."],
+    ["11", "Botany", "Plant Kingdom", "Plant Kingdom", "Bryophytes pteridophytes gymnosperms have different reproductive structures."],
+    ["12", "Zoology", "Human Reproduction", "Human Reproduction", "Seminiferous tubules spermatogenesis produce spermatozoa."],
+  ])("adds original %s %s pages using chapter and note evidence", async (grade, subject, chapter, sourceChapter, evidence) => {
+    const original = lesson("Important points");
+    original.slides[0].notes = [evidence];
+    const page = { ...figure, capture: "page" as const, title: "Original book page", chapter: sourceChapter, match_text: evidence, crop: { x: 0, y: 0, width: 1, height: 1 } };
+    const result = await appendUploadedReferenceNotes(original, mockDb([book("med", subject)], { med: [encodeReferenceVisuals("", [page])] }), grade, subject, chapter);
+    expect(result.slides[0].reference_visuals).toHaveLength(1);
+    expect(result.slides[0].reference_visuals[0].url).toContain("page-169.jpg");
+    expect(result.slides[0].sections).toBe(original.slides[0].sections);
+    expect(result.slides[0].notes).toBe(original.slides[0].notes);
+  });
+});
