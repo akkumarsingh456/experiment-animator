@@ -152,9 +152,9 @@ export function sanitizeLatex(body: string): string {
   if (open > close) s += "}".repeat(open - close);
   else if (close > open) s = "{".repeat(close - open) + s;
   // Balance \left / \right.
-  const l = (s.match(/\\left/g) || []).length;
-  const r = (s.match(/\\right/g) || []).length;
-  if (l !== r) s = s.replace(/\\left|\\right/g, "");
+  const l = (s.match(/\\left\b/g) || []).length;
+  const r = (s.match(/\\right\b/g) || []).length;
+  if (l !== r) s = s.replace(/\\(?:left|right)\b/g, "");
   return s.replace(/\s{2,}/g, " ").trim();
 }
 

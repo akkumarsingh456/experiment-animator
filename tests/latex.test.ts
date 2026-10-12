@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeLatex, normalizeLine, autoLatex, isValidLatex } from "@/lib/latex-notation";
+import { normalizeLatex, normalizeLine, autoLatex, isValidLatex, sanitizeLatex } from "@/lib/latex-notation";
 describe("latex", () => {
   it("fractions", () => { expect(normalizeLatex("1/2 m v^2")).toContain("\\frac{1}{2}"); });
   it("chem", () => { expect(normalizeLatex("H2SO4")).toBe("H_{2}SO_{4}"); });
@@ -9,4 +9,11 @@ describe("latex", () => {
   it("line", () => { const r = normalizeLine("Formula: $\\frac{a}{b$"); expect(r.length).toBeGreaterThan(0); });
   it("auto", () => { const r = autoLatex("v = u + at"); expect(r).toContain("$"); });
   it("keeps good latex", () => { expect(normalizeLatex("\\oint \\mathbf{E}\\cdot d\\mathbf{A}")).toContain("\\oint"); });
+  it.each(["\\rightarrow", "\\rightleftharpoons", "\\leftarrow"])("preserves reaction command %s during delimiter repair", (arrow) => {
+    const reaction = `\\mathrm{CH_3Br + OH^- ${arrow} CH_3OH + Br^-}`;
+    expect(sanitizeLatex(reaction)).toBe(reaction);
+    expect(normalizeLine(`$${reaction}$`)).toBe(`$${reaction}$`);
+    expect(sanitizeLatex(`\\left( ${reaction}`)).toContain(arrow);
+    expect(isValidLatex(normalizeLatex(reaction))).toBe(true);
+  });
 });

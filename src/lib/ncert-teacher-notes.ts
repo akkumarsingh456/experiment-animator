@@ -644,7 +644,7 @@ export async function mapWithConcurrency<T, R>(items: T[], limit: number, task: 
  * whose notes lack those labels get them from a dedicated formula-sheet AI
  * pass, inserted right after the Definition lines.
  */
-async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; sections?: NoteSection[] }>(
+export async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; sections?: NoteSection[] }>(
   slides: T[],
   opts: { apiKey?: string; klass: string; subject: string; chapter: string; refContext?: string },
 ): Promise<T[]> {
@@ -654,15 +654,21 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
   const targets: Array<{ index: number; title: string; excerpts: string[] }> = [];
   slides.forEach((s, i) => {
     if (!["content", "chapter"].includes(s.kind ?? "content")) return;
-    const lines = s.sections?.[0]?.lines || [];
-    const source = [s.grounding || "", s.chapter_text || "", ...lines, ...(s.bullets || []), ...(s.notes || [])].join(" ");
+    const lines = (s.sections || []).filter((section) => section.kind !== "diagram").flatMap((section) => section.lines);
+    const topicReferences = formulaReferenceContextForTopic(opts.refContext, s.title);
+    const excerpts = dedupe([
+      ...sentences(s.grounding || ""), ...sentences(s.chapter_text || ""),
+      ...(s.bullets || []), ...(s.notes || []), ...lines,
+      ...(topicReferences ? [topicReferences] : []),
+    ]);
+    const source = excerpts.join(" ");
     const quantitative = hasQuantitativeFormulaEvidence(source);
     // Review completeness even if one formula, unit and derivation already exist.
     if (!quantitative) return;
     targets.push({
       index: i,
       title: s.title,
-      excerpts: dedupe([...sentences(s.grounding || ""), ...sentences(s.chapter_text || ""), ...(s.bullets || []), ...(s.notes || [])]),
+      excerpts,
     });
   });
   if (targets.length === 0) return slides;
@@ -673,16 +679,9 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
   // Long lessons can have dozens of formula batches. Bound concurrency so the
   // AI service can return formula sheets across the entire chapter consistently.
   const maps = await mapWithConcurrency(chunks, 3, async (chunk) => {
-    const topicSlides = chunk.map((slide) => {
-      const topicReferences = formulaReferenceContextForTopic(opts.refContext, slide.title);
-      return {
-        ...slide,
-        excerpts: topicReferences ? [...slide.excerpts, topicReferences] : slide.excerpts,
-      };
-    });
     // Do not send the chapter-wide reference pool again: unrelated subtopics
     // can share a chapter (e.g. Drift Velocity and Ohm's Law).
-    const formulaOpts = { ...opts, refContext: "", slides: topicSlides };
+    const formulaOpts = { ...opts, refContext: "", slides: chunk };
     let result = await aiFormulaSheet(formulaOpts);
     for (let retry = 0; result.size === 0 && retry < 2; retry++) {
       await new Promise(resolve => setTimeout(resolve, 300 * (retry + 1)));
@@ -696,10 +695,8 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
     for (const [i, block] of map) {
       const slide = out[i];
       if (!slide) continue;
-      // Weak derivation groups (too short / no equations) are replaced only
-      // when the AI actually returned full derivations for this slide.
-      const rawExisting = slide.sections?.[0]?.lines || [];
-      const existing = block.derivations?.length ? stripWeakDerivations(rawExisting) : rawExisting;
+      // Add source-supported material without rewriting approved note lines.
+      const existing = slide.sections?.[0]?.lines || [];
       const add: string[] = [];
       const norm = (t: string) => t.replace(/\*\*[^*]+:\*\*/g, "").replace(/[\s$]/g, "");
       const formulaKey = (line: string) => {
@@ -742,35 +739,13 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
       while (at < lines.length && /^\*\*(analogy|definition)/i.test(lines[at])) at++;
       lines.splice(at, 0, ...add);
       const merged = dedupeLabelled(lines);
-      slide.sections = [{ heading: NOTE_HEADING, kind: "bullets", lines: merged }];
+      slide.sections = [
+        { ...(slide.sections?.[0] || { heading: NOTE_HEADING, kind: "bullets" as const }), lines: merged },
+        ...(slide.sections?.slice(1) || []),
+      ];
     }
   }
   return out as T[];
-}
-
-/** Remove derivation groups that are too short or lack real equations. */
-function stripWeakDerivations(lines: string[]): string[] {
-  const out: string[] = [];
-  let i = 0;
-  while (i < lines.length) {
-    if (/^\*\*derivation of/i.test(lines[i])) {
-      let j = i + 1;
-      while (j < lines.length && /^\*\*derivation step/i.test(lines[j])) j++;
-      const steps = lines.slice(i + 1, j);
-      const withMath = steps.filter((l) => /\$|=/.test(l.replace(/^\*\*[^*]+:\*\*/, ""))).length;
-      const vague = steps.some((l) => /rearrange the terms|state the final relation|stands alone/i.test(l));
-      if (!steps.length || vague || !withMath) {
-        i = j;
-        continue;
-      }
-      out.push(...lines.slice(i, j));
-      i = j;
-      continue;
-    }
-    out.push(lines[i]);
-    i++;
-  }
-  return out;
 }
 
 /**
