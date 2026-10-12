@@ -8,6 +8,8 @@ import type { Database } from "@/integrations/supabase/types";
 import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
+import { scopeTextbookPages, referenceFormulaEvidence } from "@/lib/lesson-source-scope";
+import { chaptersFor } from "@/lib/ncert-syllabus";
 import { REF_BOOK_PATTERN, combinedReferenceMatches } from "@/lib/reference-books";
 import { sourceDiscussion, reviewNotes, learningScaffold } from "@/lib/learning-design";
 import { verifyNoteSections, normalizeForGrounding, autoFixAndVerifyNotes, type NotesCheck } from "@/lib/notes-verification";
@@ -1433,7 +1435,7 @@ export function validateFigurePlacement(slides: Slide[], context: string): { rep
 
 export function buildLocalSlides(topic: string, subtopics: string, context: string, subject = "", mode: "topic" | "chapter" = "topic"): Slide[] {
   const rawSentences = uniqueByNormalized(splitSentences(context));
-  const sentences = filterJunkSentences(rawSentences).slice(0, 260);
+  const sentences = filterJunkSentences(rawSentences);
   if (sentences.length === 0) return fallbackSlides(topic, context);
   const lang = isLanguageSubject(subject);
 
@@ -1499,7 +1501,8 @@ export function buildLocalSlides(topic: string, subtopics: string, context: stri
     const keywords = normalizeText(name).split(" ").filter((word) => word.length > 2 && !/^(the|and|law|laws|rule|rules|introduction|chapter|properties|basic|concept|concepts)$/.test(word));
     const source = sentences.filter((line) => {
       const normalized = normalizeText(line);
-      return normalized.includes(normalizeText(name)) || keywords.some((word) => normalized.split(" ").includes(word));
+      const hits = keywords.filter((word) => normalized.split(" ").includes(word)).length;
+      return normalized.includes(normalizeText(name)) || (keywords.length > 0 && hits >= Math.min(2, keywords.length));
     });
     if (!source.length) {
       // A missing topic is explicit; do not relabel an unrelated paragraph.
@@ -1661,7 +1664,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v42-complete-derivations-units-mindmap",
+      "lesson-v43-source-formulas-book-captures",
       data.klass,
       data.subject,
       data.chapter,
@@ -1864,7 +1867,15 @@ export const generateLesson = createServerFn({ method: "POST" })
       pickedMap.set(`${chunk.book_id}:${chunk.chunk_index}`, splitReferenceContent(chunk.content).text);
     }
     const picked = [...pickedMap.values()].length > 0 ? [...pickedMap.values()] : selectedChunks.slice(0, 24).map((c) => splitReferenceContent(c.content).text);
-    const context = picked.join("\n---\n").slice(0, 30000);
+    let context = picked.join("\n---\n").slice(0, 30000);
+    if (data.chapter) {
+      const sourcePages = await Promise.all([...primaryIds].map(async bookId => {
+        const { data: pages } = await s.from("ncert_pages").select("page_number,text").eq("book_id", bookId).order("page_number").limit(1000);
+        return scopeTextbookPages(pages || [], data.chapter, chaptersFor(classNumber(data.klass), data.subject).map(chapter => chapter.chapter));
+      }));
+      const scoped = sourcePages.flat();
+      if (scoped.length) context = scoped.join("\n\n").slice(0, 160000);
+    }
     if (!context.trim()) {
       throw new Error(`The matching Class ${data.klass} ${data.subject} PDF was found, but no readable text chunks were saved. Re-ingest that PDF from Upload.`);
     }
@@ -1912,7 +1923,7 @@ export const generateLesson = createServerFn({ method: "POST" })
         const refRanked = hits.sort((a, z) => z._s - a._s).slice(0, 32);
         const refNames = new Map(refTop.map((b) => [b.id, b.file_name || "reference book"]));
         refContext = refRanked
-          .map((c) => `[${refNames.get(c.book_id)}] ${splitReferenceContent(String(c.content || "")).text.replace(/\s+/g, " ").trim()}`)
+          .map((c) => { const evidence = referenceFormulaEvidence(String(c.content || ""), data.chapter || data.topic); return evidence ? `[${refNames.get(c.book_id)}] ${evidence}` : ""; }).filter(Boolean)
           .join("\n---\n")
           .slice(0, 20000);
       }

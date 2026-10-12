@@ -1,11 +1,20 @@
 import type { Slide } from '@/lib/generate.functions';
 import type { ReferenceVisual } from '@/lib/reference-visuals';
+import { formulaIdentity } from '@/lib/source-formula-supplements';
 
-/** A capture refresh changes pictures only; approved notes retain their identity. */
-export function mergeLessonBookPictures(slides: Slide[], pictures: Array<{ title: string; visuals: ReferenceVisual[] }>): Slide[] {
+export function assertBookPicturesForExport(eligible: boolean, count: number) {
+  if (eligible && count === 0) throw new Error('No matching Med Easy pages are ready for this chapter. Resume book pictures and wait for the chapter captures before downloading.');
+}
+
+/** Refresh captures and append missing source formulas without rewriting approved lines. */
+export function mergeLessonBookPictures(slides: Slide[], pictures: Array<{ title: string; visuals: ReferenceVisual[]; formula_lines?: string[] }>): Slide[] {
   return slides.map((slide, index) => {
     const match = pictures[index];
     if (!match || match.title !== slide.title || slide.kind === 'break' || slide.kind === 'mcq') return slide;
-    return { ...slide, reference_visuals: match.visuals };
+    const known = new Set((slide.sections || []).flatMap(section => section.lines).filter(line => /^\*\*(?:formula|equation|relation):/i.test(line)).map(formulaIdentity));
+    const add = (match.formula_lines || []).filter(line => { const identity = formulaIdentity(line); if (!identity || known.has(identity)) return false; known.add(identity); return true; });
+    if (!add.length) return { ...slide, reference_visuals: match.visuals };
+    const first = slide.sections?.[0] || { heading: 'Teacher Notes', kind: 'bullets' as const, lines: [] };
+    return { ...slide, reference_visuals: match.visuals, sections: [{ ...first, lines: [...first.lines, ...add] }, ...(slide.sections?.slice(1) || [])] };
   });
 }

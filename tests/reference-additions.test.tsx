@@ -37,6 +37,16 @@ describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
     const unrelated = await appendUploadedReferenceNotes(lesson("Elimination reactions"), db, "12", "Chemistry", "Haloalkanes and Haloarenes");
     expect(unrelated.slides[0].reference_visuals || []).toEqual([]);
   });
+  it("keeps a full book page available to each topic actually covered on that page", async () => {
+    const original = lesson("Coulomb's Law");
+    original.slides.push(lesson("Charging by induction").slides[0]);
+    const page = { ...figure, chapter:"Electric Charges and Fields", title:"Original page", capture:"page" as const,
+      match_text:"Coulomb's law. Charging by induction.", crop:{x:0,y:0,width:1,height:1} };
+    const db = mockDb([book("med","Physics")],{med:[encodeReferenceVisuals("",[page],{chapter:page.chapter})]});
+    const result = await appendUploadedReferenceNotes(original,db,"12","Physics","Electric Charges and Fields");
+    expect(result.slides[0].reference_visuals).toHaveLength(1);
+    expect(result.slides[1].reference_visuals).toHaveLength(1);
+  });
   it("does not confuse s-block and p-block chapters even when topic words overlap", async () => {
     const original = lesson("Chemical Properties");
     original.slides[0].notes = ["Chlorine reacts with metals."];

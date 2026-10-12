@@ -1,6 +1,6 @@
 import { prepareScannedReferenceBooks } from "@/lib/prepare-reference-books";
 import { loadLessonBookPictures } from "@/lib/lesson-book-pictures.functions";
-import { mergeLessonBookPictures } from "@/lib/lesson-book-pictures";
+import { mergeLessonBookPictures, assertBookPicturesForExport } from "@/lib/lesson-book-pictures";
 import { BookReferenceFigures } from "@/components/BookReferenceFigures";
 import { BookMapSlide } from "@/components/BookMapSlide";
 import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
@@ -269,15 +269,16 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const [bookCaptureMessage, setBookCaptureMessage] = useState("");
   const bookCaptureRun = useRef<{ stopped: boolean } | null>(null);
   const captureEligible = /^(11|12)$/.test(search.klass.replace(/[^0-9]/g, "")) && /^(physics|chemistry|biology|botany|zoology)$/i.test(search.subject);
+  async function refreshBookPictures(run?: { stopped: boolean }) {
+    const pictures = await loadLessonBookPictures({ data: { klass: search.klass, subject: search.subject, chapter: search.chapter || title, slides: slides.map(slide => ({ title: slide.title, kind: slide.kind, topic_text: [...slide.key_terms, ...slide.notes, ...slide.bullets, ...(slide.sections || []).filter(section => !section.heading.startsWith("Reference notes")).flatMap(section => section.lines)].join("\n").slice(0, 30000) })) } });
+    if (!run || (bookCaptureRun.current === run && !run.stopped)) setSlides(current => mergeLessonBookPictures(current, pictures));
+    return pictures.reduce((count, picture) => count + picture.visuals.length, 0);
+  }
   async function captureBookPictures() {
     if (!captureEligible || (bookCaptureRun.current && !bookCaptureRun.current.stopped)) return;
     const run = { stopped: false }; bookCaptureRun.current = run;
     setBookCaptureBusy(true);
-    const refresh = async () => {
-      const pictures = await loadLessonBookPictures({ data: { klass: search.klass, subject: search.subject, chapter: search.chapter || title, slides: withCoverSlide(result.slides).map(slide => ({ title: slide.title, kind: slide.kind, topic_text: [...slide.key_terms, ...slide.notes, ...slide.bullets, ...(slide.sections || []).filter(section => !section.heading.startsWith("Reference notes")).flatMap(section => section.lines)].join(" ").slice(0, 30000) })) } });
-      if (bookCaptureRun.current === run) setSlides(current => mergeLessonBookPictures(current, pictures));
-      return pictures.reduce((count, picture) => count + picture.visuals.length, 0);
-    };
+    const refresh = () => refreshBookPictures(run);
     try {
       setBookCaptureMessage("Loading saved Med Easy pictures for this chapter...");
       await refresh();
@@ -543,6 +544,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     setExportMode(mode);
     setExportProgress("Preparing PDF...");
     try {
+      if (captureEligible) assertBookPicturesForExport(true, await refreshBookPictures());
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       if (!exportRef.current) throw new Error("The PDF pages are not ready.");
       if (mode !== "notes") await prepareSlideExport(exportRef.current);
@@ -570,6 +572,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     if (exportMode) return;
     setExportMode(lessonView === "notes" ? "guided-slides" : "slides");
     try {
+      if (captureEligible) assertBookPicturesForExport(true, await refreshBookPictures());
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       if (!exportRef.current) throw new Error("The slides are not ready.");
       await downloadRenderedPptx(exportRef.current, `${title}-${lessonView === "notes" ? "guided-notes" : "ppt"}`);

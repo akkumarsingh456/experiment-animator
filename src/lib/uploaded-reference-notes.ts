@@ -44,7 +44,7 @@ export async function appendUploadedReferenceNotes(result: GenerationResult, db:
   const used = new Set<string>();
   // Give each complete book map one home in the chapter, rather than repeating
   // its branches on unrelated slides. Both chapter and topic must match.
-  const figureOwners = new Map<string, number>();
+  const figureOwners = new Map<string, Set<number>>();
   const figureKey = (visual: { storage_path: string; title: string }) => `${visual.storage_path}:${visual.title}`;
   for (const { visuals } of rows) for (const visual of visuals) {
     if (!visual.chapter?.trim() || !chapterFits(visual.chapter)) continue;
@@ -59,12 +59,17 @@ export async function appendUploadedReferenceNotes(result: GenerationResult, db:
     })
       .filter(item => !["break", "mcq"].includes(result.slides[item.index].kind || ""));
     const best = scores.sort((a, b) => b.score - a.score)[0];
-    if (best && best.score > 0) figureOwners.set(figureKey(visual), best.index);
+    // A full source page can contain several genuinely different topics. Keep
+    // complete cropped maps at one home, but share a page with every matched topic.
+    if (visual.capture === "page") {
+      const matches = scores.filter(item => item.score > 0).map(item => item.index);
+      if (matches.length) figureOwners.set(figureKey(visual), new Set(matches));
+    } else if (best && best.score > 0) figureOwners.set(figureKey(visual), new Set([best.index]));
   }
   const slides = result.slides.map((slide, slideIndex) => {
     if (slide.kind === "break" || slide.kind === "mcq") return slide;
     const originalSections = (slide.sections || []).filter(section => !headings.has(section.heading));
-    const candidates = detailed ? rows.flatMap(({ book, visuals }) => visuals.filter(visual => figureOwners.get(figureKey(visual)) === slideIndex).map(visual => { used.add(book.id); return visual; })) : [];
+    const candidates = detailed ? rows.flatMap(({ book, visuals }) => visuals.filter(visual => figureOwners.get(figureKey(visual))?.has(slideIndex)).map(visual => { used.add(book.id); return visual; })) : [];
     const figures = candidates.filter((v,i,all) => all.findIndex(other => other.storage_path === v.storage_path && other.title === v.title) === i);
     return figures.length || (slide.reference_visuals || []).length || originalSections.length !== (slide.sections || []).length ? { ...slide, sections: originalSections.length === (slide.sections || []).length ? slide.sections : originalSections, reference_visuals: figures.map(figure => ({ ...figure })) } : slide;
   });
