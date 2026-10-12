@@ -663,9 +663,15 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                   <Pencil className="h-4 w-4" />{editing ? "Done editing" : "Edit slides"}
                 </Button>}
                 <Button size="sm" disabled={!!exportMode} onClick={downloadPPTX} title="PowerPoint with rendered equations; slide text is also included in speaker notes">
-                  <Download className="h-4 w-4" />PPTX
+                  <Download className="h-4 w-4" />{exportMode ? "Preparing download…" : "PPTX"}
                 </Button>
               </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3 mb-3 print:hidden" aria-live="polite">
+              {exportProgress && <span>{exportProgress}</span>}
+              {readyPdf && <a className="text-primary underline" href={readyPdf.url} download={readyPdf.filename}>Save PDF</a>}
+              {readyPptx && <a className="text-primary underline" href={readyPptx.url} download={readyPptx.filename}>Save PPTX</a>}
             </div>
 
             {lessonView === "notes" && <>

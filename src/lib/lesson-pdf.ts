@@ -28,8 +28,12 @@ export async function downloadLessonPdf(root: HTMLElement, mode: "notes" | "slid
   let count = 0;
   let rendered = 0;
   options?.onProgress?.(0, pages.length);
-  for (const page of pages) {
-    const canvas = await toCanvas(page, { pixelRatio: 1.5, backgroundColor: "#ffffff", cacheBust: false, fontEmbedCSS });
+  // Overlap image decoding for two pages, while bounding memory and preserving slide order.
+  for (let offset = 0; offset < pages.length; offset += 2) {
+    const batch = pages.slice(offset, offset + 2);
+    const canvases = await Promise.all(batch.map(page => toCanvas(page, { pixelRatio: 1.5, backgroundColor: "#ffffff", cacheBust: false, fontEmbedCSS })));
+    for (const [index, page] of batch.entries()) {
+    const canvas = canvases[index];
     const pagePx = usableHeight / usableWidth * canvas.width;
     const rect = page.getBoundingClientRect();
     const scale = canvas.width / rect.width;
@@ -58,6 +62,7 @@ export async function downloadLessonPdf(root: HTMLElement, mode: "notes" | "slid
     }
     canvas.width = canvas.height = 0;
     options?.onProgress?.(++rendered, pages.length);
+  }
   }
   const filename = `${title.replace(/[<>:"/\\|?*]/g, "-") || "lesson"}-${mode === "notes" ? "guided-notes" : "presentation-slides"}.pdf`;
   if (options?.onReady) options.onReady(pdf.output("blob"), filename);

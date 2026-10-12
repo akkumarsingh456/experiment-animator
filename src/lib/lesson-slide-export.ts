@@ -39,14 +39,18 @@ export async function downloadRenderedPptx(root: HTMLElement, title: string, opt
   pptx.subject = "Complete lesson notes with rendered LaTeX"; pptx.title = title;
   options?.onProgress?.(0, pages.length);
   let completed = 0;
-  for (const page of pages) {
-    const image = await toJpeg(page, { pixelRatio: 1.5, quality: 0.9, backgroundColor: "#ffffff", fontEmbedCSS });
+  for (let offset = 0; offset < pages.length; offset += 2) {
+    const batch = pages.slice(offset, offset + 2);
+    const images = await Promise.all(batch.map(page => toJpeg(page, { pixelRatio: 1.5, quality: 0.9, backgroundColor: "#ffffff", fontEmbedCSS })));
+    for (const [index, page] of batch.entries()) {
+    const image = images[index];
     const slide = pptx.addSlide();
     // Rendered equations keep fractions, matrices, subscripts and layout intact.
     slide.addImage({ data: image, x: 0, y: 0, w: 13.333333, h: 7.5 });
     slide.addNotes(page.innerText || page.textContent || "");
     options?.onProgress?.(++completed, pages.length);
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
   }
   const filename = `${title.replace(/[<>:"/\\|?*]/g, "-") || "lesson"}.pptx`;
   if (options?.onReady) options.onReady(await pptx.write({ outputType: "blob" }) as Blob, filename);
