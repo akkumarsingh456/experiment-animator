@@ -8,7 +8,7 @@ import { retryBookRead } from "@/lib/book-read-recovery";
 export type ReferenceReadSummary = { book: string; pages: number; figures: number; chapters: number };
 
 /** Read the existing uploaded scans once, checkpointing each page for resumption. */
-export async function prepareScannedReferenceBooks(klass: string, subject: string, progress: (message: string) => void, cancelled: () => boolean = () => false) {
+export async function prepareScannedReferenceBooks(klass: string, subject: string, progress: (message: string) => void, cancelled: () => boolean = () => false, onPicturesSaved?: () => Promise<void>) {
   const summaries: ReferenceReadSummary[] = [];
   if (!/11|12/.test(klass)) return summaries;
   await retryBookRead(() => classifyMedEasyLibrary(), { stopped: cancelled, progress, label: "Preparing book labels" });
@@ -52,7 +52,11 @@ export async function prepareScannedReferenceBooks(klass: string, subject: strin
         if (cancelled()) throw new Error("Reference-book reading paused. Completed pages are saved.");
         const content = await retryBookRead(() => readScannedPage({ data: { image, page, aspect, book_id: book.id, chapter_hint: chapterHint } }), { stopped: cancelled, progress, label: `${book.file_name} · page ${page}` });
         savedPages.set(page, content);
-        chapterHint = splitReferenceContent(content).context?.chapter || chapterHint;
+        const captured = splitReferenceContent(content);
+        chapterHint = captured.context?.chapter || chapterHint;
+        // The server has saved the original page and crop coordinates already.
+        // Attach useful images immediately, without waiting for the whole book.
+        if (captured.visuals.length && !cancelled()) await onPicturesSaved?.();
         return content;
       },
     });

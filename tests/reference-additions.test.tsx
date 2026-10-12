@@ -23,6 +23,17 @@ function lesson(title: string) {
 }
 
 describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
+  it("does not confuse s-block and p-block chapters even when topic words overlap", async () => {
+    const original = lesson("Chemical Properties");
+    original.slides[0].notes = ["Chlorine reacts with metals."];
+    const map = {...figure,title:"Chlorine reaction map",description:"Chlorine reactions",chapter:"The p-Block Elements"};
+    const db = mockDb([book("med","Chemistry")],{med:[encodeReferenceVisuals("",[map])]});
+    const wrong = await appendUploadedReferenceNotes(original,db,"11","Chemistry","The s-Block Elements");
+    expect(wrong.slides[0].reference_visuals || []).toEqual([]);
+    const right = await appendUploadedReferenceNotes(original,db,"12","Chemistry","Chapter 7: The p-Block Elements");
+    expect(right.slides[0].reference_visuals).toHaveLength(1);
+  });
+
   it("excludes NCERT screenshots, wrong topics, missing chapters and foreign image paths, including cached images",async()=>{
     const original=lesson("Nucleophilic substitution");
     original.slides[0].reference_visuals=[{...figure,title:"Cached unverified image"}];
@@ -57,7 +68,7 @@ describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
     const chunks = Object.fromEntries([botany,zoology].map((b,i)=>[b.id,[encodeReferenceVisuals("Cell structure reference notes retained in their genuine wording.",[pictures[i]],{chapter:"Cell: The Unit of Life",visuals_checked:true})]]));
     const result = await appendUploadedReferenceNotes(original,mockDb([botany,zoology],chunks),grade,"Biology","Cell: The Unit of Life");
     expect(result.slides[0].reference_visuals).toHaveLength(2);
-    expect(result.slides[0].sections).toHaveLength(3);
+    expect(result.slides[0].sections).toHaveLength(1);
     expect(result.slides[0].sections[0]).toBe(original.slides[0].sections[0]);
     expect(result.source_books.map((b:any)=>b.id)).toEqual(["botany","zoology"]);
   });
@@ -101,7 +112,7 @@ describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
     expect(html).toContain("Haloalkanes and Haloarenes");
     expect(html).not.toContain("book-figure-compact");
   });
-  it("refreshes cached reference paragraphs as topic-specific points, preserving original formulas", async () => {
+  it("removes only cached raw reference dumps, preserving original formulas", async () => {
     const original = lesson("Ohm’s Law");
     const formula = original.slides[0].sections[0];
     const points = [
@@ -114,37 +125,35 @@ describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
     const db = mockDb([book("ncert","Physics","Class 12",true)], {ncert:[points.join(" ")]});
     const result = await appendUploadedReferenceNotes(original,db,"12","Physics","Current Electricity");
     expect(result.slides[0].sections[0]).toBe(formula);
-    expect(result.slides[0].sections[1].lines).toEqual([points[0],points[3]]);
-    expect(result.slides[0].sections).toHaveLength(2);
+    expect(result.slides[0].sections).toEqual([formula]);
   });
-  it.each(["11", "12"])("adds organic notes and figures for Class %s without changing existing formulas or derivations", async grade => {
+  it.each(["11", "12"])("adds original organic figures for Class %s without OCR prose or changes to existing formulas", async grade => {
     const original = lesson("Nucleophilic substitution"); const formula = original.slides[0].sections[0];
     const passages = Array.from({length:8}, (_,i) => `Nucleophilic substitution reference passage ${i+1}: a distinct source detail retained verbatim.`);
     const db = mockDb([book("med", "Chemistry"),book("ncert", "Chemistry", `Class ${grade}`,true), book("physics", "Physics")], { med: [encodeReferenceVisuals(passages.join("\n\n"),[figure])], ncert: ["Nucleophilic substitution NCERT passage: the matching topic is included."], physics: ["Nucleophilic substitution irrelevant cross-subject passage."] });
     const result = await appendUploadedReferenceNotes(original,db,`Class ${grade}`,"Chemistry","Haloalkanes and Haloarenes");
     expect(result.slides[0].sections[0]).toBe(formula);
     expect(JSON.stringify(formula)).toBe(JSON.stringify(original.slides[0].sections[0]));
-    expect(result.slides[0].sections[1].lines).toEqual(passages);
+    expect(result.slides[0].sections).toEqual([formula]);
     expect(result.slides[0].reference_visuals).toHaveLength(1);
     expect(result.slides[0].reference_visuals[0].page).toBe(169);
-    expect(result.source_books.map((b:any)=>b.id)).toEqual(["med","ncert"]);
+    expect(result.source_books.map((b:any)=>b.id)).toEqual(["med"]);
     const repeated = await appendUploadedReferenceNotes(result,db,`Class ${grade}`,"Chemistry","Haloalkanes and Haloarenes");
     expect(repeated.slides[0].sections).toHaveLength(result.slides[0].sections.length);
     expect(repeated.slides[0].reference_visuals).toHaveLength(1);
   });
-  it("adds inorganic structural evidence without mixing neighbouring chapters", async () => {
+  it("does not substitute extracted inorganic text when no original picture is available", async () => {
     const original=lesson("Coordination compounds");
     const db=mockDb([book("med","Chemistry")],{med:["Coordination compounds have identifiable ligand and central-metal labels in the source.\n\nHydrocarbons are a separate chapter with unrelated passages."]});
     const result=await appendUploadedReferenceNotes(original,db,"12","Chemistry","Coordination Compounds");
-    expect(result.slides[0].sections[1].lines).toHaveLength(1);
-    expect(result.slides[0].sections[1].lines[0]).not.toContain("Hydrocarbons");
+    expect(result.slides[0]).toBe(original.slides[0]);
   });
-  it.each(["11","12"])("adds Physics detail for Class %s while preserving original note objects", async grade => {
+  it.each(["11","12"])("never substitutes raw Physics OCR for Class %s book images", async grade => {
     const original=lesson("Drift velocity");
     const db=mockDb([book("med","Physics")],{med:["Drift velocity describes the mean motion of charge carriers in the reference passage."]});
     const result=await appendUploadedReferenceNotes(original,db,grade,"Physics","Current Electricity");
     expect(result.slides[0].sections[0]).toBe(original.slides[0].sections[0]);
-    expect(result.slides[0].sections).toHaveLength(2);
+    expect(result.slides[0].sections).toHaveLength(1);
   });
   it("does not add Chemistry/Physics supplements to junior classes or Mathematics", async()=>{
     const original=lesson("Drift velocity");const db=mockDb([book("med","Physics")],{med:["Drift velocity reference detail that belongs only to Physics."]});

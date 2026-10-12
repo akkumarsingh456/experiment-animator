@@ -273,24 +273,19 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     if (!captureEligible || (bookCaptureRun.current && !bookCaptureRun.current.stopped)) return;
     const run = { stopped: false }; bookCaptureRun.current = run;
     setBookCaptureBusy(true);
-    let lastRefresh = 0;
-    let refreshing: Promise<void> | null = null;
     const refresh = async () => {
-      const pictures = await loadLessonBookPictures({ data: { klass: search.klass, subject: search.subject, chapter: search.chapter || title, slides: withCoverSlide(result.slides).map(slide => ({ title: slide.title, kind: slide.kind, topic_text: [...slide.key_terms, ...slide.notes, ...slide.bullets, ...(slide.sections || []).flatMap(section => section.lines)].join(" ").slice(0, 30000) })) } });
+      const pictures = await loadLessonBookPictures({ data: { klass: search.klass, subject: search.subject, chapter: search.chapter || title, slides: withCoverSlide(result.slides).map(slide => ({ title: slide.title, kind: slide.kind, topic_text: [...slide.key_terms, ...slide.notes, ...slide.bullets, ...(slide.sections || []).filter(section => !section.heading.startsWith("Reference notes")).flatMap(section => section.lines)].join(" ").slice(0, 30000) })) } });
       if (bookCaptureRun.current === run) setSlides(current => mergeLessonBookPictures(current, pictures));
       return pictures.reduce((count, picture) => count + picture.visuals.length, 0);
     };
     try {
+      setBookCaptureMessage("Loading saved Med Easy pictures for this chapter...");
+      await refresh();
       const summaries = await prepareScannedReferenceBooks(search.klass, search.subject, message => {
-        if (run.stopped) return;
-        setBookCaptureMessage(message);
-        const page = Number(/page (\d+) of/.exec(message)?.[1] || 0);
-        if (page >= lastRefresh + 20 && !refreshing) {
-          lastRefresh = page;
-          refreshing = refresh().then(() => {}).catch(() => {}).finally(() => { refreshing = null; });
-        }
-      }, () => run.stopped);
-      if (refreshing) await refreshing;
+        if (!run.stopped && bookCaptureRun.current === run) setBookCaptureMessage(message);
+      }, () => run.stopped, async () => {
+        if (!run.stopped && bookCaptureRun.current === run) await refresh();
+      });
       const matched = await refresh();
       if (bookCaptureRun.current === run) setBookCaptureMessage(run.stopped ? "Capture paused. Completed pages are saved; resume to continue." : summaries.length ? (matched ? `${matched} original Med Easy pictures added to this chapter’s topics in both lesson views.` : "Books inspected. No verified picture matches this chapter’s current topics; unrelated pictures are excluded.") : "No matching uploaded Med Easy book was found for this subject.");
     } catch (error) {

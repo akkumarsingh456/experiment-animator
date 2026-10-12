@@ -13,5 +13,6 @@ export const loadLessonBookPictures = createServerFn({ method: 'POST' })
     const { appendUploadedReferenceNotes } = await import('@/lib/uploaded-reference-notes');
     const skeleton: GenerationResult = { slides: data.slides.map(slide => ({ title: slide.title, kind: slide.kind, sections: [], bullets: [], notes: [slide.topic_text || ''], key_terms: [], visual: 'book' })), source_books: [], context_chars: 0, activities: [], activity_matches: [], video: { title: '', scenes: [] } };
     const enriched = await appendUploadedReferenceNotes(skeleton, supabaseAdmin, data.klass, data.subject, data.chapter);
+    if (enriched.slides.some(slide => slide.reference_visuals?.some(visual => !visual.url))) throw new Error("A saved Med Easy picture could not be opened. Resume book pictures to retry; the original capture is retained.");
     return enriched.slides.map(slide => ({ title: slide.title, visuals: (slide.reference_visuals || []).filter(visual => !!visual.url) }));
   });
