@@ -208,6 +208,33 @@ export type FormulaBlock = {
   derivations: Array<{ formula: string; steps: string[] }>;
 };
 
+const FORMULA_REFERENCE_STOPWORDS = new Set([
+  "and", "the", "for", "from", "with", "into", "about", "chapter", "class", "subject",
+  "continued", "introduction", "properties", "law", "laws", "topic", "part", "notes",
+  "physics", "chemistry", "mathematics", "maths", "biology", "economics",
+]);
+
+/** Keep reference-book evidence local to a slide topic before formula generation. */
+export function formulaReferenceContextForTopic(refContext: string | undefined, title: string, maxChars = 3600): string {
+  if (!refContext?.trim() || !title.trim()) return "";
+  const terms = [...new Set((title.toLowerCase().match(/[a-z0-9]+/g) || [])
+    .filter((term) => term.length >= 3 && !FORMULA_REFERENCE_STOPWORDS.has(term)))];
+  if (terms.length === 0) return "";
+  const chunks = refContext.split(/\n\s*---\s*\n/).map((text, index) => ({
+    text: text.trim(),
+    index,
+    score: terms.reduce((sum, term) => sum + ((text.toLowerCase().match(new RegExp(`\\b${term}\\b`, "g")) || []).length ? 1 : 0), 0),
+  })).filter((chunk) => chunk.text && chunk.score > 0)
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+  let selected = "";
+  for (const chunk of chunks) {
+    const next = selected ? `${selected}\n---\n${chunk.text}` : chunk.text;
+    if (next.length > maxChars) continue;
+    selected = next;
+  }
+  return selected;
+}
+
 /**
  * Ask the AI for the formulas, variable definitions, SI units and step-by-step
  * derivations of a slide, written in correct LaTeX. Subject-agnostic: physics,

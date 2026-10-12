@@ -12,7 +12,7 @@ import { isContentsListing } from "@/lib/note-source-noise";
  * lexical support in the NCERT context, that line is dropped.
  */
 
-import { aiFixFormulas, aiFormulaSheet, cleanFormulaLine, needsFormulaAI, repairNotation, hasQuantitativeFormulaEvidence } from "@/lib/formula-notation";
+import { aiFixFormulas, aiFormulaSheet, cleanFormulaLine, needsFormulaAI, repairNotation, hasQuantitativeFormulaEvidence, formulaReferenceContextForTopic } from "@/lib/formula-notation";
 import { gatewayJSON, hasGatewayKey } from "@/lib/ai-gateway-json";
 import { learningProfile } from "@/lib/learning-design";
 import { mapOutsideMath, splitMath } from "@/lib/latex-notation";
@@ -673,10 +673,20 @@ async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: string; 
   // Long lessons can have dozens of formula batches. Bound concurrency so the
   // AI service can return formula sheets across the entire chapter consistently.
   const maps = await mapWithConcurrency(chunks, 3, async (chunk) => {
-    let result = await aiFormulaSheet({ ...opts, slides: chunk });
+    const topicSlides = chunk.map((slide) => {
+      const topicReferences = formulaReferenceContextForTopic(opts.refContext, slide.title);
+      return {
+        ...slide,
+        excerpts: topicReferences ? [...slide.excerpts, topicReferences] : slide.excerpts,
+      };
+    });
+    // Do not send the chapter-wide reference pool again: unrelated subtopics
+    // can share a chapter (e.g. Drift Velocity and Ohm's Law).
+    const formulaOpts = { ...opts, refContext: "", slides: topicSlides };
+    let result = await aiFormulaSheet(formulaOpts);
     for (let retry = 0; result.size === 0 && retry < 2; retry++) {
       await new Promise(resolve => setTimeout(resolve, 300 * (retry + 1)));
-      result = await aiFormulaSheet({ ...opts, slides: chunk });
+      result = await aiFormulaSheet(formulaOpts);
     }
     return result;
   });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { guidedFormulaRow, guidedGroups } from "@/lib/guided-notes";
 import { selectSlideExcerpts, buildLocalSections } from "@/lib/ncert-teacher-notes";
 import { renderLessonIllustration } from "@/lib/napkin-infographic";
+import { formulaReferenceContextForTopic } from "@/lib/formula-notation";
 
 describe("Complete guided notes", () => {
   it("keeps every distinct source point, including notes beyond the former eight-point limit", () => {
@@ -15,7 +16,19 @@ describe("Complete guided notes", () => {
   });
   it("reads supplied formula units without guessing units for legacy equations", () => {
     expect(guidedFormulaRow("Resistance | $R = V/I$ | $\\Omega$").unit).toBe("$\\Omega$");
-    expect(guidedFormulaRow("$V = IR$").unit).toBe("—");
+    expect(guidedFormulaRow("$V = IR$").unit).toBe("");
+    expect(guidedFormulaRow("$V = IR$").concept).toBe("Formula");
+  });
+  it("keeps formula reference excerpts matched to the slide topic", () => {
+    const references = [
+      "[Physics Med Easy] Drift Velocity: $v_d = eE\\tau/m$ and $I = neAv_d$.",
+      "[Physics Med Easy] Ohm's Law: $V = IR$ at constant temperature.",
+      "[Physics Med Easy] Wheatstone Bridge: balance condition $P/Q = R/S$.",
+    ].join("\n---\n");
+    const ohmReferences = formulaReferenceContextForTopic(references, "Ohm's Law");
+    expect(ohmReferences).toContain("Ohm's Law");
+    expect(ohmReferences).not.toContain("Drift Velocity");
+    expect(ohmReferences).not.toContain("Wheatstone Bridge");
   });
   it("does not reuse a consumed derivation for an adjacent different formula", () => {
     const groups = guidedGroups([{ heading: "Teacher Notes", kind: "bullets", lines: ["**Formula:** Current | $I = nAev_d$ | A", "**Formula:** Mobility | $\\mu = v_d/E$ | m²/(V s)", "**Derivation of current:** $I = nAev_d$", "**Derivation step 1:** Divide charge by time."] }]);

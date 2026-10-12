@@ -86,5 +86,5 @@ export function guidedFormulaRow(line: string): { concept: string; expression: s
   const cells = line.split(" | ");
   if (cells.length === 3) return { concept: cells[0], expression: cells[1], unit: cells[2] };
   const named = line.match(/^([^$:=]{3,60}):\s*(.+)$/);
-  return { concept: named?.[1] || "Relation", expression: named?.[2] || line, unit: "—" };
+  return { concept: named?.[1] || "Formula", expression: named?.[2] || line, unit: "" };
 }
