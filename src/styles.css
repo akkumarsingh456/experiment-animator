@@ -360,6 +360,11 @@
 .visual-topic-number { color: #173d50; font-weight: 700; }
 .notebook-term-highlight { background: #fff0a5; color: inherit; padding: 0 3px; border-radius: 3px; }
 .notebook-guide-heading { text-decoration: underline; text-decoration-color: #a3c8eb; text-decoration-thickness: 3px; text-underline-offset: 2px; margin-bottom: 4px; }
+.manual-image-controls button { padding: 3px 5px; border-radius: 5px; }
+.manual-image-controls button:hover { background: #eaf3f8; }
+.manual-image-controls input[type=range] { display: block; width: 100%; }
+.lesson-export-slide .manual-image-controls, .lesson-export-notes .manual-image-controls { display: none !important; }
+@media print { .manual-image-controls { display: none !important; } }
 .note-math { max-width: 100%; }
 .note-math-display { padding: 4px 2px; }
 .guided-group .note-math-display { scrollbar-width: thin; }

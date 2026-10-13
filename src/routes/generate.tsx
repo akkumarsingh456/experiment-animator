@@ -4,6 +4,8 @@ import { mergeLessonBookPictures } from "@/lib/lesson-book-pictures";
 import { mergeMedEasySupplements } from "@/lib/med-easy-supplements";
 import { lessonIllustrationCaption } from "@/lib/napkin-infographic";
 import { FormulaVisualCards } from "@/components/FormulaVisualCards";
+import {ManualVisualEditor} from '@/components/ManualVisualEditor';
+import {loadManualVisuals} from '@/lib/manual-visuals';
 import { BookReferenceFigures } from "@/components/BookReferenceFigures";
 import { BookMapSlide } from "@/components/BookMapSlide";
 import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
@@ -273,6 +275,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   };
   const withCoverSlide = (items: Slide[]) => [makeCoverSlide(), ...items.map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, result.source_books[0]?.subject || search.subject)).map(repairSourceMathSlide)];
   const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
+  useEffect(()=>{const refresh=()=>setSlides(current=>[...current]);window.addEventListener('manual-visual-saved',refresh);void loadManualVisuals().catch(()=>{});return()=>window.removeEventListener('manual-visual-saved',refresh);},[]);
   const [bookCaptureBusy, setBookCaptureBusy] = useState(false);
   const [bookCaptureMessage, setBookCaptureMessage] = useState("");
   const bookCaptureRun = useRef<{ stopped: boolean } | null>(null);
@@ -550,10 +553,11 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     return notePages;
   }), [slides]);
   const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, section: "NCERT notes & illustration",
-    content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} subject={search.subject} chapter={search.chapter || title} staticView />,
+    content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} staticView />,
   }));
 
   async function downloadPDF(mode: "notes" | "slides" | "guided-slides" = lessonView) {
+    await loadManualVisuals();
     if (exportMode) return;
     const cached = downloadCache.current.get(`pdf-${mode}`);
     if (cached?.slides === slides) { setReadyDownload(`pdf-${mode}`, cached); savePreparedFile(cached); return; }
@@ -584,6 +588,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   }
 
   async function downloadPPTX(mode: "guided-slides" | "slides") {
+    await loadManualVisuals();
     if (exportMode) return;
     const key = `pptx-${mode}`;
     const cached = downloadCache.current.get(key);
@@ -700,7 +705,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 imageUrl={images[activeIdx]}
                 imageLoading={!!imgLoading[activeIdx]}
                 onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
-                subject={search.subject} chapter={search.chapter || title}
+                klass={search.klass} subject={search.subject} chapter={search.chapter || title}
               /> : <GuidedNotesPresentation inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={originalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("slides")} />}
             </div>
 
@@ -889,7 +894,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       </p>
 
       {exportMode && <div ref={exportRef} className={`lesson-export-root lesson-export-${exportMode === "notes" ? "notes" : "slides"} ${exportMode === "slides" ? "original-slide-deck" : ""}`} data-presentation-style={exportMode === "slides" ? "lovable" : "guided"} aria-hidden="true">
-        {exportMode === "slides" ? originalPages.map((slide, index) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} subject={search.subject} chapter={search.chapter || title} staticView /></div>) :
+        {exportMode === "slides" ? originalPages.map((slide, index) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} staticView /></div>) :
           <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} />}
       </div>}
       {presenting && <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
@@ -1106,10 +1111,10 @@ function BreakSlideBody({ slide }: { slide: Slide }) {
 }
 
 function SlideCanvas({
-  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage, subject, chapter, staticView,
+  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage, klass, subject, chapter, staticView,
 }: {
   slide: Slide; index: number; total: number; editing: boolean; onChange: (p: Partial<Slide>) => void;
-  imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void; subject?: string; chapter?: string; staticView?: boolean;
+  imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void; klass?: string; subject?: string; chapter?: string; staticView?: boolean;
 }) {
   if (!slide) return null;
   const sourceIndex = (slide as Slide & { sourceIndex?: number }).sourceIndex ?? index;
@@ -1275,7 +1280,7 @@ function SlideCanvas({
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
               <div className="lesson-figure-panel relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 flex flex-col">
                 {isMathematics(subject) ? <MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} /> : imageUrl ? (
-                  <img src={imageUrl} alt={`${slide.title} — NCERT 2D infographic`} className="w-full min-h-0 flex-1 object-contain" />
+                  <ManualVisualEditor storageKey={JSON.stringify([klass,subject,chapter,slide.title,sourceIndex,slide.sections?.flatMap(section=>section.lines).slice(0,2)||slide.notes.slice(0,2)])} autoUrl={imageUrl} alt={`${slide.title} — NCERT 2D infographic`} />
                 ) : imageLoading ? (
                   <div className="flex flex-col items-center gap-2 text-[10px] text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />
