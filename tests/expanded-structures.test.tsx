@@ -9,11 +9,11 @@ import { mapWithConcurrency } from "@/lib/ncert-teacher-notes";
 
 describe("More source-based structures across subjects", () => {
   it.each(["Physics", "Chemistry", "Biology", "Mathematics", "History", "Geography", "Political Science", "Economics", "Accountancy", "Computer Science", "English", "Hindi"])("shows factual study maps for %s", (subject) => {
-    const input = { title: "Selected topic", sections: [{ heading: "Teacher Notes", lines: ["**Explanation:** A factual explanation from the selected source.", "**Key point:** A second supported idea.", "**Definition:** A third supported idea.", "**Activity:** Discuss with a partner."] }] };
+    const input = { title: "Selected topic", sections: [{ heading: "Teacher Notes", lines: ["**Explanation:** A factual explanation from the selected source.", "**Explanation:** A second supported idea.", "**Definition:** A third supported idea.", "**Activity:** Discuss with a partner."] }] };
     const html = renderToStaticMarkup(<TopicVisualStructures subject={subject} input={input} />);
-    expect(html).toContain(/English|Hindi/.test(subject) ? "Reading path:" : /Mathematics/.test(subject) ? "mathematics-topic-visual" : "short concept icons");
+    expect(html).toContain(/English|Hindi/.test(subject) ? "Reading path:" : /Mathematics/.test(subject) ? "mathematics-topic-visual" : "Source-based concept map");
     if (/Mathematics/.test(subject)) expect(html.match(/<figure/g)).toHaveLength(1);
-    else if (!/English|Hindi/.test(subject)) expect(html.match(/<figure/g)).toHaveLength(1);
+    else if (!/English|Hindi/.test(subject)) expect(html.match(/<figure/g)).toHaveLength(2);
     expect(sourceConceptFacts(input)).toHaveLength(3);
   });
   it("preserves Hindi, escapes source markup, and wraps without ellipses", () => {

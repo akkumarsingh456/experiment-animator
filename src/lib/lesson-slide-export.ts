@@ -4,6 +4,7 @@ import { paginateGuidedArticles, PRESENTATION_WIDTH, PRESENTATION_HEIGHT } from 
 
 /** Use the same measured content for the projector, slide PDF and PowerPoint. */
 export async function prepareSlideExport(root: HTMLElement) {
+  root.querySelectorAll('.manual-image-controls').forEach(controls=>controls.remove());
   if (root.dataset.presentationStyle === "lovable") {
     root.style.width = `${PRESENTATION_WIDTH}px`;
     await document.fonts.ready;

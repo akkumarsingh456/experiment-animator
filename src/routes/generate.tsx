@@ -557,7 +557,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   }));
 
   async function downloadPDF(mode: "notes" | "slides" | "guided-slides" = lessonView) {
-    await loadManualVisuals();
+    await loadManualVisuals().catch(()=>{});
     if (exportMode) return;
     const cached = downloadCache.current.get(`pdf-${mode}`);
     if (cached?.slides === slides) { setReadyDownload(`pdf-${mode}`, cached); savePreparedFile(cached); return; }
@@ -588,7 +588,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   }
 
   async function downloadPPTX(mode: "guided-slides" | "slides") {
-    await loadManualVisuals();
+    await loadManualVisuals().catch(()=>{});
     if (exportMode) return;
     const key = `pptx-${mode}`;
     const cached = downloadCache.current.get(key);
@@ -1280,7 +1280,7 @@ function SlideCanvas({
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
               <div className="lesson-figure-panel relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 flex flex-col">
                 {isMathematics(subject) ? <MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} /> : imageUrl ? (
-                  <ManualVisualEditor storageKey={JSON.stringify([klass,subject,chapter,slide.title,sourceIndex,slide.sections?.flatMap(section=>section.lines).slice(0,2)||slide.notes.slice(0,2)])} autoUrl={imageUrl} alt={`${slide.title} — NCERT 2D infographic`} />
+                  <ManualVisualEditor klass={klass} subject={subject} chapter={chapter} topic={slide.title} storageKey={JSON.stringify([klass,subject,chapter,slide.title,sourceIndex,slide.sections?.flatMap(section=>section.lines).slice(0,2)||slide.notes.slice(0,2)])} autoUrl={imageUrl} alt={`${slide.title} — NCERT 2D infographic`} />
                 ) : imageLoading ? (
                   <div className="flex flex-col items-center gap-2 text-[10px] text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />

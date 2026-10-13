@@ -1,21 +1,25 @@
 import {useEffect,useRef,useState} from 'react';
-import {ImagePlus,Save,Move,RotateCcw} from 'lucide-react';
+import {ImagePlus,Save,Move,RotateCcw,BookOpen} from 'lucide-react';
+import {loadManualBookLinks} from '@/lib/manual-book-links.functions';
 import {toast} from 'sonner';
 import {loadManualVisuals,manualVisualCache,saveManualVisual,type ManualVisual} from '@/lib/manual-visuals';
 
-export function ManualVisualEditor({storageKey,autoUrl,alt}:{storageKey:string;autoUrl:string;alt:string}){
+export function ManualVisualEditor({storageKey,autoUrl,alt,klass='',subject='',chapter='',topic=''}:{storageKey:string;autoUrl:string;alt:string;klass?:string;subject?:string;chapter?:string;topic?:string}){
  const [visual,setVisual]=useState<ManualVisual|null>(()=>manualVisualCache.get(storageKey)||null);
  const [open,setOpen]=useState(false),[saving,setSaving]=useState(false);
+ const [bookOpen,setBookOpen]=useState(false),[bookLoading,setBookLoading]=useState(false),[bookError,setBookError]=useState('');
+ const [books,setBooks]=useState<Awaited<ReturnType<typeof loadManualBookLinks>>>([]);
  const input=useRef<HTMLInputElement>(null),panel=useRef<HTMLDivElement>(null);
  const drag=useRef<{x:number;y:number;left:number;top:number}|null>(null);
  useEffect(()=>{let cancelled=false;loadManualVisuals().then(()=>{if(!cancelled)setVisual(manualVisualCache.get(storageKey)||null);}).catch(()=>toast.error('Saved images could not be loaded.'));return()=>{cancelled=true;};},[storageKey]);
  async function upload(file?:File){
   if(!file)return;if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>12*1024*1024){toast.error('Choose a PNG, JPG or WebP image up to 12 MB.');return;}
-  try{const url=URL.createObjectURL(file);const image=new Image();try{image.src=url;await image.decode();const scale=Math.min(1,1600/Math.max(image.width,image.height));const canvas=document.createElement('canvas');canvas.width=Math.round(image.width*scale);canvas.height=Math.round(image.height*scale);canvas.getContext('2d')!.drawImage(image,0,0,canvas.width,canvas.height);setVisual({url:canvas.toDataURL('image/png'),width:85,x:7,y:8,shape:'rectangle',showAuto:false});setOpen(true);}finally{URL.revokeObjectURL(url);}}catch{toast.error('This image could not be opened.');}
+  try{const url=URL.createObjectURL(file);const image=new Image();try{image.src=url;await image.decode();const scale=Math.min(1,1600/Math.max(image.width,image.height));const canvas=document.createElement('canvas');canvas.width=Math.round(image.width*scale);canvas.height=Math.round(image.height*scale);canvas.getContext('2d')!.drawImage(image,0,0,canvas.width,canvas.height);setVisual({url:canvas.toDataURL('image/png'),width:85,x:7,y:8,shape:'rectangle',showAuto:false});setOpen(true);setBookOpen(false);panel.current?.focus();}finally{URL.revokeObjectURL(url);}}catch{toast.error('This image could not be opened.');}
  }
  function change(patch:Partial<ManualVisual>){setVisual(current=>current?{...current,...patch}:current);}
  async function save(){setSaving(true);try{await saveManualVisual(storageKey,visual);setOpen(false);toast.success('Image and layout saved on this device.');}catch{toast.error('Image could not be saved. Device storage may be full.');}finally{setSaving(false);}}
- return <div ref={panel} className="manual-visual-editor relative w-full h-full min-h-0" onDragOver={event=>event.preventDefault()} onDrop={event=>{event.preventDefault();void upload(event.dataTransfer.files[0]);}}>
+ async function openBooks(){setBookOpen(value=>!value);if(bookOpen)return;setBookLoading(true);setBookError('');try{setBooks(await loadManualBookLinks({data:{klass,subject,chapter,topic}}));}catch{setBookError('Book links are unavailable. You can still paste a screenshot or import from your device.');}finally{setBookLoading(false);}}
+ return <div ref={panel} tabIndex={0} aria-label="Topic image editor: click here and paste a screenshot" className="manual-visual-editor relative w-full h-full min-h-0" onPaste={event=>{const file=[...event.clipboardData.items].find(item=>item.type.startsWith('image/'))?.getAsFile();if(file){event.preventDefault();void upload(file);}}} onDragOver={event=>event.preventDefault()} onDrop={event=>{event.preventDefault();void upload(event.dataTransfer.files[0]);}}>
    {(!visual||visual.showAuto)&&<img className="w-full h-full object-contain" src={autoUrl} alt={alt}/>}
    {visual&&<div className="absolute overflow-hidden" style={{left:`${visual.x}%`,top:`${visual.y}%`,width:`${visual.width}%`,maxHeight:'90%',borderRadius:visual.shape==='circle'?'50%':visual.shape==='rounded'?16:0,aspectRatio:visual.shape==='circle'?'1':undefined,cursor:open?'move':'default',touchAction:open?'none':undefined}}
      onPointerDown={event=>{if(!open)return;event.currentTarget.setPointerCapture(event.pointerId);drag.current={x:event.clientX,y:event.clientY,left:visual.x,top:visual.y};}}
@@ -25,7 +29,15 @@ export function ManualVisualEditor({storageKey,autoUrl,alt}:{storageKey:string;a
    </div>}
    <div className="manual-image-controls absolute bottom-2 left-2 right-2 flex flex-wrap gap-1 rounded-lg bg-white/95 p-2 border text-[11px] shadow">
      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event=>{void upload(event.target.files?.[0]);event.target.value='';}}/>
-     <button onClick={()=>input.current?.click()} title="Import a picture from your device" className="flex items-center gap-1"><ImagePlus size={15}/> Import image</button>
+     <button onClick={()=>input.current?.click()} title="Import a picture from your device" className="flex items-center gap-1"><ImagePlus size={15}/> From device</button>
+     <button onClick={()=>void openBooks()} className="flex items-center gap-1"><BookOpen size={15}/> From Med Easy book</button>
+     {bookOpen&&<div className="w-full border-t pt-2 max-h-36 overflow-auto">
+       <p>Open the PDF, capture the picture, then click this panel and press Ctrl+V.</p>
+       {bookLoading?<p>Finding saved chapter pages…</p>:bookError?<p>{bookError}</p>:!books.length?<p>No matching Med Easy book is available for this class and subject.</p>:books.map(book=><div key={book.id} className="mt-2">
+         {book.url?<a href={book.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-700">Open {book.name}</a>:<span>{book.name}: PDF link unavailable</span>}
+         {book.pages.length?<div className="flex flex-wrap gap-2 mt-1">{book.pages.map(({page,topic})=>book.url?<a key={page} href={`${book.url}#page=${page}`} target="_blank" rel="noopener noreferrer" className="underline">PDF page {page}{topic?' · topic match':''}</a>:null)}</div>:<p>Chapter pages have not been indexed yet. Use the PDF contents to find the chapter.</p>}
+       </div>)}
+     </div>}
      {visual&&<button onClick={()=>setOpen(value=>!value)} className="flex items-center gap-1 ml-2"><Move size={15}/> Size / shape / position</button>}
      {open&&visual&&<div className="w-full grid grid-cols-2 gap-2 mt-1">
        <label>Size <input aria-label="Uploaded image size" type="range" min="10" max="100" value={visual.width} onChange={event=>change({width:Number(event.target.value),x:Math.min(visual.x,100-Number(event.target.value))})}/></label>
