@@ -268,7 +268,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const [bookCaptureBusy, setBookCaptureBusy] = useState(false);
   const [bookCaptureMessage, setBookCaptureMessage] = useState("");
   const bookCaptureRun = useRef<{ stopped: boolean } | null>(null);
-  const captureEligible = /^(11|12)$/.test(search.klass.replace(/[^0-9]/g, "")) && /^(physics|chemistry|biology|botany|zoology)$/i.test(search.subject);
+  const captureEligible = /^(9|10|11|12)$/.test(search.klass.replace(/[^0-9]/g, "")) && !!search.subject;
   async function refreshBookPictures(run?: { stopped: boolean }) {
     const pictures = await loadLessonBookPictures({ data: { klass: search.klass, subject: search.subject, chapter: search.chapter || title, slides: slides.map(slide => ({ title: slide.title, kind: slide.kind, topic_text: [...slide.key_terms, ...slide.notes, ...slide.bullets, ...(slide.sections || []).filter(section => !section.heading.startsWith("Reference notes")).flatMap(section => section.lines)].join("\n").slice(0, 30000) })) } });
     if (!run || (bookCaptureRun.current === run && !run.stopped)) setSlides(current => mergeLessonBookPictures(current, pictures));
@@ -280,7 +280,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     setBookCaptureBusy(true);
     const refresh = () => refreshBookPictures(run);
     try {
-      setBookCaptureMessage("Loading saved Med Easy pictures for this chapter...");
+      setBookCaptureMessage("Loading original book screenshots for this chapter...");
       await refresh();
       const summaries = await prepareScannedReferenceBooks(search.klass, search.subject, message => {
         if (!run.stopped && bookCaptureRun.current === run) setBookCaptureMessage(message);
@@ -538,11 +538,9 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     const sections = slide.sections?.filter((section) => section.kind !== "diagram");
     const fallback = slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...slide.bullets, ...slide.notes];
     const sourceSections = sections?.length ? sections : [{ heading: "Teacher Notes", kind: "bullets", lines: fallback }];
-    const notePages = paginateLectureSections(sourceSections, 18).map((page) => ({ ...slide, reference_visuals: undefined, sections: page as Slide["sections"], sourceIndex,
+    const notePages = paginateLectureSections(sourceSections, 18).map((page) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
       title: slide.title }));
-    const figurePages = (slide.reference_visuals || []).filter(figure => figure.url).map(figure => ({ ...slide, reference_visuals: [figure], sourceIndex,
-      sections: [{ heading: "Book structure and explanation", kind: "bullets" as const, lines: [figure.description, `${figure.book || "Uploaded textbook"} · PDF page ${figure.page}`] }], title: slide.title }));
-    return [...notePages, ...figurePages];
+    return notePages;
   }), [slides]);
   const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, section: "NCERT notes & illustration",
     content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} subject={search.subject} chapter={search.chapter || title} staticView />,
@@ -1269,7 +1267,7 @@ function SlideCanvas({
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0" style={lang ? { display: "none" } : undefined}>
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
               <div className="lesson-figure-panel relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 grid place-items-center">
-                {slide.reference_visuals?.some(figure => figure.url) ? <BookReferenceFigures figures={slide.reference_visuals} compact subject={subject} /> : isMathematics(subject) ? <MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} /> : imageUrl ? (
+                {isMathematics(subject) ? <MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} /> : imageUrl ? (
                   <img src={imageUrl} alt={`${slide.title} — NCERT 2D infographic`} className="w-full h-full object-contain" />
                 ) : imageLoading ? (
                   <div className="flex flex-col items-center gap-2 text-[10px] text-muted-foreground">
@@ -1283,6 +1281,9 @@ function SlideCanvas({
                   </button>
                 )}
               </div>
+              {!!slide.reference_visuals?.some(figure => figure.url) && <div className="lesson-book-supplement w-full flex-[3] min-h-0 overflow-y-auto border-t border-border" aria-label="Original book screenshots below the 2D illustration">
+                <BookReferenceFigures figures={slide.reference_visuals} compact subject={subject} />
+              </div>}
               {slide.context_illustration && <figure className="flex-1 min-h-0 bg-white rounded-lg overflow-hidden flex flex-col">
                 <img className="w-full min-h-0 flex-1 object-contain" src={slide.context_illustration.url} alt={slide.context_illustration.description} />
                 <figcaption className="text-[10px] text-center px-2 pb-1">AI context illustration · {slide.context_illustration.provider}</figcaption>

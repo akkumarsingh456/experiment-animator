@@ -7,7 +7,7 @@ describe('adding book pictures to an approved lesson', () => {
  it('changes only picture data and retains exact formulas, derivations and wording', () => {
   const sections = [{heading:'Teacher Notes', kind:'bullets' as const, lines:['**Formula:** $V=IR$', '**Derivation step 1:** Keep these words.']}];
   const slide: Slide = {title:'Chlorine',sections,notes:['Original notes.'],bullets:['Original bullet.'],key_terms:['chlorine'],visual:'book'};
-  const [updated] = mergeLessonBookPictures([slide],[{title:'Chlorine',visuals:[picture]}]);
+  const [updated] = mergeLessonBookPictures([slide],[{title:'Chlorine',visuals:[picture],formula_lines:['**Formula:** $NEW=UNREQUESTED$']}]);
   expect(updated.sections).toBe(sections); expect(updated.notes).toBe(slide.notes); expect(updated.bullets).toBe(slide.bullets);
   expect(updated.reference_visuals).toEqual([picture]);
   expect({...updated,reference_visuals:undefined}).toEqual({...slide,reference_visuals:undefined});
