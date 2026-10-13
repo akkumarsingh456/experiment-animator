@@ -8,8 +8,8 @@ const HOST='black-forest-labs-flux-1-schnell.hf.space';
 export async function createFreeContextIllustration(subject:string,title:string,terms:string[]=[]):Promise<string|undefined>{
  const token=process.env.HF_IMAGE_TOKEN;
  if(!token || process.env.HF_IMAGES_FREE_ONLY!=='true' || Date.now()<pausedUntil)return;
- if(!/^(physics|chemistry|biology|botany|zoology)$/i.test(subject))return;
- const key=`${subject}:${title}`;
+ if(!/^(science|physics|chemistry|biology|botany|zoology)$/i.test(subject))return;
+ const key=`study-notebook-v1:${subject}:${title}:${terms.slice(0,6).join('|')}`;
  if(recent.has(key))return recent.get(key);
  if(pending.has(key))return pending.get(key);
  const request=(async()=>{
@@ -22,7 +22,7 @@ export async function createFreeContextIllustration(subject:string,title:string,
    let connectTimer:ReturnType<typeof setTimeout>|undefined;
    try { client=await Promise.race([connection,new Promise<never>((_,reject)=>{connectTimer=setTimeout(()=>{connectionExpired=true;reject(new Error('Free GPU connection timed out'));},10000);})]); }
    finally {clearTimeout(connectTimer);}
-   const prompt=`Clean flat 2D educational context illustration for ${subject}: ${title}. Relevant topics: ${terms.slice(0,6).join(', ')}. White background, clear large equipment or natural structures. No writing, no letters, no numbers, no equations, no watermark. Exact scientific relationships are supplied in a separate labelled diagram.`;
+   const prompt=`Neat hand-drawn 2D educational context illustration on pale lined notebook paper for ${subject}: ${title}. Relevant topics: ${terms.slice(0,6).join(', ')}. Straight top-down page view, large clear topic-specific equipment or natural structures, tidy green yellow pink and blue accents, minimal empty space. No desk props. No writing, no letters, no numbers, no equations, no watermark. Exact scientific relationships, formulas and labels are supplied separately by the local scientific diagram and LaTeX renderer.`;
    const job=client.submit('/infer',{prompt,seed:42,randomize_seed:false,width:768,height:512,num_inference_steps:4});
    timer=setTimeout(()=>void job.cancel().catch(()=>{}),25000);
    let data:unknown;

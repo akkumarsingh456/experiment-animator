@@ -1290,9 +1290,9 @@ function SlideCanvas({
               </div>
               {!slide.reference_visuals?.some(figure => figure.url) && <FormulaVisualCards slide={slide} limit={slide.context_illustration ? 1 : 2} />}
               {!slide.reference_visuals?.some(figure => figure.url) && <div className="px-3 py-2 rounded-md bg-card border border-border/50 text-[11px] leading-snug shrink-0">
-                <p className="font-medium text-primary">Read the diagram</p>
+                <p className="font-medium text-primary notebook-guide-heading">Read the diagram</p>
                 <p>{lessonIllustrationCaption(slide.title, subject, {...slide, keyTerms: slide.key_terms, chapter})}</p>
-                {(slide.key_terms || []).slice(0, 2).map((term, index) => typeof term === 'object' && term.meaning ? <p key={index} className="mt-1"><strong>{term.term}:</strong> {term.meaning.length > 120 ? `${term.meaning.slice(0, 117)}…` : term.meaning}</p> : null)}
+                {(slide.key_terms || []).slice(0, 2).map((term, index) => typeof term === 'object' && term.meaning ? <p key={index} className="mt-1"><strong><mark className="notebook-term-highlight">{term.term}</mark>:</strong> {term.meaning.length > 120 ? `${term.meaning.slice(0, 117)}…` : term.meaning}</p> : null)}
               </div>}
               {!!slide.reference_visuals?.some(figure => figure.url) && <div className="lesson-book-supplement w-full flex-[4] min-h-0 flex overflow-hidden border-t border-border" aria-label="Original book screenshots below the 2D illustration">
                 <BookReferenceFigures figures={slide.reference_visuals} compact presentation subject={subject} />

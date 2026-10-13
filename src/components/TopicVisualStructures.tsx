@@ -39,7 +39,7 @@ export function TopicVisualStructures({
   const topic = topicScienceDrawing(input, subject);
   if (topic) return <div className="guided-explanation guided-visual-structures"><figure>
     <div className="guided-figure-heading"><strong>Labelled topic illustration</strong><span>2D diagram</span></div>
-    <img src={svgDataUrl(wrapTextbookDrawing(topic.drawing, topic.id))} alt={`${input.title}: ${topic.caption}`} />
+    <img src={svgDataUrl(wrapTextbookDrawing(topic.drawing, topic.id, input.title))} alt={`${input.title}: ${topic.caption}`} />
     <figcaption>{topic.caption}</figcaption>
   </figure></div>;
   if (!facts.length) return null;

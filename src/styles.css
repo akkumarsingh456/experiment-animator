@@ -354,6 +354,12 @@
 .formula-visual-card .katex-display { margin: .3em 0; text-align: center; }
 .formula-visual-card .katex { font-size: 1.08em; }
 .formula-visual-card small { display: block; color: #456176; font-size: 10px; }
+.formula-visual-card { background-color: #fffef9; background-image: repeating-linear-gradient(transparent, transparent 25px, #e4edf5 25px, #e4edf5 26px); }
+.formula-visual-card figcaption { text-decoration: underline; text-decoration-color: #9cd4b1; text-decoration-thickness: 3px; text-underline-offset: 3px; }
+.formula-visual-card:nth-child(2) figcaption { text-decoration-color: #e6a8c7; }
+.visual-topic-number { color: #173d50; font-weight: 700; }
+.notebook-term-highlight { background: #fff0a5; color: inherit; padding: 0 3px; border-radius: 3px; }
+.notebook-guide-heading { text-decoration: underline; text-decoration-color: #a3c8eb; text-decoration-thickness: 3px; text-underline-offset: 2px; margin-bottom: 4px; }
 .note-math { max-width: 100%; }
 .note-math-display { padding: 4px 2px; }
 .guided-group .note-math-display { scrollbar-width: thin; }

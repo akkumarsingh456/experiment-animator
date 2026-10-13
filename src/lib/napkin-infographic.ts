@@ -359,10 +359,10 @@ export function renderNapkinInfographicDataUrl(input: FactInput): string {
 export function renderLessonIllustration(input: FactInput & ConceptMapInput): string {
   const identity = stableHash(`${input.subject}|${input.title}|${input.slideIndex ?? 0}`).toString(16);
   const topic = topicScienceDrawing(input, input.subject);
-  if (topic) return wrapTextbookDrawing(topic.drawing, identity);
+  if (topic) return wrapTextbookDrawing(topic.drawing, identity, input.title);
   const geometry = geometryDiagram(input.title, input.subject);
   if (geometry) return geometry.svg;
-  return wrapTextbookDrawing(topicIconOverview(input, input.subject).drawing, identity);
+  return wrapTextbookDrawing(topicIconOverview(input, input.subject).drawing, identity, input.title);
 }
 
 export function renderLessonIllustrationDataUrl(input: FactInput & ConceptMapInput): string {
