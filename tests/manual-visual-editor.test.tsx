@@ -14,7 +14,7 @@ describe('manual image import UI',()=>{
   expect(host.textContent).toContain('From device');
   const bookButton=[...host.querySelectorAll('button')].find(button=>button.textContent?.includes('From Med Easy'))!;
   await act(async()=>bookButton.click());
-  expect(host.querySelector('a[href$="#page=40"]')).not.toBeNull();expect(host.textContent).toContain('Ctrl+V');
+  expect([...host.querySelectorAll('button')].some(button=>button.textContent?.includes('PDF page 40'))).toBe(true);expect(host.textContent).toContain('View PDF');expect(host.querySelector('a')).toBeNull();expect(host.textContent).toContain('Ctrl+V');
   await act(async()=>root.unmount());host.remove();
  });
  it('pastes an image, opens editing, and saves its data and layout',async()=>{

@@ -4,6 +4,18 @@ import {combinedReferenceSubject,screenshotBookMatches} from '@/lib/reference-bo
 import {splitReferenceContent} from '@/lib/reference-visuals';
 import {indexLocalBookPage} from '@/lib/local-book-index';
 
+/** Fetch the PDF on the server so the browser stays on the website's origin. */
+export const openManualBookPdf=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({id:z.string().max(100),klass:z.string().max(30),subject:z.string().max(100)}).parse(raw)).handler(async({data})=>{
+ const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');
+ const {data:book,error}=await db.from('ncert_books').select('id,class,subject,chapter,file_name,storage_path').eq('id',data.id).maybeSingle();
+ if(error||!book||!combinedReferenceSubject(book)||!screenshotBookMatches(book,data.klass,data.subject))throw new Error('A matching Med Easy book is not available.');
+ const signed=await db.storage.from('ncert-pdfs').createSignedUrl(book.storage_path,300);
+ if(!signed.data?.signedUrl)throw new Error('The book could not be opened.');
+ const response=await fetch(signed.data.signedUrl,{signal:AbortSignal.timeout(60000)});
+ if(!response.ok)throw new Error('The stored PDF could not be loaded. Try opening a device copy.');
+ return new Response(response.body,{headers:{'Content-Type':'application/pdf','Cache-Control':'private, no-store'}});
+});
+
 /** Reuse uploaded books and verified saved page indexes; do not trigger scanning. */
 export const loadManualBookLinks=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({klass:z.string().max(30),subject:z.string().max(100),chapter:z.string().max(300),topic:z.string().max(500)}).parse(raw)).handler(async({data})=>{
  const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');

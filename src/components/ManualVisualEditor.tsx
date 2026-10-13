@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {ImagePlus,Save,Move,RotateCcw,BookOpen} from 'lucide-react';
 import {loadManualBookLinks} from '@/lib/manual-book-links.functions';
+import {ManualBookPdfViewer} from '@/components/ManualBookPdfViewer';
 import {toast} from 'sonner';
 import {loadManualVisuals,manualVisualCache,saveManualVisual,type ManualVisual} from '@/lib/manual-visuals';
 
@@ -9,6 +10,7 @@ export function ManualVisualEditor({storageKey,autoUrl,alt,klass='',subject='',c
  const [open,setOpen]=useState(false),[saving,setSaving]=useState(false);
  const [bookOpen,setBookOpen]=useState(false),[bookLoading,setBookLoading]=useState(false),[bookError,setBookError]=useState('');
  const [books,setBooks]=useState<Awaited<ReturnType<typeof loadManualBookLinks>>>([]);
+ const [viewer,setViewer]=useState<{id:string;name:string;page:number}|null>(null);
  const input=useRef<HTMLInputElement>(null),panel=useRef<HTMLDivElement>(null);
  const drag=useRef<{x:number;y:number;left:number;top:number}|null>(null);
  useEffect(()=>{let cancelled=false;loadManualVisuals().then(()=>{if(!cancelled)setVisual(manualVisualCache.get(storageKey)||null);}).catch(()=>toast.error('Saved images could not be loaded.'));return()=>{cancelled=true;};},[storageKey]);
@@ -34,8 +36,8 @@ export function ManualVisualEditor({storageKey,autoUrl,alt,klass='',subject='',c
      {bookOpen&&<div className="w-full border-t pt-2 max-h-36 overflow-auto">
        <p>Open the PDF, capture the picture, then click this panel and press Ctrl+V.</p>
        {bookLoading?<p>Finding saved chapter pages…</p>:bookError?<p>{bookError}</p>:!books.length?<p>No matching Med Easy book is available for this class and subject.</p>:books.map(book=><div key={book.id} className="mt-2">
-         {book.url?<a href={book.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-700">Open {book.name}</a>:<span>{book.name}: PDF link unavailable</span>}
-         {book.pages.length?<div className="flex flex-wrap gap-2 mt-1">{book.pages.map(({page,topic})=>book.url?<a key={page} href={`${book.url}#page=${page}`} target="_blank" rel="noopener noreferrer" className="underline">PDF page {page}{topic?' · topic match':''}</a>:null)}</div>:<p>Chapter pages have not been indexed yet. Use the PDF contents to find the chapter.</p>}
+         <button onClick={()=>setViewer({id:book.id,name:book.name,page:book.pages[0]?.page||1})} className="underline text-blue-700">View PDF · {book.name}</button>
+         {book.pages.length?<div className="flex flex-wrap gap-2 mt-1">{book.pages.map(({page,topic})=><button key={page} onClick={()=>setViewer({id:book.id,name:book.name,page})} className="underline">PDF page {page}{topic?' · topic match':''}</button>)}</div>:<p>Chapter pages have not been indexed yet. Use the PDF contents to find the chapter.</p>}
        </div>)}
      </div>}
      {visual&&<button onClick={()=>setOpen(value=>!value)} className="flex items-center gap-1 ml-2"><Move size={15}/> Size / shape / position</button>}
@@ -49,5 +51,6 @@ export function ManualVisualEditor({storageKey,autoUrl,alt,klass='',subject='',c
        <button onClick={()=>{setVisual(null);void saveManualVisual(storageKey,null).then(()=>toast.success('Automatic diagram restored.')).catch(()=>toast.error('Could not remove the saved image.'));}} className="flex items-center gap-1"><RotateCcw size={15}/> Restore automatic</button>
      </div>}
    </div>
+   {viewer&&<ManualBookPdfViewer id={viewer.id} name={viewer.name} klass={klass} subject={subject} initialPage={viewer.page} onClose={()=>{setViewer(null);panel.current?.focus();}} onImport={file=>void upload(file)}/>}
  </div>;
 }

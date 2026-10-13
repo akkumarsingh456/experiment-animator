@@ -11,7 +11,7 @@ export type ExtractedPdf = {
 };
 
 let pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
-async function loadPdfjs() {
+export async function loadPdfjs() {
   if (typeof window === "undefined") {
     throw new Error("PDF extraction must run in the browser.");
   }
