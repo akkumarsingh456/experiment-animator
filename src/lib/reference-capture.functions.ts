@@ -17,18 +17,27 @@ export const saveCapturedReferencePage = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let sourcePath = data.source_path;
     let fileName = data.source_file_name || "";
+    let sourceSubject = "";
+    let sourceClass = "";
+    let sourceChapter = "";
+    let originalText = "";
     if (data.book_id) {
-      const { data: book, error } = await supabaseAdmin.from("ncert_books").select("storage_path,file_name").eq("id", data.book_id).single();
+      const { data: book, error } = await supabaseAdmin.from("ncert_books").select("storage_path,file_name,subject,class,chapter").eq("id", data.book_id).single();
       if (error || !book) throw new Error(error?.message || "The uploaded book was not found.");
       sourcePath = book.storage_path;
       fileName = book.file_name;
+      sourceSubject = book.subject || "";
+      sourceClass = book.class || "";
+      sourceChapter = book.chapter || "";
       const { data: saved, error: savedError } = await supabaseAdmin.from("ncert_pages").select("text").eq("book_id", data.book_id).eq("page_number", data.page).maybeSingle();
       if (savedError) throw new Error(savedError.message);
-      if (saved?.text.startsWith("[SOURCE_OCR_PAGE]\n") && splitReferenceContent(saved.text).context?.index_version === 2) return saved.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "");
+      if (saved && splitReferenceContent(saved.text).context?.capture_saved && splitReferenceContent(saved.text).context?.index_version === 2) return saved.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "");
+      originalText = saved ? splitReferenceContent(saved.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "")).text : "";
     }
-    const subject = combinedReferenceSubject({ file_name: fileName });
-    if (!subject || !sourcePath) throw new Error("Free book pictures are available for your uploaded Med Easy PDFs.");
-    const index = indexLocalBookPage(subject, data.text, data.chapter_hint);
+    const combined = combinedReferenceSubject({ file_name: fileName });
+    const subject = combined || sourceSubject;
+    if (!subject || !sourcePath) throw new Error("A saved book with a class and subject is required for original screenshots.");
+    const index = indexLocalBookPage(subject, data.text, data.chapter_hint || (!combined ? sourceChapter : ""), combined ? undefined : sourceClass);
     const imagePath = `${sourcePath}.page-${data.page}.jpg`;
     const { data: bucket, error: bucketError } = await supabaseAdmin.storage.getBucket("ncert-pdfs");
     if (bucketError) throw new Error(`Could not prepare book pictures: ${bucketError.message}`);
@@ -42,16 +51,18 @@ export const saveCapturedReferencePage = createServerFn({ method: "POST" })
     const { error: imageError } = await supabaseAdmin.storage.from("ncert-pdfs").upload(imagePath, bytes, { contentType: "image/jpeg", upsert: true });
     if (imageError) throw new Error(imageError.message);
     const visuals: ReferenceVisual[] = !index.needsReview && index.chapter ? [{
-      title: `${index.chapter} — original book page`, kind: "diagram", description: "Original Med Easy page. All equations, structures, arrows and labels are preserved.",
+      title: `${index.chapter} — original book page`, kind: "diagram", description: "Original uploaded book page. All equations, structures, arrows and labels are preserved.",
       page: data.page, book_id: data.book_id, chapter: index.chapter, storage_path: imagePath,
       aspect: data.aspect, crop: { x: 0, y: 0, width: 1, height: 1 }, capture: "page", match_text: index.matchText,
     }] : [];
     // Index text stays in picture metadata, never in the lesson's note paragraphs.
-    const content = encodeReferenceVisuals("", visuals, { chapter: index.chapter, visuals_checked: true, reader: "local", capture_saved: true, needs_review: index.needsReview, index_version: 2, match_text: index.matchText });
+    const content = encodeReferenceVisuals(combined ? "" : originalText || data.text, visuals, { chapter: index.chapter, visuals_checked: true, reader: "local", capture_saved: true, needs_review: index.needsReview, index_version: 2, match_text: index.matchText });
     if (data.book_id) {
+      if (combined) {
       const { error: chunkError } = await supabaseAdmin.from("ncert_chunks").upsert({ book_id: data.book_id, chunk_index: data.page - 1, content }, { onConflict: "book_id,chunk_index" });
       if (chunkError) throw new Error(chunkError.message);
-      const { error } = await supabaseAdmin.from("ncert_pages").upsert({ book_id: data.book_id, page_number: data.page, text: "[SOURCE_OCR_PAGE]\n" + content }, { onConflict: "book_id,page_number" });
+      }
+      const { error } = await supabaseAdmin.from("ncert_pages").upsert({ book_id: data.book_id, page_number: data.page, text: (combined ? "[SOURCE_OCR_PAGE]\n" : "") + content }, { onConflict: "book_id,page_number" });
       if (error) throw new Error(error.message);
     }
     return content;

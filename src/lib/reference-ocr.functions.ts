@@ -73,7 +73,15 @@ export const finishReferenceReading = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: pages, error } = await supabaseAdmin.from("ncert_pages").select("page_number,text").eq("book_id", data.book_id).order("page_number").limit(1000);
     if (error) throw new Error(error.message);
-    if (!pages || pages.length !== data.num_pages || pages.some((page, index) => page.page_number !== index + 1 || !page.text.startsWith("[SOURCE_OCR_PAGE]\n"))) throw new Error("The book has unread pages; extraction will resume next time.");
+    if (pages?.length === 1000) {
+      for (let from = 1000; ; from += 1000) {
+        const { data: extra, error: extraError } = await supabaseAdmin.from("ncert_pages").select("page_number,text").eq("book_id", data.book_id).order("page_number").range(from, from + 999);
+        if (extraError) throw new Error(extraError.message);
+        pages.push(...(extra || []));
+        if (!extra || extra.length < 1000) break;
+      }
+    }
+    if (!pages || pages.length !== data.num_pages || pages.some((page, index) => page.page_number !== index + 1)) throw new Error("The book has unread pages; extraction will resume next time.");
     const recovered = pages.map(page => splitReferenceContent(page.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "")));
     if (recovered.some(page => page.context?.visuals_checked !== true)) throw new Error("Some pages have not been inspected for diagrams; resume book reading to include their screenshots.");
     const figures = recovered.reduce((sum, page) => sum + page.visuals.length, 0);
@@ -82,7 +90,9 @@ export const finishReferenceReading = createServerFn({ method: "POST" })
     const localPages = recovered.filter(page => page.context?.reader === "local");
     const capturedLocally = localPages.length > 0 && localPages.every(page => page.context?.capture_saved);
     if (full.trim().length < data.num_pages * 100 && !figures && !capturedLocally) throw new Error("Not enough readable notes were recovered. The original PDF is retained for review.");
-    const { error: updateError } = await supabaseAdmin.from("ncert_books").update({ full_text: full.slice(0, 1_000_000), num_chunks: pages.length, status: "ready" }).eq("id", data.book_id);
+    // Ordinary books already have curated retrieval chunks. Capture is additive.
+    const legacyCombined = pages.every(page => page.text.startsWith("[SOURCE_OCR_PAGE]\n"));
+    const { error: updateError } = await supabaseAdmin.from("ncert_books").update(legacyCombined ? { full_text: full.slice(0, 1_000_000), num_pages: data.num_pages, num_chunks: pages.length, status: "ready" } : { num_pages: data.num_pages }).eq("id", data.book_id);
     if (updateError) throw new Error(updateError.message);
     return { pages: pages.length, figures, chapters, unmatchedPages: recovered.filter(page => page.context?.needs_review).length };
   });
