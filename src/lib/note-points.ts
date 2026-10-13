@@ -1,6 +1,6 @@
 /** Layout only: keep source words and math verbatim, split prose at sentence boundaries. */
 export function prosePoints(line: string): string[] {
-  if (line.length < 180) return [line];
+  if (line.length < 90) return [line];
   const label = line.match(/^(\s*\*\*[^*]+:\*\*\s*)([\s\S]*)$/);
   if (/^\s*\*{0,2}(?:formulas?|equations?|relations?|results?|derivations?|variables?|si units?|units?|dimensions?)\b/i.test(line)) return [line];
   const prefix = label?.[1] || "";
@@ -14,7 +14,7 @@ export function prosePoints(line: string): string[] {
   if (masked.includes("$") || /\\[([]/.test(masked)) return [line];
   const points: string[] = [];
   let start = 0;
-  const boundaries = /[.!?][”’"')]*\s+(?=[\p{Lu}“"(])|\n\s*\n/gu;
+  const boundaries = /[.!?][”’"')]*\s+(?=[\p{L}“"(])|\n\s*\n|(?<=\S)[;]\s+(?=\p{L})|\(\d+\.\d+\)\s+(?=\p{Lu})/gu;
   for (const match of masked.matchAll(boundaries)) {
     const end = match.index! + match[0].trimEnd().length;
     const before = masked.slice(start, end);

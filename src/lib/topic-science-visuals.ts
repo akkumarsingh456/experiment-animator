@@ -1,6 +1,7 @@
 import type { ConceptMapInput } from '@/lib/source-concept-map';
 import { plainMathText } from '@/lib/latex-notation';
 import { additionalTopicDrawing } from '@/lib/chapter-topic-diagrams';
+import {classroomDiscussionVisual} from '@/lib/classroom-visuals';
 import { currentElectricityDiagram } from '@/lib/current-electricity-diagrams';
 
 export type TopicDrawing = { id: string; caption: string; drawing: string };
@@ -29,6 +30,8 @@ const benzene = (label:string) => {
 
 /** Topic selection is shared by all lesson views and exports. No copied paragraphs. */
 export function topicScienceDrawing(input: ConceptMapInput, subject=''): TopicDrawing | null {
+ const classroom=classroomDiscussionVisual(input);
+ if(classroom)return classroom;
  const displayed=(input.sections||[]).filter(section=>section.kind!=='diagram' && !/^Reference notes/i.test(section.heading)).flatMap(section=>section.lines)
    .filter(line=>!/^\*\*(?:learning objective|prerequisite|exit ticket|practice|answer|activity|support practice|core practice|challenge practice)/i.test(line));
  // Paginated slides share their parent title and key terms, but their visible

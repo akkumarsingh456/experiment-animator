@@ -542,7 +542,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   // Retain Lovable's notes-and-illustration layout independently of guided worksheets.
   const originalPages = useMemo(() => slides.flatMap((slide, sourceIndex) => {
     if (slide.kind === "break" || slide.kind === "mcq") return [{ ...slide, sourceIndex }];
-    const sections = slide.sections?.filter((section) => section.kind !== "diagram");
+    const sections = slide.sections?.filter((section) => section.kind !== "diagram" && section.lines.some(line=>line.trim()));
     const fallback = slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...slide.bullets, ...slide.notes];
     const sourceSections = sections?.length ? sections : [{ heading: "Teacher Notes", kind: "bullets", lines: fallback }];
     const notePages = paginateLectureSections(sourceSections, 18).map((page) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
@@ -1292,7 +1292,7 @@ function SlideCanvas({
               {!slide.reference_visuals?.some(figure => figure.url) && <div className="px-3 py-2 rounded-md bg-card border border-border/50 text-[11px] leading-snug shrink-0">
                 <p className="font-medium text-primary notebook-guide-heading">Read the diagram</p>
                 <p>{lessonIllustrationCaption(slide.title, subject, {...slide, keyTerms: slide.key_terms, chapter})}</p>
-                {(slide.key_terms || []).slice(0, 2).map((term, index) => typeof term === 'object' && term.meaning ? <p key={index} className="mt-1"><strong><mark className="notebook-term-highlight">{term.term}</mark>:</strong> {term.meaning.length > 120 ? `${term.meaning.slice(0, 117)}…` : term.meaning}</p> : null)}
+                {(slide.key_terms || []).filter(term=>typeof term==='object' && term.term.length<=35 && !/^(if|thus|chapter|constant [a-z]$)/i.test(term.term)).slice(0, 3).map((term, index) => <span key={index} className="inline-block mt-1 mr-2"><mark className="notebook-term-highlight">{term.term}</mark></span>)}
               </div>}
               {!!slide.reference_visuals?.some(figure => figure.url) && <div className="lesson-book-supplement w-full flex-[4] min-h-0 flex overflow-hidden border-t border-border" aria-label="Original book screenshots below the 2D illustration">
                 <BookReferenceFigures figures={slide.reference_visuals} compact presentation subject={subject} />
