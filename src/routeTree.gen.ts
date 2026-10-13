@@ -14,6 +14,7 @@ import { Route as GenerateRouteImport } from './routes/generate'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as NotesLibraryRouteImport } from './routes/notes-library'
 import { Route as UploadRouteImport } from './routes/upload'
+import { Route as ApiMedEasyPdfRouteImport } from './routes/api.med-easy-pdf'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +41,11 @@ const UploadRoute = UploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMedEasyPdfRoute = ApiMedEasyPdfRouteImport.update({
+  id: '/api/med-easy-pdf',
+  path: '/api/med-easy-pdf',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/notes-library': typeof NotesLibraryRoute
   '/upload': typeof UploadRoute
+  '/api/med-easy-pdf': typeof ApiMedEasyPdfRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/notes-library': typeof NotesLibraryRoute
   '/upload': typeof UploadRoute
+  '/api/med-easy-pdf': typeof ApiMedEasyPdfRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,33 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/notes-library': typeof NotesLibraryRoute
   '/upload': typeof UploadRoute
+  '/api/med-easy-pdf': typeof ApiMedEasyPdfRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/generate' | '/history' | '/notes-library' | '/upload'
+  fullPaths:
+    | '/'
+    | '/generate'
+    | '/history'
+    | '/notes-library'
+    | '/upload'
+    | '/api/med-easy-pdf'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/generate' | '/history' | '/notes-library' | '/upload'
-  id: '__root__' | '/' | '/generate' | '/history' | '/notes-library' | '/upload'
+  to:
+    | '/'
+    | '/generate'
+    | '/history'
+    | '/notes-library'
+    | '/upload'
+    | '/api/med-easy-pdf'
+  id:
+    | '__root__'
+    | '/'
+    | '/generate'
+    | '/history'
+    | '/notes-library'
+    | '/upload'
+    | '/api/med-easy-pdf'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +105,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   NotesLibraryRoute: typeof NotesLibraryRoute
   UploadRoute: typeof UploadRoute
+  ApiMedEasyPdfRoute: typeof ApiMedEasyPdfRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UploadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/med-easy-pdf': {
+      id: '/api/med-easy-pdf'
+      path: '/api/med-easy-pdf'
+      fullPath: '/api/med-easy-pdf'
+      preLoaderRoute: typeof ApiMedEasyPdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   NotesLibraryRoute: NotesLibraryRoute,
   UploadRoute: UploadRoute,
+  ApiMedEasyPdfRoute: ApiMedEasyPdfRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

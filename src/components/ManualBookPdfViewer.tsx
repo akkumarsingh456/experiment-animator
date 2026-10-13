@@ -1,7 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import type {PDFDocumentProxy} from 'pdfjs-dist';
-import {openManualBookPdf} from '@/lib/manual-book-links.functions';
 import {loadPdfjs} from '@/lib/pdf-extract';
 import {ChevronsLeft,ChevronsRight,ChevronLeft,ChevronRight,RotateCw,Download,Maximize,ImagePlus,X} from 'lucide-react';
 const files=new Map<string,Promise<Blob>>();
@@ -9,18 +8,23 @@ export function ManualBookPdfViewer({id,name,klass,subject,initialPage,onClose,o
  const [pdf,setPdf]=useState<PDFDocumentProxy|null>(null),[page,setPage]=useState(initialPage),[zoom,setZoom]=useState(1),[error,setError]=useState(''),[loading,setLoading]=useState(true),[rendering,setRendering]=useState(false);
  const [pageInput,setPageInput]=useState(String(initialPage)),[rotation,setRotation]=useState(0),[sourceFile,setSourceFile]=useState<Blob|null>(null);
  const [renderedVersion,setRenderedVersion]=useState('');
+ const [attempt,setAttempt]=useState(0),[downloading,setDownloading]=useState(false);
+ const pdfUrl=`/api/med-easy-pdf?${new URLSearchParams({id,klass,subject})}`;
  const ready=!!pdf&&!rendering&&renderedVersion===`${page}:${zoom}:${rotation}`;
  const canvas=useRef<HTMLCanvasElement>(null);
  useEffect(()=>setPageInput(String(page)),[page]);
  function go(){const number=Number(pageInput);if(!pdf||!Number.isInteger(number)||number<1||number>pdf.numPages){setError(`Enter a whole page number from 1 to ${pdf?.numPages||1}.`);return;}setError('');setPage(number);}
  function download(blob:Blob,filename:string){const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
  async function read(blob:Blob){const library=await loadPdfjs();return library.getDocument({data:new Uint8Array(await blob.arrayBuffer())}).promise;}
+ async function downloadPdf(){setDownloading(true);try{let blob=sourceFile;if(!blob){const response=await fetch(pdfUrl);if(!response.ok)throw new Error();blob=await response.blob();setSourceFile(blob);files.set(`${klass}:${subject}:${id}`,Promise.resolve(blob));}download(blob,name);}catch{setError('The PDF download failed. Retry or open a device PDF.');}finally{setDownloading(false);}}
  useEffect(()=>{let cancelled=false;
+  let task:ReturnType<Awaited<ReturnType<typeof loadPdfjs>>['getDocument']>|undefined;
+  setLoading(true);setError('');setRenderedVersion('');
   const key=`${klass}:${subject}:${id}`;
-  if(!files.has(key)){const pending=openManualBookPdf({data:{id,klass,subject}}).then(response=>response.blob()).catch(error=>{files.delete(key);throw error;});files.set(key,pending);if(files.size>2)files.delete(files.keys().next().value!);}
-  void files.get(key)!.then(blob=>{if(!cancelled)setSourceFile(blob);return read(blob);}).then(value=>{if(cancelled){void value.loadingTask.destroy();return;}setPdf(value);setPage(Math.max(1,Math.min(initialPage,value.numPages)));}).catch(()=>{if(!cancelled)setError('The online book could not be loaded. Open a PDF from your device below.');}).finally(()=>{if(!cancelled)setLoading(false);});
-  return()=>{cancelled=true;};
- },[id,klass,subject,initialPage]);
+  const pending=files.has(key)?files.get(key)!.then(read):loadPdfjs().then(library=>{if(cancelled)throw new Error('Reader closed');task=library.getDocument({url:pdfUrl,rangeChunkSize:262144,disableStream:true,disableAutoFetch:true});return task.promise;});
+  void pending.then(value=>{if(cancelled){void value.loadingTask.destroy();return;}setPdf(value);setPage(Math.max(1,Math.min(initialPage,value.numPages)));}).catch(()=>{if(!cancelled){files.delete(key);setError('The online PDF could not be opened. Select Retry or Open device PDF.');}}).finally(()=>{if(!cancelled)setLoading(false);});
+  return()=>{cancelled=true;void task?.destroy();};
+ },[id,klass,subject,initialPage,attempt]);
  useEffect(()=>()=>{void pdf?.loadingTask.destroy();},[pdf]);
  useEffect(()=>{if(!pdf||!canvas.current)return;let cancelled=false;let task:ReturnType<Awaited<ReturnType<PDFDocumentProxy['getPage']>>['render']>|undefined;setRendering(true);
   void pdf.getPage(page).then(value=>{if(cancelled||!canvas.current)return;const viewport=value.getViewport({scale:1.5*zoom,rotation:(value.rotate+rotation)%360});const target=canvas.current;target.width=Math.ceil(viewport.width);target.height=Math.ceil(viewport.height);task=value.render({canvas:target,canvasContext:target.getContext('2d')!,viewport});return task.promise;}).then(()=>{if(!cancelled){setRenderedVersion(`${page}:${zoom}:${rotation}`);setError('');}}).catch(reason=>{if(!cancelled&&reason?.name!=='RenderingCancelledException')setError('This page could not be rendered. Try another page.');}).finally(()=>{if(!cancelled)setRendering(false);});return()=>{cancelled=true;task?.cancel();};
@@ -38,12 +42,12 @@ export function ManualBookPdfViewer({id,name,klass,subject,initialPage,onClose,o
     <label>Zoom <select aria-label="PDF zoom" value={zoom} onChange={event=>setZoom(Number(event.target.value))}><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.5">150%</option><option value="2">200%</option></select></label>
     <button title="Fit page width" aria-label="Fit page width" disabled={!pdf} onClick={()=>setZoom(1)}><Maximize size={18}/></button>
     <button title="Rotate page clockwise" aria-label="Rotate page clockwise" disabled={!pdf} onClick={()=>setRotation(value=>(value+90)%360)}><RotateCw size={18}/></button>
-    <button disabled={!sourceFile} onClick={()=>sourceFile&&download(sourceFile,name)} className="flex gap-1 items-center"><Download size={16}/> PDF</button>
+    <button disabled={!pdf||downloading} onClick={()=>void downloadPdf()} className="flex gap-1 items-center"><Download size={16}/>{downloading?'Downloading…':'PDF'}</button>
     <button disabled={!ready} onClick={()=>canvas.current?.toBlob(blob=>{if(blob)download(blob,`book-page-${page}.png`);},'image/png')} className="flex gap-1 items-center"><Download size={16}/> Page PNG</button>
     <button disabled={!ready} className="text-blue-700 font-medium flex gap-1 items-center" onClick={()=>canvas.current?.toBlob(blob=>{if(blob){onImport(new File([blob],`book-page-${page}.png`,{type:'image/png'}));onClose();}},'image/png')}><ImagePlus size={16}/> Use this page image</button>
     <label className="cursor-pointer underline">Open device PDF<input type="file" accept="application/pdf" className="hidden" onChange={async event=>{const file=event.target.files?.[0];if(!file)return;setLoading(true);setError('');try{const next=await read(file);setSourceFile(file);setPdf(next);setPage(1);setRotation(0);}catch{setError('This device PDF could not be opened.');}finally{setLoading(false);}}}/></label>
    </div>
-   <div className="overflow-auto flex-1 bg-slate-100 p-3"><p className="mb-2">Take a screenshot here, then close this reader and paste it into the 2D panel. You can also import the whole page.</p>{loading&&<p>Loading PDF inside the website…</p>}{error&&<p role="alert">{error}</p>}<canvas ref={canvas} className="mx-auto bg-white shadow max-w-none" style={{display:pdf?'block':'none',width:pdf?`${zoom*100}%`:undefined,maxWidth:zoom<=1?'100%':undefined}}/></div>
+   <div className="overflow-auto flex-1 bg-slate-100 p-3"><p className="mb-2">Take a screenshot here, then close this reader and paste it into the 2D panel. You can also import the whole page.</p>{loading&&<p>Loading the requested PDF pages…</p>}{error&&<div role="alert">{error} <button className="underline text-blue-700" onClick={()=>setAttempt(value=>value+1)}>Retry</button></div>}<canvas ref={canvas} className="mx-auto bg-white shadow max-w-none" style={{display:pdf?'block':'none',width:pdf?`${zoom*100}%`:undefined,maxWidth:zoom<=1?'100%':undefined}}/></div>
   </div>
  </div>,document.body);
 }

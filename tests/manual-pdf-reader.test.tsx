@@ -4,11 +4,12 @@ import {createRoot} from 'react-dom/client';
 import {ManualBookPdfViewer} from '@/components/ManualBookPdfViewer';
 const f=vi.hoisted(()=>({viewport:vi.fn(()=>({width:500,height:700})),page:vi.fn(),render:vi.fn(()=>({promise:Promise.resolve(),cancel:vi.fn()})),destroy:vi.fn(async()=>{})}));
 vi.mock('@/lib/manual-book-links.functions',()=>({openManualBookPdf:async()=>({blob:async()=>new Blob(['%PDF'])})}));
-vi.mock('@/lib/pdf-extract',()=>({loadPdfjs:async()=>({getDocument:()=>({promise:Promise.resolve({numPages:342,loadingTask:{destroy:f.destroy},getPage:f.page})})})}));
-afterEach(()=>{vi.restoreAllMocks();});
+vi.mock('@/lib/pdf-extract',()=>({loadPdfjs:async()=>({getDocument:()=>({destroy:f.destroy,promise:Promise.resolve({numPages:342,loadingTask:{destroy:f.destroy},getPage:f.page})})})}));
+afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals();vi.useRealTimers();});
 describe('PDF reader controls',()=>{
  it('supports typed Go/Enter, navigation, rotate, fit, download controls and page import',async()=>{
   f.page.mockImplementation(async()=>({rotate:0,getViewport:f.viewport,render:f.render}));
+  vi.stubGlobal('fetch',vi.fn(async()=>new Response('%PDF-1.7',{headers:{'Content-Type':'application/pdf'}})));
   vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({} as CanvasRenderingContext2D);
   vi.spyOn(HTMLCanvasElement.prototype,'toBlob').mockImplementation(callback=>callback(new Blob(['image'],{type:'image/png'})));
   const close=vi.fn(),importPage=vi.fn();const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
@@ -29,10 +30,10 @@ describe('PDF reader controls',()=>{
   await act(async()=>{zoom.value='2';zoom.dispatchEvent(new Event('change',{bubbles:true}));});expect(f.viewport).toHaveBeenLastCalledWith(expect.objectContaining({scale:3}));
   await act(async()=>button('Fit page width').click());expect(f.viewport).toHaveBeenLastCalledWith(expect.objectContaining({scale:1.5}));
   expect([...dialog.querySelectorAll('button')].some(button=>button.textContent?.includes('Page PNG')&&!button.disabled)).toBe(true);
-  expect([...dialog.querySelectorAll('button')].some(button=>button.textContent===' PDF'&&!button.disabled)).toBe(true);
+  expect([...dialog.querySelectorAll('button')].some(button=>button.textContent?.trim()==='PDF'&&!button.disabled)).toBe(true);
   const downloads:string[]=[];vi.spyOn(URL,'createObjectURL').mockReturnValue('blob:download');vi.spyOn(URL,'revokeObjectURL').mockImplementation(()=>{});vi.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(function(){downloads.push(this.download);});
   vi.useFakeTimers();
-  [...dialog.querySelectorAll('button')].find(button=>button.textContent?.trim()==='PDF')!.click();
+  await act(async()=>[...dialog.querySelectorAll('button')].find(button=>button.textContent?.trim()==='PDF')!.click());
   [...dialog.querySelectorAll('button')].find(button=>button.textContent?.includes('Page PNG'))!.click();
   expect(downloads).toEqual(['Physics.pdf','book-page-1.png']);vi.runOnlyPendingTimers();vi.useRealTimers();
   await act(async()=>{input.value='999';input.dispatchEvent(new Event('input',{bubbles:true}));});
