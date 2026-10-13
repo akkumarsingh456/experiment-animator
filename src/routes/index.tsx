@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import {bookPreparationSnapshot,subscribeBookPreparation} from '@/lib/book-preparation';
+import { useEffect, useMemo, useState } from "react";
+import {startChapterPreparation} from '@/lib/book-preparation';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -83,8 +83,7 @@ function GeneratorBlock() {
   const [chapter, setChapter] = useState("");
   const [customTopic, setCustomTopic] = useState("");
   const lang = isLang(subject);
-  const preparation=useSyncExternalStore(subscribeBookPreparation,bookPreparationSnapshot,bookPreparationSnapshot);
-  const preparingBooks=/^(11|12)$/.test(klass.replace(/[^0-9]/g,'')) && /physics|chemistry|biology|botany|zoology/i.test(subject) && (!preparation.initialized||preparation.busy||preparation.failed);
+  useEffect(()=>{if(!chapter)return;const timer=setTimeout(()=>void startChapterPreparation(klass,subject,chapter),300);return ()=>clearTimeout(timer);},[klass,subject,chapter]);
 
   // Every dropdown is driven strictly by the built-in NCERT syllabus.
   const subjects = useMemo(() => subjectsForClass(klass), [klass]);
@@ -314,12 +313,12 @@ function GeneratorBlock() {
 
         <Button
           onClick={go}
-          disabled={!finalTopic || preparingBooks}
+          disabled={!finalTopic}
           size="lg"
           className="w-full mt-5 rounded-xl h-12 shadow-glow"
         >
           <Wand2 className="h-4 w-4" />
-          {preparingBooks ? preparation.failed?'Resume book preparation above':'Preparing book pictures before generation…' : lang ? "Generate full chapter PPT + MCQs" : "Generate Lesson & 3D Experiment"}
+          {lang ? "Generate full chapter PPT + MCQs" : "Generate Lesson & 3D Experiment"}
         </Button>
 
         <p className="mt-3 text-xs text-muted-foreground text-center">

@@ -3,6 +3,18 @@ const mock=vi.hoisted(()=>({read:vi.fn()}));
 vi.mock('@/lib/prepare-reference-books',()=>({prepareScannedReferenceBooks:mock.read}));
 beforeEach(()=>{vi.resetModules();mock.read.mockReset();});
 describe('preparation independent of lesson generation',()=>{
+ it('prepares only the selected chapter and reuses a completed chapter job',async()=>{
+  mock.read.mockResolvedValue([{book:'Physics Med Easy',pages:7,figures:7,chapters:1}]);
+  const module=await import('@/lib/book-preparation');module.initializeBookPreparation();
+  const first=module.startChapterPreparation('12','Physics','Electrostatic Potential and Capacitance');
+  expect(module.startChapterPreparation('12','Physics','Electrostatic Potential and Capacitance')).toBe(first);
+  await first;
+  expect(mock.read).toHaveBeenCalledTimes(1);
+  expect(mock.read.mock.calls[0][1]).toBe('Physics');
+  expect(mock.read.mock.calls[0][5]).toBe('Electrostatic Potential and Capacitance');
+  expect(mock.read.mock.calls[0][6]).toEqual({medEasyOnly:true,chapterOnly:true});
+  await module.startChapterPreparation('12','Physics','Electrostatic Potential and Capacitance');expect(mock.read).toHaveBeenCalledTimes(1);
+ });
  it('shares one reading job and prepares all four Med Easy subjects without paid AI',async()=>{
   mock.read.mockImplementation(async()=>[{book:'Med Easy',pages:10,figures:2,chapters:1}]);
   const module=await import('@/lib/book-preparation');

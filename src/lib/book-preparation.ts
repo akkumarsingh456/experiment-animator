@@ -7,11 +7,39 @@ let pending:Promise<void>|undefined;
 let stopped=false;
 let completed=false;
 let libraryVersion=0;
+let selectedChapter='';
+let selectedRequest:{klass:string;subject:string;chapter:string}|undefined;
+const chapterJobs=new Map<string,Promise<void>>();
+const readyChapters=new Set<string>();
 const publish=(patch:Partial<State>)=>{state={...state,...patch};listeners.forEach(listener=>listener());};
 export const bookPreparationSnapshot=()=>state;
 export function subscribeBookPreparation(listener:()=>void){listeners.add(listener);return ()=>{listeners.delete(listener);};}
 export function pauseBookPreparation(){stopped=true;publish({message:'Pausing book preparation. Saved pages will be reused.'});}
-export function invalidateBookPreparation(){libraryVersion++;completed=false;publish({revision:state.revision+1});const wait=pending||Promise.resolve();void wait.then(()=>{if(!stopped)void startBookPreparation();});}
+export function initializeBookPreparation(){publish({initialized:true});}
+export function invalidateBookPreparation(){libraryVersion++;completed=false;readyChapters.clear();publish({revision:state.revision+1});}
+export function resumeBookPreparation(){return selectedRequest?startChapterPreparation(selectedRequest.klass,selectedRequest.subject,selectedRequest.chapter):startBookPreparation();}
+export function startChapterPreparation(klass:string,subject:string,chapter:string):Promise<void>{
+ if(!/11|12/.test(klass)||!chapter||!/physics|chemistry|biology|botany|zoology/i.test(subject))return Promise.resolve();
+ const key=`${klass}|${subject}|${chapter}`;selectedChapter=key;selectedRequest={klass,subject,chapter};
+ if(completed||readyChapters.has(key)){publish({busy:false,failed:false,message:'Reusing saved chapter pictures.',revision:state.revision+1});return Promise.resolve();}
+ if(chapterJobs.has(key))return chapterJobs.get(key)!;
+ const previous=pending||Promise.resolve();if(pending)stopped=true;
+ const cancelled=()=>selectedChapter!==key||stopped;
+ const job=previous.then(async()=>{
+  if(selectedChapter!==key)return;
+  stopped=false;publish({busy:true,failed:false,message:`Checking saved pictures for ${chapter}…`});
+  try{
+   const summaries=await prepareScannedReferenceBooks(klass,subject,message=>{if(!cancelled())publish({message});},cancelled,async()=>publish({revision:state.revision+1}),chapter,{medEasyOnly:true,chapterOnly:true});
+   if(!cancelled()){
+    const error=summaries.find(summary=>summary.error)?.error;
+    if(!error&&summaries.some(summary=>summary.pages>0))readyChapters.add(key);
+    publish({failed:!!error,message:error||'Saved chapter pictures are available. Lesson generation stays ready.'});
+   }
+  }catch(error){if(!cancelled())publish({failed:true,message:error instanceof Error?error.message:'Chapter pictures could not be checked.'});}
+  finally{if(selectedChapter===key)publish({initialized:true,busy:false,revision:state.revision+1});}
+ }).finally(()=>{chapterJobs.delete(key);});
+ chapterJobs.set(key,job);return job;
+}
 
 /** One reader survives client-side navigation; generation never starts a second scan. */
 export function startBookPreparation():Promise<void>{

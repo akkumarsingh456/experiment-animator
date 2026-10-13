@@ -7,16 +7,25 @@ import { saveCapturedReferencePage } from "@/lib/reference-capture.functions";
 import { createLocalBookReader } from "@/lib/local-book-reader";
 import { splitReferenceContent } from "@/lib/reference-visuals";
 import { retryBookRead } from "@/lib/book-read-recovery";
+import { canonicalBookChapter,contentsHeadingMatches } from '@/lib/book-chapter-priority';
 export type ReferenceReadSummary = { book: string; pages: number; figures: number; chapters: number; unmatchedPages?: number; error?: string };
 
 /** Read the existing uploaded scans once, checkpointing each page for resumption. */
 let readingQueue:Promise<void>=Promise.resolve();
+let activeReader:{preempted:boolean}|undefined;
+const downloadedBooks=new Map<string,Blob>();
 export function prepareScannedReferenceBooks(...args:Parameters<typeof readReferenceBooks>):ReturnType<typeof readReferenceBooks>{
-  const task=readingQueue.then(()=>readReferenceBooks(...args));
+  if(args[6]?.chapterOnly&&activeReader)activeReader.preempted=true;
+  const task=readingQueue.then(async()=>{
+    const token={preempted:false};activeReader=token;
+    const parameters=[...args] as Parameters<typeof readReferenceBooks>;
+    parameters[3]=()=>token.preempted||!!args[3]?.();
+    try{return await readReferenceBooks(...parameters);}finally{if(activeReader===token)activeReader=undefined;}
+  });
   readingQueue=task.then(()=>{},()=>{});
   return task;
 }
-async function readReferenceBooks(klass: string, subject: string, progress: (message: string) => void, cancelled: () => boolean = () => false, onPicturesSaved?: () => Promise<void>, chapter?: string, options?:{medEasyOnly?:boolean}) {
+async function readReferenceBooks(klass: string, subject: string, progress: (message: string) => void, cancelled: () => boolean = () => false, onPicturesSaved?: () => Promise<void>, chapter?: string, options?:{medEasyOnly?:boolean;chapterOnly?:boolean}) {
   const summaries: ReferenceReadSummary[] = [];
   if(cancelled())return summaries;
   await retryBookRead(() => classifyMedEasyLibrary(), { stopped: cancelled, progress, label: "Preparing book labels" });
@@ -60,27 +69,46 @@ async function readReferenceBooks(klass: string, subject: string, progress: (mes
       }
     }
     const savedPages = new Map((saved || []).filter(page => splitReferenceContent(page.text).context?.capture_saved === true && splitReferenceContent(page.text).context?.visuals_checked === true && splitReferenceContent(page.text).context?.index_version === 2).map(page => [page.page_number, page.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "")]));
+    const bookSubject=combinedReferenceSubject(book)||book.subject;
+    if(options?.chapterOnly&&chapter){
+      const wanted=canonicalBookChapter(bookSubject,chapter);
+      const cached=[...savedPages].filter(([,text])=>canonicalBookChapter(bookSubject,splitReferenceContent(text).context?.chapter||'')===wanted).sort((a,b)=>a[0]-b[0]);
+      if(cached.length){
+        const first=cached[0],last=cached[cached.length-1];const firstPage=splitReferenceContent(first[1]);const next=splitReferenceContent(savedPages.get(last[0]+1)||'');
+        const contiguous=last[0]-first[0]+1===cached.length;
+        if(contiguous&&contentsHeadingMatches(bookSubject,firstPage.context?.match_text||firstPage.text,chapter)&&next.context?.chapter&&canonicalBookChapter(bookSubject,next.context.chapter)!==wanted){
+          summaries.push({book:book.file_name,pages:cached.length,figures:cached.reduce((sum,[,text])=>sum+splitReferenceContent(text).visuals.length,0),chapters:1});
+          progress(`Reusing saved pictures for ${chapter}.`);continue;
+        }
+      }
+    }
     if (savedPages.size === book.num_pages) {
       const pages = [...savedPages.values()].map(splitReferenceContent);
       summaries.push({ book: book.file_name, pages: savedPages.size, figures: pages.reduce((sum,page) => sum + page.visuals.length, 0), chapters: new Set(pages.map(page => page.context?.chapter).filter(Boolean)).size, unmatchedPages: pages.filter(page => page.context?.needs_review).length });
       continue;
     }
-    const file = await retryBookRead(async () => {
+    const file = downloadedBooks.get(book.storage_path) || await retryBookRead(async () => {
       const ticket = await signDownload({ data: { path: book.storage_path } });
       const response = await fetch(ticket.signedUrl);
       if (!response.ok) throw new Error(`Could not read the uploaded ${book.file_name}.`);
       return response.blob();
     }, { stopped: cancelled, progress, label: `Opening ${book.file_name}` });
+    downloadedBooks.set(book.storage_path,file);while(downloadedBooks.size>2)downloadedBooks.delete(downloadedBooks.keys().next().value!);
     let chapterHint = combinedReferenceSubject(book) ? "" : book.chapter;
-    const bookSubject = combinedReferenceSubject(book) || book.subject;
+    let readingChapter=false;
     const extracted = await extractPdfText(file, (page, total) => {
       if (savedPages.has(page)) chapterHint = splitReferenceContent(savedPages.get(page) || "").context?.chapter || "";
-      progress(`Reading ${book.file_name} · page ${page} of ${total}`);
+      progress(options?.chapterOnly ? readingChapter ? `Reading ${chapter} · PDF page ${page}` : `Checking the book index for ${chapter}…` : `Reading ${book.file_name} · page ${page} of ${total}`);
     }, {
       inspectEveryPage: true,
+      chapterOnly: options?.chapterOnly,
       cancelled,
-      ...(chapter ? { priorityChapter: { subject: bookSubject, chapter }, recognizeIndex: (image: string, nativeText: string) => reader.recognizeContents(image, nativeText) } : {}),
-      beforePage: (page, previous) => { if (page !== previous + 1) chapterHint = ""; if (savedPages.has(page)) chapterHint = splitReferenceContent(savedPages.get(page) || "").context?.chapter || ""; },
+      ...(chapter ? { priorityChapter: { subject: bookSubject, chapter }, recognizeIndex: async (image: string, nativeText: string,page:number,aspect:number) => {
+        const text=await reader.recognizeContents(image,nativeText);
+        try {const content=await saveCapturedReferencePage({data:{image,text,page,aspect,book_id:book.id}});savedPages.set(page,content);}catch { /* Index caching is optional; actual picture saves report their own errors. */ }
+        return text;
+      } } : {}),
+      beforePage: (page, previous) => { readingChapter=true;if (page !== previous + 1) chapterHint = ""; if (savedPages.has(page)) chapterHint = splitReferenceContent(savedPages.get(page) || "").context?.chapter || ""; },
       savedPages,
       savePage: async (text, page) => {
         if (cancelled()) throw new Error("Reference-book reading paused. Completed pages are saved.");

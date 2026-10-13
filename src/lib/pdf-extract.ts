@@ -1,5 +1,6 @@
 import { parseBookContents, canonicalBookChapter, chapterReadingOrder, contentsHeadingMatches } from "@/lib/book-chapter-priority";
 import { indexLocalBookPage } from "@/lib/local-book-index";
+import { splitReferenceContent } from '@/lib/reference-visuals';
 // Client-side PDF text extraction using pdfjs-dist.
 // pdfjs is imported dynamically so SSR (which lacks DOMMatrix) doesn't crash.
 
@@ -29,7 +30,7 @@ async function loadPdfjs() {
 export async function extractPdfText(
   file: File | Blob,
   onProgress?: (page: number, total: number) => void,
-  options?: { recognizePage: (image: string, page: number, aspect: number, nativeText?: string) => Promise<string>; savedPages?: Map<number, string>; savePage?: (text: string, page: number) => Promise<void>; inspectEveryPage?: boolean; priorityChapter?: { subject: string; chapter: string }; recognizeIndex?: (image: string, nativeText: string, page: number) => Promise<string>; beforePage?: (page: number, previousPage: number) => void; cancelled?: () => boolean },
+  options?: { recognizePage: (image: string, page: number, aspect: number, nativeText?: string) => Promise<string>; savedPages?: Map<number, string>; savePage?: (text: string, page: number) => Promise<void>; inspectEveryPage?: boolean; priorityChapter?: { subject: string; chapter: string }; chapterOnly?: boolean; recognizeIndex?: (image: string, nativeText: string, page: number, aspect: number) => Promise<string>; beforePage?: (page: number, previousPage: number) => void; cancelled?: () => boolean },
 ): Promise<ExtractedPdf> {
   const pdfjs = await loadPdfjs();
   const buffer = await file.arrayBuffer();
@@ -40,9 +41,12 @@ export async function extractPdfText(
   try {
   let order = Array.from({length: doc.numPages}, (_,i)=>i+1);
   const indexText = new Map<number, string>();
+  let verifiedChapter=false;
   async function inspectIndex(number: number) {
     if (options?.cancelled?.()) throw new Error("Reference-book reading paused. Completed pages are saved.");
     if (indexText.has(number)) return indexText.get(number)!;
+    const saved=options?.savedPages?.get(number);
+    if(saved){const parsed=splitReferenceContent(saved);const text=parsed.context?.match_text || parsed.text;if(text.trim()){indexText.set(number,text);return text;}}
     const page = await doc.getPage(number);
     const content = await page.getTextContent();
     const native = content.items.map(it => "str" in it ? it.str + (it.hasEOL ? "\n" : " ") : "").join("");
@@ -51,7 +55,7 @@ export async function extractPdfText(
     const canvas = document.createElement("canvas"); canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
     try {
       await page.render({canvas,viewport}).promise;
-      const text = await options!.recognizeIndex!(canvas.toDataURL("image/jpeg",.9),native,number);
+      const text = await options!.recognizeIndex!(canvas.toDataURL("image/jpeg",.9),native,number,canvas.width/canvas.height);
       indexText.set(number,text); return text;
     } finally {canvas.width=canvas.height=0;}
   }
@@ -69,7 +73,9 @@ export async function extractPdfText(
       if (found.length >= 2) {ranges.push(...found);lastContents=page;}
       else if (lastContents && page>lastContents+1) break;
     }
-    const target = ranges.find(range=>canonicalBookChapter(subject,range.chapter)===wanted);
+    const matches=ranges.filter(range=>canonicalBookChapter(subject,range.chapter)===wanted).sort((a,b)=>a.start-b.start);
+    const target=matches[0]?{...matches[0]}:undefined;
+    if(target)for(const range of matches.slice(1)){if(range.start>target.end+1)break;target.end=Math.max(target.end,range.end);}
     if(target) {
       // Front matter suggests where to look, but only the actual chapter
       // heading authorizes prioritising a page. A damaged earlier TOC entry
@@ -80,11 +86,12 @@ export async function extractPdfText(
         .sort((a,b)=>Math.abs(a-expected)-Math.abs(b-expected));
       for(const page of candidates) {
         if(contentsHeadingMatches(subject, await inspectIndex(page), target.chapter)) {
-          order=chapterReadingOrder(doc.numPages,page,page+target.end-target.start); break;
+          order=options.chapterOnly ? Array.from({length:Math.min(target.end-target.start+1,doc.numPages-page+1)},(_,i)=>page+i) : chapterReadingOrder(doc.numPages,page,page+target.end-target.start);verifiedChapter=true; break;
         }
       }
     }
   }
+  if(options?.chapterOnly&&!verifiedChapter)throw new Error('The chapter page range needs review. Saved pictures remain available; no whole-book scan was started.');
   let previousPage=0;
   for (const i of order) {
     if (options?.cancelled?.()) throw new Error("Reference-book reading paused. Completed pages are saved.");
