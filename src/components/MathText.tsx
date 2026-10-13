@@ -1,4 +1,5 @@
 import katex from "katex";
+import { normalNoteLabel } from "@/lib/note-labels";
 import { autoLatex, splitMath, normalizeLatex, latexToUnicode } from "@/lib/latex-notation";
 
 /**
@@ -7,7 +8,7 @@ import { autoLatex, splitMath, normalizeLatex, latexToUnicode } from "@/lib/late
  * source text when a fragment fails to parse, so notes never break.
  */
 export function MathText({ text }: { text: string }) {
-  const segments = splitMath(autoLatex(text));
+  const segments = splitMath(autoLatex(normalNoteLabel(text)));
   return (
     <>
       {segments.map((seg, i) => {

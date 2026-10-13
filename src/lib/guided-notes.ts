@@ -1,6 +1,7 @@
 import { dedupeLabelled, type NoteSection } from "@/lib/ncert-teacher-notes";
 import { toNoteBlocks } from "@/lib/notes-paging";
 import { splitMath } from "@/lib/latex-notation";
+import { normalNoteLabel } from "@/lib/note-labels";
 
 export type GuidedGroup = { heading: string; kind: "prose" | "list" | "formula" | "derivation" | "terms"; lines: string[] };
 const categories: Array<[RegExp, string, GuidedGroup["kind"]]> = [
@@ -31,7 +32,7 @@ const categories: Array<[RegExp, string, GuidedGroup["kind"]]> = [
 export function guidedGroups(sections: NoteSection[] | undefined, fallback: string[] = []): GuidedGroup[] {
   const sectionLines = sections?.filter((s) => s.kind !== "diagram").flatMap((s) => s.lines.map((line) =>
     /^\*\*/.test(line) || s.heading === "Teacher Notes" ? line : `**${s.heading.replace(/^\d+\.\s*/, "")}:** ${line}`));
-  const lines = dedupeLabelled(sectionLines?.length ? sectionLines : fallback);
+  const lines = dedupeLabelled((sectionLines?.length ? sectionLines : fallback).map(normalNoteLabel));
   const groups: GuidedGroup[] = [];
   const get = (heading: string, kind: GuidedGroup["kind"]) => {
     let group = groups.find((g) => g.heading === heading);
