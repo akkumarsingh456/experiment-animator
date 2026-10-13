@@ -14,7 +14,7 @@ export async function prepareScannedReferenceBooks(klass: string, subject: strin
   const summaries: ReferenceReadSummary[] = [];
   if (!/11|12/.test(klass)) return summaries;
   await retryBookRead(() => classifyMedEasyLibrary(), { stopped: cancelled, progress, label: "Preparing book labels" });
-  const { data: inventory, error } = await supabase.from("ncert_books").select("id,class,subject,chapter,file_name,storage_path,num_pages,num_chunks").or("file_name.ilike.%MED EASY%,file_name.ilike.%MEDEASY%").limit(100);
+  const { data: inventory, error } = await supabase.from("ncert_books").select("id,class,subject,chapter,file_name,storage_path,num_pages,num_chunks").or("file_name.ilike.%MED EASY%,file_name.ilike.%MEDEASY%").limit(1000);
   if (error) throw new Error(error.message);
   const indexedCounts = new Map<string, number>();
   for (const book of inventory || []) {
