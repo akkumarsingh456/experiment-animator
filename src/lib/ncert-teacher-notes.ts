@@ -21,6 +21,7 @@ import { PW_EXTRACTION_RULES, normalizeNoteLine } from "@/lib/pwNotesNormalizer"
 import { referenceBooksPrompt } from "@/lib/reference-books";
 import { sourceFormulaBlocks } from "@/lib/source-derivations";
 import { isUnitStatement } from "@/lib/note-labels";
+import { sourceFormulaExplanations } from "@/lib/med-easy-supplements";
 
 
 export type NoteSectionKind = "text" | "bullets" | "formula" | "terms" | "tip" | "diagram";
@@ -653,10 +654,11 @@ export async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: s
   const supplemented = slides.map(slide => {
     if (!["content", "chapter"].includes(slide.kind || "content")) return slide;
     const existing = (slide.sections || []).filter(section => section.kind !== "diagram").flatMap(section => section.lines);
-    const additions = sourceFormulaBlocks(slide.title, opts.subject, [
+    const evidence = [
       slide.grounding || "", slide.chapter_text || "", ...(slide.bullets || []), ...(slide.notes || []), ...existing,
       formulaReferenceContextForTopic(opts.refContext, slide.title),
-    ], existing);
+    ];
+    const additions = [...sourceFormulaBlocks(slide.title,opts.subject,evidence,existing), ...sourceFormulaExplanations(slide.title,opts.subject,evidence,existing)];
     if (!additions.length) return slide;
     const first = slide.sections?.[0] || { heading: NOTE_HEADING, kind: "bullets" as const, lines: [] };
     return { ...slide, sections: [{ ...first, lines: [...first.lines, ...additions] }, ...(slide.sections?.slice(1) || [])] };

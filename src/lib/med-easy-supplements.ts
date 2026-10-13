@@ -17,13 +17,17 @@ const details: Record<string, string[]> = {
   'Raoult’s law': ['This form applies to a component in an ideal liquid solution; its reference pressure is the vapour pressure of the pure component at the same temperature.', 'For an ideal mixture of volatile components, total pressure is the sum of their partial pressures.'],
 };
 
+export function sourceFormulaExplanations(title:string, subject:string, evidence:string[], existing:string[]=[]):string[] {
+  return matchingSourceRules(title,subject,evidence).flatMap(rule=>details[rule.name]||[]).map(line=>`**Formula basis:** ${line}`).filter(line=>!existing.includes(line));
+}
+
 /** Evidence is an index into verified chapter pages, never pasted OCR prose. */
 export function medEasyFormulaSupplement(title: string, subject: string, evidence: string[], existing: string[] = []): string[] {
   const plain = evidence.map(text => text.replace(/\$[^$]*\$/g, ' '));
   const rules = matchingSourceRules(title, subject, plain);
   if (!rules.length) return [];
   const formulas = sourceFormulaBlocks(title, subject, plain, existing);
-  return [...formulas, ...rules.flatMap(rule => details[rule.name] || []).map(line => `**Formula basis:** ${line}`).filter(line => !existing.includes(line))];
+  return [...formulas, ...sourceFormulaExplanations(title,subject,plain,existing)];
 }
 
 /** Explicit additive enrichment, separate from the image-only refresh contract. */

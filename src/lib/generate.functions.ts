@@ -62,7 +62,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     // v13: topic-aware textbook renderer with large labels and visual models.
     const cacheKey = hashKey([
-      "img-v21-notebook-scientific-topic-diagrams",
+      "img-v22-visible-page-specific-diagrams",
       process.env.HF_IMAGES_FREE_ONLY === "true" && !!process.env.HF_IMAGE_TOKEN ? "hf-enabled" : "local-only",
       data.klass,
       data.subject,
@@ -1673,7 +1673,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v44-topic-diagrams-source-derivations",
+      "lesson-v45-source-explanations-page-specific-diagrams",
       data.klass,
       data.subject,
       data.chapter,

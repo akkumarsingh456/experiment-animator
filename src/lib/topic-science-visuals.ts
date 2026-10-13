@@ -29,6 +29,16 @@ const benzene = (label:string) => {
 
 /** Topic selection is shared by all lesson views and exports. No copied paragraphs. */
 export function topicScienceDrawing(input: ConceptMapInput, subject=''): TopicDrawing | null {
+ const displayed=(input.sections||[]).filter(section=>section.kind!=='diagram' && !/^Reference notes/i.test(section.heading)).flatMap(section=>section.lines)
+   .filter(line=>!/^\*\*(?:learning objective|prerequisite|exit ticket|practice|answer|activity|support practice|core practice|challenge practice)/i.test(line));
+ // Paginated slides share their parent title and key terms, but their visible
+ // notes differ. Resolve the actual page before those shared parent fields.
+ if(displayed.length){
+   const pageModels=displayed.map(line=>topicDrawingByTitle(plainMathText(line).slice(0,220),subject)).filter((model):model is TopicDrawing=>!!model);
+   const pageUnique=new Map(pageModels.map(model=>[model.id,model]));
+   if(pageUnique.size===1)return [...pageUnique.values()][0];
+   return null;
+ }
  const direct=topicDrawingByTitle(input.title,subject);
  if(direct)return direct;
  // A generic title must retain its chapter context in every render/export.
@@ -40,7 +50,7 @@ export function topicScienceDrawing(input: ConceptMapInput, subject=''): TopicDr
  const models=evidence.map(line=>topicDrawingByTitle(plainMathText(line).slice(0,180),subject)).filter((drawing):drawing is TopicDrawing=>!!drawing);
  const distinct=new Map(models.map(drawing=>[drawing.id,drawing]));
  if(distinct.size===1)return [...distinct.values()][0];
- if(input.chapter){const chapter=topicDrawingByTitle(input.chapter,subject);if(chapter)return {...chapter,caption:`Chapter overview: ${chapter.caption}`};}
+ if(!displayed.length && input.chapter){const chapter=topicDrawingByTitle(input.chapter,subject);if(chapter)return {...chapter,caption:`Chapter overview: ${chapter.caption}`};}
  return null;
 }
 

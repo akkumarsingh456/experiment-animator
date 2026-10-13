@@ -362,6 +362,8 @@ export function renderLessonIllustration(input: FactInput & ConceptMapInput): st
   if (topic) return wrapTextbookDrawing(topic.drawing, identity, input.title);
   const geometry = geometryDiagram(input.title, input.subject);
   if (geometry) return geometry.svg;
+  const pageFacts=sourceConceptFacts(input).slice(0,3);
+  if(pageFacts.length && input.sections?.length)return renderSourceConceptMap(input,pageFacts);
   return wrapTextbookDrawing(topicIconOverview(input, input.subject).drawing, identity, input.title);
 }
 

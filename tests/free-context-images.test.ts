@@ -9,7 +9,7 @@ describe('optional free image generation',()=>{
   const {createFreeContextIllustration}=await import('@/lib/hf-image-provider.server');
   const first=await createFreeContextIllustration('Chemistry','Galvanic Cells',['oxidation']);
   expect(first).toBe('data:image/webp;base64,AQID');
-  expect(await createFreeContextIllustration('Chemistry','Galvanic Cells')).toBe(first);
+  expect(await createFreeContextIllustration('Chemistry','Galvanic Cells',['oxidation'])).toBe(first);
   expect(f.connect).toHaveBeenCalledOnce();expect(f.connect.mock.calls[0][0]).toBe('black-forest-labs/FLUX.1-schnell');
   expect(f.submit.mock.calls[0][1].prompt).not.toContain('hf_private');
   expect(f.close).toHaveBeenCalledOnce();vi.unstubAllGlobals();vi.unstubAllEnvs();

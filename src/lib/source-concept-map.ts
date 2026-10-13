@@ -17,7 +17,7 @@ export function sourceConceptFacts(input: ConceptMapInput): string[] {
   const sections = input.sections?.filter((section) => section.kind !== "diagram").flatMap((section) => section.lines.map((line) =>
     /^\*\*/.test(line) || section.heading === "Teacher Notes" ? line : `**${section.heading}:** ${line}`)) || [];
   const factual = sections.filter((line) => !/^\*\*(?:learning objective|prerequisite|activity|experiment|discussion|support practice|core practice|challenge practice|exit ticket|check your understanding|practice|answer|solution|derivation|formula|equation|variable|si unit|unit|dimension)/i.test(line));
-  const lines = factual.length ? factual : [...(input.bullets || []), ...(input.notes || []), ...(input.keyTerms || []).map((term) => `${term.term}: ${term.meaning}`)];
+  const lines = factual.length ? factual : sections.length ? sections.filter(line=>!/^\*\*(?:learning objective|prerequisite|exit ticket|practice|answer|activity|support practice|core practice|challenge practice)/i.test(line)) : [...(input.bullets || []), ...(input.notes || []), ...(input.keyTerms || []).map((term) => `${term.term}: ${term.meaning}`)];
   // Retain authored LaTeX for HTML study maps. Only the SVG fallback flattens it.
   return [...new Set(lines.map((line) => line.replace(/^\*\*([^*]+):\*\*\s*/, "").trim()).filter(Boolean))];
 }
@@ -38,7 +38,7 @@ function wrap(value: string, width: number): string[] {
 }
 
 export function renderSourceConceptMap(input: ConceptMapInput, facts = sourceConceptFacts(input).slice(0, 4)): string {
-  const heading = wrap(text(input.title), 43);
+  const heading = wrap(`1. ${text(input.title)}`, 43);
   const top = 42 + heading.length * 32;
   let y = top + 28;
   const cards = facts.map((fact, index) => {
@@ -49,7 +49,7 @@ export function renderSourceConceptMap(input: ConceptMapInput, facts = sourceCon
     y += height + 18;
     return svg;
   });
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="760" height="${y + 15}" viewBox="0 0 760 ${y + 15}" role="img" font-family="Arial, Noto Sans Devanagari, sans-serif"><rect width="760" height="${y + 15}" rx="16" fill="#fff"/>${heading.map((line, i) => `<text x="28" y="${38 + i * 32}" font-size="27" font-weight="700" fill="#174e5e">${escape(line)}</text>`).join("")}${cards.join("")}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="760" height="${y + 15}" viewBox="0 0 760 ${y + 15}" role="img" data-visual-style="study-notebook" font-family="Arial, Noto Sans Devanagari, sans-serif"><defs><pattern id="paper-lines" width="760" height="26" patternUnits="userSpaceOnUse"><path d="M0 25H760" fill="none" stroke="#dce8f2" stroke-width=".8"/></pattern></defs><rect width="760" height="${y + 15}" rx="16" fill="#fffef9"/><rect width="760" height="${y + 15}" fill="url(#paper-lines)"/>${heading.map((line, i) => `<text x="28" y="${38 + i * 32}" font-size="27" font-weight="700" fill="#174e5e">${escape(line)}</text>`).join("")}${cards.join("")}</svg>`;
 }
 
 export function svgDataUrl(svg: string): string {
