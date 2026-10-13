@@ -1,6 +1,8 @@
 import {startChapterPreparation,bookPreparationSnapshot,subscribeBookPreparation,pauseBookPreparation} from '@/lib/book-preparation';
 import { loadLessonBookPictures } from "@/lib/lesson-book-pictures.functions";
 import { mergeLessonBookPictures } from "@/lib/lesson-book-pictures";
+import { mergeMedEasySupplements } from "@/lib/med-easy-supplements";
+import { lessonIllustrationCaption } from "@/lib/napkin-infographic";
 import { BookReferenceFigures } from "@/components/BookReferenceFigures";
 import { BookMapSlide } from "@/components/BookMapSlide";
 import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
@@ -276,7 +278,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const captureEligible = /^(9|10|11|12)$/.test(search.klass.replace(/[^0-9]/g, "")) && !!search.subject;
   async function refreshBookPictures(run?: { stopped: boolean }) {
     const pictures = await loadLessonBookPictures({ data: { klass: search.klass, subject: search.subject, chapter: search.chapter || title, slides: slides.map(slide => ({ title: slide.title, kind: slide.kind, topic_text: [...slide.key_terms, ...slide.notes, ...slide.bullets, ...(slide.sections || []).filter(section => !section.heading.startsWith("Reference notes")).flatMap(section => section.lines)].join("\n").slice(0, 30000) })) } });
-    if (!run || (bookCaptureRun.current === run && !run.stopped)) setSlides(current => mergeLessonBookPictures(current, pictures));
+    if (!run || (bookCaptureRun.current === run && !run.stopped)) setSlides(current => mergeMedEasySupplements(mergeLessonBookPictures(current, pictures), pictures));
     return pictures.reduce((count, picture) => count + picture.visuals.length, 0);
   }
   async function captureBookPictures() {
@@ -1270,9 +1272,9 @@ function SlideCanvas({
             </div>
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0" style={lang ? { display: "none" } : undefined}>
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
-              <div className="lesson-figure-panel relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 grid place-items-center">
+              <div className="lesson-figure-panel relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 flex flex-col">
                 {isMathematics(subject) ? <MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} /> : imageUrl ? (
-                  <img src={imageUrl} alt={`${slide.title} — NCERT 2D infographic`} className="w-full h-full object-contain" />
+                  <img src={imageUrl} alt={`${slide.title} — NCERT 2D infographic`} className="w-full min-h-0 flex-1 object-contain" />
                 ) : imageLoading ? (
                   <div className="flex flex-col items-center gap-2 text-[10px] text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -1285,6 +1287,11 @@ function SlideCanvas({
                   </button>
                 )}
               </div>
+              {!slide.reference_visuals?.some(figure => figure.url) && <div className="px-3 py-2 rounded-md bg-card border border-border/50 text-[11px] leading-snug shrink-0">
+                <p className="font-medium text-primary">Read the diagram</p>
+                <p>{lessonIllustrationCaption(slide.title, subject, {...slide, keyTerms: slide.key_terms, chapter})}</p>
+                {(slide.key_terms || []).slice(0, 2).map((term, index) => typeof term === 'object' && term.meaning ? <p key={index} className="mt-1"><strong>{term.term}:</strong> {term.meaning.length > 120 ? `${term.meaning.slice(0, 117)}…` : term.meaning}</p> : null)}
+              </div>}
               {!!slide.reference_visuals?.some(figure => figure.url) && <div className="lesson-book-supplement w-full flex-[4] min-h-0 flex overflow-hidden border-t border-border" aria-label="Original book screenshots below the 2D illustration">
                 <BookReferenceFigures figures={slide.reference_visuals} compact presentation subject={subject} />
               </div>}

@@ -371,6 +371,7 @@ export function renderLessonIllustrationDataUrl(input: FactInput & ConceptMapInp
   return `data:image/svg+xml;base64,${b64}`;
 }
 
-export function lessonIllustrationCaption(title: string, subject?: string): string {
-  return topicScienceDrawing({ title }, subject)?.caption || (/^(physics|science)$/i.test(subject || "") ? currentElectricityDiagram(title)?.caption : undefined) || geometryDiagram(title, subject)?.caption || topicIconOverview({ title }, subject).caption;
+export function lessonIllustrationCaption(title: string, subject?: string, input?: ConceptMapInput): string {
+  const source = input || {title};
+  return topicScienceDrawing(source, subject)?.caption || (/^(physics|science)$/i.test(subject || "") ? currentElectricityDiagram(title)?.caption : undefined) || geometryDiagram(title, subject)?.caption || topicIconOverview(source, subject).caption;
 }
