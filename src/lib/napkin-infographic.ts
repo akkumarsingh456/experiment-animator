@@ -359,16 +359,18 @@ export function renderNapkinInfographicDataUrl(input: FactInput): string {
 /** Large reference-style figure without a miniature duplicate of the notes. */
 export function renderLessonIllustration(input: FactInput & ConceptMapInput): string {
   const identity = stableHash(`${input.subject}|${input.title}|${input.slideIndex ?? 0}`).toString(16);
-  if(isKeyPointPage(input) && !input.sections?.some(section=>/classroom discussion/i.test(section.heading))){
+  if(isKeyPointPage(input) && !/electric flux/i.test(input.title) && !input.sections?.some(section=>/classroom discussion/i.test(section.heading))){
     const facts=sourceConceptFacts(input);
-    if(facts.length)return wrapTextbookDrawing(keyPointIconCards(facts),identity,input.title);
+    const cards=keyPointIconCards(facts);
+    if(cards)return wrapTextbookDrawing(cards,identity,input.title);
   }
   const topic = topicScienceDrawing(input, input.subject);
   if (topic) return wrapTextbookDrawing(topic.drawing, identity, input.title);
   const geometry = geometryDiagram(input.title, input.subject);
   if (geometry) return geometry.svg;
   const pageFacts=sourceConceptFacts(input).slice(0,3);
-  if(pageFacts.length && input.sections?.length)return wrapTextbookDrawing(keyPointIconCards(pageFacts),identity,input.title);
+  const cards=keyPointIconCards(pageFacts);
+  if(cards && input.sections?.length)return wrapTextbookDrawing(cards,identity,input.title);
   return wrapTextbookDrawing(topicIconOverview(input, input.subject).drawing, identity, input.title);
 }
 

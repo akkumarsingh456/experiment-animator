@@ -38,7 +38,8 @@ export function TopicVisualStructures({
       </section>
     );
   const topic = topicScienceDrawing(input, subject);
-  if(isKeyPointPage(input) && !classroomDiscussionVisual(input) && facts.length)return <div className="guided-explanation guided-visual-structures"><figure><img src={svgDataUrl(wrapTextbookDrawing(keyPointIconCards(facts), 'key-point-icons', input.title))} alt={`${input.title}: short concept icons`} /><figcaption>Short concept cues; full explanations remain in the notes.</figcaption></figure></div>;
+  const cards=keyPointIconCards(facts);
+  if(isKeyPointPage(input) && !/electric flux/i.test(input.title) && !classroomDiscussionVisual(input) && cards)return <div className="guided-explanation guided-visual-structures"><figure><img src={svgDataUrl(wrapTextbookDrawing(cards, 'key-point-icons', input.title))} alt={`${input.title}: short concept icons`} /><figcaption>Short concept cues; full explanations remain in the notes.</figcaption></figure></div>;
   if (topic) return <div className="guided-explanation guided-visual-structures"><figure>
     <div className="guided-figure-heading"><strong>Labelled topic illustration</strong><span>2D diagram</span></div>
     <img src={svgDataUrl(wrapTextbookDrawing(topic.drawing, topic.id, input.title))} alt={`${input.title}: ${topic.caption}`} />

@@ -62,7 +62,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     // v13: topic-aware textbook renderer with large labels and visual models.
     const cacheKey = hashKey([
-      "img-v23-classroom-and-concept-icons",
+      "img-v24-flux-and-complete-concept-labels",
       process.env.HF_IMAGES_FREE_ONLY === "true" && !!process.env.HF_IMAGE_TOKEN ? "hf-enabled" : "local-only",
       data.klass,
       data.subject,

@@ -32,6 +32,7 @@ const benzene = (label:string) => {
 export function topicScienceDrawing(input: ConceptMapInput, subject=''): TopicDrawing | null {
  const classroom=classroomDiscussionVisual(input);
  if(classroom)return classroom;
+ if(/electric flux/i.test(input.title) && /^(physics|science)$/i.test(subject))return additionalTopicDrawing('Electric flux','Physics');
  const displayed=(input.sections||[]).filter(section=>section.kind!=='diagram' && !/^Reference notes/i.test(section.heading)).flatMap(section=>section.lines)
    .filter(line=>!/^\*\*(?:learning objective|prerequisite|exit ticket|practice|answer|activity|support practice|core practice|challenge practice)/i.test(line));
  // Paginated slides share their parent title and key terms, but their visible
