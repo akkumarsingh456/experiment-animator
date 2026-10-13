@@ -10,8 +10,15 @@ import { retryBookRead } from "@/lib/book-read-recovery";
 export type ReferenceReadSummary = { book: string; pages: number; figures: number; chapters: number; unmatchedPages?: number; error?: string };
 
 /** Read the existing uploaded scans once, checkpointing each page for resumption. */
-export async function prepareScannedReferenceBooks(klass: string, subject: string, progress: (message: string) => void, cancelled: () => boolean = () => false, onPicturesSaved?: () => Promise<void>, chapter?: string) {
+let readingQueue:Promise<void>=Promise.resolve();
+export function prepareScannedReferenceBooks(...args:Parameters<typeof readReferenceBooks>):ReturnType<typeof readReferenceBooks>{
+  const task=readingQueue.then(()=>readReferenceBooks(...args));
+  readingQueue=task.then(()=>{},()=>{});
+  return task;
+}
+async function readReferenceBooks(klass: string, subject: string, progress: (message: string) => void, cancelled: () => boolean = () => false, onPicturesSaved?: () => Promise<void>, chapter?: string, options?:{medEasyOnly?:boolean}) {
   const summaries: ReferenceReadSummary[] = [];
+  if(cancelled())return summaries;
   await retryBookRead(() => classifyMedEasyLibrary(), { stopped: cancelled, progress, label: "Preparing book labels" });
   const { data: inventory, error } = await supabase.from("ncert_books").select("id,class,subject,chapter,file_name,storage_path,num_pages,num_chunks").limit(1000);
   if (error) throw new Error(error.message);
@@ -24,6 +31,7 @@ export async function prepareScannedReferenceBooks(klass: string, subject: strin
     }
   }
   const indexedCounts = new Map<string, number>();
+  if(options?.medEasyOnly && inventory)inventory.splice(0,inventory.length,...inventory.filter(book=>!!combinedReferenceSubject(book)));
   for (const book of inventory || []) {
     if (!screenshotBookMatches(book, klass, subject)) continue;
     const { count } = await supabase.from("ncert_pages").select("page_number", { count: "exact", head: true }).eq("book_id", book.id);

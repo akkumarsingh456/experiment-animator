@@ -35,7 +35,8 @@ export async function appendUploadedReferenceNotes(result: GenerationResult, db:
       if (!extra || extra.length < 1000) break;
     }
   }
-  const selected = (books || []).filter(book => screenshotBookMatches(book, klass, subject));
+  const selected = (books || []).filter(book => !!combinedReferenceSubject(book) && screenshotBookMatches(book, klass, subject));
+  if(!selected.length)return result;
   // Remove only sections created by the retired raw-reference importer. Core
   // Teacher Notes, formulas, derivations and their original objects stay intact.
   const loadedRows = await Promise.all(selected.map(async book => {

@@ -62,12 +62,12 @@ describe("Chapter-wide source formula completeness", () => {
     expect(referenceFormulaEvidence(source, "Chapter 1: Electric Charges and Fields")).toContain("Coulomb's law");
     expect(referenceFormulaEvidence(source, "Current Electricity")).toBe("");
   });
-  it("appends a missing relation to existing lessons only once while retaining all approved strings", () => {
+  it("never changes approved formulas or derivations during picture refresh", () => {
     const slide = { title:"Coulomb's Law", bullets:[], notes:[], key_terms:[], visual:"book", sections:[{heading:"Teacher Notes",kind:"bullets",lines:["Approved explanation.", "**Derivation step 1:** Keep these exact words."]}]} as Slide;
     const formula_lines = sourceFormulaLines(slide.title,"Physics",["Coulomb's law is stated here."]);
     const updated = mergeLessonBookPictures([slide],[{title:slide.title,visuals:[],formula_lines}]);
     const repeated = mergeLessonBookPictures(updated,[{title:slide.title,visuals:[],formula_lines}]);
-    expect(repeated[0].sections?.[0].lines).toEqual([...slide.sections![0].lines,...formula_lines]);
+    expect(repeated[0].sections?.[0].lines).toEqual(slide.sections![0].lines);
     expect(slide.sections![0].lines).toHaveLength(2);
   });
 });

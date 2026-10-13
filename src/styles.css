@@ -394,4 +394,13 @@
 .book-figure-presentation .book-reference-figure { padding: .85rem 1rem; display: flex; flex-direction: column; min-height: 0; }
 .book-figure-presentation .book-reference-figure p { margin: .5rem 0; }
 .book-map-image-space { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.lesson-book-supplement .book-figure-presentation { display: flex; overflow: hidden; padding: 4px; }
+.lesson-book-supplement .book-reference-figure { flex: 1; min-width: 0; padding: 6px; gap: 3px; }
+.lesson-book-supplement .book-reference-figure figcaption { font-size: 11px; margin: 0; }
+.lesson-book-supplement .book-reference-figure p { font-size: 10px; line-height: 1.2; margin: 0; }
+.lesson-book-supplement .book-reference-figure small { font-size: 9px; }
+.book-preparation-status { display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 18px;background:#f0f8fc;border-bottom:1px solid #d9e8f2;font-size:12px; }
+.book-preparation-status span { flex:1;min-width:160px; }
+.book-preparation-status button { padding:4px 9px;border:1px solid #bdd8e5;border-radius:6px; }
+@media print { .book-preparation-status { display:none; } }
 @media (max-width: 640px) { .book-map-slide { padding: 1rem; } }

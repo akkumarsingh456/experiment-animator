@@ -1,5 +1,6 @@
 import { encodeReferenceVisuals, splitReferenceContent } from "@/lib/reference-visuals";
 import { prepareScannedReferenceBooks, type ReferenceReadSummary } from "@/lib/prepare-reference-books";
+import {invalidateBookPreparation} from '@/lib/book-preparation';
 import { readScannedPage } from "@/lib/reference-ocr.functions";
 import { saveCapturedReferencePage } from "@/lib/reference-capture.functions";
 import { createLocalBookReader } from "@/lib/local-book-reader";
@@ -422,6 +423,7 @@ function UploadPage() {
         setProgress(50 + ((i + slice.length) / chunks.length) * 50);
       }
       step({ name: "store-chunks", label: "Store memory chunks", status: "ok", msg: `${chunks.length} chunks` });
+      if(referenceSubject)invalidateBookPreparation();
 
       return {
         numPages: extracted.numPages,

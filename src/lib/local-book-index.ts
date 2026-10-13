@@ -1,7 +1,7 @@
 import { chaptersFor } from "@/lib/ncert-syllabus";
 
 const normal = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-const chapterName = (value: string) => value.replace(/^chapter\s*\d+\s*[:.\-]?\s*/i, "");
+const chapterName = (value: string) => value.replace(/^chapter\s*\d+\s*[:.\-]?\s*/i, "").replace(/\s*\((?:Physics|Chemistry|Biology)\)\s*$/i, "");
 // The page index includes older Med Easy chapters as well as rationalised books.
 // It does not change the website's lesson syllabus or existing notes.
 const biologyChapters = [

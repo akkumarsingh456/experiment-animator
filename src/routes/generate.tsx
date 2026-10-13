@@ -1,4 +1,4 @@
-import { prepareScannedReferenceBooks } from "@/lib/prepare-reference-books";
+import {startBookPreparation,bookPreparationSnapshot,subscribeBookPreparation,pauseBookPreparation} from '@/lib/book-preparation';
 import { loadLessonBookPictures } from "@/lib/lesson-book-pictures.functions";
 import { mergeLessonBookPictures } from "@/lib/lesson-book-pictures";
 import { BookReferenceFigures } from "@/components/BookReferenceFigures";
@@ -7,7 +7,7 @@ import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
 import { isMathematics, mathematicsPresentationSlide } from "@/lib/mathematics-presentation";
 import { omitContentsListings } from "@/lib/note-source-noise";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { z } from "zod";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
@@ -159,9 +159,12 @@ function GeneratePage() {
   const search = Route.useSearch();
   const nav = useNavigate();
   const run = useServerFn(generateLesson);
+  const preparation=useSyncExternalStore(subscribeBookPreparation,bookPreparationSnapshot,bookPreparationSnapshot);
+  const preparingBeforeLesson=/^(11|12)$/.test(search.klass.replace(/[^0-9]/g,'')) && /physics|chemistry|biology|botany|zoology/i.test(search.subject) && (!preparation.initialized||preparation.busy||preparation.failed);
+  const startedRequest=useRef('');
   const requestIdRef = useRef(0);
   const [retryAttempt, setRetryAttempt] = useState(0);
-  useEffect(() => () => { requestIdRef.current += 1; }, []);
+  useEffect(() => () => { requestIdRef.current += 1;startedRequest.current=''; }, []);
   const [loading, setLoading] = useState(false);
   const readingStatus = "Preparing your PPT and teacher notes…";
   const [result, setResult] = useState<GenerationResult | null>(null);
@@ -169,6 +172,10 @@ function GeneratePage() {
 
   useEffect(() => {
     if (!search.topic || (search.go !== "1" && retryAttempt === 0)) return;
+    if(preparingBeforeLesson)return;
+    const requestKey=`${search.topic}|${search.klass}|${search.subject}|${search.go}|${retryAttempt}`;
+    if(startedRequest.current===requestKey)return;
+    startedRequest.current=requestKey;
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     setLoading(true);
@@ -189,7 +196,7 @@ function GeneratePage() {
     }
     // Clearing go must not invalidate this request: its result still belongs to this page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.go, retryAttempt]);
+  }, [search.go, retryAttempt, preparingBeforeLesson]);
 
   return (
     <div className="min-h-screen">
@@ -213,11 +220,11 @@ function GeneratePage() {
           <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight ml-1">{search.topic || "Untitled"}</h1>
         </div>
 
-        {loading && (
+        {(loading || preparingBeforeLesson && !result) && (
           <Card className="border-dashed">
             <CardContent className="p-12 text-center">
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-              <p className="mt-4 font-medium">{readingStatus}</p>
+              <p className="mt-4 font-medium">{preparingBeforeLesson ? preparation.message : readingStatus}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Using your chapter and already-read reference notes. Scanned books can be read separately from the upload library.
               </p>
@@ -282,14 +289,9 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     try {
       setBookCaptureMessage("Loading original book screenshots for this chapter...");
       await refresh();
-      const summaries = await prepareScannedReferenceBooks(search.klass, search.subject, message => {
-        if (!run.stopped && bookCaptureRun.current === run) setBookCaptureMessage(message);
-      }, () => run.stopped, async () => {
-        if (!run.stopped && bookCaptureRun.current === run) await refresh();
-      }, search.chapter || title);
+      await startBookPreparation();
       const matched = await refresh();
-      const reviewPages = summaries.reduce((total, book) => total + (book.unmatchedPages || 0), 0);
-      if (bookCaptureRun.current === run) setBookCaptureMessage(run.stopped ? "Capture paused. Completed pages are saved; resume to continue." : summaries.length ? (matched ? `${matched} original Med Easy pictures added to this chapter’s topics in both lesson views.` : "Pages saved. No confidently matched picture was found for the current chapter and topics.") + (reviewPages ? ` ${reviewPages} pages need chapter review.` : "") : "No matching uploaded Med Easy book was found for this subject.");
+      if (bookCaptureRun.current === run) setBookCaptureMessage(matched ? `${matched} saved book pictures matched to this chapter.` : bookPreparationSnapshot().message);
     } catch (error) {
       if (bookCaptureRun.current === run) setBookCaptureMessage(error instanceof Error ? error.message : "Book capture could not finish. Resume to try again.");
     } finally {
@@ -298,9 +300,13 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     }
   }
   useEffect(() => {
-    // Start after the approved lesson is visible; reading never blocks its display.
-    const task = setTimeout(() => { void captureBookPictures(); }, 0);
-    return () => { clearTimeout(task); if (bookCaptureRun.current) bookCaptureRun.current.stopped = true; bookCaptureRun.current = null; };
+    // Only load prepared pictures here. The root reader starts before lessons
+    // and survives navigation, so clicking Generate never starts a new scan.
+    let active=true,lastRevision=bookPreparationSnapshot().revision;
+    void refreshBookPictures().catch(()=>{});
+    const update=()=>{const state=bookPreparationSnapshot();setBookCaptureBusy(state.busy);setBookCaptureMessage(state.message);if(state.revision!==lastRevision){lastRevision=state.revision;void refreshBookPictures().catch(()=>{});}};
+    update();const unsubscribe=subscribeBookPreparation(()=>{if(active)update();});
+    return ()=>{active=false;unsubscribe();if(bookCaptureRun.current)bookCaptureRun.current.stopped=true;bookCaptureRun.current=null;};
   }, [result]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [presenting, setPresenting] = useState(false);
@@ -632,11 +638,11 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         <>
           {exportProgress && <p role="status" className="print:hidden mb-3">{exportProgress}</p>}
           {captureEligible && <details className="print:hidden mb-4 rounded-lg border p-3">
-            <summary className="cursor-pointer font-medium">Med Easy book pictures · background reading</summary>
+            <summary className="cursor-pointer font-medium">Med Easy book pictures · saved library</summary>
             <p className="text-sm mt-2">Each lesson view has its own downloads below. Book reading can continue separately.</p>
             <p className="text-sm text-muted-foreground">Free book-picture capture · no AI credits required. {bookCaptureMessage || "Preparing chapter and topic captures..."}</p>
             <Button className="mt-2" size="sm" variant="outline" onClick={() => {
-              if (bookCaptureBusy) { if (bookCaptureRun.current) bookCaptureRun.current.stopped = true; setBookCaptureMessage("Pausing after the current page is saved..."); }
+              if (bookCaptureBusy) { pauseBookPreparation();if (bookCaptureRun.current) bookCaptureRun.current.stopped = true; setBookCaptureMessage("Pausing after the current page is saved..."); }
               else void captureBookPictures();
             }}>{bookCaptureBusy ? "Pause capture" : "Read / resume book pictures"}</Button>
           </details>}
@@ -1281,8 +1287,8 @@ function SlideCanvas({
                   </button>
                 )}
               </div>
-              {!!slide.reference_visuals?.some(figure => figure.url) && <div className="lesson-book-supplement w-full flex-[3] min-h-0 overflow-y-auto border-t border-border" aria-label="Original book screenshots below the 2D illustration">
-                <BookReferenceFigures figures={slide.reference_visuals} compact subject={subject} />
+              {!!slide.reference_visuals?.some(figure => figure.url) && <div className="lesson-book-supplement w-full flex-[4] min-h-0 flex overflow-hidden border-t border-border" aria-label="Original book screenshots below the 2D illustration">
+                <BookReferenceFigures figures={slide.reference_visuals} compact presentation subject={subject} />
               </div>}
               {slide.context_illustration && <figure className="flex-1 min-h-0 bg-white rounded-lg overflow-hidden flex flex-col">
                 <img className="w-full min-h-0 flex-1 object-contain" src={slide.context_illustration.url} alt={slide.context_illustration.description} />

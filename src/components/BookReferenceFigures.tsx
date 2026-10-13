@@ -31,7 +31,7 @@ export function BookReferenceFigures({ figures, compact = false, presentation = 
         <figcaption><Icon size={20} aria-hidden="true" /><strong>{figure.title}</strong><span>{figure.capture === "page" ? "Original book page" : figure.kind === "reaction" ? "Reaction scheme" : figure.kind === "structure" ? "Molecular structure" : "Labelled diagram"}</span></figcaption>
         <SourceCrop figure={figure} presentation={presentation} compact={compact} />
         <p>{figure.description}</p>
-        <small><BookOpen size={13} aria-hidden="true" />{figure.book || "Uploaded book"} · {figure.chapter ? `${figure.chapter} · ` : ""}PDF page {figure.page}</small>
+        <small><BookOpen size={13} aria-hidden="true" />{figure.book || "Uploaded book"} · {figure.chapter ? `${figure.chapter} · ` : ""}PDF page {figure.page}<a href={figure.url} target="_blank" rel="noopener noreferrer" className="print:hidden" aria-label={`Open ${figure.title} at full size`}>Full size ↗</a></small>
       </figure>;
     })}
   </section>;

@@ -136,7 +136,7 @@ describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
     expect(html).toContain("Haloalkanes and Haloarenes");
     expect(html).not.toContain("book-figure-compact");
   });
-  it("removes only cached raw reference dumps, preserving original formulas", async () => {
+  it("preserves cached note wording and original formulas during screenshot refresh", async () => {
     const original = lesson("Ohm’s Law");
     const formula = original.slides[0].sections[0];
     const points = [
@@ -149,7 +149,7 @@ describe("Supplemental Med Easy/NCERT notes and exact book figures", () => {
     const db = mockDb([book("ncert","Physics","Class 12",true)], {ncert:[points.join(" ")]});
     const result = await appendUploadedReferenceNotes(original,db,"12","Physics","Current Electricity");
     expect(result.slides[0].sections[0]).toBe(formula);
-    expect(result.slides[0].sections).toEqual([formula]);
+    expect(result.slides[0].sections).toEqual(original.slides[0].sections);
   });
   it.each(["11", "12"])("adds original organic figures for Class %s without OCR prose or changes to existing formulas", async grade => {
     const original = lesson("Nucleophilic substitution"); const formula = original.slides[0].sections[0];
