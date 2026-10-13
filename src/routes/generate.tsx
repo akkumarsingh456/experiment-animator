@@ -3,6 +3,7 @@ import { loadLessonBookPictures } from "@/lib/lesson-book-pictures.functions";
 import { mergeLessonBookPictures } from "@/lib/lesson-book-pictures";
 import { mergeMedEasySupplements } from "@/lib/med-easy-supplements";
 import { lessonIllustrationCaption } from "@/lib/napkin-infographic";
+import { FormulaVisualCards } from "@/components/FormulaVisualCards";
 import { BookReferenceFigures } from "@/components/BookReferenceFigures";
 import { BookMapSlide } from "@/components/BookMapSlide";
 import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
@@ -1287,6 +1288,7 @@ function SlideCanvas({
                   </button>
                 )}
               </div>
+              {!slide.reference_visuals?.some(figure => figure.url) && <FormulaVisualCards slide={slide} limit={slide.context_illustration ? 1 : 2} />}
               {!slide.reference_visuals?.some(figure => figure.url) && <div className="px-3 py-2 rounded-md bg-card border border-border/50 text-[11px] leading-snug shrink-0">
                 <p className="font-medium text-primary">Read the diagram</p>
                 <p>{lessonIllustrationCaption(slide.title, subject, {...slide, keyTerms: slide.key_terms, chapter})}</p>

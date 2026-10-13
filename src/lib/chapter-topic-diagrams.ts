@@ -1,4 +1,5 @@
 import type { TopicDrawing } from './topic-science-visuals';
+import { chemistryStructureDrawing } from './chemistry-structure-diagrams';
 
 const text=(x:number,y:number,s:string)=>`<text x="${x}" y="${y}" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" fill="#173d50">${s}</text>`;
 const line=(x:number,y:number,a:number,b:number,arrow=false)=>`<path d="M${x} ${y}L${a} ${b}" stroke="#247f91" stroke-width="4" fill="none"${arrow?' marker-end="url(#tip)"':''}/>`;
@@ -10,6 +11,8 @@ const diagram=(id:string,caption:string,drawing:string):TopicDrawing=>({id,capti
 export function additionalTopicDrawing(title:string,subject:string):TopicDrawing|null {
  const s=title.toLowerCase();
  if(/chem/i.test(subject)) {
+  const structure = chemistryStructureDrawing(title);
+  if (structure) return structure;
   if(/arrhenius/.test(s))return diagram('arrhenius-plot','For constant activation energy and pre-exponential factor, ln k versus reciprocal temperature is linear with a negative slope. Axes are schematic.',line(140,410,650,410,true)+line(140,410,140,110,true)+line(175,145,605,375)+text(380,475,'Reciprocal temperature 1/T')+text(180,85,'ln k'));
   if(/phenol/.test(s) && !/alcohol|ether/.test(s))return diagram('phenol-structure','Phenol has an OH group directly attached to an aromatic ring.',`<polygon points="380,150 480,210 480,330 380,390 280,330 280,210" fill="#e5f4f5" stroke="#247f91" stroke-width="4"/>`+circle(380,270,60)+line(380,150,380,95)+text(380,75,'OH')+text(380,465,'Phenol: aromatic hydroxyl group'));
   if(/raoult|vapour pressure/.test(s))return diagram('raoult-plot','For an ideal solution at fixed temperature, a component’s partial vapour pressure is proportional to its mole fraction. Axes are schematic.',line(140,410,650,410,true)+line(140,410,140,110,true)+line(140,410,590,145)+text(390,475,'Mole fraction of component A')+text(380,90,'Partial vapour pressure of A')+text(140,450,'0')+text(590,450,'1'));

@@ -33,7 +33,7 @@ export function MathText({ text }: { text: string }) {
             displayMode: seg.type === "block",
             throwOnError: false,
             strict: false,
-            output: "html",
+            output: "htmlAndMathml",
           });
         } catch {
           return <span key={i}>{latexToUnicode(seg.value)}</span>;
@@ -41,7 +41,7 @@ export function MathText({ text }: { text: string }) {
         return (
           <span
             key={i}
-            className={seg.type === "block" ? "block my-1 overflow-x-auto" : "inline-block align-middle"}
+            className={seg.type === "block" ? "note-math note-math-display block my-1 overflow-x-auto" : "note-math inline-block align-middle"}
             dangerouslySetInnerHTML={{ __html: html }}
           />
         );

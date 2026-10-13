@@ -347,6 +347,20 @@
 .note-formula-card { display: grid; gap: 10px; padding: 14px 18px; margin: 6px 0; border: 1px solid #bdd4db; border-radius: 10px; background: #edf7f6; text-indent: 0; }
 .note-formula-card small { color: #456176; font-size: .9em; }
 
+/* Typesetting only: the equation and note source strings are preserved. */
+.formula-visual-cards { display: grid; gap: 6px; flex-shrink: 0; min-width: 0; }
+.formula-visual-card { margin: 0; padding: 7px 12px; border: 1px solid #c7dfe4; border-left: 3px solid #247f91; border-radius: 8px; background: #f7fcfc; min-width: 0; overflow: hidden; }
+.formula-visual-card figcaption { font-size: 11px; font-weight: 600; color: #245668; }
+.formula-visual-card .katex-display { margin: .3em 0; text-align: center; }
+.formula-visual-card .katex { font-size: 1.08em; }
+.formula-visual-card small { display: block; color: #456176; font-size: 10px; }
+.note-math { max-width: 100%; }
+.note-math-display { padding: 4px 2px; }
+.guided-group .note-math-display { scrollbar-width: thin; }
+.formula-derivation-target .note-math { color: #16445b; }
+.guided-derivation-flow > li { position: relative; border-left: 3px solid #d5e8ec; }
+.guided-visual-structures img { image-rendering: auto; }
+
 /* Page spacing only: preserve the existing wording and mathematical notation. */
 .original-slide-display .lesson-slide-body > div:first-child { padding: 30px 32px 28px; gap: 18px; min-width: 0; }
 .original-slide-display [data-note-sheet] { padding: 14px 16px 18px; border: 1px solid #d5e3eb; border-radius: 12px; background: #fff; }
