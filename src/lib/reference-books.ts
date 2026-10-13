@@ -131,6 +131,16 @@ export function combinedReferenceMatches(book: { file_name?: string | null; chap
   return (grade === 11 || grade === 12) && !!inferred && inferred === subjectKey(subject);
 }
 
+/** Ordinary uploads stay scoped to their grade/subject; combined volumes span 11–12. */
+export function screenshotBookMatches(book: { class?: string; subject?: string; file_name?: string | null; chapter?: string | null }, klass: string, subject: string): boolean {
+  const combined = combinedReferenceSubject(book);
+  if (combined) return (klass === "*" || /11|12/.test(klass)) && (subject === "*" || combinedReferenceMatches(book, klass === "*" ? "11" : klass, subject));
+  const grade = klass.replace(/[^0-9]/g, "");
+  const sameGrade = klass === "*" || book.class?.replace(/[^0-9]/g, "") === grade;
+  const canonical = (value: string) => value.toLowerCase().replace(/maths|math$/g, "mathematics").replace(/botany|zoology/g, "biology");
+  return sameGrade && (subject === "*" || canonical(book.subject || "") === canonical(subject));
+}
+
 /** Combined Med Easy volumes belong to both senior classes, regardless of upload tags. */
 export function medEasyLibraryMetadata<T extends { class: string; subject: string; file_name?: string | null; chapter?: string | null }>(book: T): T {
   const inferred = combinedReferenceSubject(book);

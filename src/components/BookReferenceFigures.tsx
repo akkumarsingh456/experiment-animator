@@ -25,7 +25,7 @@ export function BookReferenceFigures({ figures, compact = false, presentation = 
   const available = figures?.filter(figure => !!figure.url) || [];
   if (!available.length) return null;
   return <section className={presentation ? "book-figure-stack book-figure-presentation" : compact ? "book-figure-stack book-figure-compact" : "book-figure-stack"} aria-label="Structures and diagrams from your books">
-    {available.slice(0, compact || presentation ? 1 : available.length).map((figure, index) => {
+    {available.slice(0, presentation ? 1 : available.length).map((figure, index) => {
       const Icon = figure.kind === "reaction" ? FlaskConical : /physics/i.test(subject || "") ? Zap : Atom;
       return <figure className="book-reference-figure" key={`${figure.storage_path}:${index}`}>
         <figcaption><Icon size={20} aria-hidden="true" /><strong>{figure.title}</strong><span>{figure.capture === "page" ? "Original book page" : figure.kind === "reaction" ? "Reaction scheme" : figure.kind === "structure" ? "Molecular structure" : "Labelled diagram"}</span></figcaption>

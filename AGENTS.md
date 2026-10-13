@@ -12,3 +12,5 @@
 - Merge curated NCERT subtopic supplements through `subtopicsFor` so every syllabus consumer receives one deduplicated list.
 - Measure Teacher Notes with separate headed and plain block heights so pagination matches the headings actually rendered.
 - Keep local lesson illustrations deterministic per slide identity and vary their topic icon and composition without external image APIs.
+- Book capture checkpoints live in page metadata; ordinary textbook retrieval chunks stay untouched so scanning is additive to NCERT generation.
+- Screenshot refresh changes only reference_visuals; render those below the existing 2D illustration with strict grade, subject, chapter and topic matching.

@@ -20,7 +20,7 @@ vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: {
   from: (table: string) => {
     const query = {
       select: () => query, eq: () => query, order: () => query,
-      single: async () => ({ data: { file_name: fixture.fileName, storage_path: "Books/med-easy.pdf" }, error: null }),
+      single: async () => ({ data: { file_name: fixture.fileName, storage_path: "Books/med-easy.pdf", subject: "Physics", class: "Class 12", chapter: "Current Electricity" }, error: null }),
       maybeSingle: async () => ({ data: fixture.saved, error: null }),
       limit: async () => ({ data: fixture.pages, error: null }),
       upsert: fixture.upsert, update: fixture.update,
@@ -48,7 +48,7 @@ describe("Saving original book pictures without paid AI", () => {
     expect(fixture.upsert).toHaveBeenCalledTimes(2);
   });
   it("reuses an existing checkpoint without replacing saved pictures", async () => {
-    const saved = encodeReferenceVisuals("Approved source text", [], { chapter: "Current Electricity", visuals_checked: true, index_version: 2 });
+    const saved = encodeReferenceVisuals("Approved source text", [], { chapter: "Current Electricity", visuals_checked: true, index_version: 2, reader: "local", capture_saved: true });
     fixture.saved = { text: "[SOURCE_OCR_PAGE]\n" + saved };
     expect(await saveCapturedReferencePage({ data: { ...source, text: "new text" } })).toBe(saved);
     expect(fixture.upload).not.toHaveBeenCalled(); expect(fixture.paidReader).not.toHaveBeenCalled();
@@ -64,9 +64,13 @@ describe("Saving original book pictures without paid AI", () => {
     expect(await finishReferenceReading({ data: { book_id: source.book_id, num_pages: 2 } })).toMatchObject({ pages: 2, unmatchedPages: 1 });
     expect(fixture.paidReader).not.toHaveBeenCalled();
   });
-  it("keeps NCERT sources out of the Med Easy picture channel", async () => {
+  it("adds NCERT screenshots without overwriting existing source text or retrieval chunks", async () => {
     fixture.fileName = "NCERT_CLASS_12_PHYSICS.pdf";
-    await expect(saveCapturedReferencePage({ data: { ...source, text: "Current Electricity" } })).rejects.toThrow("Med Easy");
-    expect(fixture.upload).not.toHaveBeenCalled();
+    fixture.saved = { text: "Original approved textbook paragraph." };
+    const content = await saveCapturedReferencePage({ data: { ...source, text: "Current Electricity\nOhm's Law relates voltage and current in conductors." } });
+    expect(splitReferenceContent(content).text).toBe("Original approved textbook paragraph.");
+    expect(splitReferenceContent(content).visuals).toHaveLength(1);
+    expect(fixture.upload).toHaveBeenCalledTimes(1);
+    expect(fixture.upsert).toHaveBeenCalledTimes(1);
   });
 });

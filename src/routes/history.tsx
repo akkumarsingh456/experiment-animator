@@ -29,6 +29,10 @@ export const Route = createFileRoute("/history")({
   head: () => ({
     meta: [
       { title: "Ingestion history — EduPlan AI" },
+      { property: "og:title", content: "Book Upload History — EduPlan AI" },
+      { property: "og:description", content: "Review saved NCERT books by class, subject and upload status." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "description",
         content:

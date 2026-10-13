@@ -43,6 +43,10 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "EduPlan AI — NCERT Experiments, Animated for Class 9–12" },
+      { property: "og:title", content: "EduPlan AI — NCERT Lessons for Classes 9–12" },
+      { property: "og:description", content: "Create NCERT-grounded lessons with original book screenshots, diagrams and teacher notes." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "description", content: "Search any NCERT topic. Get a 10-slide editable lesson and a 3D animated experiment video for Class 9–12." },
     ],
   }),

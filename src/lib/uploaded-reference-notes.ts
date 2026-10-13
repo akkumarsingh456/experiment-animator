@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { GenerationResult } from "@/lib/generate.functions";
 import { indexLocalBookPage } from "@/lib/local-book-index";
-import { combinedReferenceMatches } from "@/lib/reference-books";
+import { screenshotBookMatches, combinedReferenceSubject } from "@/lib/reference-books";
 import { splitReferenceContent } from "@/lib/reference-visuals";
 
 const normal = (text: string) => text.toLowerCase().replace(/[’']s\b/g, "").replace(/[^\p{L}\p{M}0-9]+/gu, " ").trim();
@@ -16,27 +16,41 @@ const topicScore = (title: string, text: string) => {
 
 /** Attach original Med Easy captures; never use OCR paragraphs as picture substitutes. */
 export async function appendUploadedReferenceNotes(result: GenerationResult, db: SupabaseClient<Database>, klass: string, subject: string, chapter: string): Promise<GenerationResult> {
-  const detailed = /^(chemistry|physics|biology|botany|zoology)$/i.test(subject) && /^(?:Class\s*)?(11|12)$/i.test(klass);
-  if (!detailed) return result;
   // Keep significant short names such as s-block / p-block distinct. Loose
   // keyword overlap can otherwise attach a different chapter's diagrams.
   const chapterKeys = new Map<string, string>();
   const chapterKey = (value: string) => {
     if (!chapterKeys.has(value)) chapterKeys.set(value, normal(indexLocalBookPage(subject, value).chapter || value).split(" ").filter(word => word && !/^(?:chapter|the|and|of|[0-9]+)$/.test(word)).join(" "));
-    return chapterKeys.get(value)!;
+    return chapterKeys.get(value) || "";
   };
   const requestedChapter = chapterKey(chapter);
   const chapterFits = (source?: string) => !!requestedChapter && !!source?.trim() && requestedChapter === chapterKey(source);
-  const { data: books, error } = await db.from("ncert_books").select("id,class,subject,chapter,file_name,num_chunks,storage_path").limit(500);
+  const { data: books, error } = await db.from("ncert_books").select("id,class,subject,chapter,file_name,num_chunks,storage_path").limit(1000);
   if (error) throw new Error(error.message);
-  const selected = (books || []).filter(book => combinedReferenceMatches(book, klass, subject));
+  if (books?.length === 1000) {
+    for (let from = 1000; ; from += 1000) {
+      const { data: extra, error: extraError } = await db.from("ncert_books").select("id,class,subject,chapter,file_name,num_chunks,storage_path").range(from, from + 999);
+      if (extraError) throw new Error(extraError.message);
+      books.push(...(extra || []));
+      if (!extra || extra.length < 1000) break;
+    }
+  }
+  const selected = (books || []).filter(book => screenshotBookMatches(book, klass, subject));
   // Remove only sections created by the retired raw-reference importer. Core
   // Teacher Notes, formulas, derivations and their original objects stay intact.
-  const headings = new Set((books || []).filter(book => combinedReferenceMatches(book, klass, subject) || (/ncert/i.test(book.file_name) && book.subject.toLowerCase() === subject.toLowerCase())).map(book => `Reference notes — ${book.file_name.replace(/\.pdf$/i, "").trim()}`));
   const loadedRows = await Promise.all(selected.map(async book => {
-    const { data, error: chunkError } = await db.from("ncert_chunks").select("chunk_index,content").eq("book_id", book.id).order("chunk_index").limit(1000);
+    const combined = !!combinedReferenceSubject(book);
+    const { data, error: chunkError } = await db.from(combined ? "ncert_chunks" : "ncert_pages").select(combined ? "chunk_index,content" : "page_number,text").eq("book_id", book.id).order(combined ? "chunk_index" : "page_number").limit(1000);
     if (chunkError) throw new Error(chunkError.message);
-    const parsed = (data || []).map(row => splitReferenceContent(row.content));
+    if (data?.length === 1000) {
+      for (let from = 1000; ; from += 1000) {
+        const { data: extra, error: extraError } = await db.from(combined ? "ncert_chunks" : "ncert_pages").select(combined ? "chunk_index,content" : "page_number,text").eq("book_id", book.id).order(combined ? "chunk_index" : "page_number").range(from, from + 999);
+        if (extraError) throw new Error(extraError.message);
+        data.push(...(extra || []));
+        if (!extra || extra.length < 1000) break;
+      }
+    }
+    const parsed = (data || []).map(row => splitReferenceContent((row as unknown as {content?: string; text?: string}).content || (row as unknown as {text?: string}).text || ""));
     return { book, visuals: parsed.flatMap(row => row.visuals.filter(v => Number.isInteger(v.page) && v.page > 0 && v.storage_path === `${book.storage_path}.page-${v.page}.jpg`).map(v => ({ ...v, chapter: v.chapter || row.context?.chapter, book: book.file_name, book_id: book.id }))) };
 
   }));
@@ -44,7 +58,7 @@ export async function appendUploadedReferenceNotes(result: GenerationResult, db:
   // figures over an empty duplicate with the same filename and stale counters.
   const uniqueRows = new Map<string, typeof loadedRows[number]>();
   for (const row of loadedRows) {
-    const key = row.book.file_name.trim().toLowerCase();
+    const key = `${row.book.class}|${row.book.subject}|${row.book.file_name.trim().toLowerCase()}`;
     const current = uniqueRows.get(key);
     if (!current || row.visuals.length > current.visuals.length) uniqueRows.set(key, row);
   }
@@ -85,10 +99,9 @@ export async function appendUploadedReferenceNotes(result: GenerationResult, db:
   }
   const slides = result.slides.map((slide, slideIndex) => {
     if (slide.kind === "break" || slide.kind === "mcq") return slide;
-    const originalSections = (slide.sections || []).filter(section => !headings.has(section.heading));
-    const candidates = detailed ? rows.flatMap(({ book, visuals }) => visuals.filter(visual => figureOwners.get(figureKey(visual))?.has(slideIndex)).map(visual => { used.add(book.id); return visual; })) : [];
+    const candidates = rows.flatMap(({ book, visuals }) => visuals.filter(visual => figureOwners.get(figureKey(visual))?.has(slideIndex)).map(visual => { used.add(book.id); return visual; }));
     const figures = candidates.filter((v,i,all) => all.findIndex(other => other.storage_path === v.storage_path && other.title === v.title) === i);
-    return figures.length || (slide.reference_visuals || []).length || originalSections.length !== (slide.sections || []).length ? { ...slide, sections: originalSections.length === (slide.sections || []).length ? slide.sections : originalSections, reference_visuals: figures.map(figure => ({ ...figure })) } : slide;
+    return figures.length || (slide.reference_visuals || []).length ? { ...slide, reference_visuals: figures.map(figure => ({ ...figure })) } : slide;
   });
   const paths = [...new Set(slides.flatMap(slide => (slide.reference_visuals || []).map(figure => figure.storage_path)))];
   for (let start = 0; start < paths.length; start += 8) {

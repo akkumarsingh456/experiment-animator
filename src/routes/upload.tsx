@@ -52,6 +52,10 @@ export const Route = createFileRoute("/upload")({
   head: () => ({
     meta: [
       { title: "Upload NCERT PDF — EduPlan AI" },
+      { property: "og:title", content: "Upload NCERT Books — EduPlan AI" },
+      { property: "og:description", content: "Save NCERT textbooks and scan original chapter and topic screenshots for Classes 9–12." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "description",
         content:
@@ -108,16 +112,20 @@ function UploadPage() {
   const referenceCancelled = useRef(false);
   useEffect(() => () => { referenceCancelled.current = true; }, []);
   async function readReferenceLibrary(subjects = ["Chemistry", "Physics", "Biology"]) {
+    if (referenceReading) return;
     referenceCancelled.current = false;
+    localStorage.setItem("eduplan-book-scan", JSON.stringify(subjects));
     setReferenceReading(true);
     setReferenceStatus("Opening scanned reference books…");
     try {
       const summaries: ReferenceReadSummary[] = [];
       for (const subject of subjects) {
         if (referenceCancelled.current) break;
-        summaries.push(...await prepareScannedReferenceBooks("Class 11", subject, setReferenceStatus, () => referenceCancelled.current));
+        summaries.push(...await prepareScannedReferenceBooks(subject === "*" ? "*" : "Class 11", subject, setReferenceStatus, () => referenceCancelled.current));
       }
-      setReferenceStatus(referenceCancelled.current ? "Reading paused. Completed pages are saved." : summaries.length ? `${summaries.length} Med Easy books inspected · ${summaries.reduce((sum,book) => sum + book.pages, 0)} pages · ${summaries.reduce((sum,book) => sum + book.figures, 0)} screenshots saved. Available in teacher notes and Generate PPT & Notes for Classes 11 and 12.` : "No matching Med Easy books were found. Upload the reference PDFs first.");
+      const failed = summaries.filter(book => book.error);
+      if (!referenceCancelled.current && !failed.length) localStorage.removeItem("eduplan-book-scan");
+      setReferenceStatus(referenceCancelled.current ? "Reading paused. Completed pages are saved." : summaries.length ? `${summaries.filter(book => !book.error).length} books fully scanned · ${summaries.reduce((sum,book) => sum + book.pages, 0)} pages · ${summaries.reduce((sum,book) => sum + book.figures, 0)} screenshots saved.${failed.length ? ` ${failed.length} books need another resume: ${failed.map(book => `${book.book}: ${book.error}`).join("; ")}` : ""}` : "No matching uploaded books were found.");
       await refreshLibrary();
     } catch (error) {
       setReferenceStatus(error instanceof Error ? error.message : String(error));
@@ -218,6 +226,17 @@ function UploadPage() {
     const id = setInterval(refreshLibrary, 20000);
     return () => clearInterval(id);
   }, [refreshLibrary]);
+  const resumedScan = useRef(false);
+  useEffect(() => {
+    if (!library.length || resumedScan.current) return;
+    resumedScan.current = true;
+    const pending = localStorage.getItem("eduplan-book-scan");
+    if (!pending) return;
+    try {
+      const subjects: unknown = JSON.parse(pending);
+      if (Array.isArray(subjects) && subjects.every(value => typeof value === "string")) void readReferenceLibrary(subjects);
+    } catch { localStorage.removeItem("eduplan-book-scan"); }
+  }, [library.length]);
 
 
   const canSubmit =
@@ -1121,7 +1140,7 @@ function UploadPage() {
           <CardContent>
             <div className="mb-5 rounded-xl border border-border p-4 space-y-2">
               {classificationError && <p className="text-sm text-muted-foreground" role="status">{classificationError}</p>}
-              <p className="text-sm">Inspect every page of Physics, Chemistry, Botany and Zoology Med Easy books to save original diagrams, reaction maps, structures and labelled biology screenshots. They are added by chapter and topic to teacher notes and Generate PPT &amp; Notes for Classes 11 and 12. Existing formulas, derivations and wording are preserved. Large books take time; completed pages are saved so reading can resume.</p>
+              <p className="text-sm">Original book screenshots · Classes 9–12 · All subjects</p>
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => readReferenceLibrary(["Chemistry"])} disabled={referenceReading || library.length === 0}><FlaskConical className="h-4 w-4 mr-2" />Read / resume Chemistry</Button>
                 <Button onClick={() => readReferenceLibrary(["Physics"])} disabled={referenceReading || library.length === 0}><Zap className="h-4 w-4 mr-2" />Read / resume Physics</Button>
@@ -1130,7 +1149,8 @@ function UploadPage() {
                   {referenceReading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <BookOpen className="h-4 w-4 mr-2" />}
                   All reference books
                 </Button>
-                {referenceReading && <Button variant="outline" onClick={() => { referenceCancelled.current = true; setReferenceStatus("Pausing after the current page…"); }}>Pause</Button>}
+                <Button variant="outline" onClick={() => readReferenceLibrary(["*"])} disabled={referenceReading || library.length === 0}><Library className="h-4 w-4 mr-2" />Scan all classes &amp; subjects</Button>
+                {referenceReading && <Button variant="outline" onClick={() => { referenceCancelled.current = true; localStorage.removeItem("eduplan-book-scan"); setReferenceStatus("Pausing after the current page…"); }}>Pause</Button>}
               </div>
               {referenceStatus && <p className="text-sm text-muted-foreground" role="status">{referenceStatus}</p>}
             </div>

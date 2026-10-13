@@ -87,8 +87,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "EduPlan AI — NCERT Experiments, Animated for Class 9–12" },
       { name: "twitter:description", content: "Search any NCERT topic. Get a 10-slide editable lesson and a 3D animated experiment video for Class 9–12." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/0b5d8e20-7d7c-4ad7-ae08-d37bbd9b97b8" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/0b5d8e20-7d7c-4ad7-ae08-d37bbd9b97b8" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },

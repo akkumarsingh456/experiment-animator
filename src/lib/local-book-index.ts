@@ -57,9 +57,11 @@ const aliases: Record<string, string[]> = {
 };
 
 /** OCR is an index only. It must never replace approved notes or equations. */
-export function indexLocalBookPage(subject: string, text: string, previousChapter = "") {
-  const canonicalSubject = /phys/i.test(subject) ? "Physics" : /chem/i.test(subject) ? "Chemistry" : "Biology";
-  const chapters = [...chaptersFor("11", canonicalSubject), ...chaptersFor("12", canonicalSubject)];
+export function indexLocalBookPage(subject: string, text: string, previousChapter = "", klass?: string) {
+  const canonicalSubject = /phys/i.test(subject) ? "Physics" : /chem/i.test(subject) ? "Chemistry" : /bio|bot|zoo/i.test(subject) ? "Biology" : /math/i.test(subject) ? "Mathematics" : subject;
+  const grade = klass?.replace(/[^0-9]/g, "");
+  const grades = grade && ["9", "10", "11", "12"].includes(grade) ? [grade] : ["9", "10", "11", "12"];
+  const chapters = grades.flatMap(value => chaptersFor(value, canonicalSubject));
   const names = [...chapters.map(chapter => chapterName(chapter.chapter)), ...(canonicalSubject === "Biology" ? biologyChapters : canonicalSubject === "Chemistry" ? olderChemistryChapters : [])];
   const unique = new Map(names.map(chapter => [normal(chapter), chapter]));
   const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
