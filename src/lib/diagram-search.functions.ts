@@ -4,6 +4,7 @@ import type {ImageCredit} from './manual-image-import';
 export type DiagramResult=ImageCredit&{url:string;width:number;height:number};
 const cache=new Map<string,{expires:number;images:DiagramResult[]}>();
 const plain=(value:string)=>value.replace(/<[^>]*>/g,' ').replace(/&(?:nbsp|amp|quot|lt|gt);/g,' ').replace(/\s+/g,' ').trim().slice(0,220);
+function isWikimediaImage(value:string){try{const url=new URL(value);return url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&['upload.wikimedia.org','thumb.wikimedia.org'].includes(url.hostname);}catch{return false;}}
 
 /** Free public diagram search. Google results are opened separately and never scraped. */
 export const searchFreeDiagrams=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({query:z.string().min(2).max(240)}).parse(raw)).handler(async({data})=>{
@@ -11,22 +12,26 @@ export const searchFreeDiagrams=createServerFn({method:'POST'}).inputValidator((
   const params=new URLSearchParams({action:'query',format:'json',generator:'search',gsrsearch:`${data.query} filetype:drawing -photograph -logo -advertisement`,gsrnamespace:'6',gsrlimit:'20',prop:'imageinfo',iiprop:'url|mime|size|extmetadata',iiurlwidth:'1280'});
   const response=await fetch(`https://commons.wikimedia.org/w/api.php?${params}`,{headers:{'User-Agent':'EduPlanAI/1.0 (educational diagram picker)'},signal:AbortSignal.timeout(15000)});
   if(!response.ok)throw new Error('Diagram search is temporarily unavailable. Use Google Images or paste a screenshot.');
-  const json=await response.json() as {query?:{pages?:Record<string,{title:string;index?:number;imageinfo?:Array<{thumburl?:string;url:string;descriptionurl:string;mime:string;width:number;height:number;extmetadata?:Record<string,{value:string}>}>}>}};
-  const images=Object.values(json.query?.pages||{}).sort((a,b)=>(a.index||0)-(b.index||0)).flatMap(page=>{
+  const json=await response.json() as {error?:{info?:string};query?:{pages?:Record<string,{title:string;index?:number;imageinfo?:Array<{thumburl?:string;url:string;descriptionurl:string;mime:string;width:number;height:number;extmetadata?:Record<string,{value:string}>}>}>}};
+  if(json.error)throw new Error('The diagram provider could not complete this search. Please retry.');
+  const normalize=(value:string)=>value.toLowerCase().replace(/^file:/,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+  const query=normalize(data.query);
+  const relevance=(title:string)=>{const text=normalize(title);return (text.startsWith(query)?100:text.includes(query)?50:0)+query.split(' ').filter(word=>word.length>2&&text.split(' ').includes(word)).length;};
+  const images=Object.values(json.query?.pages||{}).sort((a,b)=>relevance(b.title)-relevance(a.title)||(a.index||0)-(b.index||0)).flatMap(page=>{
     const info=page.imageinfo?.[0];if(!info||info.width<100||info.height<80||info.mime!=='image/svg+xml')return [];
-    const url=info.thumburl;if(!url||!url.startsWith('https://upload.wikimedia.org/'))return [];
+    const url=info.thumburl;if(!url||!isWikimediaImage(url))return [];
     const meta=info.extmetadata||{},license=plain(meta.LicenseShortName?.value||'');
     if(!license||!/^https:\/\/commons\.wikimedia\.org\//.test(info.descriptionurl))return [];
     return [{title:plain(page.title.replace(/^File:/,'')),url,page:info.descriptionurl,width:info.width,height:info.height,
       author:plain(meta.Artist?.value||'Wikimedia contributor'),license,licenseUrl:meta.LicenseUrl?.value?.startsWith('https://')?meta.LicenseUrl.value:info.descriptionurl}];
   }).slice(0,12);
-  if(cache.size>=60)cache.delete(cache.keys().next().value!);cache.set(key,{expires:Date.now()+3600000,images});return images;
+  if(cache.size>=60)cache.delete(cache.keys().next().value!);cache.set(key,{expires:Date.now()+(images.length?3600000:30000),images});return images;
 });
 
 function allowedImageUrl(value:string){
   const url=new URL(value);if(url.protocol!=='https:'||url.username||url.password||url.port)throw new Error('Use Copy image or a screenshot for this website.');
   const host=url.hostname.toLowerCase();
-  const allowed=['upload.wikimedia.org','gstatic.com','googleusercontent.com','ncert.nic.in','ncert.gov.in','olabs.edu.in','amrita.edu'];
+  const allowed=['upload.wikimedia.org','thumb.wikimedia.org','gstatic.com','googleusercontent.com','ncert.nic.in','ncert.gov.in','olabs.edu.in','amrita.edu'];
   if(!allowed.some(domain=>host===domain||host.endsWith(`.${domain}`)))throw new Error('This website does not allow direct image import. Copy the image itself, then paste it here.');return url;
 }
 /** Restricted image fetch for hosts that expose raster previews, not an open proxy. */
