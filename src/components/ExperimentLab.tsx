@@ -3,6 +3,7 @@ import { BookOpen, CheckCircle2, Download, Eye, FlaskConical, Play, Pause, Rotat
 import type { Activity } from '@/lib/generate.functions';
 import { displayExperiments, experimentVideoLinks, NCERT_LABS, type ExperimentActivity } from '@/lib/experiment-activities';
 import { drawExperiment, experimentCues } from '@/lib/experiment-drawing';
+import { NcertManualLinks } from './NcertManualLinks';
 
 function saveBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href=url;link.download=filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
@@ -74,14 +75,15 @@ function ExperimentPlayer({ activity }: { activity: ExperimentActivity }) {
   </div>;
 }
 
-export function ExperimentLab({ activities, topic }: { activities: Activity[]; topic: string }) {
+export function ExperimentLab({ activities, topic, klass, subject, chapter }: { activities: Activity[]; topic: string; klass: string; subject: string; chapter: string }) {
   const experiments=useMemo(()=>displayExperiments(activities||[],topic),[activities,topic]);
   const [selected,setSelected]=useState(0),[checked,setChecked]=useState<Record<string,boolean>>({});
   const activity=experiments[Math.min(selected,experiments.length-1)];
   const cues=activity?experimentCues(activity):null;
   return <section className="mb-10 space-y-5" aria-label="NCERT experiment studio">
     <div className="flex items-center gap-3"><span className="rounded-xl bg-cyan-100 p-3 text-cyan-800"><FlaskConical size={23}/></span><div><h2 className="text-xl font-semibold">NCERT Experiment Studio</h2><p className="text-sm text-muted-foreground">Prepare your tools, follow the illustrated procedure, then watch it unfold.</p></div></div>
-    {!activity?<div className="rounded-2xl border bg-white p-6"><h3 className="font-semibold">A complete experiment procedure was not found for this topic</h3><p className="my-3 text-sm text-muted-foreground">Exercise questions are not shown as lab instructions. Upload or re-ingest the matching NCERT activity / laboratory-manual pages to build this guide.</p><a className="text-primary underline" href={NCERT_LABS} target="_blank" rel="noopener noreferrer">Browse official NCERT laboratory manuals and experiment videos</a><a className="mt-3 block text-primary underline" href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`NCERT ${topic} experiment OLabs`)}`} target="_blank" rel="noopener noreferrer">Search YouTube for this topic’s demonstrations</a></div>:<>
+    <NcertManualLinks klass={klass} subject={subject} chapter={chapter} topic={topic}/>
+    {!activity?<div className="rounded-2xl border bg-white p-6"><h3 className="font-semibold">A complete experiment procedure was not found for this topic</h3><p className="my-3 text-sm text-muted-foreground">Exercise questions are not shown as lab instructions. Upload or re-ingest the matching NCERT activity / laboratory-manual pages to build this guide.</p><p className="text-sm font-medium">Open the class-specific manual PDFs listed above.</p><a className="mt-3 block text-primary underline" href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`NCERT ${topic} experiment OLabs`)}`} target="_blank" rel="noopener noreferrer">Search YouTube for this topic’s demonstrations</a></div>:<>
       {experiments.length>1&&<label className="block text-sm font-medium">Choose activity <select className="ml-2 max-w-full rounded-lg border bg-white p-2" value={selected} onChange={event=>{setSelected(Number(event.target.value));setChecked({});}}>{experiments.map((item,index)=><option key={index} value={index}>{item.name}</option>)}</select></label>}
       <article className="rounded-2xl border bg-white p-5 sm:p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-xl font-semibold">{activity.name}</h3><span className="rounded-full bg-emerald-50 px-3 py-1 text-xs text-emerald-800">{activity.procedure_source==='manual'?'NCERT manual supplement':'Matched textbook procedure'}</span></div>

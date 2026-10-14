@@ -902,7 +902,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
             </div>
           </section>
 
-          {lessonView === "slides" && <ExperimentLab activities={result.activities} topic={search.topic || search.chapter || title} />}
+          {lessonView === "slides" && <ExperimentLab activities={result.activities} topic={search.topic || search.chapter || title} klass={search.klass} subject={search.subject} chapter={search.chapter || title} />}
         </>
       )}
 
