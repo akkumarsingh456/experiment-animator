@@ -11,6 +11,7 @@ import { BookMapSlide } from "@/components/BookMapSlide";
 import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
 import { isMathematics, mathematicsPresentationSlide } from "@/lib/mathematics-presentation";
 import { omitContentsListings } from "@/lib/note-source-noise";
+import { topicEvidence } from "@/lib/topic-evidence";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
@@ -272,7 +273,23 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       caption: `Class ${search.klass} · ${search.subject} · Topic: ${search.topic || title} · Chapter: ${search.chapter || "—"}`,
     };
   };
-  const withCoverSlide = (items: Slide[]) => [makeCoverSlide(), ...items.map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, result.source_books[0]?.subject || search.subject)).map(repairSourceMathSlide)];
+  const withCoverSlide = (items: Slide[]) => {
+    const sourceLines = (slide: Slide) => [slide.chapter_text || '', slide.grounding || '', slide.ncert_quote || '',
+      ...slide.bullets, ...slide.notes, ...(slide.sections || []).filter(section => section.kind !== 'diagram').flatMap(section => section.lines)]
+      .flatMap(line => line.split(/\n\s*\n|(?<=[.!?])\s+(?=\p{Lu})/u)).filter(line => line.trim());
+    const available = items.flatMap(sourceLines);
+    const repaired = items.map(omitContentsListings).map(slide => {
+      if (slide.kind === 'break' || slide.kind === 'mcq' ||
+        slide.sections?.some(section => section.kind !== 'diagram' && section.lines.some(line => line.trim()))) return slide;
+      const own = sourceLines(slide);
+      const recovered = [...new Set(own.length ? own : topicEvidence(slide.title, available))];
+      const missing = `Readable source text for ${slide.title} is unavailable. Re-ingest the matching chapter PDF from Upload, then regenerate this lesson.`;
+      return { ...slide, sections: [{ heading: recovered.length ? 'Teacher Notes' : 'Source text needs attention', kind: 'bullets' as const,
+        lines: recovered.length ? recovered : [missing] }],
+        caption: recovered.length ? (slide.caption?.includes('No readable topic evidence') ? 'Recovered from saved lesson source text.' : slide.caption) : 'Source text needs attention for this topic.' };
+    });
+    return [makeCoverSlide(), ...repaired.map(slide => mathematicsPresentationSlide(slide, result.source_books[0]?.subject || search.subject)).map(repairSourceMathSlide)];
+  };
   const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
   useEffect(()=>{const refresh=()=>setSlides(current=>[...current]);window.addEventListener('manual-visual-saved',refresh);void loadManualVisuals().catch(()=>{});return()=>window.removeEventListener('manual-visual-saved',refresh);},[]);
   const [bookCaptureBusy, setBookCaptureBusy] = useState(false);

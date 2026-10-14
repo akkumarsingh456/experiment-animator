@@ -8,6 +8,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
+import { topicEvidence } from "@/lib/topic-evidence";
 import { scopeTextbookPages, referenceFormulaEvidence } from "@/lib/lesson-source-scope";
 import { chaptersFor } from "@/lib/ncert-syllabus";
 import { REF_BOOK_PATTERN, combinedReferenceMatches } from "@/lib/reference-books";
@@ -1096,7 +1097,7 @@ function splitSentences(context: string) {
     .replace(/([.!?।])\s+(?=[\p{L}0-9])/gu, "$1|SPLIT|")
     .split("|SPLIT|")
     .map((s) => s.replace(/\s+/g, " ").trim())
-    .filter((s) => s.length > 28 && s.length < 420)
+    .filter((s) => s.length > 28)
     .filter((s) => !/^\d+$/.test(s));
 }
 
@@ -1507,15 +1508,10 @@ export function buildLocalSlides(topic: string, subtopics: string, context: stri
   const concepts = selectedConcepts.length ? selectedConcepts : [cleanSyllabusLabel(topic)];
   const conceptSlides: Slide[] = [];
   for (const name of concepts) {
-    const keywords = normalizeText(name).split(" ").filter((word) => word.length > 2 && !/^(the|and|law|laws|rule|rules|introduction|chapter|properties|basic|concept|concepts)$/.test(word));
-    const source = sentences.filter((line) => {
-      const normalized = normalizeText(line);
-      const hits = keywords.filter((word) => normalized.split(" ").includes(word)).length;
-      return normalized.includes(normalizeText(name)) || (keywords.length > 0 && hits >= Math.min(2, keywords.length));
-    });
+    const source = topicEvidence(name, sentences);
     if (!source.length) {
       // A missing topic is explicit; do not relabel an unrelated paragraph.
-      conceptSlides.push({ title: name, kind: "content", bullets: [], notes: [], key_terms: [], visual: "book", grounding: "", caption: "No readable topic evidence was found in the selected textbook." });
+      conceptSlides.push({ title: name, kind: "content", bullets: [`Readable source text for ${name} is missing from the selected textbook. Re-ingest the matching chapter PDF from Upload, then regenerate this lesson.`], notes: [], key_terms: [], visual: "book", grounding: "", caption: "Source text needs attention for this topic." });
       continue;
     }
     conceptSlides.push(makeSlide(titleCase(name), source, topic, "book", conceptSlides.length, subject));

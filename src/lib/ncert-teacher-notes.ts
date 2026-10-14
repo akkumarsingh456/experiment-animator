@@ -1,4 +1,5 @@
 import { isContentsListing } from "@/lib/note-source-noise";
+import { topicEvidence } from "@/lib/topic-evidence";
 /**
  * NCERT teacher-style structured notes.
  *
@@ -103,10 +104,7 @@ export function selectSlideExcerpts(slide: NoteSourceSlide, context: string): st
   const stop = new Set(["chapter", "introduction", "important", "concept", "current", "electricity", "the", "and", "for", "with", "from", "ncert", "point", "overview", "core", "definitions", "symbols", "quantities", "units", "activity", "working", "relationships", "applications", "interpretation", "common", "exam", "points", "final", "revision"]);
   const terms = norm(slide.title).split(" ").filter((word) => word.length > 3 && !stop.has(word));
   if (!terms.length) return own;
-  // A source-less topic must not borrow a different topic to fill its page.
-  if (!own.length) return [];
-  const related = sentences(context).map((line, index) => ({ line, index, score: terms.filter((term) => norm(line).split(" ").includes(term)).length }))
-    .filter(({ score }) => score > 0).sort((a, b) => b.score - a.score || a.index - b.index).slice(0, 16).sort((a, b) => a.index - b.index).map(({ line }) => line);
+  const related = topicEvidence(slide.title, sentences(context)).slice(0, 16);
   const result: string[] = [];
   let chars = 0;
   for (const line of dedupe([...own, ...related])) {
