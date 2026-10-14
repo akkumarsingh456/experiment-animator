@@ -1,11 +1,13 @@
 import {z} from 'zod';
 import {combinedReferenceSubject,screenshotBookMatches} from '@/lib/reference-books';
+import {canImportMedEasy} from '@/lib/manual-image-import';
 const links=new Map<string,{url:string;expires:number}>();
 /** Forward byte ranges on the website origin; never buffer a whole book. */
 export async function streamManualPdf(request:Request):Promise<Response>{
  const params=new URL(request.url).searchParams;
  const parsed=z.object({id:z.string().min(1).max(100),klass:z.string().max(30),subject:z.string().max(100)}).safeParse(Object.fromEntries(params));
  if(!parsed.success)return new Response('Invalid book request',{status:400});
+ if(!canImportMedEasy(parsed.data.klass,parsed.data.subject))return new Response('Med Easy import is available only for Class 11–12 Physics and Chemistry.',{status:403});
  const range=request.headers.get('range');if(range&&!/^bytes=(?:\d+-\d*|-\d+)$/.test(range))return new Response('Invalid PDF byte range',{status:400});
  const data=parsed.data,key=JSON.stringify(data);
  try{

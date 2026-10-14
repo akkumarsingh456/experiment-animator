@@ -1,4 +1,5 @@
-export type ManualVisual={url:string;width:number;x:number;y:number;shape:'rectangle'|'rounded'|'circle';showAuto:boolean};
+import type {ImageCredit} from './manual-image-import';
+export type ManualVisual={url:string;width:number;x:number;y:number;shape:'rectangle'|'rounded'|'circle';showAuto:boolean;credit?:ImageCredit};
 export const manualVisualCache=new Map<string,ManualVisual>();
 let loading:Promise<void>|undefined;
 function database():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const request=indexedDB.open('eduplan-manual-images',1);request.onupgradeneeded=()=>request.result.createObjectStore('images');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});}

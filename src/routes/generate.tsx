@@ -1296,8 +1296,8 @@ function SlideCanvas({
             <div className="relative bg-gradient-to-br from-primary/10 via-secondary to-accent/30 flex flex-col p-3 border-l border-border/60 overflow-hidden gap-2 min-h-0" style={lang ? { display: "none" } : undefined}>
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
               <div className="lesson-figure-panel relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 flex flex-col">
-                {isMathematics(subject) ? <MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} /> : imageUrl ? (
-                  <ManualVisualEditor klass={klass} subject={subject} chapter={chapter} topic={slide.title} storageKey={JSON.stringify([klass,subject,chapter,slide.title,sourceIndex,slide.sections?.flatMap(section=>section.lines).slice(0,2)||slide.notes.slice(0,2)])} autoUrl={imageUrl} alt={`${slide.title} — NCERT 2D infographic`} />
+                {isMathematics(subject) || imageUrl ? (
+                  <ManualVisualEditor klass={klass} subject={subject} chapter={chapter} topic={slide.title} storageKey={JSON.stringify([klass,subject,chapter,slide.title,sourceIndex,slide.sections?.flatMap(section=>section.lines).slice(0,2)||slide.notes.slice(0,2)])} autoUrl={imageUrl||''} autoContent={isMathematics(subject)?<MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} />:undefined} alt={`${slide.title} — NCERT 2D infographic`} />
                 ) : imageLoading ? (
                   <div className="flex flex-col items-center gap-2 text-[10px] text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />

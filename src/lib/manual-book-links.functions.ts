@@ -4,9 +4,11 @@ import {combinedReferenceSubject,screenshotBookMatches} from '@/lib/reference-bo
 import {splitReferenceContent} from '@/lib/reference-visuals';
 import {indexLocalBookPage} from '@/lib/local-book-index';
 import {parseBookContents,canonicalBookChapter} from '@/lib/book-chapter-priority';
+import {canImportMedEasy} from '@/lib/manual-image-import';
 
 /** Fetch the PDF on the server so the browser stays on the website's origin. */
 export const openManualBookPdf=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({id:z.string().max(100),klass:z.string().max(30),subject:z.string().max(100)}).parse(raw)).handler(async({data})=>{
+ if(!canImportMedEasy(data.klass,data.subject))throw new Error('Med Easy import is available only for Class 11–12 Physics and Chemistry.');
  const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');
  const {data:book,error}=await db.from('ncert_books').select('id,class,subject,chapter,file_name,storage_path').eq('id',data.id).maybeSingle();
  if(error||!book||!combinedReferenceSubject(book)||!screenshotBookMatches(book,data.klass,data.subject))throw new Error('A matching Med Easy book is not available.');
@@ -19,6 +21,7 @@ export const openManualBookPdf=createServerFn({method:'POST'}).inputValidator((r
 
 /** Reuse uploaded books and verified saved page indexes; do not trigger scanning. */
 export const loadManualBookLinks=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({klass:z.string().max(30),subject:z.string().max(100),chapter:z.string().max(300),topic:z.string().max(500)}).parse(raw)).handler(async({data})=>{
+ if(!canImportMedEasy(data.klass,data.subject))return [];
  const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');
  const {data:books,error}=await db.from('ncert_books').select('id,class,subject,chapter,file_name,storage_path').limit(1000);
  if(error)throw new Error('The uploaded book library could not be opened.');
