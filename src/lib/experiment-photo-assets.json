@@ -1,0 +1,109 @@
+[
+  {
+    "id": "ammeter",
+    "file": "/apparatus/ammeter.jpg",
+    "title": "Picture of Ammeter.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Picture_of_Ammeter.jpg",
+    "author": "Adimora chidinma",
+    "license": "CC0",
+    "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "bytes": 357348
+  },
+  {
+    "id": "resistor",
+    "file": "/apparatus/resistor.jpg",
+    "title": "Laboratory resistor.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Laboratory_resistor.jpg",
+    "author": "Егор Осин",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "bytes": 101281
+  },
+  {
+    "id": "resistance-box",
+    "file": "/apparatus/resistance-box.jpg",
+    "title": "Resistance box 2.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Resistance_box_2.jpg",
+    "author": "Adimora chidinma",
+    "license": "CC0",
+    "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "bytes": 313385
+  },
+  {
+    "id": "beaker",
+    "file": "/apparatus/beaker.jpg",
+    "title": "Glass 100ml beaker.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Glass_100ml_beaker.jpg",
+    "author": "Lilly_M",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "bytes": 94924
+  },
+  {
+    "id": "microscope",
+    "file": "/apparatus/microscope.jpg",
+    "title": "Light Optical Microscope.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Light_Optical_Microscope.jpg",
+    "author": "Jeremyida002",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "bytes": 333733
+  },
+  {
+    "id": "onion-cells",
+    "file": "/apparatus/onion-cells.jpg",
+    "title": "Onion Epidermis Cells W.M. 40x - 132.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Onion_Epidermis_Cells_W.M._40x_-_132.jpg",
+    "author": "loganrickert",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "bytes": 178217
+  },
+  {
+    "id": "bar-magnet",
+    "file": "/apparatus/bar-magnet.jpg",
+    "title": "Bar magnet crop.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Bar_magnet_crop.jpg",
+    "author": "File:Bar magnet.jpg : Photo taken by Aney / derivative work:  MikeRun",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+    "bytes": 147059
+  },
+  {
+    "id": "battery",
+    "file": "/apparatus/battery.jpg",
+    "title": "Philips Dry cell 1.5 volt type R 6 HD Heavy Duty made in Belgium old AA battery (51886880801).jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Philips_Dry_cell_1.5_volt_type_R_6_HD_Heavy_Duty_made_in_Belgium_old_AA_battery_(51886880801).jpg",
+    "author": "Joost J. Bakker  IJmuiden",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "bytes": 210929
+  },
+  {
+    "id": "lens",
+    "file": "/apparatus/lens.jpg",
+    "title": "Convex lens (magnifying glass) and upside-down image.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Convex_lens_(magnifying_glass)_and_upside-down_image.jpg",
+    "author": "AntanO",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "test-tubes",
+    "file": "/apparatus/test-tubes.jpg",
+    "title": "Test tubes in rack.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Test_tubes_in_rack.jpg",
+    "author": "J.N. Eskra",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "id": "voltmeter",
+    "file": "/apparatus/voltmeter.jpg",
+    "title": "Analog panel (switch) voltmeter M 364.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Analog_panel_(switch)_voltmeter_M_364.jpg",
+    "author": "ANDREY SHTANKO",
+    "license": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  }
+]
