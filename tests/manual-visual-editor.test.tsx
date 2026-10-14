@@ -5,6 +5,7 @@ import {ManualVisualEditor} from '@/components/ManualVisualEditor';
 const fixture=vi.hoisted(()=>({save:vi.fn(async()=>{}),cache:new Map(),books:vi.fn(async()=>[{id:'p',name:'Physics Med Easy.pdf',url:'https://example.test/book.pdf?token=1',pages:[{page:40,topic:true}]}])}));
 vi.mock('@/lib/manual-visuals',()=>({manualVisualCache:fixture.cache,loadManualVisuals:async()=>{},saveManualVisual:fixture.save}));
 vi.mock('@/lib/manual-book-links.functions',()=>({loadManualBookLinks:fixture.books}));
+vi.mock('@/lib/manual-pdf-cache',()=>({cachedManualPdf:async()=>({}),manualPdfUrl:()=>'/api/med-easy-pdf',retryManualPdf:()=>{}}));
 vi.mock('sonner',()=>({toast:{success:vi.fn(),error:vi.fn()}}));
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();fixture.save.mockClear();});
 describe('manual image import UI',()=>{

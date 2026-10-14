@@ -13,8 +13,9 @@ describe('PDF reader controls',()=>{
   vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({} as CanvasRenderingContext2D);
   vi.spyOn(HTMLCanvasElement.prototype,'toBlob').mockImplementation(callback=>callback(new Blob(['image'],{type:'image/png'})));
   const close=vi.fn(),importPage=vi.fn();const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
-  await act(async()=>root.render(<ManualBookPdfViewer id="controls" name="Physics.pdf" klass="12" subject="Physics" initialPage={1} onClose={close} onImport={importPage}/>));
+  await act(async()=>root.render(<ManualBookPdfViewer id="controls" name="Physics.pdf" klass="12" subject="Physics" chapter="Electric Fields" suggestedPages={[40]} initialPage={1} onClose={close} onImport={importPage}/>));
   const dialog=document.querySelector('[role=dialog]')!;
+  expect([...dialog.querySelectorAll('strong')].some(text=>text.textContent?.includes('Go to PDF page 40'))).toBe(true);
   const button=(label:string)=>dialog.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
   const input=dialog.querySelector<HTMLInputElement>('[aria-label="Go to PDF page"]')!;
   expect(button('First page').disabled).toBe(true);
