@@ -12,6 +12,7 @@ import { MathematicsTopicVisual } from "@/components/MathematicsTopicVisual";
 import { isMathematics, mathematicsPresentationSlide } from "@/lib/mathematics-presentation";
 import { omitContentsListings } from "@/lib/note-source-noise";
 import { topicEvidence } from "@/lib/topic-evidence";
+import { ExperimentLab } from "@/components/ExperimentLab";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
@@ -901,7 +902,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
             </div>
           </section>
 
-          {lessonView === "slides" && <><ActivitiesView activities={result.activities} /><VideoView video={result.video} /></>}
+          {lessonView === "slides" && <ExperimentLab activities={result.activities} topic={search.topic || search.chapter || title} />}
         </>
       )}
 
@@ -1346,117 +1347,6 @@ function SlideCanvas({
         )}
       </CardContent>
     </Card>
-  );
-}
-
-function ActivitiesView({ activities }: { activities: GenerationResult["activities"] }) {
-  if (!activities || activities.length === 0) {
-    return (
-      <section className="mb-10">
-        <h2 className="font-semibold text-lg mb-3">NCERT Activity / Experiment</h2>
-        <Card className="border-dashed">
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            No explicit "Activity" was detected for this topic in the filtered chapter.
-          </CardContent>
-        </Card>
-      </section>
-    );
-  }
-  return (
-    <section className="mb-10">
-      <h2 className="font-semibold text-lg mb-3">NCERT Activity — step-by-step</h2>
-      <div className="space-y-4">
-        {activities.map((a, idx) => (
-          <Card key={idx} className="border-border/60 shadow-soft">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <FlaskConical className="h-4 w-4 text-chemistry" />
-                <h3 className="font-semibold">{a.name}</h3>
-              </div>
-              <p className="text-sm"><span className="font-medium">Objective:</span> {a.objective}</p>
-              {a.apparatus?.length > 0 && (
-                <p className="text-sm mt-2"><span className="font-medium">Apparatus:</span> {a.apparatus.join(", ")}</p>
-              )}
-              <ol className="mt-4 space-y-3">
-                {a.steps?.map((st) => (
-                  <li key={st.step} className="flex gap-3">
-                    <div className="h-7 w-7 shrink-0 rounded-full bg-primary text-primary-foreground grid place-items-center text-xs font-bold">{st.step}</div>
-                    <div>
-                      <div className="font-medium text-sm">{st.title}</div>
-                      <div className="text-sm text-muted-foreground leading-relaxed">{st.description}</div>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-              <div className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg bg-secondary/60 p-3"><span className="font-medium">Observation: </span>{a.observation}</div>
-                <div className="rounded-lg bg-accent/30 p-3"><span className="font-medium">Conclusion: </span>{a.conclusion}</div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function VideoView({ video }: { video: GenerationResult["video"] }) {
-  const [playing, setPlaying] = useState(false);
-  const [sceneIdx, setSceneIdx] = useState(0);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scenes = video?.scenes ?? [];
-
-  useEffect(() => {
-    if (!playing || scenes.length === 0) return;
-    const dur = (scenes[sceneIdx]?.duration_s ?? 5) * 1000;
-    timer.current = setTimeout(() => {
-      if (sceneIdx < scenes.length - 1) setSceneIdx((i) => i + 1);
-      else setPlaying(false);
-    }, dur);
-    return () => { if (timer.current) clearTimeout(timer.current); };
-  }, [playing, sceneIdx, scenes]);
-
-  if (scenes.length === 0) return null;
-  const current = scenes[sceneIdx];
-
-  return (
-    <section className="mb-10">
-      <h2 className="font-semibold text-lg mb-3">3D Animated Experiment Video</h2>
-      <Card className="overflow-hidden border-border/60 shadow-soft">
-        <CardContent className="p-0">
-          <div className="aspect-video bg-gradient-to-br from-foreground via-primary/40 to-chemistry/40 relative grid place-items-center overflow-hidden">
-            <div className="absolute inset-0 grid-paper opacity-20" />
-            <div key={sceneIdx} className="relative text-center px-6 max-w-2xl animate-in fade-in zoom-in-95 duration-700">
-              <Badge className="bg-background/80 text-foreground border border-border rounded-full mb-3">
-                Scene {current.scene} / {scenes.length} · {current.duration_s}s
-              </Badge>
-              <h3 className="font-display text-2xl sm:text-3xl font-bold text-background drop-shadow-lg">{current.title}</h3>
-              <p className="mt-3 text-background/90 text-sm sm:text-base italic">"{current.narration}"</p>
-              <p className="mt-4 text-background/70 text-xs font-mono leading-relaxed">{current.visual_prompt}</p>
-            </div>
-            <button
-              onClick={() => { setPlaying((p) => !p); if (!playing && sceneIdx === scenes.length - 1) setSceneIdx(0); }}
-              className="absolute bottom-5 right-5 h-12 w-12 rounded-full bg-background text-foreground grid place-items-center shadow-glow hover:scale-105 transition"
-            >
-              {playing ? <span className="text-lg">⏸</span> : <Play className="h-5 w-5" />}
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-6 border-t border-border/60 text-xs">
-            {scenes.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => { setSceneIdx(i); setPlaying(false); }}
-                className={`p-3 text-center font-medium border-r border-border/60 last:border-r-0 truncate transition ${
-                  i === sceneIdx ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card"
-                }`}
-              >
-                {i + 1}. {s.title}
-              </button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </section>
   );
 }
 

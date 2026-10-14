@@ -9,6 +9,7 @@ import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
 import { topicEvidence } from "@/lib/topic-evidence";
+import { extractExperimentActivities } from "@/lib/experiment-activities";
 import { scopeTextbookPages, referenceFormulaEvidence } from "@/lib/lesson-source-scope";
 import { chaptersFor } from "@/lib/ncert-syllabus";
 import { REF_BOOK_PATTERN, combinedReferenceMatches } from "@/lib/reference-books";
@@ -1521,57 +1522,6 @@ export function buildLocalSlides(topic: string, subtopics: string, context: stri
 }
 
 
-function fallbackActivities(topic: string, context: string): Activity[] {
-  const sentences = splitSentences(context).filter((s) => sentenceHasAny(s, [topic, "activity", "experiment", "observe", "apparatus"])).slice(0, 6);
-  return [
-    {
-      name: `${topic} — NCERT working guide`,
-      objective: `Understand the working of ${topic} using the selected NCERT text.`,
-      apparatus: ["NCERT diagram/text", "Notebook", "Teacher-guided classroom demonstration"],
-      steps: (sentences.length
-        ? sentences
-        : [
-            `Read the matching NCERT passage for ${topic}.`,
-            "Identify the main condition, change, observation and result described in the text.",
-            "Connect the observation to the NCERT explanation and conclusion.",
-          ]
-      ).map((sentence, index) => ({
-        step: index + 1,
-        title: index === 0 ? "Start from NCERT" : `Working step ${index + 1}`,
-        description: sentence,
-      })),
-      observation: "The observation is taken from the filtered NCERT excerpt shown in the generated lesson.",
-      conclusion: `The concept of ${topic} is explained only from the matching uploaded NCERT memory.`,
-    },
-  ];
-}
-
-function normalizeActivities(activities: unknown, topic: string, context: string): Activity[] {
-  if (!Array.isArray(activities) || activities.length === 0) return fallbackActivities(topic, context);
-  return activities.map((activity, index) => {
-    const value = activity as Partial<Activity>;
-    const steps =
-      Array.isArray(value.steps) && value.steps.length > 0
-        ? value.steps.map((step, stepIndex) => {
-            const s = step as Partial<ActivityStep>;
-            return {
-              step: Number(s.step || stepIndex + 1),
-              title: String(s.title || `Step ${stepIndex + 1}`),
-              description: String(s.description || "Follow this NCERT step."),
-            };
-          })
-        : fallbackActivities(topic, context)[0].steps;
-    return {
-      name: String(value.name || `${topic} activity ${index + 1}`),
-      objective: String(value.objective || `Understand ${topic}.`),
-      apparatus: Array.isArray(value.apparatus) ? value.apparatus.map(String) : [],
-      steps,
-      observation: String(value.observation || "Observe the result described in NCERT."),
-      conclusion: String(value.conclusion || `Connect the activity result to ${topic}.`),
-    };
-  });
-}
-
 function normalizeSlides(slides: unknown, topic: string, context: string): Slide[] {
   const fallback = fallbackSlides(topic, context);
   const parsed: Slide[] = Array.isArray(slides)
@@ -1616,47 +1566,16 @@ function normalizeSlides(slides: unknown, topic: string, context: string): Slide
   return [...parsed, ...fallback].slice(0, 10);
 }
 
-function buildLocalActivities(topic: string, context: string): Activity[] {
-  const sentences = splitSentences(context);
-  const activityStart = sentences.findIndex((s) => /Activity\s+\d+(?:\.\d+)?|experiment|apparatus|procedure/i.test(s));
-  const pool = activityStart >= 0 ? sentences.slice(activityStart, activityStart + 12) : sentences.filter((s) => sentenceHasAny(s, [topic, "observe", "show", "place", "connect", "measure", "calculate"])).slice(0, 8);
-  if (pool.length === 0) return fallbackActivities(topic, context);
-  const id = pool.join(" ").match(/Activity\s+\d+(?:\.\d+)?/i)?.[0];
-  const steps = pool.slice(0, 7).map((sentence, index) => ({
-    step: index + 1,
-    title: index === 0 ? "NCERT starting point" : `Working step ${index + 1}`,
-    description: trimToWords(sentence, 220),
-  }));
-  return [
-    {
-      name: id || `${topic} — NCERT working guide`,
-      objective: `Understand ${topic} using only the matched NCERT passage.`,
-      apparatus: uniqueByNormalized(pool.join(" ").match(/\b(voltmeter|ammeter|cell|battery|wire|key|resistor|capacitor|plate|dielectric|glass rod|silk|pith ball|lens|mirror|prism|beaker|test tube|magnet|spring balance|ruler|scale)\b/gi) ?? []).slice(0, 8),
-      steps,
-      observation: trimToWords(pool.find((s) => /observe|observation|seen|notice|shows|found/i.test(s)) || pool[Math.min(steps.length - 1, 2)] || pool[0], 240),
-      conclusion: trimToWords(pool.find((s) => /conclude|therefore|hence|thus|shows that|we find/i.test(s)) || pool[pool.length - 1], 240),
-    },
-  ];
-}
-
 function fallbackVideo(topic: string, activities: Activity[]): { title: string; scenes: VideoScene[] } {
-  const steps = activities.flatMap((a) => a.steps || []);
-  const source =
-    steps.length > 0
-      ? steps.slice(0, 6)
-      : [
-          { step: 1, title: "Set up the concept", description: `Introduce ${topic} with the NCERT diagram or apparatus.` },
-          { step: 2, title: "Show the change", description: "Animate the ray, particle, object or quantity changing step by step." },
-          { step: 3, title: "Reveal the reason", description: "Zoom into the microscopic or conceptual cause behind the observation." },
-          { step: 4, title: "Connect result", description: "End with the NCERT observation and conclusion." },
-        ];
+  const source = activities.flatMap(activity => [...activity.steps,
+    { step: activity.steps.length + 1, title: 'Observe & explain', description: `${activity.observation} ${activity.conclusion}` }]);
   return {
     title: `${topic} activity animation`,
     scenes: source.map((step, index) => ({
       scene: index + 1,
       title: step.title,
-      duration_s: 5,
-      visual_prompt: `Cinematic 3D classroom-lab animation: ${step.description}`,
+      duration_s: 8,
+      visual_prompt: `Labelled apparatus schematic: ${step.description}`,
       narration: step.description,
     })),
   };
@@ -1669,7 +1588,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v45-source-explanations-page-specific-diagrams",
+      "lesson-v46-bounded-ncert-experiment-procedures",
       data.klass,
       data.subject,
       data.chapter,
@@ -2010,7 +1929,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     };
     const slides = [...verifiedSlides, ...mcqSlides];
 
-    const activities = normalizeActivities(buildLocalActivities(data.topic, context), data.topic, context);
+    const activities = extractExperimentActivities(data.topic, context);
     const video = fallbackVideo(data.topic, activities);
 
 
