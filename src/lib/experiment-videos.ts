@@ -1,8 +1,9 @@
 import catalog from './experiment-video-catalog.json';
+import { experimentVideoSource } from './experiment-video-sources';
 
 export type ExperimentVideo = {
   id: string; title: string; referenceTitle?: string; channel: string; subject: string; grades: string[];
-  source: string; views: number | null; comments: number | null; commentsState: string;
+  source: string; channelId?: string; views: number | null; comments: number | null; commentsState: string;
   duration: number; checkedAt: string; playlist?: string; embeddable?: boolean;
 };
 type Family='Physics'|'Chemistry'|'Biology';
@@ -44,7 +45,7 @@ const groups:Group[]=[
 const stop=new Set('the and for with from this that using class grade chapter science ncert experiment experiments practical activity activities demonstration tutorial preparation prepare study determine determining verification verify verifying all working guide lab manual chemistry physics biology to of in on by a an'.split(' '));
 function words(text:string){return text.toLowerCase().replace(/sulph/g,'sulf').replace(/isation/g,'ization').replace(/[^a-z0-9]+/g,' ').split(/\s+/).map(word=>word.length>5?word.replace(/ies$/,'y').replace(/s$/,''):word).filter(word=>word.length>2&&!stop.has(word)&&!/^\d+$/.test(word));}
 
-export function relevantExperimentVideos(input:{klass:string;subject:string;chapter:string;topic:string;activity?:string},sort='relevance') {
+export function relevantExperimentVideos(input:{klass:string;subject:string;chapter:string;topic:string;activity?:string},sort='relevance',institutionOnly=false) {
   const grade=input.klass.match(/(?:^|\D)(9|10|11|12)(?=\D|$)/)?.[1]||input.klass;
   const context=`${input.chapter} ${input.topic}`;
   const applicable=groups.filter(group=>group.chapter.test(context));
@@ -72,11 +73,14 @@ export function relevantExperimentVideos(input:{klass:string;subject:string;chap
     const exactActivity=!!a&&!!b&&a[1]===b[1];
     const weight=(word:string)=>1+Math.log(1+30/((frequencies.get(word)||0)+1));
     const score=hits.reduce((sum,word)=>sum+weight(word)*3,0)+activeHits.reduce((sum,word)=>sum+weight(word)*4,0)+(groupMatch?8:0)+(video.grades.includes(grade)?6:0)+(exactActivity?20:0);
-    return {...video,score,eligible,sameGrade:video.grades.includes(grade)};
-  }).filter(video=>video.eligible);
-  // Engagement is a tie-breaker after relevance by default; never pull an
-  // unrelated popular video into the experiment list.
-  return matches.sort((a,b)=>sort==='views'? (b.views??-1)-(a.views??-1)||b.score-a.score:
+    const matchTier=exactActivity||activeHits.length>=2||hits.length>=2||distinctive?0:hits.length?1:2;
+    return {...video,score,eligible,sameGrade:video.grades.includes(grade),matchTier,authority:experimentVideoSource(video)};
+  }).filter(video=>video.eligible&&(!institutionOnly||video.authority.institution));
+  // An exact experiment / topic and the selected class take precedence.
+  // Among comparable matches prefer NCERT, then government-funded OLabs,
+  // then university material. Popularity never overrides these priorities.
+  return matches.sort((a,b)=>a.matchTier-b.matchTier||Number(b.sameGrade)-Number(a.sameGrade)||a.authority.priority-b.authority.priority||
+    (sort==='views'? (b.views??-1)-(a.views??-1)||b.score-a.score:
     sort==='comments'?(b.comments??-1)-(a.comments??-1)||b.score-a.score:
-    b.score-a.score||(b.views??-1)-(a.views??-1)||(b.comments??-1)-(a.comments??-1)).slice(0,9);
+    b.score-a.score||(b.views??-1)-(a.views??-1)||(b.comments??-1)-(a.comments??-1))).slice(0,9);
 }
