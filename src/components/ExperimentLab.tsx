@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BookOpen, CheckCircle2, Download, Eye, FlaskConical, Play, Pause, RotateCcw, Volume2, Wind } from 'lucide-react';
 import type { Activity } from '@/lib/generate.functions';
-import { displayExperiments, experimentVideoLinks, NCERT_LABS, type ExperimentActivity } from '@/lib/experiment-activities';
+import { displayExperiments, NCERT_LABS, type ExperimentActivity } from '@/lib/experiment-activities';
 import { drawExperiment, experimentCues } from '@/lib/experiment-drawing';
 import { NcertManualLinks } from './NcertManualLinks';
+import { ExperimentVideos } from './ExperimentVideos';
 
 function saveBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href=url;link.download=filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
@@ -17,14 +18,12 @@ function Frame({ activity, step }: { activity: ExperimentActivity; step: number 
 function ExperimentPlayer({ activity }: { activity: ExperimentActivity }) {
   const canvas=useRef<HTMLCanvasElement>(null), recorder=useRef<MediaRecorder|null>(null), stream=useRef<MediaStream|null>(null);
   const [playing,setPlaying]=useState(false),[elapsed,setElapsed]=useState(0),[speed,setSpeed]=useState(1),[voice,setVoice]=useState(false),[recording,setRecording]=useState(false),[error,setError]=useState('');
-  const [external,setExternal]=useState('');
   const durations=useMemo(()=>[...activity.steps.map(step=>step.description),activity.observation].map(text=>Math.max(8,Math.ceil(text.split(/\s+/).length/2.4))),[activity]);
   const starts=useMemo(()=>durations.map((_,index)=>durations.slice(0,index).reduce((sum,value)=>sum+value,0)),[durations]);
   const total=durations.reduce((sum,value)=>sum+value,0);
   const sceneAt=(time:number)=>{const index=durations.findIndex((duration,index)=>time<starts[index]+duration);return index<0?durations.length-1:index;};
   const scene=sceneAt(elapsed);
   const state=useRef({elapsed,playing,speed});state.current={elapsed,playing,speed};
-  const links=useMemo(()=>experimentVideoLinks(`${activity.name} ${activity.objective} ${activity.apparatus.join(' ')}`),[activity]);
   useEffect(()=>{
     let frame=0,last=0,clock=0,lastDraw=-1;
     const draw=(now:number)=>{
@@ -71,7 +70,6 @@ function ExperimentPlayer({ activity }: { activity: ExperimentActivity }) {
     </div>
     <div className="px-4 pb-4"><input aria-label="Animation position" className="w-full" type="range" min={0} max={total} step={.1} value={elapsed} disabled={recording} onChange={event=>{const value=Number(event.target.value);setElapsed(value);state.current.elapsed=value;}}/><p className="text-xs text-muted-foreground">{Math.floor(elapsed)} / {total}s · Locally drawn schematic animation. Saved WebM includes captions; browser read-aloud is not recorded.</p>{error&&<p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}</div>
     <div className="flex flex-wrap gap-2 border-t bg-slate-50 p-3">{[...activity.steps.map(step=>step.title),'Observe & explain'].map((title,index)=><button key={index} disabled={recording} className={`rounded-lg border px-3 py-2 text-xs ${index===scene?'bg-primary text-primary-foreground':'bg-white'}`} onClick={()=>{setElapsed(starts[index]);state.current.elapsed=starts[index];setPlaying(true);}}>{index+1}. {title}</button>)}</div>
-    {links.length>0&&<div className="border-t p-4"><p className="mb-3 font-medium text-sm">Watch a recorded demonstration</p><div className="flex flex-wrap gap-2">{links.map(link=><button className="rounded-lg border px-3 py-2 text-left text-sm hover:bg-secondary" key={link.id} onClick={()=>{setExternal(external===link.id?'':link.id);setPlaying(false);}}>{link.title}<span className="block text-xs text-muted-foreground">{link.provider}</span></button>)}</div>{external&&<div className="mt-3"><iframe className="aspect-video w-full rounded-xl" src={`https://www.youtube-nocookie.com/embed/${external}`} title={links.find(link=>link.id===external)?.title} allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowFullScreen/><a className="mt-2 inline-block text-sm text-primary underline" href={`https://www.youtube.com/watch?v=${external}`} target="_blank" rel="noopener noreferrer">Open video on YouTube if playback is unavailable</a></div>}</div>}
   </div>;
 }
 
@@ -97,5 +95,6 @@ export function ExperimentLab({ activities, topic, klass, subject, chapter }: { 
       </article>
       <ExperimentPlayer key={`${selected}:${activity.name}`} activity={activity}/>
     </>}
+    <ExperimentVideos klass={klass} subject={subject} chapter={chapter} topic={topic} activity={activity?.name}/>
   </section>;
 }
