@@ -1,6 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import {startChapterPreparation} from '@/lib/book-preparation';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -83,7 +82,6 @@ function GeneratorBlock() {
   const [chapter, setChapter] = useState("");
   const [customTopic, setCustomTopic] = useState("");
   const lang = isLang(subject);
-  useEffect(()=>{if(!chapter)return;const timer=setTimeout(()=>void startChapterPreparation(klass,subject,chapter),300);return ()=>clearTimeout(timer);},[klass,subject,chapter]);
 
   // Every dropdown is driven strictly by the built-in NCERT syllabus.
   const subjects = useMemo(() => subjectsForClass(klass), [klass]);

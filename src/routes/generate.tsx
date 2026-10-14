@@ -164,7 +164,6 @@ function GeneratePage() {
   const search = Route.useSearch();
   const nav = useNavigate();
   const run = useServerFn(generateLesson);
-  useEffect(()=>{if(search.chapter)void startChapterPreparation(search.klass,search.subject,search.chapter);},[search.klass,search.subject,search.chapter]);
   const startedRequest=useRef('');
   const requestIdRef = useRef(0);
   const [retryAttempt, setRetryAttempt] = useState(0);
