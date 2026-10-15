@@ -2,13 +2,14 @@ import { mapOutsideMath, splitMath } from './latex-notation';
 
 export function validStudyTerm(term:string,meaning:string):boolean {
   return term.trim().length>=3&&term.length<=48&&meaning.trim().length>=18
-    && !/^(?:they|there|these|those|this|that|it|how|what|why|when|which|where|who|if|thus|hence|therefore|we|you|one of)\b/i.test(term.trim())
+    && !/^(?:and|or|but|s core|they|there|these|those|this|that|it|how|what|why|when|which|where|who|if|thus|hence|therefore|we|you|one of)\b/i.test(term.trim())
     && !/[?]|\b(?:intext question|example\s+\d|solution solution)\b/i.test(`${term} ${meaning}`);
 }
 
 export function isSourceTask(text:string):boolean {
   const body=text.replace(/^\*\*[^*]+:\*\*\s*/,'');
   return /\?\s*$|^(?:calculate|comment on|show that|how can|explain why|determine|find the|state whether)\b/i.test(body)
+    || /^\s*\(?[a-d]\)\s+/i.test(body)
     || /\b(?:Calculate|Determine|Comment on)\s+(?:the|whether|how)\b/.test(body);
 }
 
@@ -27,15 +28,24 @@ export function readableSourceRelation(text:string):boolean {
   return /[=∝≈<>→⇌]|\\(?:propto|approx|equiv|rightarrow|rightleftharpoons|leq|geq)\b/.test(expressions.length?expressions.join(' '):text);
 }
 
+/** A running page/section heading embedded in an equation is extraction damage. */
+export function hasSourcePrintIntrusion(text: string): boolean {
+  const plain = splitMath(text).filter(part => part.type === 'text').map(part => part.value).join(' ');
+  return /\b\d{1,3}\s+\d{1,2}\.\d{1,2}\s+(?:[A-Z][A-Z -]{2,}){2}/.test(plain)
+    || /\b\d{1,2}\.\d{1,2}\s+[A-Z](?:\s*[A-Z]){10,}/.test(plain);
+}
+
 /** Detect local extraction damage even when a long prose sentence hides it. */
 export function hasBrokenSourceMath(raw:string):boolean {
   const text=String(raw||'');
+  if (hasSourcePrintIntrusion(text)) return true;
   if (/[\uFFFD\u25A1\u25AF\u0000\uE000-\uF8FF]/u.test(text)) return true;
   const mathematical=/[=∝]|\*\*(?:formula|equation|relation)|\bEq\./i.test(text);
   return mathematical && (
     /(?:\b\d{1,3}\s+){4,}\d{1,3}\b/.test(text) ||
     /\b([a-zA-Z]{1,3})\1{3,}\b/.test(text) ||
-    /(?:\b[A-Za-z]\s+){6,}[A-Za-z]\b/.test(text)
+    /(?:\b[A-Za-z]\s+){6,}[A-Za-z]\b/.test(text) ||
+    (/\b(?:sin|cos|tan)\s*\d+/i.test(text) && /(?:\b[A-Z]\s+){3,}[A-Z]\b/.test(text))
   );
 }
 
@@ -51,7 +61,7 @@ export function stripRepeatedPrintHeaders(line: string): string {
 /** Never reconstruct an unreadable scientific equation from its page number. */
 export function cleanSourceNoteLine(raw:string):string {
   let line=stripRepeatedPrintHeaders(String(raw||'').trim());
-  if(!line||collapsedSourceTable(line))return '';
+  if(!line||collapsedSourceTable(line)||hasSourcePrintIntrusion(line))return '';
   line=mapOutsideMath(line,text=>text.split(/("[^"\n]*"|“[^”\n]*”)/g).map((part,index)=>index%2?part:part
     .replace(/(?:\bIntext\s+Questions?\s*){2,}/gi,' ')
     .replace(/(?:\bExample\s+\d+(?:\.\d+)?\s*){2,}/gi,' ')

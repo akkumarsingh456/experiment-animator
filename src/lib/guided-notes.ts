@@ -35,10 +35,10 @@ const categories: Array<[RegExp, string, GuidedGroup["kind"]]> = [
 
 /** Reorganise every verified note, without shortening or dropping extra lines. */
 export function guidedGroups(sections: NoteSection[] | undefined, fallback: string[] = []): GuidedGroup[] {
-  const sectionLines = sections?.filter((s) => s.kind !== "diagram" && s.heading !== "Source table — original extracted entries").flatMap((s) => s.lines.map((line) =>
+  const sectionLines = sections?.filter((s) => s.kind !== "diagram" && s.heading !== "Source table — original extracted entries" && s.heading !== "Source review — original extraction").flatMap((s) => s.lines.map((line) =>
     /^\*\*/.test(line) || s.heading === "Teacher Notes" ? line : `**${s.heading.replace(/^\d+\.\s*/, "")}:** ${line}`));
   const lines = dedupeLabelled((sectionLines?.length ? sectionLines : fallback).map(normalNoteLabel));
-  const groups: GuidedGroup[] = (sections || []).filter(section => section.heading === "Source table — original extracted entries").map(section => ({heading: section.heading, kind: "list", lines: section.lines}));
+  const groups: GuidedGroup[] = (sections || []).filter(section => (section.heading === "Source table — original extracted entries" || section.heading === "Source review — original extraction")).map(section => ({heading: section.heading, kind: "list", lines: section.lines}));
   const get = (heading: string, kind: GuidedGroup["kind"]) => {
     let group = groups.find((g) => g.heading === heading);
     if (!group) { group = { heading, kind, lines: [] }; groups.push(group); }
@@ -78,7 +78,7 @@ export function guidedGroups(sections: NoteSection[] | undefined, fallback: stri
 export function uniqueTopicGroups(topics: GuidedGroup[][]): GuidedGroup[][] {
   const seen = new Set<string>();
   return topics.map((groups) => groups.map((group) => {
-    if (group.heading === "Source table — original extracted entries" || group.kind === "formula" || group.kind === "derivation" || /practice|answers|check your understanding|objectives|exit ticket|before you begin|recap|discuss|activities/i.test(group.heading)) return group;
+    if ((group.heading === "Source table — original extracted entries" || group.heading === "Source review — original extraction") || group.kind === "formula" || group.kind === "derivation" || /practice|answers|check your understanding|objectives|exit ticket|before you begin|recap|discuss|activities/i.test(group.heading)) return group;
     const lines = group.lines.filter((line) => {
       const key = line.replace(/\*\*/g, "").replace(/\s+/g, " ").trim().toLowerCase();
       if (seen.has(key)) return false;

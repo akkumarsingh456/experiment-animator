@@ -22,7 +22,7 @@ export function sequenceChemistryNotes(sections: NoteSection[] | undefined, subj
   ];
   let index = 0;
   for (const section of original) {
-    if (section.heading === "Source table — original extracted entries") { groups.push({section,rank:120,index:index++}); continue; }
+    if ((section.heading === "Source table — original extracted entries" || section.heading === "Source review — original extraction")) { groups.push({section,rank:120,index:index++}); continue; }
     // A derivation or procedure is atomic: never sort its individual steps.
     if (section.kind === "diagram" || section.lines.some(line => /derivation|\bstep\s*\d/i.test(line))) {
       groups.push({section:{...section,lines:[...section.lines]},rank:75,index:index++}); continue;

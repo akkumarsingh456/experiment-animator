@@ -54,6 +54,7 @@ export function layoutChemistrySlide(slide: Slide): Slide {
   const source = slide.sections?.length ? slide.sections : [{heading: "Teacher Notes", kind: "bullets" as const, lines: [...slide.bullets, ...slide.notes]}];
   const output: NoteSection[] = [], retained: string[] = [];
   for (const section of source) {
+    if (section.heading === "Source review — original extraction") { output.push(section); continue; }
     const readable: string[] = [];
     for (const line of section.lines) {
       if (!isCollapsedChemistryTable(line)) { readable.push(chemistryTypography(line)); continue; }

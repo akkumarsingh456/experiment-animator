@@ -29,6 +29,6 @@ export function prosePoints(line: string): string[] {
 }
 
 export function sectionPoints(heading: string, kind: string, lines: string[]): string[] {
-  if (heading === "Source table — original extracted entries" || kind === "diagram" || /\b(?:formulas?|equations?|relations?|derivations?)\b/i.test(heading)) return lines;
+  if ((heading === "Source table — original extracted entries" || heading === "Source review — original extraction") || kind === "diagram" || /\b(?:formulas?|equations?|relations?|derivations?)\b/i.test(heading)) return lines;
   return lines.flatMap(prosePoints);
 }

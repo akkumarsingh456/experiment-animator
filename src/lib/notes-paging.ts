@@ -45,7 +45,7 @@ const FORMULA_LABEL = /^\s*\*{0,2}\s*(formula|equation|relation|result)\b/i;
 export function toNoteBlocks(sections: NoteSectionLike[] | undefined): NoteBlock[] {
   const blocks: NoteBlock[] = [];
   (sections || []).forEach((sec, sectionIndex) => {
-    const sourceLines=sec.kind==='diagram'||sec.heading==='Source table — original extracted entries'?sec.lines||[]:(sec.lines||[]).map(cleanSourceNoteLine).filter(Boolean);
+    const sourceLines=sec.kind==='diagram'||(sec.heading==='Source table — original extracted entries'||sec.heading==='Source review — original extraction')?sec.lines||[]:(sec.lines||[]).map(cleanSourceNoteLine).filter(Boolean);
     const lines = sectionPoints(sec.heading, sec.kind, sourceLines);
     if (sec.kind === "diagram") {
       if (lines.length) {

@@ -9,7 +9,7 @@ export function matchesTopicScope(topic:string,line:string):boolean {
 
 export function notesQualityPolicy(subject:string,chapter:string,topic=''):string[] {
   const context=`${chapter} ${topic}`,rules=[
-    'Ignore repeated print headings, intext-question banners, example numbers and solution banners. A question is practice, never a definition or formula.',
+    'Preserve exercise stems, options and answer context together. A multiple-choice or true/false option is not a factual assertion; never promote it into key points without its established answer. Reject running page titles, page numbers and section headings embedded in equations. Ignore repeated print headings, intext-question banners, example numbers and solution banners. A question is practice, never a definition or formula.',
     'Never flatten a table into a paragraph or infer row-to-column correspondence from OCR order. Retain a table only when each row and heading are recoverable; otherwise omit that table and retain independently readable explanations.',
     'Give each topic its own evidence. Do not repeat an entire paragraph under another subtopic. Replace pronouns with their source-supported antecedents; omit a fragment if its antecedent cannot be established.',
     'A parseable equation or vocabulary overlap is not proof of scientific correctness. Check the relation, symbols, stated assumptions and source meaning together.',

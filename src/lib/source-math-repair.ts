@@ -1,6 +1,6 @@
 import { layoutChemistrySlide, SOURCE_TABLE_HEADING } from "@/lib/chemistry-note-layout";
 import type { Slide } from "@/lib/generate.functions";
-import { cleanSourceNoteLine, validStudyTerm } from './source-note-quality';
+import { cleanSourceNoteLine, validStudyTerm, hasSourcePrintIntrusion, hasBrokenSourceMath } from './source-note-quality';
 import { matchesTopicScope } from './notes-quality-policy';
 
 /** Repair only the identifiable NCERT microscopic-resistivity extraction.
@@ -21,6 +21,25 @@ export function repairSourceMathLine(line: string): string {
 
 export function repairSourceMathSlide(slide: Slide): Slide {
   slide = layoutChemistrySlide(slide);
+  const reviewHeading = "Source review — original extraction";
+  const originals: string[] = [];
+  const inputSections = slide.sections?.map(section => {
+    if (section.heading === reviewHeading || section.heading === SOURCE_TABLE_HEADING) return section;
+    // An exercise option is not an asserted textbook fact. Preserve its siblings
+    // together so a false option cannot survive as an independent key point.
+    const optionList = /^(key points|important points|teacher notes)$/i.test(section.heading) && section.lines.length >= 3
+      && section.lines.some(line => /^\s*(?:\*\*[^*]+:\*\*\s*)?\(?[a-d]\)\s+/i.test(line));
+    const kept = section.lines.filter(line => {
+      if (optionList || ((hasSourcePrintIntrusion(line) || hasBrokenSourceMath(line)) && repairSourceMathLine(line) === line)) { originals.push(line); return false; }
+      return true;
+    });
+    return {...section, lines: kept};
+  }).filter(section => section.lines.length);
+  if (originals.length) {
+    const review = {heading: reviewHeading, kind: "text" as const, lines: [
+      "These original entries contain damaged extraction or exercise options whose answer has not been established. They are retained for comparison with the textbook, not presented as verified formulas or facts.", ...originals]};
+    slide = {...slide, sections: [...(inputSections || []), review], notes_quality: {ready:false,lines:0,derivations:0,activity:false,issues:[...(slide.notes_quality?.issues || []), "Source extraction or exercise options require textbook review."]}};
+  }
   const repairLines = (lines: string[]) =>
     lines.filter(line=>matchesTopicScope(slide.title,line)).flatMap((line) => {
       const fixed = repairSourceMathLine(line);
@@ -38,13 +57,13 @@ export function repairSourceMathSlide(slide: Slide): Slide {
     });
   const repaired:Slide = {
     ...slide,
-    title: slide.title.replace(/\bOhm'S\b/g, "Ohm’s"),
+    title: slide.title.replace(/(['’])S\b/g, "$1s"),
     bullets: slide.bullets.filter(line=>matchesTopicScope(slide.title,line)).map(repairSourceMathLine).map(cleanSourceNoteLine).filter(Boolean),
     notes: repairLines(slide.notes),
     key_terms: (slide.key_terms||[]).filter(term=>validStudyTerm(term.term,term.meaning)),
     sections: slide.sections?.map((section) => ({
       ...section,
-      lines: section.heading === SOURCE_TABLE_HEADING ? section.lines : repairLines(section.lines),
+      lines: (section.heading === SOURCE_TABLE_HEADING || section.heading === reviewHeading) ? section.lines : repairLines(section.lines),
     })).filter(section=>section.lines.length),
   };
   const count=(item:Slide)=>(item.sections||[]).filter(section=>section.kind!=='diagram').reduce((n,section)=>n+section.lines.length,0)+item.notes.length+item.bullets.length;

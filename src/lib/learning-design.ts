@@ -26,7 +26,7 @@ export function learningProfile(subject = "", klass = "") {
 /** One discussion task anchored in an actual note, never a fabricated NCERT experiment. */
 export function sourceDiscussion(title: string, sections: NoteSection[], subject: string, klass: string): NoteSection | undefined {
   if (sections.some((s) => /activity|experiment|discussion/i.test(s.heading) || s.lines.some((l) => /^\*\*(?:NCERT )?(activity|experiment|discussion)/i.test(l)))) return;
-  const evidence = sections.filter((s) => s.kind !== "diagram").flatMap((s) => s.lines)
+  const evidence = sections.filter((s) => s.kind !== "diagram" && !/^Source (?:review|table)/.test(s.heading)).flatMap((s) => s.lines)
     .find((l) => /[\p{L}]{3}/u.test(l) && !/^\*\*(learning|prerequisite|practice|exit|answer|derivation)/i.test(l));
   if (!evidence) return;
   const body = cleanSourceNoteLine(evidence).replace(/^\*\*[^*]+:\*\*\s*/, "");
@@ -54,7 +54,7 @@ export function sourceDiscussion(title: string, sections: NoteSection[], subject
 export type NotesQuality = { ready: boolean; issues: string[]; lines: number; derivations: number; activity: boolean };
 /** Add teaching prompts only; never invent missing definitions or derivations. */
 export function learningScaffold(title: string, sections: NoteSection[]): NoteSection[] {
-  const lines = sections.filter((s) => s.kind !== "diagram").flatMap((s) => s.lines);
+  const lines = sections.filter((s) => s.kind !== "diagram" && !/^Source (?:review|table)/.test(s.heading)).flatMap((s) => s.lines);
   if (lines.length < 3) return sections;
   const has = (label: string) => lines.some((l) => new RegExp(`^\\*\\*${label}`, "i").test(l));
   const prompts: string[] = [];
