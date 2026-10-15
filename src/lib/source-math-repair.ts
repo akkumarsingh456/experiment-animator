@@ -1,4 +1,5 @@
 import type { Slide } from "@/lib/generate.functions";
+import { cleanSourceNoteLine } from './source-note-quality';
 
 /** Repair only the identifiable NCERT microscopic-resistivity extraction.
  * Other damaged relations are left to the source-grounded generation repair.
@@ -20,7 +21,7 @@ export function repairSourceMathSlide(slide: Slide): Slide {
   const repairLines = (lines: string[]) =>
     lines.flatMap((line) => {
       const fixed = repairSourceMathLine(line);
-      if (fixed === line) return [line];
+      if (fixed === line) { const clean=cleanSourceNoteLine(line);return clean?[clean]:[]; }
       return [
         "**Explanation:** The microscopic model reproduces Ohm’s law for a conductor with constant material conditions; Ohm’s law is not valid for every material or field strength.",
         "**Derivation of microscopic resistivity:** $\\rho=\\frac{m}{ne^2\\tau}$",
@@ -35,11 +36,11 @@ export function repairSourceMathSlide(slide: Slide): Slide {
   return {
     ...slide,
     title: slide.title.replace(/\bOhm'S\b/g, "Ohm’s"),
-    bullets: slide.bullets.map(repairSourceMathLine),
+    bullets: slide.bullets.map(repairSourceMathLine).map(cleanSourceNoteLine).filter(Boolean),
     notes: repairLines(slide.notes),
     sections: slide.sections?.map((section) => ({
       ...section,
       lines: repairLines(section.lines),
-    })),
+    })).filter(section=>section.lines.length),
   };
 }

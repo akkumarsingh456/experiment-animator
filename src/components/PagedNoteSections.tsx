@@ -13,6 +13,7 @@ import MathText from "@/components/MathText";
 import { FormulaDerivation } from "@/components/FormulaDerivation";
 import { guidedFormulaRow } from "@/lib/guided-notes";
 import { toNoteBlocks, type NoteBlock, type NoteSectionLike } from "@/lib/notes-paging";
+import { readableSourceRelation } from "@/lib/source-note-quality";
 
 // Present repeated prose labels as a single heading, keeping mathematical
 // derivation labels intact for the block grouping helpers.
@@ -58,7 +59,7 @@ function BlockView({ block, showHeading, subject }: { block: NoteBlock; showHead
         >
           {block.lines.map((line, index) => (
             <li key={index} className="pl-[1em] -indent-[1em] [&_.katex-display]:my-[0.15em] [&_.katex-display]:indent-0 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden">
-              {/^(?:\*\*)?(?:formula|equation|relation):/i.test(line) ? (() => {
+              {/^(?:\*\*)?(?:formula|equation|relation):/i.test(line) && readableSourceRelation(line) ? (() => {
                 const row = guidedFormulaRow(line.replace(/^\*\*[^*]+:\*\*\s*/, ""));
                 return <div className="note-formula-card"><strong><MathText text={row.concept} /></strong><div><MathText text={row.expression} /></div>{row.unit && <small>Unit: <MathText text={row.unit} /></small>}</div>;
               })() : <>• {isMathematics(subject) ? <MathematicsProse text={line} /> : <MathText text={line} />}</>}

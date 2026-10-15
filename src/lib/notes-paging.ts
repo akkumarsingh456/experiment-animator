@@ -11,6 +11,7 @@
  */
 
 import { sectionPoints } from "@/lib/note-points";
+import { cleanSourceNoteLine } from "@/lib/source-note-quality";
 
 export type NoteSectionLike = { heading: string; kind: string; lines: string[] };
 
@@ -44,7 +45,8 @@ const FORMULA_LABEL = /^\s*\*{0,2}\s*(formula|equation|relation|result)\b/i;
 export function toNoteBlocks(sections: NoteSectionLike[] | undefined): NoteBlock[] {
   const blocks: NoteBlock[] = [];
   (sections || []).forEach((sec, sectionIndex) => {
-    const lines = sectionPoints(sec.heading, sec.kind, sec.lines || []);
+    const sourceLines=sec.kind==='diagram'?sec.lines||[]:(sec.lines||[]).map(cleanSourceNoteLine).filter(Boolean);
+    const lines = sectionPoints(sec.heading, sec.kind, sourceLines);
     if (sec.kind === "diagram") {
       if (lines.length) {
         blocks.push({ sectionIndex, heading: sec.heading, kind: sec.kind, lines });

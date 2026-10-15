@@ -13,6 +13,7 @@
 import { hasMath, mapOutsideMath, normalizeLine } from "@/lib/latex-notation";
 import { gatewayJSON, hasGatewayKey } from "@/lib/ai-gateway-json";
 import { repairSourceMathLine } from "@/lib/source-math-repair";
+import { hasBrokenSourceMath, cleanSourceNoteLine } from "@/lib/source-note-quality";
 
 /* ---------------- deterministic layer ---------------- */
 
@@ -88,6 +89,7 @@ function repairPlainNotation(raw: string): string {
 export function isGarbledMath(raw: string): boolean {
   const s = String(raw || "");
   if (!s) return false;
+  if (hasBrokenSourceMath(s)) return true;
   // Properly authored LaTeX is never garbage — only its prose is inspected.
   if (hasMath(s)) return false;
   const letters = (s.match(/[A-Za-z]/g) || []).length;
@@ -108,7 +110,7 @@ export function isGarbledMath(raw: string): boolean {
  * Returns "" when the line should be dropped.
  */
 export function cleanFormulaLine(raw: string): string {
-  const fixed = repairNotation(raw);
+  const fixed = repairNotation(cleanSourceNoteLine(raw));
   if (!fixed || isGarbledMath(fixed)) return "";
   return fixed;
 }
