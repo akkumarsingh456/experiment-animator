@@ -68,3 +68,7 @@ Add all supplements (including dimensional formulas) before `paginateLectureSect
 ## Chapter covers
 
 `LessonCover.tsx` supplies the shared first-slide design in lecture presentation and export views. Resolve the selected subject before topic keywords (a Physics cell must not select Biology). Use exact chapter diagrams where available, otherwise clearly editorial subject-tool icons. Periodic element tiles carry correct atomic numbers and explicit d/f block colour keys. Keep cover copy separate from lesson evidence, retain the original topic list in slide data, and use a compact roadmap with an additional-topic count when the selection exceeds six entries. Do not replace note diagrams or generated lesson content when changing cover design.
+
+## Chemistry table preservation and typography
+
+Detect f-block/lanthanoid tables using element names, ions and orbital runs, not only d-block symbols. `chemistry-note-layout.ts` moves collapsed table material into labelled source-transcription continuation pages before shared cleaning runs. Preserve every original token in order, including headings and continuation fragments. Separate named rows; do not invent missing column-to-value correspondences. Retain independently readable explanations in the main notes and repair only unambiguous orbital exponents, ionic charges and species typography. Original table entries must bypass semantic cleanup and cross-topic deduplication in both lecture and guided views. Mark uncertain tables for textbook verification; do not label a transcription as a verified scientific table.

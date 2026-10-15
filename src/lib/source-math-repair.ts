@@ -1,3 +1,4 @@
+import { layoutChemistrySlide, SOURCE_TABLE_HEADING } from "@/lib/chemistry-note-layout";
 import type { Slide } from "@/lib/generate.functions";
 import { cleanSourceNoteLine, validStudyTerm } from './source-note-quality';
 import { matchesTopicScope } from './notes-quality-policy';
@@ -19,6 +20,7 @@ export function repairSourceMathLine(line: string): string {
 }
 
 export function repairSourceMathSlide(slide: Slide): Slide {
+  slide = layoutChemistrySlide(slide);
   const repairLines = (lines: string[]) =>
     lines.filter(line=>matchesTopicScope(slide.title,line)).flatMap((line) => {
       const fixed = repairSourceMathLine(line);
@@ -42,7 +44,7 @@ export function repairSourceMathSlide(slide: Slide): Slide {
     key_terms: (slide.key_terms||[]).filter(term=>validStudyTerm(term.term,term.meaning)),
     sections: slide.sections?.map((section) => ({
       ...section,
-      lines: repairLines(section.lines),
+      lines: section.heading === SOURCE_TABLE_HEADING ? section.lines : repairLines(section.lines),
     })).filter(section=>section.lines.length),
   };
   const count=(item:Slide)=>(item.sections||[]).filter(section=>section.kind!=='diagram').reduce((n,section)=>n+section.lines.length,0)+item.notes.length+item.bullets.length;

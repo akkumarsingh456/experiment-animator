@@ -516,3 +516,9 @@
 .guided-cover .lesson-cover h1, .guided-cover .lesson-cover p, .guided-cover .lesson-cover ol, .guided-cover .lesson-cover li { text-align: left; }
 .guided-cover .cover-main-grid { grid-template-columns: 1.15fr 1fr; }
 .guided-cover .lesson-cover { box-sizing: border-box; }
+
+/* Keep source-table transcription separate from teachable prose, never hide its entries. */
+.source-table-entries { display: grid; gap: 8px; min-width: 0; }
+.source-table-entry { text-indent: 0; margin: 5px 0; padding: 10px 14px; border: 1px solid #dfd8c8; border-left: 3px solid #b59954; border-radius: 6px; background: #fbf8f0; font-family: ui-monospace, Consolas, monospace; font-size: .88em; line-height: 1.65; overflow-wrap: anywhere; white-space: normal; }
+.original-slide-display [data-note-content] ul { line-height: 1.65; }
+.original-slide-display [data-note-content] h4 { margin-bottom: .55em; }

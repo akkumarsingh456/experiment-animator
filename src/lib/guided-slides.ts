@@ -53,7 +53,7 @@ export function paginateGuidedArticles(root: HTMLElement, maxHeight: number): HT
           const shell = node.cloneNode(false) as HTMLElement; if (shell.tagName === "DETAILS") (shell as HTMLDetailsElement).open = true;
           if (heading) shell.appendChild(heading.cloneNode(true)); walk(child, [...wrappers, shell]);
         }
-      } else if (node.classList.contains("dimension-cards")) {
+      } else if ((node.classList.contains("dimension-cards") || node.classList.contains("source-table-entries"))) {
         // Each quantity/formula/memory card can move to the next page independently.
         Array.from(node.children).forEach(child => add(wrap(child.cloneNode(true) as HTMLElement)));
       } else if (node.matches("ul, ol")) {
