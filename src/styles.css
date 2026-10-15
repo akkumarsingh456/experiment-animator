@@ -181,7 +181,7 @@
 .guided-slide-frame { position: relative; flex: none; margin: 0; border-radius: 10px; box-shadow:
     0 24px 70px #02061755,
     0 0 0 1px #ffffff20; }
-.guided-slide-display { max-width: none; overflow: hidden; background: white; border-radius: 10px; transform-origin: top left; }
+.guided-slide-display { position: absolute; top: 0; left: 0; margin: 0; max-width: none; overflow: hidden; background: white; border-radius: 10px; transform-origin: top left; }
 .guided-slide-source { position: fixed; left: -20000px; top: 0; pointer-events: none; visibility: hidden; }
 .guided-slide-deck .guided-notes { max-width: none; font-size: 25px; line-height: 1.55; }
 .guided-slide-deck .guided-topic { padding: 36px 52px; margin: 0; border: 0; box-shadow: none; border-radius: 0; background: linear-gradient(135deg, #ffffff 72%, #f0f7fb); }
