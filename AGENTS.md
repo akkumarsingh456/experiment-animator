@@ -14,3 +14,4 @@
 - Keep local lesson illustrations deterministic per slide identity and vary their topic icon and composition without external image APIs.
 - Book capture checkpoints live in page metadata; ordinary textbook retrieval chunks stay untouched so scanning is additive to NCERT generation.
 - Screenshot refresh changes only reference_visuals; render those below the existing 2D illustration with strict grade, subject, chapter and topic matching.
+- Follow `docs/NOTES_AND_VISUAL_QUALITY.md` for all subject/chapter changes. Keep shared extraction guards, chapter-specific evidence constraints and explicit unavailable-diagram states; never route ambiguous words such as series, cell or unit without subject context.

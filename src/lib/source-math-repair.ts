@@ -1,5 +1,6 @@
 import type { Slide } from "@/lib/generate.functions";
-import { cleanSourceNoteLine } from './source-note-quality';
+import { cleanSourceNoteLine, validStudyTerm } from './source-note-quality';
+import { matchesTopicScope } from './notes-quality-policy';
 
 /** Repair only the identifiable NCERT microscopic-resistivity extraction.
  * Other damaged relations are left to the source-grounded generation repair.
@@ -19,7 +20,7 @@ export function repairSourceMathLine(line: string): string {
 
 export function repairSourceMathSlide(slide: Slide): Slide {
   const repairLines = (lines: string[]) =>
-    lines.flatMap((line) => {
+    lines.filter(line=>matchesTopicScope(slide.title,line)).flatMap((line) => {
       const fixed = repairSourceMathLine(line);
       if (fixed === line) { const clean=cleanSourceNoteLine(line);return clean?[clean]:[]; }
       return [
@@ -33,14 +34,26 @@ export function repairSourceMathSlide(slide: Slide): Slide {
         "**SI unit:** Resistivity $\\rho$: $\\Omega\\,\\mathrm{m}$; resistance $R$: $\\Omega$; relaxation time $\\tau$: $\\mathrm{s}$.",
       ];
     });
-  return {
+  const repaired:Slide = {
     ...slide,
     title: slide.title.replace(/\bOhm'S\b/g, "Ohm’s"),
-    bullets: slide.bullets.map(repairSourceMathLine).map(cleanSourceNoteLine).filter(Boolean),
+    bullets: slide.bullets.filter(line=>matchesTopicScope(slide.title,line)).map(repairSourceMathLine).map(cleanSourceNoteLine).filter(Boolean),
     notes: repairLines(slide.notes),
+    key_terms: (slide.key_terms||[]).filter(term=>validStudyTerm(term.term,term.meaning)),
     sections: slide.sections?.map((section) => ({
       ...section,
       lines: repairLines(section.lines),
     })).filter(section=>section.lines.length),
   };
+  const count=(item:Slide)=>(item.sections||[]).filter(section=>section.kind!=='diagram').reduce((n,section)=>n+section.lines.length,0)+item.notes.length+item.bullets.length;
+  if(count(repaired)<count(slide)){
+    const lines=(repaired.sections||[]).flatMap(section=>section.lines);
+    repaired.notes_quality={
+      ready:false,lines:lines.length,
+      derivations:lines.filter(line=>/^\*\*derivation of/i.test(line)).length,
+      activity:lines.some(line=>/^\*\*(?:activity|discussion)/i.test(line)),
+      issues:[...new Set([...(slide.notes_quality?.issues||[]),'Unreadable or mismatched source fragments were omitted. Regenerate this topic from clearer matching textbook pages to restore missing detail.'])],
+    };
+  }
+  return repaired;
 }

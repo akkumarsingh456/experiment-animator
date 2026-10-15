@@ -19,10 +19,12 @@ export function isKeyPointPage(input:ConceptMapInput):boolean {
 }
 
 /** Brief visual labels, not replacements for the complete lesson sentences. */
-export function keyPointIconCards(facts:string[]):string {
+export function keyPointIconCards(facts:string[],subject=''):string {
   const escape=(text:string)=>text.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]!));
   const cues=facts.map(fact=>{
-    const label=/electric flux|flux/i.test(fact)?'Electric flux':/area vector|surface normal/i.test(fact)?'Area vector':/cosine|cos\s*θ|orientation|angle.*surface/i.test(fact)?'Surface orientation':/uniform.*field/i.test(fact)?'Uniform electric field':/series/i.test(fact)?'Series combination':/parallel.*(?:capacitor|plate|resistor)/i.test(fact)?'Parallel combination':/direction.*field|field.*direction/i.test(fact)?'Electric field direction':/dielectric|polaris|polariz/i.test(fact)?'Dielectric response':/capacitor|capacitance/i.test(fact)?'Capacitance':/charge/i.test(fact)?'Electric charge':/potential|voltage/i.test(fact)?'Potential difference':/reaction/i.test(fact)?'Chemical reaction':/cell|organ/i.test(fact)?'Biological structure':'';
+    const electrical=/^(?:physics|science)$/i.test(subject)||!subject&&/electric flux|dielectric|capacitance|capacitor/i.test(fact);
+    if(!electrical||/transition (?:element|metal)|lanthanoid|actinoid|oxidation state/i.test(fact))return {fact,label:''};
+    const label=/electric flux|flux/i.test(fact)?'Electric flux':/area vector|surface normal/i.test(fact)?'Area vector':/cosine|cos\s*θ|orientation|angle.*surface/i.test(fact)?'Surface orientation':/uniform.*field/i.test(fact)?'Uniform electric field':/(?:capacitor|resistor|circuit).{0,35}series|series.{0,35}(?:capacitor|resistor|circuit)/i.test(fact)?'Series combination':/parallel.*(?:capacitor|plate|resistor)/i.test(fact)?'Parallel combination':/direction.*field|field.*direction/i.test(fact)?'Electric field direction':/dielectric|polaris|polariz/i.test(fact)?'Dielectric response':/capacitor|capacitance/i.test(fact)?'Capacitance':/charge/i.test(fact)?'Electric charge':/potential|voltage/i.test(fact)?'Potential difference':/reaction/i.test(fact)?'Chemical reaction':/cell|organ/i.test(fact)?'Biological structure':'';
     // Never manufacture a title by taking the first few words of a paragraph.
     return {fact,label};
   }).filter(cue=>cue.label);

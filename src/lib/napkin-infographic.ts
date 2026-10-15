@@ -1,8 +1,7 @@
-import { topicScienceDrawing, topicIconOverview } from "@/lib/topic-science-visuals";
+import { topicScienceDrawing } from "@/lib/topic-science-visuals";
 import { plainMathText } from "@/lib/latex-notation";
 import { currentElectricityDiagram, wrapTextbookDrawing } from "@/lib/current-electricity-diagrams";
-import {isKeyPointPage,keyPointIconCards} from '@/lib/classroom-visuals';
-import { renderSourceConceptMap, sourceConceptFacts, type ConceptMapInput } from "@/lib/source-concept-map";
+import { type ConceptMapInput } from "@/lib/source-concept-map";
 import { geometryDiagram } from "@/lib/geometry-diagrams";
 
 /**
@@ -359,19 +358,12 @@ export function renderNapkinInfographicDataUrl(input: FactInput): string {
 /** Large reference-style figure without a miniature duplicate of the notes. */
 export function renderLessonIllustration(input: FactInput & ConceptMapInput): string {
   const identity = stableHash(`${input.subject}|${input.title}|${input.slideIndex ?? 0}`).toString(16);
-  if(isKeyPointPage(input) && !/electric flux/i.test(input.title) && !input.sections?.some(section=>/classroom discussion/i.test(section.heading))){
-    const facts=sourceConceptFacts(input);
-    const cards=keyPointIconCards(facts);
-    if(cards)return wrapTextbookDrawing(cards,identity,input.title);
-  }
   const topic = topicScienceDrawing(input, input.subject);
   if (topic) return wrapTextbookDrawing(topic.drawing, identity, input.title);
   const geometry = geometryDiagram(input.title, input.subject);
   if (geometry) return geometry.svg;
-  const pageFacts=sourceConceptFacts(input).slice(0,3);
-  const cards=keyPointIconCards(pageFacts);
-  if(cards && input.sections?.length)return wrapTextbookDrawing(cards,identity,input.title);
-  return wrapTextbookDrawing(topicIconOverview(input, input.subject).drawing, identity, input.title);
+  const notice=`<text x="380" y="225" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" fill="#173d50">No suitable diagram is available for this topic.</text><text x="380" y="280" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" fill="#456176">Use the import options below to add a diagram.</text><text x="380" y="330" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" fill="#456176">Check Google, or use Med Easy where available.</text>`;
+  return wrapTextbookDrawing(notice,identity,input.title);
 }
 
 export function renderLessonIllustrationDataUrl(input: FactInput & ConceptMapInput): string {
@@ -382,5 +374,5 @@ export function renderLessonIllustrationDataUrl(input: FactInput & ConceptMapInp
 
 export function lessonIllustrationCaption(title: string, subject?: string, input?: ConceptMapInput): string {
   const source = input || {title};
-  return topicScienceDrawing(source, subject)?.caption || (/^(physics|science)$/i.test(subject || "") ? currentElectricityDiagram(title)?.caption : undefined) || geometryDiagram(title, subject)?.caption || topicIconOverview(source, subject).caption;
+  return topicScienceDrawing(source, subject)?.caption || geometryDiagram(title, subject)?.caption || 'No suitable topic-specific diagram is available. Use Check Google below, or import a matching Med Easy picture where that option is available.';
 }

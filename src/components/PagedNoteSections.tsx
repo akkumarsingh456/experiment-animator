@@ -154,6 +154,7 @@ export function PagedNoteSections({
           style={{ fontSize: `${fit.px}px`, columnCount: fit.cols, columnGap: "1.5em" }}
          
         >
+          {!blocks.length&&<p className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-slate-800">The source text for this page is incomplete or unreadable. Regenerate this topic using clearer textbook pages to recover the missing explanation.</p>}
           {blocks.map((block, index) => {
             const previous = blocks[index - 1];
             return (

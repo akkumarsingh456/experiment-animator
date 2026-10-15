@@ -9,6 +9,8 @@ import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
 import { topicEvidence } from "@/lib/topic-evidence";
+import { cleanSourceNoteLine, isSourceTask, validStudyTerm, readableSourceRelation } from "@/lib/source-note-quality";
+import { isDefinitionStatement } from "@/lib/note-labels";
 import { extractExperimentActivities } from "@/lib/experiment-activities";
 import { scopeTextbookPages, referenceFormulaEvidence } from "@/lib/lesson-source-scope";
 import { chaptersFor } from "@/lib/ncert-syllabus";
@@ -64,7 +66,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     // v13: topic-aware textbook renderer with large labels and visual models.
     const cacheKey = hashKey([
-      "img-v24-flux-and-complete-concept-labels",
+      "img-v25-subject-scoped-diagrams-no-placeholder-icons",
       process.env.HF_IMAGES_FREE_ONLY === "true" && !!process.env.HF_IMAGE_TOKEN ? "hf-enabled" : "local-only",
       data.klass,
       data.subject,
@@ -608,8 +610,8 @@ const JUNK_PATTERNS: RegExp[] = [
   /^\s*\d+\s*$/,
   /^\s*®?\s*$/,
 ];
-export function filterJunkSentences(sentences: string[]): string[] {
-  return sentences.filter((s) => {
+export function filterJunkSentences(sentences: string[], preserveWording=false): string[] {
+  return (preserveWording?sentences:sentences.map(cleanSourceNoteLine)).filter((s) => {
     const t = String(s || "").trim();
     if (t.length < 30) return false;
     if (JUNK_PATTERNS.some((r) => r.test(t))) return false;
@@ -1140,11 +1142,11 @@ function pickSentences(sentences: string[], terms: string[], count: number, offs
 }
 
 function extractFormulaSentences(sentences: string[]) {
-  return sentences.filter((s) => /[A-Za-z]\s*=|\bSI\b|unit|formula|law|equation|proportional|constant|\bV\b|\bQ\b|\bC\b|\bE\b|ε|epsilon|coulomb|farad|volt/i.test(s));
+  return sentences.filter(s=>!isSourceTask(s)&&readableSourceRelation(s));
 }
 
 function extractDefinitionSentences(sentences: string[]) {
-  return sentences.filter((s) => /\bis\b|\bare\b|defined as|called|known as|means|refers to/i.test(s));
+  return sentences.filter(s=>isDefinitionStatement(s)&&!isSourceTask(s));
 }
 
 function extractKeyTerms(sentences: string[], topic: string): { term: string; meaning: string }[] {
@@ -1171,6 +1173,7 @@ function extractKeyTerms(sentences: string[], topic: string): { term: string; me
   }
   const seen = new Set<string>();
   return candidates.filter((item) => {
+    if(!validStudyTerm(item.term,item.meaning))return false;
     const key = normalizeText(item.term);
     if (!key || seen.has(key)) return false;
     seen.add(key);
@@ -1446,9 +1449,9 @@ export function validateFigurePlacement(slides: Slide[], context: string): { rep
 
 export function buildLocalSlides(topic: string, subtopics: string, context: string, subject = "", mode: "topic" | "chapter" = "topic"): Slide[] {
   const rawSentences = uniqueByNormalized(splitSentences(context));
-  const sentences = filterJunkSentences(rawSentences);
-  if (sentences.length === 0) return fallbackSlides(topic, context);
   const lang = isLanguageSubject(subject);
+  const sentences = filterJunkSentences(rawSentences,lang);
+  if (sentences.length === 0) return fallbackSlides(topic, context);
 
   // ---------- LANGUAGE / CHAPTER MODE ----------
   // English / Hindi / Sanskrit (or any explicit chapter mode): paginate the
@@ -1588,7 +1591,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v48-reject-corrupted-source-equations",
+      "lesson-v49-source-structure-and-topic-quality-policy",
       data.klass,
       data.subject,
       data.chapter,

@@ -1,0 +1,26 @@
+/** Review constraints, not a replacement textbook or a store of invented facts. */
+export function matchesTopicScope(topic:string,line:string):boolean {
+  const inner=/inner transition|lanthan|actin|f.block/i;
+  const outer=/first.row|first transition|\b3d\b|outer transition/i;
+  if(inner.test(topic)&&outer.test(line)&&!inner.test(line))return false;
+  if(/outer transition|transition.*propert|d.block/i.test(topic)&&!inner.test(topic)&&inner.test(line)&&!outer.test(line))return false;
+  return true;
+}
+
+export function notesQualityPolicy(subject:string,chapter:string,topic=''):string[] {
+  const context=`${chapter} ${topic}`,rules=[
+    'Ignore repeated print headings, intext-question banners, example numbers and solution banners. A question is practice, never a definition or formula.',
+    'Never flatten a table into a paragraph or infer row-to-column correspondence from OCR order. Retain a table only when each row and heading are recoverable; otherwise omit that table and retain independently readable explanations.',
+    'Give each topic its own evidence. Do not repeat an entire paragraph under another subtopic. Replace pronouns with their source-supported antecedents; omit a fragment if its antecedent cannot be established.',
+    'A parseable equation or vocabulary overlap is not proof of scientific correctness. Check the relation, symbols, stated assumptions and source meaning together.',
+  ];
+  if(/chem|science/i.test(subject))rules.push('Distinguish an element series from an electrical series circuit, an electrochemical cell from a biological cell, and an oxidation-state change from a physical SI-unit statement. Do not choose pictures from isolated ambiguous words.');
+  if(/transition|lanthan|actin|d.block|f.block/i.test(context))rules.push('Keep outer d-block trends separate from inner-transition lanthanoid/actinoid properties. Do not reuse first-row transition-ion colour, oxidation-state or lattice tables as inner-transition notes. Preserve the compound, ion, oxidation state and conditions for any stated property.');
+  if(/organic|alcohol|phenol|ether|aldehyde|ketone|amine|haloalkane/i.test(context))rules.push('Keep preparation, properties, mechanism and uses separate for the named functional group. Do not substitute a different functional-group test or infer a colour from an unrelated reagent.');
+  if(/physics|science/i.test(subject))rules.push('Require an explicit circuit context before using series/parallel electrical diagrams. Keep potential, field, force and energy distinct; preserve sign conventions and conditions on each relation.');
+  if(/bio|botan|zoolog|science/i.test(subject))rules.push('Match structures and process stages to the named organism, tissue and topic. Do not replace every biology topic with a generic cell or circulation diagram.');
+  if(/math/i.test(subject))rules.push('Preserve domains, theorem hypotheses and complete proof steps. Mathematical series, parallel lines and functions must not trigger Physics pictures.');
+  if(/computer|informatics/i.test(subject))rules.push('Keep program syntax and code blocks intact; distinguish assignment from a mathematical formula and include only source-supported outputs.');
+  if(/english|hindi|sanskrit|history|geograph|social|political/i.test(subject))rules.push('Preserve quoted source wording and subject-specific meaning. Do not impose scientific units, physical derivations or anatomical pictures on textual interpretation.');
+  return rules;
+}

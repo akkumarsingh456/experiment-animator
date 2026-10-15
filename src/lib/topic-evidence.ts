@@ -1,4 +1,6 @@
 import { isContentsListing } from './note-source-noise';
+import { cleanSourceNoteLine, isSourceTask } from './source-note-quality';
+import { matchesTopicScope } from './notes-quality-policy';
 
 // Match textbook spelling and grammatical variants without changing source text.
 const tokens = (text: string) => text.toLowerCase().replace(/isation\b/g, 'ization')
@@ -10,7 +12,9 @@ const ignored = new Set(['the', 'and', 'for', 'with', 'from', 'chapter', 'introd
 export function topicEvidence(title: string, lines: string[]): string[] {
   const terms = [...new Set(tokens(title).filter(word => word.length > 2 && !ignored.has(word)))];
   if (!terms.length) return [];
-  const candidates = lines.filter(line => line.trim().length > 28 && !isContentsListing(line));
+  const focus=/inner transition|lanthan|actin|f.block/i.test(title)?/inner transition|lanthan|actin|f.block/i
+    : /outer transition|transition.*propert/i.test(title)?/transition|d.block/i:undefined;
+  const candidates = lines.map(cleanSourceNoteLine).filter(line => line.trim().length > 28 && !isContentsListing(line)&&!isSourceTask(line)&&matchesTopicScope(title,line)&&(!focus||focus.test(line)));
   const scored = candidates.map(line => {
     const words = new Set(tokens(line));
     return { line, hits: terms.filter(term => words.has(term)) };

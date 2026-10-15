@@ -1136,6 +1136,7 @@ function SlideCanvas({
   if (!slide) return null;
   const sourceIndex = (slide as Slide & { sourceIndex?: number }).sourceIndex ?? index;
   imageUrl = renderLessonIllustrationDataUrl({ ...slide, keyTerms: slide.key_terms, chapter, subject, slideIndex: sourceIndex });
+  const illustrationCaption=lessonIllustrationCaption(slide.title,subject,{...slide,keyTerms:slide.key_terms,chapter});
   const kind = slide.kind === "chapter" && slide.sections?.length ? "content" : slide.kind || "content";
   const lang = isLanguageSubject(subject);
   const bookFigurePage = slide.sections?.some(section => section.heading === "Book structure and explanation") && slide.reference_visuals?.some(figure => figure.url);
@@ -1182,7 +1183,7 @@ function SlideCanvas({
             <div className="flex items-center gap-2">
               {v && (
                 <Badge variant="outline" className={`rounded-full text-[10px] ${vTone}`}>
-                  Notes {v.coverage}% · Diagram {v.diagram_match}% · Labels {v.diagram_label_fit}
+                  Text coverage {v.coverage}% · Visual overlap {v.diagram_match}% · Labels {v.diagram_label_fit}
                 </Badge>
               )}
               {v?.figures_check && (v.figures_check.expected.length > 0 || v.figures_check.placed.length > 0) && (
@@ -1208,7 +1209,7 @@ function SlideCanvas({
                       : "Notation renders correctly and vocabulary matches the retrieved source. These checks do not certify factual accuracy."
                   }
                 >
-                  Notation {(v as any).notes_check.pass ? "✓" : "⚠"} · Source match {(v as any).notes_check.grounding_confidence}%{(v as any).notes_check.latex_fixed ? ` · ${(v as any).notes_check.latex_fixed} auto-fixed` : ""}
+                  Notation {(v as any).notes_check.pass ? "✓" : "⚠"} · Source vocabulary overlap {(v as any).notes_check.grounding_confidence}%{(v as any).notes_check.latex_fixed ? ` · ${(v as any).notes_check.latex_fixed} auto-fixed` : ""}
                 </Badge>
               )}
               <Badge variant="outline" className="rounded-full text-[10px]">
@@ -1312,8 +1313,8 @@ function SlideCanvas({
               </div>
               {!slide.reference_visuals?.some(figure => figure.url) && <FormulaVisualCards slide={slide} limit={slide.context_illustration ? 1 : 2} />}
               {!slide.reference_visuals?.some(figure => figure.url) && <div className="px-3 py-2 rounded-md bg-card border border-border/50 text-[11px] leading-snug shrink-0">
-                <p className="font-medium text-primary notebook-guide-heading">Read the diagram</p>
-                <p>{lessonIllustrationCaption(slide.title, subject, {...slide, keyTerms: slide.key_terms, chapter})}</p>
+                <p className="font-medium text-primary notebook-guide-heading">{illustrationCaption.startsWith('No suitable')?'Add a diagram':'Read the diagram'}</p>
+                <p>{illustrationCaption}</p>
                 {(slide.key_terms || []).filter(term=>typeof term==='object' && term.term.length<=35 && !/^(if|thus|chapter|constant [a-z]$)/i.test(term.term)).slice(0, 3).map((term, index) => <span key={index} className="inline-block mt-1 mr-2"><mark className="notebook-term-highlight">{term.term}</mark></span>)}
               </div>}
               {!!slide.reference_visuals?.some(figure => figure.url) && <div className="lesson-book-supplement w-full flex-[4] min-h-0 flex overflow-hidden border-t border-border" aria-label="Original book screenshots below the 2D illustration">

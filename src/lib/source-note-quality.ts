@@ -1,5 +1,26 @@
 import { mapOutsideMath, splitMath } from './latex-notation';
 
+export function validStudyTerm(term:string,meaning:string):boolean {
+  return term.trim().length>=3&&term.length<=48&&meaning.trim().length>=18
+    && !/^(?:they|there|these|those|this|that|it|how|what|why|when|which|where|who|if|thus|hence|therefore|we|you|one of)\b/i.test(term.trim())
+    && !/[?]|\b(?:intext question|example\s+\d|solution solution)\b/i.test(`${term} ${meaning}`);
+}
+
+export function isSourceTask(text:string):boolean {
+  const body=text.replace(/^\*\*[^*]+:\*\*\s*/,'');
+  return /\?\s*$|^(?:calculate|comment on|show that|how can|explain why|determine|find the|state whether)\b/i.test(body)
+    || /\b(?:Calculate|Determine|Comment on)\s+(?:the|whether|how)\b/.test(body);
+}
+
+/** Lost row/column alignment cannot safely be turned into a scientific claim. */
+export function collapsedSourceTable(text:string):boolean {
+  const lattice=(text.match(/\b(?:hcp|bcc|ccp|fcc)\b/gi)||[]).length;
+  const ions=(text.match(/\b(?:Sc|Ti|Cr|Mn|Fe|Co|Ni|Cu|Zn|Y|Zr|Nb|Mo|Ru|Rh|Pd|Ag|Cd|La|Hf|Ta|W|Re|Os|Ir|Pt|Au|Hg)\b/g)||[]).length;
+  const states=(text.match(/[+-]\s*\d\b|\b\d\s*[+-]/g)||[]).length;
+  const colours=(text.match(/\b(?:colourless|colorless|violet|purple|bluepink|pink|yellow|green|blue)\b/gi)||[]).length;
+  return lattice>=6||(ions>=6&&(states>=6||colours>=5));
+}
+
 export function readableSourceRelation(text:string):boolean {
   if(hasBrokenSourceMath(text))return false;
   const expressions=splitMath(text).filter(part=>part.type!=='text').map(part=>part.value);
@@ -21,7 +42,21 @@ export function hasBrokenSourceMath(raw:string):boolean {
 /** Never reconstruct an unreadable scientific equation from its page number. */
 export function cleanSourceNoteLine(raw:string):string {
   let line=String(raw||'').trim();
-  if(!line)return '';
+  if(!line||collapsedSourceTable(line))return '';
+  line=mapOutsideMath(line,text=>text.split(/("[^"\n]*"|“[^”\n]*”)/g).map((part,index)=>index%2?part:part
+    .replace(/(?:\bIntext\s+Questions?\s*){2,}/gi,' ')
+    .replace(/(?:\bExample\s+\d+(?:\.\d+)?\s*){2,}/gi,' ')
+    .replace(/(?:\bSolution\s*){2,}/gi,' ')
+    .replace(/\b([\p{L}]{3,})(?:\s+\1\b){2,}/giu,'$1')
+    .replace(/\s{2,}/g,' ')).join('')).trim();
+  if(collapsedSourceTable(line))return '';
+  const body=line.replace(/^\*\*[^*]+:\*\*\s*/,'');
+  if(/^(?:\d{1,2}\.\d{1,2}\s+)?(?:is|are|lists|shows|gives)\s+(?:the|that|a|an|how)\b/i.test(body)||/\bone of the no features\b/i.test(body))return '';
+  const task=isSourceTask(body);
+  if(task&&!hasBrokenSourceMath(line)&&/^\*\*(?:definition|formula|equation|relation|si unit|key point|important point|example):/i.test(line)){
+    return `**Check your understanding:** ${body}`;
+  }
+  if(/^(?:Therefore|Thus|Hence),?\s+they\b/i.test(body)&&body.split(/[.!?]/).filter(Boolean).length===1)return '';
   if(hasBrokenSourceMath(line)){
     // A complete prose sentence following the damaged equation can survive.
     // The original Formula label must not follow it into the rendered card.

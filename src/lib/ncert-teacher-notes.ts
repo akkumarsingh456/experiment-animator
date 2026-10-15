@@ -1,5 +1,6 @@
 import { isContentsListing } from "@/lib/note-source-noise";
 import { topicEvidence } from "@/lib/topic-evidence";
+import { notesQualityPolicy } from "@/lib/notes-quality-policy";
 /**
  * NCERT teacher-style structured notes.
  *
@@ -227,7 +228,7 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
   const units = take(isUnit, pool.length);
   const derivation = take(isDerivation, pool.length);
   add("Formula", take(isFormula, pool.length));
-  add("SI unit", units);
+  for(const unit of units)add(/\b(?:SI|S\.I\.)\s+unit/i.test(unit)?'SI unit':'Unit',[unit]);
   add("Derivation step", derivation);
   add("Condition", take(line=>sourceDetailLabel(line)==='Condition', pool.length));
   add("Limitation", take(line=>sourceDetailLabel(line)==='Limitation', pool.length));
@@ -405,6 +406,7 @@ export async function groqTeacherNotes(opts: {
   const payload = opts.slides.map((s, i) => ({
     index: i,
     title: s.title,
+    quality_constraints: notesQualityPolicy(opts.subject,opts.chapter,s.title),
     ncert_excerpts: selectSlideExcerpts(s, opts.context),
   }));
 
@@ -413,6 +415,7 @@ export async function groqTeacherNotes(opts: {
     `Class: ${opts.klass} | Subject: ${opts.subject} | Chapter: ${opts.chapter}`,
     `SUBJECT DESIGN: ${learningProfile(opts.subject, opts.klass).focus}.`,
     `AGE-APPROPRIATE TEACHING: ${learningProfile(opts.subject, opts.klass).level}`,
+    ...notesQualityPolicy(opts.subject,opts.chapter).map(rule=>`QUALITY RULE: ${rule}`),
     "Do not impose physics sections on other subjects. Include derivations or mathematical proofs only where supported; definitions and empirical laws have explanations, not fabricated proofs. For language lessons retain important source wording and explain it in the language of the passage.",
     "Teach in this order: objective and prerequisite → concept explanation → vocabulary → worked source example/proof/derivation → one interactive task → practice with feedback → recap and exit ticket.",
     "For every topic give ONE classroom activity adapted from the supplied NCERT example, observation, case or passage: title, source idea, materials, pair/group roles, numbered steps, discussion questions, student output and teacher check. Identify adaptations as teacher-designed; do not invent an NCERT activity number or experimental observations. If apparatus, quantities or lab safety procedure are absent, use a paper/diagram or text discussion instead of proposing a lab procedure.",
@@ -582,7 +585,7 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
         // A fluent rewrite must not erase a whole source-backed learning facet.
         // Only restore missing categories from this slide's own local evidence.
         const generated=sections.flatMap(section=>section.lines).join('\n');
-        const facets=[/definition|key term/i,/si unit|variable breakdown|dimension/i,/condition|assumption|validity|formula basis/i,/limitation|exception/i,/^use$|real.life use|application/i];
+        const facets=[/definition|key term/i,/unit|variable breakdown|dimension/i,/condition|assumption|validity|formula basis/i,/limitation|exception/i,/^use$|real.life use|application/i];
         const localLines=(withLocal[i].sections||[]).flatMap(section=>section.lines);
         const additions=facets.filter(facet=>!facet.test(generated)).flatMap(facet=>localLines.filter(line=>facet.test(line.match(/^\*\*([^*]+):\*\*/)?.[1]||'')));
         const enriched=sections.map((section,at)=>at===0?{...section,lines:dedupeLabelled([...section.lines,...additions])}:section);
