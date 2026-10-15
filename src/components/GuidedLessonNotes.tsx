@@ -12,7 +12,7 @@ import { FormulaMindMap } from "@/components/FormulaMindMap";
 import { FormulaDerivation } from "@/components/FormulaDerivation";
 
 function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }) {
-  return <section className={`guided-group guided-${group.kind}`}>
+  return <section className={`guided-group guided-${group.kind}`} data-note-category={group.heading}>
     <h3>{group.heading}</h3>
     {group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula / relation</th><th>Unit / SI unit</th></tr></thead><tbody>
       {group.lines.map((line, i) => { const row = guidedFormulaRow(line); return <tr key={i}><td><MathText text={row.concept} /></td><td><MathText text={row.expression} /></td><td><MathText text={row.unit} /></td></tr>; })}

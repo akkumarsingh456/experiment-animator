@@ -21,7 +21,7 @@ import { DIAGRAM_HEADING, aiNoteDiagrams, buildLocalDiagram } from "@/lib/note-d
 import { PW_EXTRACTION_RULES, normalizeNoteLine } from "@/lib/pwNotesNormalizer";
 import { referenceBooksPrompt } from "@/lib/reference-books";
 import { sourceFormulaBlocks } from "@/lib/source-derivations";
-import { isUnitStatement } from "@/lib/note-labels";
+import { isUnitStatement, isDefinitionStatement, sourceDetailLabel } from "@/lib/note-labels";
 import { sourceFormulaExplanations } from "@/lib/med-easy-supplements";
 
 
@@ -104,11 +104,11 @@ export function selectSlideExcerpts(slide: NoteSourceSlide, context: string): st
   const stop = new Set(["chapter", "introduction", "important", "concept", "current", "electricity", "the", "and", "for", "with", "from", "ncert", "point", "overview", "core", "definitions", "symbols", "quantities", "units", "activity", "working", "relationships", "applications", "interpretation", "common", "exam", "points", "final", "revision"]);
   const terms = norm(slide.title).split(" ").filter((word) => word.length > 3 && !stop.has(word));
   if (!terms.length) return own;
-  const related = topicEvidence(slide.title, sentences(context)).slice(0, 16);
+  const related = topicEvidence(slide.title, sentences(context)).slice(0, 28);
   const result: string[] = [];
   let chars = 0;
   for (const line of dedupe([...own, ...related])) {
-    if (chars + line.length > 12000) continue;
+    if (chars + line.length > 16000) continue;
     result.push(line); chars += line.length;
   }
   return result;
@@ -166,7 +166,7 @@ export function dedupeLabelled(lines: string[]): string[] {
 const NOTE_HEADING = "Teacher Notes";
 
 
-const isDefinition = (s: string) => /\bis defined as\b|\bis called\b|\bis known as\b|\brefers to\b|\bmeans\b/i.test(s) && !/^\s*(from|hence|therefore|next|which|\d)/i.test(s);
+const isDefinition = (s: string) => isDefinitionStatement(s) && !/^\s*(from|hence|therefore|next|which|\d)/i.test(s);
 const isFormula = (s: string) => /[A-Za-zΔ]\s*=\s*[^=]/.test(s) && s.length < 240;
 const isUnit = isUnitStatement;
 const isDerivation = (s: string) => /\bderiv(e|ed|ation|ing)\b|\bsubstitut(e|ing)\b|\bwe get\b|\bwe obtain\b|\bon simplif/i.test(s) && /[=]|\$/.test(s);
@@ -229,9 +229,12 @@ export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
   add("Formula", take(isFormula, pool.length));
   add("SI unit", units);
   add("Derivation step", derivation);
-  add("Important point", take(isProperty, 4));
-  add("Example", take(isExample, 2));
-  add("Use", take(isApplication, 2));
+  add("Condition", take(line=>sourceDetailLabel(line)==='Condition', pool.length));
+  add("Limitation", take(line=>sourceDetailLabel(line)==='Limitation', pool.length));
+  add("Use", take(line=>isApplication(line)||sourceDetailLabel(line)==='Use', pool.length));
+  add("Explanation", take(line=>sourceDetailLabel(line)==='Explanation', pool.length));
+  add("Important point", take(isProperty, pool.length));
+  add("Example", take(isExample, pool.length));
   // Guided notes are a flowing document, so retain all remaining source
   // statements rather than capping the notes to fit a fixed slide.
   add("Key point", take(() => true, pool.length));
@@ -327,6 +330,9 @@ const HEADINGS = [
   "22. Core Practice",
   "23. Challenge Practice",
   "24. Exit Ticket",
+  "25. Conditions and Assumptions",
+  "26. Limitations and Exceptions",
+  "27. Mechanism / Process",
 ];
 
 /** Labels whose lines are maths/pedagogy and must not be filtered by lexical overlap. */
@@ -427,6 +433,13 @@ export async function groqTeacherNotes(opts: {
     "- Clean OCR damage (broken words, stray page numbers, headers/footers) before writing.",
     "",
     "TEACHING STYLE (mandatory):",
+    "- Write student-ready notes, not copied textbook fragments. Use a clear concept name, a precise definition, then explain what it means in simpler words and why it behaves that way. Introduce prerequisites before using them. Each bullet should express one complete, connected idea; avoid unexplained pronouns and fragments such as 'for the case of the'.",
+    "- For each supported formula supply: named relation, readable equation, meaning of every symbol, relevant units, assumptions/conditions, physical or conceptual interpretation and a source-supported use. Distinguish a defining equation, an empirical law and a derived result. Do not confuse the unit of a quantity with the unit of every symbol in its formula.",
+    "- Keep Conditions and Assumptions and Limitations and Exceptions explicit. Explain the circumstances in which the result applies, what is held constant and when it fails, only if stated or demonstrated by the supplied source. Do not fabricate these sections to complete a template.",
+    "- A derivation must name the target result, state the starting law and assumptions, then show each algebraic/physical step with its reason, ending with the result and interpretation. Preserve signs, vectors, integration limits and applicable units. Do not claim that checking dimensions proves a relation.",
+    "- Physics: link the definition to a physical picture; explain directions/sign conventions, scalar/vector nature, limiting cases and graph meaning where supported. Chemistry: separate preparation, properties and uses; show balanced reactions, source-stated reagents, catalysts, temperature/pressure and observations; explain structure–property or mechanism links without inventing reaction outcomes. Biology: connect structure to function, explain processes in chronological numbered steps and compare similar terms; use equations only where the chapter actually supplies them.",
+    "- Mathematics: state domain restrictions and theorem hypotheses before a proof or worked solution, justify transformations and check the conclusion. Computing: explain input, algorithm/syntax, an annotated source example, output and edge cases. Languages/humanities: explain terms, context, textual evidence and interpretation; do not impose SI units, chemical formulas or scientific derivations on those lessons.",
+    "- Worked examples must show the question or situation, given information, reason for choosing the method, complete source-supported steps and an interpreted answer. Separate numerical data taken from the source from explanations; never invent values. End substantive concepts with a brief takeaway and a specific self-check with an explained answer, without repeating the same generic task on every topic.",
     "- OPEN WITH AN INTRODUCTION: 2-3 lines saying what the topic is about, why it matters and where it sits in the chapter, before anything else.",
     "- Include only formulas and special cases supported by this topic's excerpts, with their conditions of validity. Never infer a formula from corrupted OCR or a page/equation reference.",
     "- Cover all distinct relevant relations in the topic evidence, not just the first formula: defining relations, source-derived results, justified rearrangements and special cases. Explain when each is useful and its assumptions, and retain every source-supported proof or derivation. Do not add formulas to a non-quantitative topic merely to fill headings.",
@@ -458,8 +471,8 @@ export async function groqTeacherNotes(opts: {
     "",
     `Use only these headings, in order, omitting any you cannot support: ${HEADINGS.join(" | ")}`,
     'Each section: { "heading": string, "kind": "text"|"bullets"|"formula"|"terms"|"tip", "lines": string[] }.',
-    "Use kind 'formula' for Formula/SI Unit/Derivation/Graph sections and 'tip' for Analogy/Exam tip/Memory Trick.",
-    "The notes flow across printable pages. Aim for 30-45 substantive lines when the source supports that depth; use complete paragraphs of 2-4 sentences for explanations and short numbered lines for derivations/examples. Do not pad sparse sources or impose a fixed slide word limit.",
+    "Use kind 'formula' for equations and derivation steps, 'terms' for vocabulary, 'text' for connected explanations, and 'bullets' for units, conditions, limitations, applications and process steps. Graph descriptions are prose unless they contain a mathematical relation.",
+    "The notes flow across printable pages. Cover all distinct source-supported ideas in depth rather than fitting a slide or a line quota. Use short explanatory paragraphs, focused bullets and numbered process/derivation steps. Preserve useful detail and examples; do not pad sparse sources, repeat definitions or include raw OCR headings and exercise lists.",
 
     "NEVER include edition years (e.g. 2019-20), figure/table numbers, page numbers or 'Fig.' references.",
     "Do not repeat the same fact under two headings — every fact appears exactly once.",
@@ -565,7 +578,16 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
   for (const { batch, map } of results) {
     batch.forEach(({ i }, localIdx) => {
       const sections = map.get(localIdx);
-      if (sections?.length && sections[0].lines.length >= 3) withLocal[i] = { ...withLocal[i], sections };
+      if (sections?.length && sections[0].lines.length >= 3) {
+        // A fluent rewrite must not erase a whole source-backed learning facet.
+        // Only restore missing categories from this slide's own local evidence.
+        const generated=sections.flatMap(section=>section.lines).join('\n');
+        const facets=[/definition|key term/i,/si unit|variable breakdown|dimension/i,/condition|assumption|validity|formula basis/i,/limitation|exception/i,/^use$|real.life use|application/i];
+        const localLines=(withLocal[i].sections||[]).flatMap(section=>section.lines);
+        const additions=facets.filter(facet=>!facet.test(generated)).flatMap(facet=>localLines.filter(line=>facet.test(line.match(/^\*\*([^*]+):\*\*/)?.[1]||'')));
+        const enriched=sections.map((section,at)=>at===0?{...section,lines:dedupeLabelled([...section.lines,...additions])}:section);
+        withLocal[i] = { ...withLocal[i], sections: enriched };
+      }
     });
   }
 

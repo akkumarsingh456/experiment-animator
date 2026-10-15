@@ -5,7 +5,7 @@ export type LearningFamily = "language" | "mathematics" | "science" | "humanitie
 export function learningProfile(subject = "", klass = "") {
   const family: LearningFamily = /english|hindi|sanskrit|urdu|language|हिन्दी|हिंदी|संस्कृत/i.test(subject) ? "language"
     : /math|गणित/i.test(subject) ? "mathematics"
-    : /science|physics|chemistry|biology|विज्ञान/i.test(subject) && !/computer|political|social/i.test(subject) ? "science"
+    : /science|physics|chemistry|biology|botany|zoology|विज्ञान/i.test(subject) && !/computer|political|social/i.test(subject) ? "science"
     : /computer|informatics|technology/i.test(subject) ? "computing"
     : /accountancy|business|commerce|economics/i.test(subject) ? "commerce"
     : /history|geography|political|social|civics|sociology|psychology/i.test(subject) ? "humanities" : "general";
