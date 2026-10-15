@@ -78,3 +78,7 @@ Detect f-block/lanthanoid tables using element names, ions and orbital runs, not
 Use `stripRepeatedPrintHeaders` for repeated dotted section IDs such as `14.1 14.1 14.1`, including the adjacent running chapter/subject header when recognisable. Apply this outside LaTeX and quotations; preserve single section references and scientific numerical data. Clean the evidence before constructing classroom-discussion activity text, and keep the same cleanup when reopening saved notes.
 
 Covers use a ruled-paper notebook/pamphlet theme with binding, tape and authored SVG pen-style motifs above and below the chapter panel. Resolve Physics decoration by the chapter family (optics, electrical, or measurement/mechanics). Retain the main chapter-specific figure and learning roadmap. These are illustrative vector drawings, not photographs of an actual experiment.
+
+## Public homepage claims
+
+Describe the implemented class/subject catalog, uploaded-material retrieval, automated drafting, source review, diagrams and manual imports, available activities and PDF/PPTX exports. Do not promise a fixed ten-slide lesson, every experiment, realistic 3D footage, voiceover, unlimited use or MP4 downloads without implementing and verifying those capabilities. Keep senior Biology catalog limits explicit. The homepage uses the EduPlan display name and educational/tool illustrations rather than sparkle/wand iconography. Preserve the generator controls and routes when changing its presentation.
