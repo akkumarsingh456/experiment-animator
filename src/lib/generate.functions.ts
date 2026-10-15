@@ -1,3 +1,4 @@
+import { sequenceChemistryNotes } from "@/lib/chemistry-note-sequence";
 import { withPhysicsDimensions } from "@/lib/physics-dimensions";
 import { ENGLISH_CHAPTERS } from "@/lib/english-chapters";
 import { splitReferenceContent } from "@/lib/reference-visuals";
@@ -1593,7 +1594,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v53-repeated-print-header-cleanup",
+      "lesson-v54-chemistry-sequential-study-notes",
       data.klass,
       data.subject,
       data.chapter,
@@ -1922,7 +1923,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     const verifiedSlides = notedSlides.map((sl, i) => {
       const { sections, check } = fixedChecks[i];
       const activity = sourceDiscussion(sl.title, sections, data.subject, data.klass);
-      const completeSections = withPhysicsDimensions(learningScaffold(sl.title, activity ? [...sections, activity] : sections), data.subject, sl.title);
+      const completeSections = sequenceChemistryNotes(withPhysicsDimensions(learningScaffold(sl.title, activity ? [...sections, activity] : sections), data.subject, sl.title), data.subject, data.chapter || sl.title);
       const prev = sl.verification as SlideVerification | undefined;
       return {
         ...sl,

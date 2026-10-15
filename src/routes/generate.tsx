@@ -1,3 +1,4 @@
+import { sequenceChemistryNotes } from "@/lib/chemistry-note-sequence";
 import { LessonCover } from "@/components/LessonCover";
 import { withPhysicsDimensions } from "@/lib/physics-dimensions";
 import {startChapterPreparation,bookPreparationSnapshot,subscribeBookPreparation,pauseBookPreparation} from '@/lib/book-preparation';
@@ -291,7 +292,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         lines: recovered.length ? recovered : [missing] }],
         caption: recovered.length ? (slide.caption?.includes('No readable topic evidence') ? 'Recovered from saved lesson source text.' : slide.caption) : 'Source text needs attention for this topic.' };
     });
-    return [makeCoverSlide(), ...repaired.map(slide => mathematicsPresentationSlide(slide, result.source_books[0]?.subject || search.subject)).map(repairSourceMathSlide)];
+    return [makeCoverSlide(), ...repaired.map(slide => mathematicsPresentationSlide(slide, result.source_books[0]?.subject || search.subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(slide.sections, search.subject || "", search.chapter || slide.title)}))];
   };
   const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
   useEffect(()=>{const refresh=()=>setSlides(current=>[...current]);window.addEventListener('manual-visual-saved',refresh);void loadManualVisuals().catch(()=>{});return()=>window.removeEventListener('manual-visual-saved',refresh);},[]);

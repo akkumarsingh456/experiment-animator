@@ -82,3 +82,9 @@ Covers use a ruled-paper notebook/pamphlet theme with binding, tape and authored
 ## Public homepage claims
 
 Describe the implemented class/subject catalog, uploaded-material retrieval, automated drafting, source review, diagrams and manual imports, available activities and PDF/PPTX exports. Do not promise a fixed ten-slide lesson, every experiment, realistic 3D footage, voiceover, unlimited use or MP4 downloads without implementing and verifying those capabilities. Keep senior Biology catalog limits explicit. The homepage uses the EduPlan display name and educational/tool illustrations rather than sparkle/wand iconography. Preserve the generator controls and routes when changing its presentation.
+
+## Chemistry teaching sequence and cover variants
+
+`sequenceChemistryNotes` orders explicitly labelled content into definitions, composition, nomenclature, bonding/theory, isomerism, preparation, properties, reactions, conditions, uses and practice. It preserves all input lines and keeps procedures/derivations atomic. Unknown labels retain their relative order; source transcription follows the main teaching material. The generation policy specifies coordination-compound distinctions and physical/organic chapter sequences. This is organisation and notation guidance, not a factual validation of every uploaded chapter.
+
+Chapter cover templates vary deterministically between laboratory folio, index layout, blueprint and field notebook using subject and chapter identity. Only the first slide layout changes; chapter figures, learning roadmap and content-page layout remain intact.

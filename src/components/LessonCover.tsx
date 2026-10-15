@@ -57,8 +57,11 @@ export function LessonCover({title, objectives, subject = "", klass}: {title: st
   const match = title.match(/^Chapter\s+(\d+)\s*[:.\-]\s*/i);
   const heading = title.replace(/^Chapter\s+\d+\s*[:.\-]\s*/i, "");
   const goals = [...new Set(objectives.map(item => item.trim()).filter(Boolean))];
-  return <div className="lesson-cover notebook-cover" style={{"--cover-accent": theme.color, "--cover-pale": theme.pale} as CSSProperties}>
-    <div className="cover-topline"><span><Icon size={20} strokeWidth={1.6} />{subject || theme.name}{klass ? ` / CLASS ${klass}` : ""}</span><span>EDUPLAN AI <span className="cover-top-dot" /></span></div>
+  const variants: Record<string, string[]> = {Chemistry: ["labfolio", "index", "fieldbook"], Physics: ["blueprint", "fieldbook", "index"], Mathematics: ["index", "blueprint", "fieldbook"], Biology: ["fieldbook", "labfolio", "index"]};
+  const chapterSeed = Number(match?.[1] || [...title].reduce((sum, char) => sum + char.charCodeAt(0), 0));
+  const template = (variants[theme.name] || ["fieldbook", "index", "blueprint"])[chapterSeed % 3];
+  return <div className={`lesson-cover notebook-cover cover-template-${template}`} style={{"--cover-accent": theme.color, "--cover-pale": theme.pale} as CSSProperties}>
+    <div className="cover-topline"><span><Icon size={20} strokeWidth={1.6} />{subject || theme.name}{klass ? ` / CLASS ${klass}` : ""}</span><span>EDUPLAN <span className="cover-top-dot" /></span></div>
     <NotebookDoodles family={theme.name} title={title} />
     <div className="cover-main-grid"><div className="cover-copy"><div className="cover-eyebrow">{match ? `CHAPTER ${match[1].padStart(2, "0")}` : "CHAPTER STUDY"}<span />MY CHAPTER NOTES</div><h1>{heading}</h1><div className="cover-title-rule" /><p className="cover-description">Read, sketch, connect.<br />Let’s make sense of the chapter.</p><div className="cover-subject-stamp"><Icon size={22} strokeWidth={1.6} /><span>{theme.name}<small>CHAPTER OVERVIEW</small></span></div></div><div className="cover-visual"><CoverFigure subject={subject} title={title} /><div className="cover-visual-corner">01 <ArrowUpRight size={18} /></div></div></div>
     <section className="cover-roadmap"><div className="cover-roadmap-label"><BookOpen size={19} /><strong>Inside this chapter</strong><small>{goals.length} selected {goals.length === 1 ? "topic" : "topics"}</small></div><ol>{goals.slice(0, 6).map((goal, i) => <li key={goal}><span>{String(i + 1).padStart(2, "0")}</span><p>{goal}</p></li>)}</ol>{goals.length > 6 && <p className="cover-more">+ {goals.length - 6} more topics covered in the lesson</p>}</section>
