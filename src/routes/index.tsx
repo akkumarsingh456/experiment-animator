@@ -125,10 +125,10 @@ function GeneratorBlock() {
   }
 
   return (
-    <Card className="border-border/60 shadow-soft overflow-hidden">
-      <CardContent className="p-6 sm:p-8">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary grid place-items-center">
+    <Card className="lesson-builder border-border/60 shadow-soft overflow-hidden">
+      <CardContent className="lesson-builder-content p-6 sm:p-8">
+        <div className="lesson-builder-heading flex items-center gap-2 mb-4">
+          <div className="lesson-builder-mark h-9 w-9 rounded-xl bg-primary/10 text-primary grid place-items-center">
             <Search className="h-4 w-4" />
           </div>
           <div>
@@ -136,12 +136,13 @@ function GeneratorBlock() {
             <p className="text-xs text-muted-foreground">
               {lang
                 ? "Language mode · full chapter, verbatim NCERT text with break slides + MCQs"
-                : "RAG-filtered to your exact Class · Subject · Chapter, with 10 MCQs at the end"}
+                : "Choose your textbook chapter, set the topics and prepare notes with practice questions."}
             </p>
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-3">
+        <ol className="lesson-builder-guide" aria-label="Lesson preparation steps"><li><span>01</span>Class & subject</li><li><span>02</span>Chapter & topics</li><li><span>03</span>Prepare your lesson</li></ol>
+        <div className="lesson-builder-fields grid sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Class</label>
             <Select value={klass} onValueChange={setKlass}>
@@ -259,7 +260,7 @@ function GeneratorBlock() {
                     onChange={(e) => setCustomSub(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomSub(); } }}
                   />
-                  <Button type="button" variant="outline" size="icon" onClick={addCustomSub}>
+                  <Button type="button" variant="outline" size="icon" aria-label="Add custom subtopic" onClick={addCustomSub}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -298,7 +299,7 @@ function GeneratorBlock() {
           onClick={go}
           disabled={!finalTopic}
           size="lg"
-          className="w-full mt-5 rounded-xl h-12 shadow-sm"
+          className="lesson-builder-submit w-full mt-5 rounded-xl h-12 shadow-sm"
         >
           <BookOpen className="h-4 w-4" />
           {lang ? "Generate full chapter PPT + MCQs" : "Prepare lesson & activities"}
