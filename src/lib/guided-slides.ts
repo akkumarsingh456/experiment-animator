@@ -47,6 +47,9 @@ export function paginateGuidedArticles(root: HTMLElement, maxHeight: number): HT
           const shell = node.cloneNode(false) as HTMLElement; if (shell.tagName === "DETAILS") (shell as HTMLDetailsElement).open = true;
           if (heading) shell.appendChild(heading.cloneNode(true)); walk(child, [...wrappers, shell]);
         }
+      } else if (node.classList.contains("dimension-cards")) {
+        // Each quantity/formula/memory card can move to the next page independently.
+        Array.from(node.children).forEach(child => add(wrap(child.cloneNode(true) as HTMLElement)));
       } else if (node.matches("ul, ol")) {
         Array.from(node.children).forEach((child, index) => { const list = node.cloneNode(false) as HTMLElement;
           if (list.tagName === "OL") list.setAttribute("start", String(index + 1)); list.appendChild(child.cloneNode(true)); add(wrap(list));

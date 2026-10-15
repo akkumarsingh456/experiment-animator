@@ -1,3 +1,4 @@
+import { withPhysicsDimensions } from "@/lib/physics-dimensions";
 import {startChapterPreparation,bookPreparationSnapshot,subscribeBookPreparation,pauseBookPreparation} from '@/lib/book-preparation';
 import { loadLessonBookPictures } from "@/lib/lesson-book-pictures.functions";
 import { mergeLessonBookPictures } from "@/lib/lesson-book-pictures";
@@ -559,18 +560,27 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
 
 
+  const [lectureRowBudgets, setLectureRowBudgets] = useState<Record<number, number>>({});
+  const continueOverflowingNotes = useCallback((sourceIndex: number, ratio: number) => {
+    setLectureRowBudgets(previous => {
+      const current = previous[sourceIndex] || 18;
+      const next = Math.max(6, Math.min(current - 1, Math.floor(current / Math.max(1.05, ratio))));
+      return next < current ? {...previous, [sourceIndex]: next} : previous;
+    });
+  }, []);
+
   // Retain Lovable's notes-and-illustration layout independently of guided worksheets.
   const originalPages = useMemo(() => slides.flatMap((slide, sourceIndex) => {
     if (slide.kind === "break" || slide.kind === "mcq") return [{ ...slide, sourceIndex }];
     const sections = slide.sections?.filter((section) => section.kind !== "diagram" && section.lines.some(line=>line.trim()));
     const fallback = slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...slide.bullets, ...slide.notes];
     const sourceSections = sections?.length ? sections : [{ heading: "Teacher Notes", kind: "bullets", lines: fallback }];
-    const notePages = paginateLectureSections(sourceSections, 18).map((page) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
+    const notePages = paginateLectureSections(withPhysicsDimensions(sourceSections as NonNullable<Slide["sections"]>, search.subject || "", slide.title), lectureRowBudgets[sourceIndex] || 18).map((page) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
       title: slide.title }));
     return notePages;
-  }), [slides]);
+  }), [slides, search.subject, lectureRowBudgets]);
   const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, section: "NCERT notes & illustration",
-    content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} staticView />,
+    content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} onNotesOverflow={continueOverflowingNotes} staticView />,
   }));
 
   async function downloadPDF(mode: "notes" | "slides" | "guided-slides" = lessonView) {
@@ -911,7 +921,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       </p>
 
       {exportMode && <div ref={exportRef} className={`lesson-export-root lesson-export-${exportMode === "notes" ? "notes" : "slides"} ${exportMode === "slides" ? "original-slide-deck" : ""}`} data-presentation-style={exportMode === "slides" ? "lovable" : "guided"} aria-hidden="true">
-        {exportMode === "slides" ? originalPages.map((slide, index) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} staticView /></div>) :
+        {exportMode === "slides" ? originalPages.map((slide, index) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} onNotesOverflow={continueOverflowingNotes} staticView /></div>) :
           <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} />}
       </div>}
       {presenting && <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
@@ -1128,10 +1138,11 @@ function BreakSlideBody({ slide }: { slide: Slide }) {
 }
 
 function SlideCanvas({
-  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage, klass, subject, chapter, staticView,
+  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage, klass, subject, chapter, staticView, onNotesOverflow,
 }: {
   slide: Slide; index: number; total: number; editing: boolean; onChange: (p: Partial<Slide>) => void;
   imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void; klass?: string; subject?: string; chapter?: string; staticView?: boolean;
+  onNotesOverflow?: (sourceIndex: number, ratio: number) => void;
 }) {
   if (!slide) return null;
   const sourceIndex = (slide as Slide & { sourceIndex?: number }).sourceIndex ?? index;
@@ -1255,6 +1266,7 @@ function SlideCanvas({
               ) : null}
               <PagedNoteSections
                 sections={slide.sections?.filter((section) => section.kind !== "diagram")}
+                onOverflow={onNotesOverflow ? ratio => onNotesOverflow(sourceIndex, ratio) : undefined}
                 subject={subject}
                 header={<PenNotesBlock index={sourceIndex} slide={slide} subject={subject} editable={!staticView} />}
               />

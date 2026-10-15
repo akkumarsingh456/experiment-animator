@@ -1,10 +1,10 @@
-import { withPhysicsDimensions } from "@/lib/physics-dimensions";
 import { MathematicsProse } from "@/components/MathematicsProse";
 import { isMathematics } from "@/lib/mathematics-presentation";
 /**
  * Teacher Notes sheet for the current slide.
  *
- * One page per slide — no inner notes pagination. The text size is fitted
+ * Continuation pages are built before rendering. This component never adds notes
+ * after pagination or uses an inner vertical scrollbar. The text size is fitted
  * automatically so the notes fill the page: larger when notes are short,
  * smaller (and in two columns) when they are long. Each formula and its
  * derivation stay together as one unbreakable block.
@@ -82,13 +82,15 @@ export function PagedNoteSections({
   scale,
   header,
   subject,
+  onOverflow,
 }: {
   sections?: NoteSectionLike[];
   scale?: "card" | "present";
   header?: React.ReactNode;
   subject?: string;
+  onOverflow?: (ratio: number) => void;
 }) {
-  const blocks = useMemo(() => toNoteBlocks(groupNoteLabels(withPhysicsDimensions(sections as import("@/lib/ncert-teacher-notes").NoteSection[] | undefined, subject || ""))), [sections, subject]);
+  const blocks = useMemo(() => toNoteBlocks(groupNoteLabels(sections)), [sections]);
   const maxPx = scale === "present" ? 22 : 18;
   const boxRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -123,16 +125,25 @@ export function PagedNoteSections({
           return lo;
         };
         const one = search(1);
+        if (!one && availableHeight > 0 && blocks.length > 1) {
+          // Repack the source topic into additional outer slides using actual DOM size.
+          fits(MIN_PX, 1);
+          onOverflow?.(content.scrollHeight / availableHeight);
+        }
         const wide = box.clientWidth > 640;
         const two = wide && one < MIN_PX + 1 ? search(2) : 0;
-        const next = two > one ? { px: two, cols: 2 as const } : { px: one || MIN_PX, cols: 1 as const };
+        // A single indivisible equation/diagram may be fitted as a whole; prose has
+        // already been split into continuation pages before it reaches this sheet.
+        const atomicPx = !one && !two && blocks.length === 1
+          ? MIN_PX * Math.min(1, availableHeight / Math.max(1, content.scrollHeight)) : MIN_PX;
+        const next = two > one ? { px: two, cols: 2 as const } : { px: one || atomicPx, cols: 1 as const };
         content.style.fontSize = `${next.px}px`;
         content.style.columnCount = String(next.cols);
         // Spread short pages gently while leaving dense pages enough room.
         // Reset first so measuring never counts spacing from the previous pass.
         content.style.setProperty("--note-block-gap", "0px");
         const spare = Math.max(0, availableHeight - content.scrollHeight - 24);
-        const gap = Math.min(28, spare / Math.max(1, blocks.length));
+        const gap = Math.min(8, spare / Math.max(1, blocks.length));
         content.style.setProperty("--note-block-gap", `${gap}px`);
         setFit((prev) => (Math.abs(prev.px - next.px) < 0.2 && prev.cols === next.cols ? prev : next));
       });
@@ -146,12 +157,12 @@ export function PagedNoteSections({
       cancelAnimationFrame(frame);
       ro.disconnect();
     };
-  }, [blocks, maxPx, header]);
+  }, [blocks, maxPx, header, onOverflow]);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col gap-1.5">
       {header}
-      <div ref={boxRef} data-note-sheet className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-2">
+      <div ref={boxRef} data-note-sheet className="flex-1 min-h-0 overflow-hidden pr-2">
         <div
           ref={contentRef}
           data-note-content
