@@ -1,3 +1,4 @@
+import { cleanSourceNoteLine } from "@/lib/source-note-quality";
 import type { NoteSection } from "@/lib/ncert-teacher-notes";
 import { latexLineValid } from "@/lib/notes-verification";
 
@@ -28,7 +29,8 @@ export function sourceDiscussion(title: string, sections: NoteSection[], subject
   const evidence = sections.filter((s) => s.kind !== "diagram").flatMap((s) => s.lines)
     .find((l) => /[\p{L}]{3}/u.test(l) && !/^\*\*(learning|prerequisite|practice|exit|answer|derivation)/i.test(l));
   if (!evidence) return;
-  const body = evidence.replace(/^\*\*[^*]+:\*\*\s*/, "");
+  const body = cleanSourceNoteLine(evidence).replace(/^\*\*[^*]+:\*\*\s*/, "");
+  if (!body) return;
   const { family } = learningProfile(subject, klass);
   const task = {
     language: "In pairs, locate the passage that supports this statement. One student explains a word, action or image; the other offers an interpretation and points to the words supporting it.",

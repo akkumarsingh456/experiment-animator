@@ -522,3 +522,31 @@
 .source-table-entry { text-indent: 0; margin: 5px 0; padding: 10px 14px; border: 1px solid #dfd8c8; border-left: 3px solid #b59954; border-radius: 6px; background: #fbf8f0; font-family: ui-monospace, Consolas, monospace; font-size: .88em; line-height: 1.65; overflow-wrap: anywhere; white-space: normal; }
 .original-slide-display [data-note-content] ul { line-height: 1.65; }
 .original-slide-display [data-note-content] h4 { margin-bottom: .55em; }
+
+/* Notebook pamphlet cover: ruled paper, binding, taped notes and authored pen sketches. */
+.notebook-cover { position: relative; grid-template-rows: auto 40px minmax(0,1fr) auto 36px; gap: 10px; padding: 20px 38px 16px 54px; border: 16px solid var(--cover-pale); border-radius: 12px; background-color: #fffef5; background-image: linear-gradient(90deg, transparent 26px, #e1a0a0 27px, transparent 28px), repeating-linear-gradient(0deg, transparent 0, transparent 29px, #aac9d73b 30px, transparent 31px); box-shadow: inset 0 0 0 1px #d4d6c7; }
+.notebook-cover::before { content: ''; position: absolute; pointer-events: none; left: -9px; top: 40px; bottom: 35px; width: 23px; background: repeating-linear-gradient(0deg, transparent 0, transparent 32px, #47545b 33px, #8d9696 35px, #354047 37px, transparent 39px, transparent 44px); border-radius: 8px; }
+.notebook-cover::after { content: ''; position: absolute; pointer-events: none; top: -6px; left: 46%; width: 90px; height: 22px; background: #ece3b3a8; border-left: 1px dashed #d4c996; border-right: 1px dashed #d4c996; transform: rotate(-5deg); }
+.notebook-cover .cover-topline { border: 0; padding: 0; letter-spacing: .07em; }
+.notebook-cover .cover-main-grid { gap: 5%; }
+.notebook-cover .cover-copy { gap: 6%; }
+.notebook-cover .cover-copy h1 { font-family: 'Segoe Print', 'Bradley Hand', 'Comic Sans MS', cursive; color: #87493f; font-size: clamp(24px,3.2cqw,47px); line-height: 1.18; letter-spacing: -.04em; }
+.notebook-cover .cover-eyebrow { font-family: 'Segoe Print', 'Comic Sans MS', cursive; letter-spacing: .03em; }
+.notebook-cover .cover-title-rule { width: 100px; height: 6px; background: #edc447; border-radius: 60% 30% 55% 30%; transform: rotate(-2deg); }
+.notebook-cover .cover-visual { border: 1px solid #d4d6c7; border-radius: 2px; background: #fffefa; padding: 5%; transform: rotate(1deg); box-shadow: 3px 5px 0 #3040380c; }
+.notebook-cover .cover-visual::before { content: ''; position: absolute; top: -9px; left: 34%; width: 70px; height: 18px; background: #e5dfbaa8; transform: rotate(-6deg); }
+.notebook-cover .cover-description { font-family: 'Segoe Print', 'Comic Sans MS', cursive; font-size: clamp(10px,1cqw,15px); }
+.notebook-cover .cover-subject-stamp { display: none; }
+.notebook-cover .cover-roadmap { border: 1px solid #d9d9a5; padding: 10px 14px; background: #f8f5cf; box-shadow: 2px 3px 0 #3343370b; grid-template-columns: 145px minmax(0,1fr); }
+.notebook-cover .cover-roadmap-label strong { font-family: 'Segoe Print', 'Comic Sans MS', cursive; }
+.notebook-cover .cover-roadmap li p { font-size: clamp(9px,.9cqw,13px); }
+.notebook-cover .cover-roadmap-label > svg { display: none; }
+.notebook-doodles { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 0; color: var(--cover-accent); }
+.notebook-doodles > span { display: flex; align-items: center; gap: 6px; }
+.notebook-doodles svg { width: 46px; height: 36px; flex-shrink: 0; }
+.notebook-doodles small { font: 11px/1.3 'Segoe Print', 'Comic Sans MS', cursive; }
+.notebook-doodles b { display: flex; align-items: center; gap: 10px; font: 13px/1.3 'Segoe Print', 'Comic Sans MS', cursive; font-weight: 500; }
+.notebook-doodles b i { font-size: 23px; color: #b68b39; }
+.notebook-doodles-bottom { border-top: 1px dashed #bac7b4; padding-top: 5px; }
+.notebook-doodles-bottom > span:nth-child(2) { transform: rotate(-3deg) !important; }
+@media (max-width: 700px) { .notebook-cover { padding: 14px 20px 12px 32px; border-width: 9px; gap: 7px; } .notebook-doodles { gap: 7px; } .notebook-doodles svg { width: 32px; } .notebook-doodles small { font-size: 9px; } .notebook-doodles b { display: none; } .notebook-cover .cover-roadmap { grid-template-columns: 95px minmax(0,1fr); } }

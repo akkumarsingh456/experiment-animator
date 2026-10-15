@@ -39,9 +39,18 @@ export function hasBrokenSourceMath(raw:string):boolean {
   );
 }
 
+/** Repeated section IDs are PDF running-header furniture, not numerical examples.
+ * Restrict to repeated dotted IDs outside math and quotations; keep single references.
+ */
+export function stripRepeatedPrintHeaders(line: string): string {
+  return mapOutsideMath(line, text => text.split(/("[^"\n]*"|“[^”\n]*”)/g).map((part, index) => index % 2 ? part : part.replace(
+    /\b(\d{1,2}\.\d{1,2})(?:\s+\1){2,}\b(?:\s+(?:[A-Z][A-Za-z’'-]*\s+){1,5}(?:Chemistry|Physics|Biology|Mathematics|Science)\b)?\s*/g, " "
+  )).join("")).replace(/ {2,}/g, " ").trim();
+}
+
 /** Never reconstruct an unreadable scientific equation from its page number. */
 export function cleanSourceNoteLine(raw:string):string {
-  let line=String(raw||'').trim();
+  let line=stripRepeatedPrintHeaders(String(raw||'').trim());
   if(!line||collapsedSourceTable(line))return '';
   line=mapOutsideMath(line,text=>text.split(/("[^"\n]*"|“[^”\n]*”)/g).map((part,index)=>index%2?part:part
     .replace(/(?:\bIntext\s+Questions?\s*){2,}/gi,' ')

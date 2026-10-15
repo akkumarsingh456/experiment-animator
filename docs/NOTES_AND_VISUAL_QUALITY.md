@@ -72,3 +72,9 @@ Add all supplements (including dimensional formulas) before `paginateLectureSect
 ## Chemistry table preservation and typography
 
 Detect f-block/lanthanoid tables using element names, ions and orbital runs, not only d-block symbols. `chemistry-note-layout.ts` moves collapsed table material into labelled source-transcription continuation pages before shared cleaning runs. Preserve every original token in order, including headings and continuation fragments. Separate named rows; do not invent missing column-to-value correspondences. Retain independently readable explanations in the main notes and repair only unambiguous orbital exponents, ionic charges and species typography. Original table entries must bypass semantic cleanup and cross-topic deduplication in both lecture and guided views. Mark uncertain tables for textbook verification; do not label a transcription as a verified scientific table.
+
+## Repeated PDF section headers and notebook covers
+
+Use `stripRepeatedPrintHeaders` for repeated dotted section IDs such as `14.1 14.1 14.1`, including the adjacent running chapter/subject header when recognisable. Apply this outside LaTeX and quotations; preserve single section references and scientific numerical data. Clean the evidence before constructing classroom-discussion activity text, and keep the same cleanup when reopening saved notes.
+
+Covers use a ruled-paper notebook/pamphlet theme with binding, tape and authored SVG pen-style motifs above and below the chapter panel. Resolve Physics decoration by the chapter family (optics, electrical, or measurement/mechanics). Retain the main chapter-specific figure and learning roadmap. These are illustrative vector drawings, not photographs of an actual experiment.
