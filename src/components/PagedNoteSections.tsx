@@ -142,11 +142,11 @@ export function PagedNoteSections({
         const next = two > one ? { px: two, cols: 2 as const } : { px: one || atomicPx, cols: 1 as const };
         content.style.fontSize = `${next.px}px`;
         content.style.columnCount = String(next.cols);
-        // Spread short pages gently while leaving dense pages enough room.
+        // Keep natural spacing: spare room is for content, not stretched gaps.
         // Reset first so measuring never counts spacing from the previous pass.
         content.style.setProperty("--note-block-gap", "0px");
         const spare = Math.max(0, availableHeight - content.scrollHeight - 24);
-        const gap = Math.min(8, spare / Math.max(1, blocks.length));
+        const gap = Math.min(4, spare / Math.max(1, blocks.length));
         content.style.setProperty("--note-block-gap", `${gap}px`);
         setFit((prev) => (Math.abs(prev.px - next.px) < 0.2 && prev.cols === next.cols ? prev : next));
       });

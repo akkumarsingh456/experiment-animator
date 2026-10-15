@@ -1,6 +1,10 @@
 import type { NoteSectionLike } from "@/lib/notes-paging";
 import { prosePoints } from "@/lib/note-points";
 
+// Start with fuller sheets; the rendered DOM reports overflow and lowers this
+// budget for the actual viewport, font metrics and mathematical content.
+export const DEFAULT_LECTURE_ROWS = 26;
+
 /** Estimate rendered rows, accounting for card padding, math and memory explanations. */
 function lineRows(line: string, heading: string): number {
   const plain = line.replace(/\$\$?|\\[a-zA-Z]+/g, "x");
@@ -31,7 +35,7 @@ function continuationLines(line: string): string[] {
 }
 
 /** Layout only: preserve every source point; continue long proofs at step boundaries. */
-export function paginateLectureSections(sections: NoteSectionLike[] | undefined, maxRows = 18): NoteSectionLike[][] {
+export function paginateLectureSections(sections: NoteSectionLike[] | undefined, maxRows = DEFAULT_LECTURE_ROWS): NoteSectionLike[][] {
   const pages: NoteSectionLike[][] = [];
   let current: NoteSectionLike[] = [], rows = 0;
   let derivationTarget: string | undefined;

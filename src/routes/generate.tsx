@@ -73,7 +73,7 @@ import { PenPaperEditor } from "@/components/PenPaperEditor";
 import { usePenNotes, getPenNotes } from "@/lib/pen-notes";
 import PagedNoteSections from "@/components/PagedNoteSections";
 import { GuidedLessonNotes } from "@/components/GuidedLessonNotes";
-import { paginateLectureSections } from "@/lib/lecture-pages";
+import { DEFAULT_LECTURE_ROWS, paginateLectureSections } from "@/lib/lecture-pages";
 import { GuidedNotesPresentation } from "@/components/GuidedNotesPresentation";
 import { downloadLessonPdf } from "@/lib/lesson-pdf";
 import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
@@ -566,7 +566,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const [lectureRowBudgets, setLectureRowBudgets] = useState<Record<number, number>>({});
   const continueOverflowingNotes = useCallback((sourceIndex: number, ratio: number) => {
     setLectureRowBudgets(previous => {
-      const current = previous[sourceIndex] || 18;
+      const current = previous[sourceIndex] || DEFAULT_LECTURE_ROWS;
       const next = Math.max(6, Math.min(current - 1, Math.floor(current / Math.max(1.05, ratio))));
       return next < current ? {...previous, [sourceIndex]: next} : previous;
     });
@@ -578,7 +578,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     const sections = slide.sections?.filter((section) => section.kind !== "diagram" && section.lines.some(line=>line.trim()));
     const fallback = slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...slide.bullets, ...slide.notes];
     const sourceSections = sections?.length ? sections : [{ heading: "Teacher Notes", kind: "bullets", lines: fallback }];
-    const notePages = paginateLectureSections(withPhysicsDimensions(sourceSections as NonNullable<Slide["sections"]>, search.subject || "", slide.title), lectureRowBudgets[sourceIndex] || 18).map((page) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
+    const notePages = paginateLectureSections(withPhysicsDimensions(sourceSections as NonNullable<Slide["sections"]>, search.subject || "", slide.title), lectureRowBudgets[sourceIndex] || DEFAULT_LECTURE_ROWS).map((page) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
       title: slide.title }));
     return notePages;
   }), [slides, search.subject, lectureRowBudgets]);
