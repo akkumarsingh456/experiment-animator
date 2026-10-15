@@ -54,3 +54,9 @@ The committed `CURRICULUM_VISUAL_AUDIT.json` is the historical pre-English-expan
 - Classes 10–12 title lists follow CBSE 2026–27 English Language & Literature / English Core prescribed readers.
 
 Regenerate this report with `EDUPLAN_WRITE_AUDIT=1` when running `tests/curriculum-visual-audit.test.ts`. The report includes each chapter’s unavailable topics and applicable quality constraints.
+
+## Physics dimensional formulas
+
+Every Physics topic must distinguish the dimensions of its named quantities from SI units. Use [M^a L^b T^c], including I for electric current and Θ for temperature where necessary. Never force these independent dimensions into MLT alone. Dimensionless ratios have zero exponents. Memory tips must follow defining relations; dimensional agreement cannot prove a law or determine dimensionless constants.
+
+`physics-dimensions.ts` supplies standard dimensional identities for explicitly named quantities, including existing saved notes when displayed. It does not infer quantities from ambiguous symbols. Unmatched concepts explicitly request a named quantity rather than inventing a chapter dimension. Display the formula, quantity and memory explanation in normal-flow cards with wrapping/overflow containment; include those sections in saved generated notes and exports.

@@ -456,3 +456,10 @@
 .book-preparation-status button { padding:4px 9px;border:1px solid #bdd8e5;border-radius:6px; }
 @media print { .book-preparation-status { display:none; } }
 @media (max-width: 640px) { .book-map-slide { padding: 1rem; } }
+
+/* Dimensional formulas stay in normal flow; long equations scroll within their card. */
+.dimension-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+.dimension-card { min-width: 0; max-width: 100%; padding: 14px 18px; border: 1px solid #bdd4db; border-radius: 10px; background: #edf7f6; break-inside: avoid; overflow-wrap: anywhere; }
+.dimension-expression { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: 10px 0; line-height: 1.8; }
+.dimension-card p { margin: 6px 0 0; line-height: 1.6; }
+@media print { .dimension-card { break-inside: avoid; } }

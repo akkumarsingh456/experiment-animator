@@ -5,6 +5,7 @@ import { normalNoteLabel } from "@/lib/note-labels";
 
 export type GuidedGroup = { heading: string; kind: "prose" | "list" | "formula" | "derivation" | "terms"; lines: string[] };
 const categories: Array<[RegExp, string, GuidedGroup["kind"]]> = [
+  [/^MLT Dimensional Formula$/i, "MLT Dimensional Formula", "list"],
   [/^formula basis\b/i, "Meaning and conditions", "prose"],
   [/^(conditions?|assumptions?|validity)\b/i, "Conditions and assumptions", "list"],
   [/^(limitations?|exceptions?|restrictions?)\b/i, "Limitations and exceptions", "list"],
@@ -67,7 +68,7 @@ export function guidedGroups(sections: NoteSection[] | undefined, fallback: stri
       get(heading, kind).lines.push(term ? `**${term[1]}:** ${body}` : keepLabel ? line : body);
     }
   }
-  const order = ["Learning objectives", "Before you begin", "Understanding the concept", "Key terms and definitions", "How it works — step by step", "Formulas and relations", "Symbols, units and SI units", "Meaning and conditions", "Conditions and assumptions", "Step-by-step derivation", "Limitations and exceptions", "Graphs and trends", "Important points", "Applications", "Worked examples and activities", "Investigate and discuss", "Common misconceptions", "Check your understanding", "Support practice", "Core practice", "Challenge practice", "Answers and explanations", "Remember", "Quick recap", "Exit ticket"];
+  const order = ["Learning objectives", "Before you begin", "Understanding the concept", "Key terms and definitions", "How it works — step by step", "Formulas and relations", "Symbols, units and SI units", "MLT Dimensional Formula", "Meaning and conditions", "Conditions and assumptions", "Step-by-step derivation", "Limitations and exceptions", "Graphs and trends", "Important points", "Applications", "Worked examples and activities", "Investigate and discuss", "Common misconceptions", "Check your understanding", "Support practice", "Core practice", "Challenge practice", "Answers and explanations", "Remember", "Quick recap", "Exit ticket"];
   const rank = (group: GuidedGroup) => { const index = order.indexOf(group.heading); return index < 0 ? 9 : index; };
   return groups.sort((a, b) => rank(a) - rank(b));
 }

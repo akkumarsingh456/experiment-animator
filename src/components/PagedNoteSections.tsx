@@ -1,3 +1,4 @@
+import { withPhysicsDimensions } from "@/lib/physics-dimensions";
 import { MathematicsProse } from "@/components/MathematicsProse";
 import { isMathematics } from "@/lib/mathematics-presentation";
 /**
@@ -59,7 +60,10 @@ function BlockView({ block, showHeading, subject }: { block: NoteBlock; showHead
         >
           {block.lines.map((line, index) => (
             <li key={index} className="pl-[1em] -indent-[1em] [&_.katex-display]:my-[0.15em] [&_.katex-display]:indent-0 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden">
-              {/^(?:\*\*)?(?:formula|equation|relation):/i.test(line) && readableSourceRelation(line) ? (() => {
+              {block.heading === "MLT Dimensional Formula" && line.split(" | ").length === 3 ? (() => {
+                const [quantity, expression, remember] = line.split(" | ");
+                return <div className="dimension-card" style={{textIndent: 0}}><strong>{quantity}</strong><div className="dimension-expression"><MathText text={expression} /></div><p><b>Remember: </b>{remember}</p></div>;
+              })() : /^(?:\*\*)?(?:formula|equation|relation):/i.test(line) && readableSourceRelation(line) ? (() => {
                 const row = guidedFormulaRow(line.replace(/^\*\*[^*]+:\*\*\s*/, ""));
                 return <div className="note-formula-card"><strong><MathText text={row.concept} /></strong><div><MathText text={row.expression} /></div>{row.unit && <small>Unit: <MathText text={row.unit} /></small>}</div>;
               })() : <>• {isMathematics(subject) ? <MathematicsProse text={line} /> : <MathText text={line} />}</>}
@@ -84,7 +88,7 @@ export function PagedNoteSections({
   header?: React.ReactNode;
   subject?: string;
 }) {
-  const blocks = useMemo(() => toNoteBlocks(groupNoteLabels(sections)), [sections]);
+  const blocks = useMemo(() => toNoteBlocks(groupNoteLabels(withPhysicsDimensions(sections as import("@/lib/ncert-teacher-notes").NoteSection[] | undefined, subject || ""))), [sections, subject]);
   const maxPx = scale === "present" ? 22 : 18;
   const boxRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
