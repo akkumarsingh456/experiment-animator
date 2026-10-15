@@ -8,6 +8,7 @@ function lineRows(line: string, heading: string): number {
     const [quantity, , memory] = line.split(" | ");
     return 5 + Math.ceil(quantity.length / 65) + Math.ceil(memory.length / 65);
   }
+  if (heading === "Problem-solving formula reference") return 5 + Math.ceil(plain.length / 85);
   const formula = /^\s*\*{0,2}(formula|equation|relation|derivation)/i.test(line);
   return Math.max(1, Math.ceil(plain.length / 65)) + (formula ? 3 : 0) + 0.5;
 }
@@ -37,7 +38,7 @@ export function paginateLectureSections(sections: NoteSectionLike[] | undefined,
   const flush = () => { if (current.length) pages.push(current); current = []; rows = 0; };
   for (const section of sections || []) {
     // Cards and equations remain atomic; prose may continue at sentence boundaries.
-    const lines = section.lines.flatMap(line => section.heading === "MLT Dimensional Formula" || section.kind === "diagram" ? [line] : prosePoints(line).flatMap(continuationLines));
+    const lines = section.lines.flatMap(line => section.heading === "MLT Dimensional Formula" || section.heading === "Problem-solving formula reference" || section.kind === "diagram" ? [line] : prosePoints(line).flatMap(continuationLines));
     for (const line of lines) {
       const isStep = /^\s*\*\*derivation step/i.test(line);
       if (/^\s*\*\*derivation of/i.test(line)) derivationTarget = line;

@@ -60,7 +60,10 @@ function BlockView({ block, showHeading, subject }: { block: NoteBlock; showHead
         >
           {block.lines.map((line, index) => (
             <li key={index} className="pl-[1em] -indent-[1em] [&_.katex-display]:my-[0.15em] [&_.katex-display]:indent-0 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden">
-              {(block.heading === "Source table — original extracted entries" || block.heading === "Source review — original extraction") ? <div className="source-table-entry"><MathText text={line} /></div> : block.heading === "MLT Dimensional Formula" && line.split(" | ").length === 3 ? (() => {
+              {block.heading === "Problem-solving formula reference" ? (() => {
+                const [name, expression, use] = line.split(" | ");
+                return <div className="physics-reference-row"><strong>{name}</strong><div className="physics-reference-equation"><MathText text={expression || line} /></div><p><MathText text={use || ""} /></p></div>;
+              })() : (block.heading === "Source table — original extracted entries" || block.heading === "Source review — original extraction") ? <div className="source-table-entry"><MathText text={line} /></div> : block.heading === "MLT Dimensional Formula" && line.split(" | ").length === 3 ? (() => {
                 const [quantity, expression, remember] = line.split(" | ");
                 return <div className="dimension-card" style={{textIndent: 0}}><strong>{quantity}</strong><div className="dimension-expression"><MathText text={expression} /></div><p><b>Remember: </b>{remember}</p></div>;
               })() : /^(?:\*\*)?(?:formula|equation|relation):/i.test(line) && readableSourceRelation(line) ? (() => {

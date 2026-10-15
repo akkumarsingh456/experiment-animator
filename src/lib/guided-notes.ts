@@ -5,6 +5,7 @@ import { normalNoteLabel } from "@/lib/note-labels";
 
 export type GuidedGroup = { heading: string; kind: "prose" | "list" | "formula" | "derivation" | "terms"; lines: string[] };
 const categories: Array<[RegExp, string, GuidedGroup["kind"]]> = [
+  [/^Problem-solving formula reference$/i, "Problem-solving formula reference", "formula"],
   [/^Source table — original extracted entries$/i, "Source table — original extracted entries", "list"],
   [/^MLT Dimensional Formula$/i, "MLT Dimensional Formula", "list"],
   [/^formula basis\b/i, "Meaning and conditions", "prose"],

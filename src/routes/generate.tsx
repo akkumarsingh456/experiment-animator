@@ -1,3 +1,4 @@
+import { withPhysicsFormulaReference } from "@/lib/physics-formula-reference";
 import { sequenceChemistryNotes } from "@/lib/chemistry-note-sequence";
 import { LessonCover } from "@/components/LessonCover";
 import { withPhysicsDimensions } from "@/lib/physics-dimensions";
@@ -292,7 +293,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         lines: recovered.length ? recovered : [missing] }],
         caption: recovered.length ? (slide.caption?.includes('No readable topic evidence') ? 'Recovered from saved lesson source text.' : slide.caption) : 'Source text needs attention for this topic.' };
     });
-    return [makeCoverSlide(), ...repaired.map(slide => mathematicsPresentationSlide(slide, result.source_books[0]?.subject || search.subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(slide.sections, search.subject || "", search.chapter || slide.title)}))];
+    return [makeCoverSlide(), ...withPhysicsFormulaReference(repaired, search.klass, search.subject, search.chapter || title).map(slide => mathematicsPresentationSlide(slide, result.source_books[0]?.subject || search.subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(slide.sections, search.subject || "", search.chapter || slide.title)}))];
   };
   const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
   useEffect(()=>{const refresh=()=>setSlides(current=>[...current]);window.addEventListener('manual-visual-saved',refresh);void loadManualVisuals().catch(()=>{});return()=>window.removeEventListener('manual-visual-saved',refresh);},[]);
@@ -1136,7 +1137,7 @@ function SlideCanvas({
   imageUrl = renderLessonIllustrationDataUrl({ ...slide, keyTerms: slide.key_terms, chapter, subject, slideIndex: sourceIndex });
   const illustrationCaption=lessonIllustrationCaption(slide.title,subject,{...slide,keyTerms:slide.key_terms,chapter});
   const kind = slide.kind === "chapter" && slide.sections?.length ? "content" : slide.kind || "content";
-  const lang = isLanguageSubject(subject);
+  const lang = isLanguageSubject(subject) || slide.visual === "formula-reference";
   const bookFigurePage = slide.sections?.some(section => section.heading === "Book structure and explanation") && slide.reference_visuals?.some(figure => figure.url);
   const v = slide.verification;
   const vTone = !v ? "" :

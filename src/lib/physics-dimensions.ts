@@ -57,7 +57,7 @@ const quantities: Array<{name: string; pattern: RegExp; dimension: string; remem
 
 export function withPhysicsDimensions(sections: NoteSection[] | undefined, subject: string, title = ""): NoteSection[] {
   const existing = sections || [];
-  if (!/^physics$/i.test(subject) || existing.some(s => s.heading === "MLT Dimensional Formula")) return existing;
+  if (!/^physics$/i.test(subject) || existing.some(s => s.heading === "MLT Dimensional Formula" || s.heading === "Problem-solving formula reference")) return existing;
   const text = [title, ...existing.flatMap(s => s.lines)].join(" ");
   if (!text.trim()) return existing;
   const matches = quantities.filter(q => q.pattern.test(text)).filter(q => {

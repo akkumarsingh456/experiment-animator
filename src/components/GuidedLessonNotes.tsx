@@ -1,3 +1,4 @@
+import { withPhysicsFormulaReference } from "@/lib/physics-formula-reference";
 import { sequenceChemistryNotes } from "@/lib/chemistry-note-sequence";
 import { LessonCover } from "@/components/LessonCover";
 import { withPhysicsDimensions } from "@/lib/physics-dimensions";
@@ -20,7 +21,7 @@ function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }
     {(group.heading === "Source table — original extracted entries" || group.heading === "Source review — original extraction") ? <div className="source-table-entries">{group.lines.map((line, i) => <div className="source-table-entry" key={i}><MathText text={line} /></div>)}</div> : group.heading === "MLT Dimensional Formula" ? <div className="dimension-cards">{group.lines.map((line, i) => {
       const cells = line.split(" | ");
       return cells.length === 3 ? <div className="dimension-card" key={i}><strong>{cells[0]}</strong><div className="dimension-expression"><MathText text={cells[1]} /></div><p><b>Remember: </b>{cells[2]}</p></div> : <p key={i}><MathText text={line} /></p>;
-    })}</div> : group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula / relation</th><th>Unit / SI unit</th></tr></thead><tbody>
+    })}</div> : group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula / relation</th><th>{group.heading === "Problem-solving formula reference" ? "Symbols, conditions & use" : "Unit / SI unit"}</th></tr></thead><tbody>
       {group.lines.map((line, i) => { const row = guidedFormulaRow(line); return <tr key={i}><td><MathText text={row.concept} /></td><td><MathText text={row.expression} /></td><td><MathText text={row.unit} /></td></tr>; })}
     </tbody></table></div> : group.kind === "prose" && group.lines.length === 1 ? group.lines.map((line, i) => isMathematics(subject) ? <div className="mathematics-prose" key={i}><MathematicsProse text={line} /></div> : <p key={i}><MathText text={line} /></p>) :
       group.kind === "derivation" ? <FormulaDerivation lines={group.lines} /> :
@@ -29,7 +30,7 @@ function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }
 }
 
 export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks = false, includeCover = false }: { slides: Slide[]; title: string; subject?: string; klass?: string; includeBreaks?: boolean; includeCover?: boolean }) {
-  slides = slides.map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(withPhysicsDimensions(slide.sections, subject || "", slide.title), subject || "", title)}));
+  slides = withPhysicsFormulaReference(slides, klass || "", subject || "", slides.find(slide => slide.visual === "cover")?.title || title).map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(withPhysicsDimensions(slide.sections, subject || "", slide.title), subject || "", title)}));
   const content = slides.filter((slide) => (slide.kind ?? "content") === "content" || slide.kind === "chapter" || (includeBreaks && slide.kind === "break"));
   const questions = slides.flatMap((slide) => slide.mcq ? [slide.mcq] : []);
   const topicGroups = uniqueTopicGroups(content.map((slide) => guidedGroups(slide.sections, slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...(slide.bullets || []), ...(slide.notes || [])])));
