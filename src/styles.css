@@ -749,3 +749,40 @@
 .edu-preview-controls button:focus-visible { outline: 2px solid #977332; outline-offset: 2px; }
 .edu-preview-controls span { font-size: 13px; }
 @media (max-width: 720px) { .edu-home .edu-header nav { font-size: 13px; } .lesson-builder .lesson-subtopics label { font-size: 16px; } .edu-paper-top small { font-size: 11px; } }
+
+/* Select menus render in a portal, outside the lesson-builder container. */
+.lesson-builder-menu {
+  background: #fffef9;
+  color: #29493f;
+  border: 1px solid #cdd8cb;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px #29493f18;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  scrollbar-color: #a6b79d #f3f4eb;
+}
+.lesson-builder-menu [role=option] {
+  min-height: 44px;
+  padding: 10px 34px 10px 12px;
+  border-radius: 5px;
+  color: #29493f;
+  font-size: 16px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.lesson-builder-menu [role=option][data-state=checked] {
+  background: #e7eedf;
+  color: #2f543d;
+  font-weight: 600;
+}
+.lesson-builder-menu [role=option][data-highlighted],
+.lesson-builder-menu [role=option]:focus-visible {
+  background: #dce8d5;
+  color: #244b35;
+  box-shadow: inset 3px 0 #6d896c;
+}
+.lesson-builder-menu [role=option][data-disabled] {
+  color: #788473;
+  background: transparent;
+  box-shadow: none;
+}

@@ -147,7 +147,7 @@ function GeneratorBlock() {
             <label className="text-xs font-medium text-muted-foreground">Class</label>
             <Select value={klass} onValueChange={setKlass}>
               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="lesson-builder-menu">
                 {CLASSES.map((c) => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -156,7 +156,7 @@ function GeneratorBlock() {
             <label className="text-xs font-medium text-muted-foreground">Subject</label>
             <Select value={subject} onValueChange={setSubject}>
               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="lesson-builder-menu">
                 {subjects.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -175,7 +175,7 @@ function GeneratorBlock() {
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select a chapter from the NCERT syllabus" />
                 </SelectTrigger>
-                <SelectContent className="max-h-72">
+                <SelectContent className="lesson-builder-menu max-h-72">
                   {subject === "English" ? [...new Set((ENGLISH_CHAPTERS[klass] || []).map(c => c.book))].map(book => (
                     <SelectGroup key={book}>
                       <SelectLabel>{book}</SelectLabel>
