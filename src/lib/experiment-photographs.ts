@@ -26,13 +26,12 @@ function lines(ctx:CanvasRenderingContext2D,text:string,x:number,y:number,width:
   ctx.fillText(line,x,y+row*size*1.4);return y+(row+1)*size*1.4;
 }
 const procedureCanvases=new WeakMap<HTMLCanvasElement,HTMLCanvasElement>();
-/** Procedure animation remains the main view; real photographs identify the tools. */
-export function drawPhotographicExperiment(canvas:HTMLCanvasElement,activity:ExperimentActivity,scene:number,phase:number,images:PhotoImages){
-  const photos=apparatusPhotos(activity).filter(photo=>images.has(photo.id)).slice(0,4);
+/** Procedure animation and English subtitles, without a photo reference strip. */
+export function drawPhotographicExperiment(canvas:HTMLCanvasElement,activity:ExperimentActivity,scene:number,phase:number,_images:PhotoImages){
   let procedure=procedureCanvases.get(canvas);
   if(!procedure){procedure=document.createElement('canvas');procedureCanvases.set(canvas,procedure);}
   drawExperiment(procedure,activity,scene,phase);
-  canvas.width=1280;canvas.height=photos.length?940:780;
+  canvas.width=1280;canvas.height=780;
   const ctx=canvas.getContext('2d');if(!ctx)return;
   ctx.drawImage(procedure,0,0);
   // Burn English subtitles into the saved video as well as on-screen playback.
@@ -41,15 +40,4 @@ export function drawPhotographicExperiment(canvas:HTMLCanvasElement,activity:Exp
   const subtitle=chunks[Math.min(chunks.length-1,Math.floor(phase/5))].trim();
   ctx.fillStyle='#102b43';ctx.fillRect(0,720,1280,60);ctx.fillStyle='#fff';
   lines(ctx,`English subtitles · ${subtitle}`,25,744,1230,18);
-  if(!photos.length)return;
-  ctx.fillStyle='#f1f5f9';ctx.fillRect(0,780,1280,160);
-  ctx.fillStyle='#244454';ctx.font='bold 15px Arial';ctx.fillText('REAL EQUIPMENT · identification reference (animated procedure above)',24,802);
-  photos.forEach((photo,index)=>{
-    const x=24+index*310,image=images.get(photo.id)!;
-    const scale=Math.min(95/image.width,94/image.height);
-    ctx.drawImage(image,x,816,image.width*scale,image.height*scale);
-    ctx.fillStyle='#12384b';lines(ctx,photo.label,x+105,834,195,15);
-    ctx.fillStyle='#526473';lines(ctx,`${photo.author} · ${photo.license}`,x+105,874,195,10);
-  });
-  ctx.font='11px Arial';ctx.fillText('Photo sources below player. Animation illustrates the source procedure; actual laboratory results may vary.',24,932);
 }

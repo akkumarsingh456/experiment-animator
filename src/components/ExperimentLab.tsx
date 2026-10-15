@@ -13,10 +13,6 @@ function usePhotos(activity: ExperimentActivity) {
   useEffect(()=>{let active=true;setReady(false);setImages(new Map());loadApparatusPhotos(apparatusPhotos(activity)).then(loaded=>{if(active){setImages(loaded);setReady(true);}});return()=>{active=false;};},[activity]);
   return {images,ready};
 }
-function PhotoCredits({activity}:{activity:ExperimentActivity}) {
- const photos=apparatusPhotos(activity);
- return photos.length?<details className="rounded-xl border bg-white p-4 text-xs"><summary className="cursor-pointer font-medium">Real photograph sources & licences ({photos.length})</summary><p className="my-2">Original equipment photographs from Wikimedia Commons. Images are fitted without changing their scientific content. Apparatus models can differ from your school laboratory.</p>{photos.map(photo=><p className="mt-2" key={photo.id}><a className="text-primary underline" href={photo.source} target="_blank" rel="noopener noreferrer">{photo.label}</a> — {photo.author} · <a className="underline" href={photo.licenseUrl} target="_blank" rel="noopener noreferrer">{photo.license}</a></p>)}</details>:null;
-}
 
 function saveBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href=url;link.download=filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
@@ -31,7 +27,6 @@ function Frame({ activity, step }: { activity: ExperimentActivity; step: number 
 
 function ExperimentPlayer({ activity }: { activity: ExperimentActivity }) {
   const {images,ready}=usePhotos(activity);
-  const photographic=images.size>0;
   const canvas=useRef<HTMLCanvasElement>(null), recorder=useRef<MediaRecorder|null>(null), stream=useRef<MediaStream|null>(null);
   const [playing,setPlaying]=useState(false),[elapsed,setElapsed]=useState(0),[speed,setSpeed]=useState(1),[voice,setVoice]=useState(false),[recording,setRecording]=useState(false),[error,setError]=useState('');
   const durations=useMemo(()=>[...activity.steps.map(step=>step.description),activity.observation].map(text=>Math.max(8,Math.ceil(text.split(/\s+/).length/2.4))),[activity]);
@@ -84,7 +79,7 @@ function ExperimentPlayer({ activity }: { activity: ExperimentActivity }) {
       <button className="ml-auto inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm" disabled={recording||!ready} onClick={record}><Download size={16}/>{recording?'Saving as it plays…':'Save animation video'}</button>
       {recording&&<button className="text-sm underline" onClick={()=>{recorder.current?.stop();setPlaying(false);}}>Finish clip now</button>}
     </div>
-    <div className="px-4 pb-4"><input aria-label="Animation position" className="w-full" type="range" min={0} max={total} step={.1} value={elapsed} disabled={recording||!ready} onChange={event=>{const value=Number(event.target.value);setElapsed(value);state.current.elapsed=value;}}/><p className="text-xs text-muted-foreground">{Math.floor(elapsed)} / {total}s · Animated procedure with English subtitles{photographic?' and real equipment references':''}. This is an instructional animation. Saved WebM includes captions; browser read-aloud is not recorded.</p>{error&&<p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}</div>
+    <div className="px-4 pb-4"><input aria-label="Animation position" className="w-full" type="range" min={0} max={total} step={.1} value={elapsed} disabled={recording||!ready} onChange={event=>{const value=Number(event.target.value);setElapsed(value);state.current.elapsed=value;}}/><p className="text-xs text-muted-foreground">{Math.floor(elapsed)} / {total}s · Animated procedure with English subtitles. This is an instructional animation. Saved WebM includes captions; browser read-aloud is not recorded.</p>{error&&<p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}</div>
     <div className="flex flex-wrap gap-2 border-t bg-slate-50 p-3">{[...activity.steps.map(step=>step.title),'Observe & explain'].map((title,index)=><button key={index} disabled={recording||!ready} className={`rounded-lg border px-3 py-2 text-xs ${index===scene?'bg-primary text-primary-foreground':'bg-white'}`} onClick={()=>{setElapsed(starts[index]);state.current.elapsed=starts[index];setPlaying(true);}}>{index+1}. {title}</button>)}</div>
   </div>;
 }
@@ -110,7 +105,6 @@ export function ExperimentLab({ activities, topic, klass, subject, chapter }: { 
         <details className="mt-4 border-t pt-4 text-sm"><summary className="cursor-pointer font-medium">Source and procedure evidence</summary><p className="mt-2 text-muted-foreground">{activity.procedure_source==='manual'?'This reviewed supplement is linked to the NCERT laboratory manual; it is not claimed to have been extracted from your uploaded chapter.':'Procedure steps are selected from one matched textbook activity. Missing results are labelled explicitly.'}</p>{activity.source_excerpt&&<p className="mt-3 max-h-60 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-3">{activity.source_excerpt}</p>}<a className="mt-3 inline-flex items-center gap-2 text-primary underline" href={activity.source_url||NCERT_LABS} target="_blank" rel="noopener noreferrer"><BookOpen size={16}/>{activity.source_url?'Open matching NCERT manual':'NCERT manuals & recorded demonstrations'}</a></details>
       </article>
       <ExperimentPlayer key={`${selected}:${activity.name}`} activity={activity}/>
-      <PhotoCredits activity={activity}/>
     </>}
     <ExperimentVideos klass={klass} subject={subject} chapter={chapter} topic={topic} activity={activity?.name}/>
   </section>;
