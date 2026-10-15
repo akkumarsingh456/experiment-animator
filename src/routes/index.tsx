@@ -87,7 +87,7 @@ function GeneratorBlock() {
   const lang = isLang(subject);
 
   // Every dropdown is driven strictly by the built-in NCERT syllabus.
-  const subjects = useMemo(() => subjectsForClass(klass), [klass]);
+  const subjects = useMemo(() => subjectsForClass(klass).filter((name) => !LANGUAGE_SUBJECTS.includes(name)), [klass]);
   const chapters = useMemo(() => chaptersFor(klass, subject), [klass, subject]);
   const subOptions = useMemo(
     () => (chapter ? subtopicsFor(klass, subject, chapter) : []),
