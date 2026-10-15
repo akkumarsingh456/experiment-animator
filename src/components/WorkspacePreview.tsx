@@ -1,5 +1,5 @@
 import {useEffect,useState} from "react";
-import {BookOpen,PencilLine,ChevronLeft,ChevronRight,Pause,Play} from "lucide-react";
+import {BookOpen,PencilLine} from "lucide-react";
 const examples=[
  {subject:"Physics",title:"Current electricity",kind:"circuit",caption:"A cell, an open switch and a resistor",steps:["Identify the circuit components","Trace the conducting path","Connect voltage, current and resistance","Explain why an open switch stops current"]},
  {subject:"Mathematics",title:"Right-angled triangles",kind:"triangle",caption:"The hypotenuse lies opposite the right angle",steps:["Identify the right angle","Label the two perpendicular sides","Use a² + b² = c²","Check the result and its units"]},
@@ -24,13 +24,13 @@ function Sketch({kind}:{kind:string}){
  </g></svg>;
 }
 export function WorkspacePreview(){
- const [index,setIndex]=useState(0),[playing,setPlaying]=useState(true),[interacting,setInteracting]=useState(false);
- useEffect(()=>{let previous=-1;try{previous=Number(sessionStorage.getItem('edu-workspace-preview')??-1);}catch{}let next=Math.floor(Math.random()*examples.length);if(next===previous)next=(next+1)%examples.length;setIndex(next);try{sessionStorage.setItem('edu-workspace-preview',String(next));}catch{}if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)setPlaying(false);},[]);
- useEffect(()=>{if(!playing||interacting)return;const timer=window.setInterval(()=>{if(document.hidden)return;setIndex(value=>(value+1)%examples.length);},10000);return()=>clearInterval(timer);},[playing,interacting]);
+ const [index,setIndex]=useState(0);
+ useEffect(()=>{let previous=-1;try{previous=Number(sessionStorage.getItem('edu-workspace-preview')??-1);}catch{}let next=Math.floor(Math.random()*examples.length);if(next===previous)next=(next+1)%examples.length;setIndex(next);try{sessionStorage.setItem('edu-workspace-preview',String(next));}catch{}},[]);
+ useEffect(()=>{const timer=window.setInterval(()=>setIndex(value=>(value+1)%examples.length),10000);return()=>clearInterval(timer);},[]);
  useEffect(()=>{try{sessionStorage.setItem('edu-workspace-preview',String(index));}catch{}},[index]);
  const example=examples[index];
- return <aside className="edu-desk" aria-label="Illustrated examples of an organised lesson" onMouseEnter={()=>setInteracting(true)} onMouseLeave={()=>setInteracting(false)} onFocusCapture={()=>setInteracting(true)} onBlurCapture={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setInteracting(false);}}>
+ return <aside className="edu-desk" aria-label="Illustrated examples of an organised lesson">
  <span className="edu-tape" aria-hidden="true"/><div className="edu-desk-label">A LOOK INSIDE THE WORKSPACE</div><div className="edu-paper"><div className="edu-paper-top"><BookOpen size={20}/><span>{example.subject}</span><small>Illustrative example</small></div><h2>{example.title}</h2><p className="edu-hand">One concept. A clear explanation.</p><div className="edu-paper-rule"/><Sketch kind={example.kind}/><p className="edu-preview-caption">{example.caption}</p><ol className="edu-sample-outline">{example.steps.map((step,i)=><li key={step}><span>{String(i+1).padStart(2,'0')}</span>{step}</li>)}</ol></div>
- <div className="edu-preview-controls" aria-label="Workspace example controls"><button aria-label="Previous example" onClick={()=>setIndex(value=>(value+examples.length-1)%examples.length)}><ChevronLeft size={18}/></button><span>{index+1} / {examples.length}</span><button aria-label={playing?'Pause examples':'Play examples'} aria-pressed={playing} onClick={()=>setPlaying(value=>!value)}>{playing?<Pause size={17}/>:<Play size={17}/>}</button><button aria-label="Next example" onClick={()=>setIndex(value=>(value+1)%examples.length)}><ChevronRight size={18}/></button></div><div className="edu-desk-note"><PencilLine size={20}/><span>Review it.<br/>Make it your lesson.</span></div><div className="edu-pencil" aria-hidden="true"/>
+ <div className="edu-desk-note"><PencilLine size={20}/><span>Review it.<br/>Make it your lesson.</span></div><div className="edu-pencil" aria-hidden="true"/>
  </aside>;
 }
