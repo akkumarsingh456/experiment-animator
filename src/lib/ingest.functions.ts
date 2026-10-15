@@ -1,3 +1,4 @@
+import { requireLibraryAdmin } from "@/lib/library-auth";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { medEasyLibraryMetadata } from "@/lib/reference-books";
@@ -5,7 +6,7 @@ import { medEasyLibraryMetadata } from "@/lib/reference-books";
 const BUCKET = "ncert-pdfs";
 
 /** Repair all existing copies of the four combined Med Easy volumes. */
-export const classifyMedEasyLibrary = createServerFn({ method: "POST" })
+export const classifyMedEasyLibrary = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: books, error } = await supabaseAdmin.from("ncert_books").select("id,class,subject,file_name,chapter").or("file_name.ilike.%MED EASY%,file_name.ilike.%MEDEASY%").limit(500);
@@ -21,12 +22,14 @@ export const classifyMedEasyLibrary = createServerFn({ method: "POST" })
     return { updated };
   });
 
-export const createUploadTicket = createServerFn({ method: "POST" })
+export const createUploadTicket = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
   .inputValidator((d: unknown) =>
-    z.object({ path: z.string().min(1) }).parse(d),
+    z.object({ path: z.string().min(1).max(500).regex(/^[a-zA-Z0-9_./-]+\.pdf$/i).refine(path => !path.includes("..") && !path.startsWith("/")) }).parse(d),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const {data: existing} = await supabaseAdmin.from("ncert_books").select("id").eq("storage_path",data.path).maybeSingle();
+    if(existing)throw new Error("An existing original PDF cannot be overwritten. Upload a new file instead.");
     const { data: ticket, error } = await supabaseAdmin.storage
       .from(BUCKET)
       .createSignedUploadUrl(data.path);
@@ -34,7 +37,7 @@ export const createUploadTicket = createServerFn({ method: "POST" })
     return { path: data.path, token: ticket.token, signedUrl: ticket.signedUrl };
   });
 
-export const signDownload = createServerFn({ method: "POST" })
+export const signDownload = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
   .inputValidator((d: unknown) =>
     z.object({ path: z.string().min(1), expiresIn: z.number().int().positive().optional() }).parse(d),
   )
@@ -42,15 +45,16 @@ export const signDownload = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: signed, error } = await supabaseAdmin.storage
       .from(BUCKET)
-      .createSignedUrl(data.path, data.expiresIn ?? 60 * 60 * 24 * 365);
+      .createSignedUrl(data.path, Math.min(data.expiresIn ?? 300, 300));
     if (error || !signed) throw new Error(error?.message || "Failed to sign download URL");
     return { signedUrl: signed.signedUrl };
   });
 
-export const insertBook = createServerFn({ method: "POST" })
+export const insertBook = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
   .inputValidator((d: unknown) =>
     z
       .object({
+        source_kind: z.enum(["ncert", "reference"]).default("reference"),
         klass: z.string().min(1),
         subject: z.string().min(1),
         chapter: z.string().min(1),
@@ -66,19 +70,24 @@ export const insertBook = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const {data: existing} = await supabaseAdmin.from("ncert_books").select("id").eq("storage_path",data.storage_path).maybeSingle();
+    if(existing)throw new Error("This PDF is already recorded. Existing originals cannot be replaced.");
     const metadata = medEasyLibraryMetadata({ class: data.klass, subject: data.subject, file_name: data.file_name, chapter: data.chapter });
     const { data: row, error } = await supabaseAdmin
       .from("ncert_books")
       .insert({
+        source_kind: data.source_kind,
+        approved_by: data.source_kind === "ncert" ? context.libraryUser.id : null,
+        approved_at: data.source_kind === "ncert" ? new Date().toISOString() : null,
         class: metadata.class,
         subject: metadata.subject,
         chapter: data.chapter,
         file_name: data.file_name,
         file_size: data.file_size,
         storage_path: data.storage_path,
-        download_url: data.download_url ?? null,
+        download_url: null,
         num_pages: data.num_pages,
         num_chunks: data.num_chunks,
         full_text: (data.full_text || "").slice(0, 1_000_000),
@@ -92,7 +101,7 @@ export const insertBook = createServerFn({ method: "POST" })
     return { id: row.id as string };
   });
 
-export const insertPages = createServerFn({ method: "POST" })
+export const insertPages = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -120,7 +129,7 @@ export const insertPages = createServerFn({ method: "POST" })
     return { inserted: rows.length };
   });
 
-export const insertChunks = createServerFn({ method: "POST" })
+export const insertChunks = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
   .inputValidator((d: unknown) =>
     z
       .object({

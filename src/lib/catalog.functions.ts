@@ -3,12 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 
-function supa() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
+async function supa() {
+ const {supabaseAdmin}=await import("@/integrations/supabase/client.server");return supabaseAdmin;
 }
 
 // Map form values ("10", "Science") to stored values ("Class 10", subject aliases).
@@ -64,13 +60,13 @@ export const listChapters = createServerFn({ method: "POST" })
     z.object({ klass: z.string(), subject: z.string() }).parse(d),
   )
   .handler(async ({ data }) => {
-    const db = supa();
+    const db = await supa();
     const classes = classCandidates(data.klass);
     const subjects = subjectCandidates(data.subject);
     if (!classes.length || !subjects.length) return { chapters: [] as Array<{ label: string; raw: string }> };
 
     const { data: rows, error } = await (db as any)
-      .from("ncert_books")
+      .from("ncert_books").eq("source_kind", "ncert")
       .select("chapter, file_name")
       .in("class", classes)
       .in("subject", subjects)
@@ -106,13 +102,13 @@ export const listSubtopics = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const db = supa();
+    const db = await supa();
     const classes = classCandidates(data.klass);
     const subjects = subjectCandidates(data.subject);
     if (!classes.length || !subjects.length) return { subtopics: [] as string[] };
 
     let q = (db as any)
-      .from("ncert_books")
+      .from("ncert_books").eq("source_kind", "ncert")
       .select("id, chapter, file_name")
       .in("class", classes)
       .in("subject", subjects)

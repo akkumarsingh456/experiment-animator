@@ -1,9 +1,10 @@
+import { requireLibraryAdmin } from "@/lib/library-auth";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { combinedReferenceSubject } from "@/lib/reference-books";
 import { encodeReferenceVisuals, splitReferenceContent, type ReferenceVisual } from "@/lib/reference-visuals";
 
-export const saveExtractedReferencePage = createServerFn({ method: "POST" })
+export const saveExtractedReferencePage = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
   .inputValidator((raw: unknown) => z.object({ book_id: z.string().uuid(), page: z.number().int().positive(), text: z.string().max(100_000) }).parse(raw))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -15,7 +16,7 @@ export const saveExtractedReferencePage = createServerFn({ method: "POST" })
     return { saved: true };
   });
 
-export const readScannedPage = createServerFn({ method: "POST" })
+export const readScannedPage = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
   .inputValidator((raw: unknown) => z.object({ image: z.string().max(8_000_000).regex(/^data:image\/jpeg;base64,/), page: z.number().int().positive(), book_id: z.string().uuid().optional(), source_path: z.string().max(500).regex(/^[a-zA-Z0-9_./-]+\.pdf$/i).refine(path => !path.includes(".."), "Invalid source path").optional(), aspect: z.number().positive().max(5).optional(), chapter_hint: z.string().max(200).optional(), source_file_name: z.string().max(500).optional() }).parse(raw))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -67,7 +68,7 @@ export const readScannedPage = createServerFn({ method: "POST" })
     return pageContent;
   });
 
-export const finishReferenceReading = createServerFn({ method: "POST" })
+export const finishReferenceReading = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
   .inputValidator((raw: unknown) => z.object({ book_id: z.string().uuid(), num_pages: z.number().int().positive() }).parse(raw))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

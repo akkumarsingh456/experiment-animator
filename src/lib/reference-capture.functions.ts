@@ -1,3 +1,4 @@
+import { requireLibraryAdmin } from "@/lib/library-auth";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { combinedReferenceSubject } from "@/lib/reference-books";
@@ -5,7 +6,7 @@ import { indexLocalBookPage } from "@/lib/local-book-index";
 import { encodeReferenceVisuals, splitReferenceContent, type ReferenceVisual } from "@/lib/reference-visuals";
 
 /** Save an exact PDF raster and locally read indexing metadata. No AI gateway. */
-export const saveCapturedReferencePage = createServerFn({ method: "POST" })
+export const saveCapturedReferencePage = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
   .inputValidator((raw: unknown) => z.object({
     image: z.string().max(8_000_000).regex(/^data:image\/jpeg;base64,/),
     page: z.number().int().positive(), aspect: z.number().positive().max(5),

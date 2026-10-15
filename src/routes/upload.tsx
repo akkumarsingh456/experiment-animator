@@ -1,3 +1,4 @@
+import { LibraryAccessGate } from "@/components/LibraryAccessGate";
 import { encodeReferenceVisuals, splitReferenceContent } from "@/lib/reference-visuals";
 import { prepareScannedReferenceBooks, type ReferenceReadSummary } from "@/lib/prepare-reference-books";
 import {invalidateBookPreparation} from '@/lib/book-preparation';
@@ -64,7 +65,7 @@ export const Route = createFileRoute("/upload")({
       },
     ],
   }),
-  component: UploadPage,
+  component: () => <LibraryAccessGate><UploadPage /></LibraryAccessGate>,
 });
 
 const CLASSES = ["Class 9", "Class 10", "Class 11", "Class 12"] as const;
@@ -93,6 +94,7 @@ type LibraryBook = {
 
 function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [officialNcert, setOfficialNcert] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [klass, setKlass] = useState<string>("");
   const [subject, setSubject] = useState<string>("");
@@ -372,6 +374,7 @@ function UploadPage() {
       try {
         const r = await insertBook({
           data: {
+            source_kind: officialNcert ? "ncert" : "reference",
             klass: meta.klass,
             subject: meta.subject,
             chapter: safeChapter,
@@ -751,6 +754,7 @@ function UploadPage() {
               <CardTitle className="text-lg">1. Book details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
+              <label className="flex items-start gap-3 rounded-md border border-border p-3 text-sm"><input type="checkbox" checked={officialNcert} onChange={event=>setOfficialNcert(event.target.checked)} /><span>I have checked that every selected file is an official NCERT textbook. Only verified NCERT sources are used to create notes. Leave unchecked for reference books.</span></label>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Class</Label>

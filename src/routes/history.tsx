@@ -1,3 +1,5 @@
+import { approveNcertSource } from "@/lib/library-access.functions";
+import { LibraryAccessGate } from "@/components/LibraryAccessGate";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -40,12 +42,13 @@ export const Route = createFileRoute("/history")({
       },
     ],
   }),
-  component: HistoryPage,
+  component: () => <LibraryAccessGate><HistoryPage /></LibraryAccessGate>,
 });
 
 const BUCKET = "ncert-pdfs";
 
 type Row = {
+  source_kind?: string;
   id: string;
   class: string;
   subject: string;
@@ -76,7 +79,7 @@ function HistoryPage() {
     const { data } = await supabase
       .from("ncert_books")
       .select(
-        "id, class, subject, chapter, file_name, file_size, storage_path, download_url, num_pages, num_chunks, status, created_at",
+        "id, source_kind, class, subject, chapter, file_name, file_size, storage_path, download_url, num_pages, num_chunks, status, created_at",
       )
       .order("created_at", { ascending: false })
       .limit(500);
@@ -113,10 +116,6 @@ function HistoryPage() {
 
   const openFile = useCallback(
     async (row: Row) => {
-      if (row.download_url) {
-        window.open(row.download_url, "_blank", "noopener,noreferrer");
-        return;
-      }
       setSigning(row.id);
       try {
         const { signedUrl } = await signDownload({ data: { path: row.storage_path } });
@@ -270,6 +269,7 @@ function HistoryPage() {
                             {new Date(r.created_at).toLocaleString()}
                           </td>
                           <td className="px-3 py-2 text-right whitespace-nowrap">
+                            {r.source_kind === "ncert" ? <p className="text-xs text-emerald-700">Verified NCERT source</p> : <Button size="sm" variant="outline" onClick={async()=>{if(!window.confirm("Have you opened and checked that this file is an official NCERT textbook? Approve only after verifying the publisher and content."))return;try{await approveNcertSource({data:{book_id:r.id,confirmed:true}});await load();}catch(error){window.alert(error instanceof Error?error.message:"Approval failed");}}}>Verify as NCERT</Button>}
                             <Button
                               size="sm"
                               variant="ghost"

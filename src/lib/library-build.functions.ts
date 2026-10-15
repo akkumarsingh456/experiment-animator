@@ -1,3 +1,4 @@
+import { requireLibraryAdmin } from "@/lib/library-auth";
 /**
  * Library build queue.
  *
@@ -20,12 +21,8 @@ import type { Database } from "@/integrations/supabase/types";
 import { NCERT_SYLLABUS, SYLLABUS_CLASSES } from "@/lib/ncert-syllabus";
 import { generateLesson } from "@/lib/generate.functions";
 
-function db() {
-  return createClient<Database>(
-    process.env["SUPABASE_URL"]!,
-    process.env["SUPABASE_PUBLISHABLE_KEY"]!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  ) as any;
+async function db() {
+ const {supabaseAdmin}=await import("@/integrations/supabase/client.server");return supabaseAdmin as any;
 }
 
 const STATE_ID = "library";
@@ -42,7 +39,7 @@ export type BuildState = "idle" | "running" | "paused" | "blocked";
 /* ------------------------------------------------------------------ */
 
 /** Add every syllabus chapter (optionally narrowed to one class/subject). */
-export const enqueueLibrary = createServerFn({ method: "POST" })
+export const enqueueLibrary = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -70,7 +67,7 @@ export const enqueueLibrary = createServerFn({ method: "POST" })
     }
     if (!rows.length) return { queued: 0 };
 
-    const s = db();
+    const s = await db();
     // Insert in slices; existing (class, subject, chapter) rows are left alone.
     let queued = 0;
     for (let i = 0; i < rows.length; i += 200) {
@@ -103,12 +100,12 @@ export type BuildStatus = {
   }>;
 };
 
-export const buildStatus = createServerFn({ method: "POST" })
+export const buildStatus = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
   .inputValidator((d: unknown) =>
     z.object({ klass: z.string().optional().default("") }).parse(d ?? {}),
   )
   .handler(async ({ data }): Promise<BuildStatus> => {
-    const s = db();
+    const s = await db();
     const { data: st } = await s
       .from("lesson_build_state")
       .select("status, message")
@@ -149,7 +146,7 @@ export const listBuiltChapters = createServerFn({ method: "POST" })
       .parse(d ?? {}),
   )
   .handler(async ({ data }) => {
-    const s = db();
+    const s = await db();
     let q = s
       .from("lesson_build_jobs")
       .select("klass, subject, chapter, subtopics, slides, updated_at")
@@ -165,12 +162,12 @@ export const listBuiltChapters = createServerFn({ method: "POST" })
   });
 
 /** Start / pause the build, or reset failed chapters so they can be retried. */
-export const controlBuild = createServerFn({ method: "POST" })
+export const controlBuild = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
   .inputValidator((d: unknown) =>
     z.object({ action: z.enum(["start", "pause", "retry_failed"]) }).parse(d),
   )
   .handler(async ({ data }) => {
-    const s = db();
+    const s = await db();
     if (data.action === "retry_failed") {
       await s
         .from("lesson_build_jobs")
@@ -200,12 +197,12 @@ function blockedByCredits(msg: string): boolean {
  * Process at most `MAX_BATCH` queued chapters. Exits immediately when the
  * build is paused/blocked or another runner holds the lease.
  */
-export const runBuildBatch = createServerFn({ method: "POST" })
+export const runBuildBatch = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
   .inputValidator((d: unknown) =>
     z.object({ limit: z.coerce.number().min(1).max(MAX_BATCH).optional().default(1) }).parse(d ?? {}),
   )
   .handler(async ({ data }) => {
-    const s = db();
+    const s = await db();
     const now = Date.now();
 
     // 1. Paused-state guard.

@@ -1,3 +1,4 @@
+import { getLibraryAccess } from "@/lib/library-access.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { screenshotBookMatches, combinedReferenceSubject } from "@/lib/reference-books";
 import { extractPdfText } from "@/lib/pdf-extract";
@@ -17,6 +18,8 @@ const downloadedBooks=new Map<string,Blob>();
 export function prepareScannedReferenceBooks(...args:Parameters<typeof readReferenceBooks>):ReturnType<typeof readReferenceBooks>{
   if(args[6]?.chapterOnly&&activeReader)activeReader.preempted=true;
   const task=readingQueue.then(async()=>{
+    const access = await getLibraryAccess().catch(() => null);
+    if (!access?.admin) return [];
     const token={preempted:false};activeReader=token;
     const parameters=[...args] as Parameters<typeof readReferenceBooks>;
     parameters[3]=()=>token.preempted||!!args[3]?.();

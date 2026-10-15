@@ -32,12 +32,8 @@ function hashKey(parts: Array<string | undefined | null>) {
 
 // Slide infographic rendering is local SVG, cached for quick reuse.
 
-function cacheSupa() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
+async function cacheSupa() {
+ const {supabaseAdmin}=await import("@/integrations/supabase/client.server");return supabaseAdmin;
 }
 
 /** Generate and cache local 2D slide infographics from the exact slide notes. */
@@ -84,7 +80,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
       (data.sections || []).flatMap((section) => [section.heading, ...(section.lines || [])]).join(" "),
     ]);
 
-    const db = cacheSupa();
+    const db = await cacheSupa();
     const startedAt = Date.now();
     const auditBase = {
       cache_key: cacheKey,
@@ -980,12 +976,8 @@ export type GenerationResult = {
 
 };
 
-function supa() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
+async function supa() {
+ const {supabaseAdmin}=await import("@/integrations/supabase/client.server");return supabaseAdmin;
 }
 
 function score(text: string, terms: string[]) {
@@ -1594,7 +1586,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v55-print-intrusions-and-exercise-context",
+      "lesson-v56-approved-ncert-only-source-policy",
       data.klass,
       data.subject,
       data.chapter,
@@ -1602,7 +1594,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       data.subtopics,
       data.mode,
     ]);
-    const cdb = cacheSupa();
+    const cdb = await cacheSupa();
     if (!data.nocache) {
       try {
         const { data: hit } = await (cdb as any)
@@ -1624,14 +1616,14 @@ export const generateLesson = createServerFn({ method: "POST" })
           }
           const freshMcqs = buildMcqsFromContext(data.topic, seedSentences, data.subject, 10);
           const mcqSlides: Slide[] = freshMcqs.map((m, i) => makeMcqSlide(m, i, freshMcqs.length, data.topic));
-          return appendUploadedReferenceNotes({ ...cached, slides: [...contentOnly, ...mcqSlides] }, supa(), data.klass, data.subject, data.chapter || data.topic);
+          return appendUploadedReferenceNotes({ ...cached, slides: [...contentOnly, ...mcqSlides] }, await supa(), data.klass, data.subject, data.chapter || data.topic);
         }
       } catch {
         /* miss */
       }
     }
 
-    const s = supa();
+    const s = await supa();
     const terms = buildTerms(data);
 
     // 1. Find matching books by the selected class and subject.
@@ -1643,6 +1635,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     const { data: classBooks, error: bErr } = await s
       .from("ncert_books")
       .select("id, class, subject, chapter, file_name")
+      .eq("source_kind", "ncert")
       .or(`class.ilike.%${wantedClass}%,${combinedFilter}`)
       .limit(200);
     if (bErr) throw new Error(bErr.message);
@@ -1650,12 +1643,12 @@ export const generateLesson = createServerFn({ method: "POST" })
 
     // Retry against the full inventory, retaining the same class/subject scope.
     if (candidates.length === 0) {
-      const { data: allBooks } = await s.from("ncert_books").select("id, class, subject, chapter, file_name").limit(500);
+      const { data: allBooks } = await s.from("ncert_books").select("id, class, subject, chapter, file_name").eq("source_kind", "ncert").limit(500);
       candidates = (allBooks ?? []).filter((b) => bookMatchesLesson(b, data.klass, data.subject));
     }
 
     if (candidates.length === 0) {
-      throw new Error(`No matching Class ${data.klass} ${data.subject} textbook is uploaded. Add the correct textbook in Upload; material from another class or subject will not be substituted.`);
+      throw new Error(`No approved Class ${data.klass} ${data.subject} NCERT textbook is available. An administrator must verify the correct source in Upload status; material from another class or subject will not be substituted.`);
     }
 
     // 2. Pre-rank by metadata
@@ -1739,7 +1732,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Broader inventory search, still restricted to the selected class/subject.
     const hasTopicalHit = (chunks ?? []).some((c) => score(c.content, terms) > 8);
     if (!hasTopicalHit) {
-      const { data: allBooks2 } = await s.from("ncert_books").select("id, class, subject, chapter, file_name").limit(500);
+      const { data: allBooks2 } = await s.from("ncert_books").select("id, class, subject, chapter, file_name").eq("source_kind", "ncert").limit(500);
       const ranked2 = (allBooks2 ?? [])
         .filter((b) => bookMatchesLesson(b, data.klass, data.subject))
         .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject} ${b.class}`, [...terms, ...chapterTerms]) }))
@@ -1823,53 +1816,8 @@ export const generateLesson = createServerFn({ method: "POST" })
     //     maps, short notes). These books hold the formula sheets, derivations
     //     and labelled diagrams, so their chunks are retrieved and ranked on
     //     their own instead of competing with NCERT for the same slots.
-    const refBooksAll = candidates.filter(isRef);
-    let refContext = "";
-    try {
-      let refPool = refBooksAll;
-      if (refPool.length === 0) {
-        const refLike = ["pw", "physics wallah", "med easy", "medeasy", "shobhit", "nirwan", "mind map", "short notes", "revision", "formula"]
-          .map((t) => `file_name.ilike.%${t}%`)
-          .join(",");
-        const { data: refFound } = await s
-          .from("ncert_books")
-          .select("id, class, subject, chapter, file_name")
-          .or(refLike)
-          .limit(60);
-        refPool = (refFound ?? []).filter((b) => bookMatchesLesson(b, data.klass, data.subject));
-      }
-      const refTop = refPool
-        .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject}`, [...terms, ...chapterTerms]) }))
-        .sort((a, z) => z.m - a.m)
-        .slice(0, 6)
-        .map((x) => x.b);
-      if (refTop.length > 0) {
-        const refRows = await Promise.all(
-          refTop.map((b) => {
-            const q = s
-              .from("ncert_chunks")
-              .select("book_id, chunk_index, content")
-              .eq("book_id", b.id)
-              .order("chunk_index", { ascending: true })
-              .limit(600);
-            return (keywordFilter ? q.or(keywordFilter) : q).then((r) => r.data ?? []);
-          }),
-        );
-        const scored = refRows.flat().map((c) => ({ ...c, _s: score(c.content, terms) }));
-        const hits = scored.filter((c) => c._s > 0);
-        // Never come back empty-handed: when nothing scores, still pass the
-        // book's own excerpts so PW / Med Easy material always reaches the notes.
-        const refRanked = hits.sort((a, z) => z._s - a._s).slice(0, 32);
-        const refNames = new Map(refTop.map((b) => [b.id, b.file_name || "reference book"]));
-        refContext = refRanked
-          .map((c) => { const evidence = referenceFormulaEvidence(String(c.content || ""), data.chapter || data.topic); return evidence ? `[${refNames.get(c.book_id)}] ${evidence}` : ""; }).filter(Boolean)
-          .join("\n---\n")
-          .slice(0, 20000);
-      }
-
-    } catch (e) {
-      console.warn("reference-book channel failed", e);
-    }
+    // Reference books may supply separately labelled figures, never the note text.
+    const refContext = "";
 
     // 4. Build slides + activity + storyboard locally from saved NCERT text.
     // For English/Hindi/Sanskrit (or explicit chapter mode) we paginate the full
