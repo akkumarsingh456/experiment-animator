@@ -4,6 +4,8 @@
  * nothing else is offered in the dropdowns.
  */
 
+import { ENGLISH_CHAPTERS } from "@/lib/english-chapters";
+
 import { EXTRA_SUBTOPICS } from "@/lib/ncert-subtopics-extra";
 
 export type SyllabusChapter = { chapter: string; subtopics: string[] };
@@ -45,20 +47,7 @@ export const NCERT_SYLLABUS: Record<string, ClassSyllabus> = {
       { chapter: "Chapter 3: Office Productivity Tools (Word Processing, Spreadsheets, Presentations)", subtopics: ["Creating documents", "Formatting text", "Tables", "Formulas in spreadsheets", "Slide creation and animations"] },
       { chapter: "Chapter 4: Cyber Safety and Security", subtopics: ["Safe web browsing", "Passwords", "Protecting personal data", "Cyberbullying", "Safe communication practices"] },
     ],
-    English: [
-      { chapter: "Beehive Chapter 1: The Fun They Had & The Road Not Taken (Poem)", subtopics: ["Future school concepts", "Choices in life", "Poetic devices"] },
-      { chapter: "Beehive Chapter 2: The Sound of Music & Wind (Poem)", subtopics: ["Evelyn Glennie and Bismillah Khan biographies", "Resilience", "Overcoming adversity", "Forces of nature"] },
-      { chapter: "Beehive Chapter 3: The Little Girl & Rain on the Roof (Poem)", subtopics: ["Parent-child relationship dynamics", "Soothing effects of nature", "Memories"] },
-      { chapter: "Beehive Chapter 4: A Truly Beautiful Mind & The Lake Isle of Innisfree (Poem)", subtopics: ["Albert Einstein's life", "Genius concept", "Escape to nature", "Inner peace"] },
-      { chapter: "Beehive Chapter 5: The Snake and the Mirror & A Legend of the Northland (Poem)", subtopics: ["Humorous encounters", "Folklore", "Moral lessons on greed and charity"] },
-      { chapter: "Beehive Chapter 6: My Childhood & No Men Are Foreign (Poem)", subtopics: ["A.P.J. Abdul Kalam's early life", "Communal harmony", "Universal brotherhood"] },
-      { chapter: "Beehive Chapter 7: Packing & The Duck and the Kangaroo (Poem)", subtopics: ["Situational comedy", "Adventure", "Humorous dialogue"] },
-      { chapter: "Beehive Chapter 8: Reach for the Top & On Killing a Tree (Poem)", subtopics: ["Santosh Yadav and Maria Sharapova's achievements", "Environmental conservation", "Resilience of nature"] },
-      { chapter: "Beehive Chapter 9: The Bond of Love & The Snake Trying (Poem)", subtopics: ["Animal empathy", "Human-animal relationships", "Non-violence towards animals"] },
-      { chapter: "Beehive Chapter 10: Kathmandu & A Slumber Did My Spirit Seal (Poem)", subtopics: ["Cultural observation of Nepal", "Acceptance of mortality"] },
-      { chapter: "Beehive Chapter 11: If I Were You", subtopics: ["Presence of mind", "Dramatic plot twists", "Quick wit"] },
-      { chapter: "Moments (Supplementary Reader, Chapters 1–10)", subtopics: ["The Lost Child", "The Adventures of Toto", "Iswaran the Storyteller", "In the Kingdom of Fools", "The Happy Prince", "Weathering the Storm in Ersama", "The Last Leaf", "A House Is Not a Home", "The Accidental Tourist", "The Beggar"] },
-    ],
+    English: ENGLISH_CHAPTERS["9"],
     Hindi: [
       { chapter: "क्षितिज भाग 1 (गद्य खंड एवं काव्य खंड)", subtopics: ["दो बैलों की कथा (प्रेमचंद)", "ल्हासा की ओर (राहुल सांकृत्यायन)", "साखियाँ एवं सबद (कबीर)", "वाख (ललद्यद)", "सवैये (रसखान)", "उपभोक्तावाद की संस्कृति (श्यामचरण दुबे)", "कैदी और कोकिला (माखनलाल चतुर्वेदी)", "ग्राम श्री (सुमित्रानंदन पंत)", "बच्चे काम पर जा रहे हैं (राजेश जोशी)", "प्रेमचंद के फटे जूते (हरिशंकर परसाई)", "मेरे बचपन के दिन (महादेवी वर्मा)", "एक कुत्ता और एक मैना (हजारीप्रसाद द्विवेदी)"] },
       { chapter: "कृतिका भाग 1", subtopics: ["इस जल प्रलय में (फणीश्वरनाथ रेणु)", "मेरे संग की औरतें (मृदुला गर्ग)", "रीढ़ की हड्डी (जगदीश चंद्र माथुर)", "माटी वाली (विद्यासागर नौटियाल)", "किस तरह आखिरकार मैं हिंदी में आया (शमशेर बहादुर सिंह)"] },
@@ -106,10 +95,7 @@ export const NCERT_SYLLABUS: Record<string, ClassSyllabus> = {
       { chapter: "Chapter 3: Cyber Ethics and Security", subtopics: ["Intellectual property rights", "Plagiarism", "Digital property rights", "Software licenses", "Secure online transactions"] },
       { chapter: "Chapter 4: Database Concepts (MySQL Basics)", subtopics: ["Introduction to DBMS", "Tables, rows, columns", "Data types", "Basic SQL queries (SELECT, INSERT, UPDATE)"] },
     ],
-    English: [
-      { chapter: "First Flight (Prose & Poetry, Chapters 1–11)", subtopics: ["A Letter to God", "Nelson Mandela", "Two Stories about Flying", "Diary of Anne Frank", "Glimpses of India", "Mijbil the Otter", "Madam Rides the Bus", "The Sermon at Benares", "The Proposal", "Dust of Snow", "Fire and Ice", "A Tiger in the Zoo", "How to Tell Wild Animals", "The Ball Poem", "Amanda!", "Animals", "The Trees", "Fog", "The Tale of Custard the Dragon", "For Anne Gregory"] },
-      { chapter: "Footprints Without Feet (Supplementary, Chapters 1–9)", subtopics: ["A Triumph of Surgery", "The Thief's Story", "The Midnight Visitor", "A Question of Trust", "Footprints Without Feet", "The Making of a Scientist", "The Necklace", "Bholi", "The Book That Saved the Earth"] },
-    ],
+    English: ENGLISH_CHAPTERS["10"],
     Hindi: [
       { chapter: "क्षितिज भाग 2", subtopics: ["सूरदास (पद)", "तुलसीदास (राम-लक्ष्मण-परशुराम संवाद)", "देव (सवैया, कवित्त)", "जयशंकर प्रसाद (आत्मकथ्य)", "सूर्यकांत त्रिपाठी 'निराला' (उत्साह, अट नहीं रही है)", "नागार्जुन (यह दंतुरित मुस्कान, फसल)", "मंगलेश डबराल (संगतकार)", "स्वयं प्रकाश (नेताजी का चश्मा)", "रामवृक्ष बेनीपुरी (बालगोबिन भगत)", "यशपाल (लखनवी अंदाज़)", "मन्नू भंडारी (एक कहानी यह भी)", "महावीरप्रसाद द्विवेदी (स्त्री-शिक्षा के विरोधी कुतर्कों का खंडन)", "यतींद्र मिश्र (नौबतखाने में इबादत)", "आनंद यादव (संस्कृति)"] },
       { chapter: "कृतिका भाग 2", subtopics: ["माता का अँचल (शिवपूजन सहाय)", "जॉर्ज पंचम की नाक (कमलेश्वर)", "साना-साना हाथ जोड़ि (मधु कांकरिया)", "एही ठैयाँ झुलनी हेरानी हो रामा!", "किस तरह आखिरकार मैं हिंदी में आया"] },
@@ -173,10 +159,7 @@ export const NCERT_SYLLABUS: Record<string, ClassSyllabus> = {
       { chapter: "Chapter 7: Tuples and Dictionaries", subtopics: ["Tuple immutability", "Dictionary key-value pair maps", "Dictionary methods"] },
       { chapter: "Chapter 8: Societal Impacts", subtopics: ["Digital footprint", "Cyber safety", "Intellectual property", "Open source philosophy"] },
     ],
-    English: [
-      { chapter: "Hornbill (Prose & Poetry, Chapters 1–8)", subtopics: ["The Portrait of a Lady", "Discovering Tut: the Saga Continues", "Landscape of the Soul", "The Ailing Planet", "The Browning Version", "Silk Road", "A Photograph", "The Laburnum Top", "The Voice of the Rain", "Childhood", "Father to Son"] },
-      { chapter: "Snapshots (Supplementary, Chapters 1–8)", subtopics: ["The Summer of the Beautiful White Horse", "The Address", "Ranga's Marriage", "Albert Einstein at School", "Mother's Day", "The Ghat of the Only World", "Birth", "The Tale of Melon City"] },
-    ],
+    English: ENGLISH_CHAPTERS["11"],
     Hindi: [
       { chapter: "अंतरा भाग 1", subtopics: ["कबीर (पद)", "सूरदास (पद)", "मीराबाई (पद)", "रसखान (सवैये)", "घनानंद (कवित्त/सवैया)", "भवानीप्रसाद मिश्र (घर की याद)", "त्रिलोचन (चंपा काले काले अच्छर नहीं चीन्हती)", "नागार्जुन (बादल को घिरते देखा है)", "केदारनाथ अग्रवाल (सबसे सुंदरतम)", "कुंवर नारायण (घर वापसी)", "शमशेर बहादुर सिंह (तोहफा)", "दुष्यंत कुमार (साये में धूप)", "निर्मला पुतुल (आओ मिलें)", "प्रेमचंद (ईदगाह)", "अमरकांत (दोपहर का भोजन)", "हरिशंकर परसाई", "रांगेय राघव (उसकी माँ)", "निर्मल वर्मा (परिंदे)", "कृष्णा सोबती", "राहुल सांकृत्यायन"] },
       { chapter: "अंतराल भाग 1", subtopics: ["अंडे के छिलके (मोहन राकेश)", "आषाढ़ का एक दिन (मोहन राकेश का परिचय)", "उसकी माँ (रांगेय राघव)"] },
@@ -238,10 +221,7 @@ export const NCERT_SYLLABUS: Record<string, ClassSyllabus> = {
       { chapter: "Chapter 5: Computer Networks", subtopics: ["Network types (LAN, WAN)", "Topologies", "Networking devices", "Protocols", "Web structure"] },
       { chapter: "Chapter 6: Database Management System (SQL)", subtopics: ["DDL commands", "DML commands", "Constraints", "Aggregate functions", "Joins"] },
     ],
-    English: [
-      { chapter: "Flamingo (Prose & Poetry, Chapters 1–8)", subtopics: ["The Last Lesson", "Lost Spring", "Deep Water", "The Rattrap", "Indigo", "Poets and Pancakes", "The Interview", "Going Places", "My Mother at Sixty-six", "An Elementary School Classroom in a Slum", "Keeping Quiet", "A Thing of Beauty", "A Roadside Stand", "Aunt Jennifer's Tigers"] },
-      { chapter: "Vistas (Supplementary, Chapters 1–8)", subtopics: ["The Third Level", "The Tiger King", "Journey to the End of the Earth", "The Enemy", "On the Face of It", "Memories of Childhood", "Evans Tries an O-Level"] },
-    ],
+    English: ENGLISH_CHAPTERS["12"],
     Hindi: [
       { chapter: "आरोह भाग 2", subtopics: ["हरिवंश राय बच्चन (आत्मपरिचय, एक गीत)", "जैनेंद्र कुमार (बाज़ार दर्शन)", "कुँवर नारायण (कविता के बहाने, बात सीधी थी पर)", "सुमित्रानंदन पंत (बादल राग)", "शमशेर बहादुर सिंह (उषा)", "सूर्यकांत त्रिपाठी 'निराला' (कवितावली, लक्ष्मण-मूर्च्छा)", "फ़िराक़ गोरखपुरी (रुबाइयाँ, गज़ल)", "महादेवी वर्मा (भक्तिन)", "विष्णु खरे (चार्ली चैप्लिन और हम सब)", "रज़िया सज्जाद ज़हीर (नमक)", "हजारीप्रसाद द्विवेदी (शिरीष के फूल)", "भीमराव आंबेडकर (श्रम विभाजन और जातिप्रथा, मेरी कल्पना का आदर्श समाज)"] },
       { chapter: "वितान भाग 2", subtopics: ["सिल्वर वेडिंग (मनोहर श्याम जोशी)", "जूझ (आनंद यादव)", "अतीत में दबे पाँव (ओम थानवी)", "डायरी के पन्ने (ऐनी फ्रैंक)"] },
@@ -263,6 +243,7 @@ export function chaptersFor(klass: string, subject: string): SyllabusChapter[] {
 }
 
 export function subtopicsFor(klass: string, subject: string, chapter: string): string[] {
+  if (subject === "English") return [];
   const canonical = chaptersFor(klass, subject).find((c) => c.chapter === chapter)?.subtopics || [];
   const extra = EXTRA_SUBTOPICS[`${klass}|${subject}|${chapter}`] || [];
   return Array.from(new Set([...canonical, ...extra]));

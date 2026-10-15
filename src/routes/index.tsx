@@ -1,3 +1,4 @@
+import { ENGLISH_CHAPTERS } from "@/lib/english-chapters";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
@@ -11,6 +12,8 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectGroup,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -197,7 +200,14 @@ function GeneratorBlock() {
                   <SelectValue placeholder="Select a chapter from the NCERT syllabus" />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {chapters.map((c) => (
+                  {subject === "English" ? [...new Set((ENGLISH_CHAPTERS[klass] || []).map(c => c.book))].map(book => (
+                    <SelectGroup key={book}>
+                      <SelectLabel>{book}</SelectLabel>
+                      {(ENGLISH_CHAPTERS[klass] || []).filter(c => c.book === book).map(c => (
+                        <SelectItem key={c.chapter} value={c.chapter}>{c.chapter}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )) : chapters.map((c) => (
                     <SelectItem key={c.chapter} value={c.chapter}>{c.chapter}</SelectItem>
                   ))}
 

@@ -43,6 +43,14 @@ Apply these rules whenever changing extraction, retrieval, generation, rendering
 
 ## Catalog snapshot
 
-The committed `CURRICULUM_VISUAL_AUDIT.json` enumerates 4 classes, 26 subject streams, 177 chapter entries and 1,827 expanded subtopics (2,004 chapter/subtopic title checks). For 1,274 title checks, no suitable built-in diagram was selected; those now receive the explicit import guidance. Remaining matches are schematic capabilities, not a claim of scientific verification.
+The committed `CURRICULUM_VISUAL_AUDIT.json` is the historical pre-English-expansion snapshot (177 chapter entries). English now lists individual stories and poems instead of volume placeholders, with no subtopics. That historical snapshot does not describe the expanded catalog counts.
+
+## English chapter retrieval
+
+- Show individual titles, grouped by textbook; do not offer volume names as chapters or thematic subtopics.
+- Preserve the edition label for Class 9 legacy Beehive/Moments uploads. Do not label these as the newer Kaveri curriculum.
+- Prefer the matching reader, retain source order, and stop at the next story/poem heading, including headings on a shared page.
+- If the chapter heading/readable evidence is missing, request the matching PDF rather than filling notes from other chapters.
+- Classes 10–12 title lists follow CBSE 2026–27 English Language & Literature / English Core prescribed readers.
 
 Regenerate this report with `EDUPLAN_WRITE_AUDIT=1` when running `tests/curriculum-visual-audit.test.ts`. The report includes each chapter’s unavailable topics and applicable quality constraints.

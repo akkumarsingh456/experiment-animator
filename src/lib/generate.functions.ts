@@ -1,3 +1,4 @@
+import { ENGLISH_CHAPTERS } from "@/lib/english-chapters";
 import { splitReferenceContent } from "@/lib/reference-visuals";
 import { appendUploadedReferenceNotes } from "@/lib/uploaded-reference-notes";
 import { createServerFn } from "@tanstack/react-start";
@@ -12,7 +13,7 @@ import { topicEvidence } from "@/lib/topic-evidence";
 import { cleanSourceNoteLine, isSourceTask, validStudyTerm, readableSourceRelation } from "@/lib/source-note-quality";
 import { isDefinitionStatement } from "@/lib/note-labels";
 import { extractExperimentActivities } from "@/lib/experiment-activities";
-import { scopeTextbookPages, referenceFormulaEvidence } from "@/lib/lesson-source-scope";
+import { scopeTextbookPages, scopeEnglishChapterPages, referenceFormulaEvidence } from "@/lib/lesson-source-scope";
 import { chaptersFor } from "@/lib/ncert-syllabus";
 import { REF_BOOK_PATTERN, combinedReferenceMatches } from "@/lib/reference-books";
 import { sourceDiscussion, reviewNotes, learningScaffold } from "@/lib/learning-design";
@@ -1591,7 +1592,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v49-source-structure-and-topic-quality-policy",
+      "lesson-v50-individual-english-chapter-sources",
       data.klass,
       data.subject,
       data.chapter,
@@ -1706,7 +1707,9 @@ export const generateLesson = createServerFn({ method: "POST" })
       REF_BOOK.test(`${b.file_name ?? ""} ${b.chapter ?? ""}`);
     const bookScores = candidates
       .map((book) => {
-        const metadataScore = score(`${book.chapter} ${book.file_name}`, [...terms, ...chapterTerms]);
+        const englishBook = data.subject === "English" ? ENGLISH_CHAPTERS[classNumber(data.klass)]?.find(c => c.chapter === data.chapter)?.book.replace(/ \(.*$/, "") : undefined;
+        const matchingReader = englishBook && normalizeText(`${book.chapter} ${book.file_name}`).includes(normalizeText(englishBook));
+        const metadataScore = score(`${book.chapter} ${book.file_name}`, [...terms, ...chapterTerms]) + (matchingReader ? 1000 : 0);
         const chunkScore = (chunks ?? [])
           .filter((chunk) => chunk.book_id === book.id)
           .reduce((sum, chunk) => sum + score(chunk.content, terms), 0);
@@ -1798,10 +1801,17 @@ export const generateLesson = createServerFn({ method: "POST" })
     if (data.chapter) {
       const sourcePages = await Promise.all([...primaryIds].map(async bookId => {
         const { data: pages } = await s.from("ncert_pages").select("page_number,text").eq("book_id", bookId).order("page_number").limit(1000);
-        return scopeTextbookPages(pages || [], data.chapter, chaptersFor(classNumber(data.klass), data.subject).map(chapter => chapter.chapter));
+        const titles = chaptersFor(classNumber(data.klass), data.subject).map(chapter => chapter.chapter);
+        if (data.subject !== "English") return scopeTextbookPages(pages || [], data.chapter, titles);
+        const scoped = scopeEnglishChapterPages(pages || [], data.chapter, titles);
+        if (scoped.length) return scoped;
+        // Older uploads may have chunks but no page records. Keep their source order.
+        const { data: orderedChunks } = await s.from("ncert_chunks").select("chunk_index,content").eq("book_id", bookId).order("chunk_index").limit(3000);
+        return scopeEnglishChapterPages([{page_number: 1, text: (orderedChunks || []).map(c => c.content).join("\n")}], data.chapter, titles);
       }));
       const scoped = sourcePages.flat();
       if (scoped.length) context = scoped.join("\n\n").slice(0, 160000);
+      else if (data.subject === "English") throw new Error(`Readable text for “${data.chapter}” was not located in the uploaded Class ${data.klass} English books. Upload or re-ingest the matching chapter PDF. Other chapters will not be used in its place.`);
     }
     if (!context.trim()) {
       throw new Error(`The matching Class ${data.klass} ${data.subject} PDF was found, but no readable text chunks were saved. Re-ingest that PDF from Upload.`);
