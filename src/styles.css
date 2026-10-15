@@ -787,6 +787,9 @@
   box-shadow: none;
 }
 
-.edu-brand > .edu-plan-mark { width: 48px; height: 48px; flex-shrink: 0; }
-.edu-footer .edu-brand > .edu-plan-mark { width: 38px; height: 38px; }
-@media (max-width: 720px) { .edu-brand > .edu-plan-mark { width: 42px; height: 42px; } }
+.edu-brand > .edu-plan-mark { width: 58px; height: 58px; flex-shrink: 0; }
+.edu-footer .edu-brand > .edu-plan-mark { width: 46px; height: 46px; }
+@media (max-width: 720px) { .edu-brand > .edu-plan-mark { width: 50px; height: 50px; } }
+
+.edu-brand { gap: 12px; }
+.edu-brand small { color: #142d46; font-weight: 700; font-size: 10px; letter-spacing: .14em; }
