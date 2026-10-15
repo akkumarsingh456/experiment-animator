@@ -8,6 +8,12 @@ export function paginateGuidedArticles(root: HTMLElement, maxHeight: number): HT
   const articles = Array.from(root.querySelectorAll<HTMLElement>(":scope > .guided-notes > .guided-topic"));
   const measure = document.createElement("div"); measure.className = "guided-notes guided-slide-measure"; root.appendChild(measure);
   for (const article of articles) {
+    if (article.classList.contains("guided-cover")) {
+      const page = article.cloneNode(true) as HTMLElement;
+      page.classList.add("guided-slide-page");
+      Object.assign(page.style, {height: `${maxHeight}px`, padding: "0", margin: "0", overflow: "hidden", boxSizing: "border-box"});
+      measure.appendChild(page); pages.push(page); continue;
+    }
     const title = article.querySelector("h2"); let page: HTMLElement; let count = 0;
     const newPage = () => {
       page = article.cloneNode(false) as HTMLElement; page.classList.add("guided-slide-page");

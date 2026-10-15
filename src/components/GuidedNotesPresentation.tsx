@@ -346,6 +346,7 @@ export function GuidedNotesPresentation({
             title={title}
             klass={klass}
             subject={subject}
+            includeCover
             includeBreaks={mode === "slides"}
           />
         </div>

@@ -64,3 +64,7 @@ Every Physics topic must distinguish the dimensions of its named quantities from
 ## Continuation pages instead of note scrolling
 
 Add all supplements (including dimensional formulas) before `paginateLectureSections`. Never append or regenerate a whole-topic supplement in a page renderer: it duplicates content and bypasses pagination. Preserve every input point when packing pages; account for headings, formula-card padding, superscripts and memory explanations. Continue long derivations at step boundaries with their target repeated. Move each dimensional card independently in guided presentations. The notes sheet has no inner vertical scrolling; use continuation slides and modest spacing instead of stretching sparse content.
+
+## Chapter covers
+
+`LessonCover.tsx` supplies the shared first-slide design in lecture presentation and export views. Resolve the selected subject before topic keywords (a Physics cell must not select Biology). Use exact chapter diagrams where available, otherwise clearly editorial subject-tool icons. Periodic element tiles carry correct atomic numbers and explicit d/f block colour keys. Keep cover copy separate from lesson evidence, retain the original topic list in slide data, and use a compact roadmap with an additional-topic count when the selection exceeds six entries. Do not replace note diagrams or generated lesson content when changing cover design.

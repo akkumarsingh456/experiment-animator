@@ -1,3 +1,4 @@
+import { LessonCover } from "@/components/LessonCover";
 import { withPhysicsDimensions } from "@/lib/physics-dimensions";
 import { BookReferenceFigures } from "@/components/BookReferenceFigures";
 import { MathematicsProse } from "@/components/MathematicsProse";
@@ -26,15 +27,17 @@ function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }
   </section>;
 }
 
-export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks = false }: { slides: Slide[]; title: string; subject?: string; klass?: string; includeBreaks?: boolean }) {
+export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks = false, includeCover = false }: { slides: Slide[]; title: string; subject?: string; klass?: string; includeBreaks?: boolean; includeCover?: boolean }) {
   slides = slides.map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: withPhysicsDimensions(slide.sections, subject || "", slide.title)}));
   const content = slides.filter((slide) => (slide.kind ?? "content") === "content" || slide.kind === "chapter" || (includeBreaks && slide.kind === "break"));
   const questions = slides.flatMap((slide) => slide.mcq ? [slide.mcq] : []);
   const topicGroups = uniqueTopicGroups(content.map((slide) => guidedGroups(slide.sections, slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...(slide.bullets || []), ...(slide.notes || [])])));
   return <div className="guided-notes" aria-label="Complete guided lesson notes">
     <div className="guided-document-title"><span>Class {klass} · {subject}</span><h2>{title}</h2><p>Read · Investigate · Practise · Reflect</p></div>
+    {includeCover && <article className="guided-topic guided-cover"><LessonCover title={slides.find(slide => slide.visual === "cover")?.title || title} objectives={slides.find(slide => slide.visual === "cover")?.bullets || content.map(slide => slide.title)} subject={subject} klass={klass} /></article>}
     {!!content.length && <LessonNotesPlanner topics={content.map((slide) => slide.title)} subject={subject} klass={klass} />}
     {content.map((slide, index) => {
+      if (slide.visual === "cover" && includeCover) return null;
       if (slide.kind === "break") return <article className="guided-topic" key={`break:${index}`}><h2>{slide.title}</h2><ul>{[...slide.bullets, ...slide.notes].map((line, i) => <li key={i}><MathText text={line} /></li>)}</ul></article>;
       const groups = topicGroups[index];
       const goals = groups.filter((g) => /^(Learning objectives|Before you begin)$/.test(g.heading));

@@ -1,3 +1,4 @@
+import { LessonCover } from "@/components/LessonCover";
 import { withPhysicsDimensions } from "@/lib/physics-dimensions";
 import {startChapterPreparation,bookPreparationSnapshot,subscribeBookPreparation,pauseBookPreparation} from '@/lib/book-preparation';
 import { loadLessonBookPictures } from "@/lib/lesson-book-pictures.functions";
@@ -272,7 +273,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       key_terms: [],
       visual: "cover",
       kind: "break",
-      caption: `Class ${search.klass} · ${search.subject} · Topic: ${search.topic || title} · Chapter: ${search.chapter || "—"}`,
+      caption: `Class ${search.klass} · ${search.subject} · Chapter overview`,
     };
   };
   const withCoverSlide = (items: Slide[]) => {
@@ -922,7 +923,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
       {exportMode && <div ref={exportRef} className={`lesson-export-root lesson-export-${exportMode === "notes" ? "notes" : "slides"} ${exportMode === "slides" ? "original-slide-deck" : ""}`} data-presentation-style={exportMode === "slides" ? "lovable" : "guided"} aria-hidden="true">
         {exportMode === "slides" ? originalPages.map((slide, index) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} onNotesOverflow={continueOverflowingNotes} staticView /></div>) :
-          <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} />}
+          <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} includeCover={exportMode === "guided-slides"} />}
       </div>}
       {presenting && <GuidedNotesPresentation slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
 
@@ -1107,24 +1108,9 @@ function ChapterSlideBody({ slide }: { slide: Slide }) {
   );
 }
 
-function BreakSlideBody({ slide }: { slide: Slide }) {
-  if (slide.visual === "cover") {
-    return (
-      <div className="h-full min-h-0 px-8 py-6 sm:px-16 flex flex-col justify-center gap-5">
-        <div className="text-center">
-          <div className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Chapter overview</div>
-          <p className="mt-2 text-sm text-muted-foreground">{slide.caption}</p>
-          <h2 className="mt-4 font-display text-3xl sm:text-5xl font-extrabold leading-tight">{slide.title}</h2>
-        </div>
-        <section className="mx-auto w-full max-w-3xl rounded-xl border border-primary/20 bg-primary/5 p-6 sm:p-8">
-          <h3 className="font-display text-xl sm:text-2xl font-bold mb-4">What you will learn</h3>
-          <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm sm:text-base leading-relaxed">
-            {(slide.bullets || []).map((item, index) => <li key={index} className="flex gap-2"><span className="text-primary font-bold">{index + 1}.</span><span>{item}</span></li>)}
-          </ul>
-        </section>
-      </div>
-    );
-  }
+function BreakSlideBody({ slide, subject, klass }: { slide: Slide; subject?: string; klass?: string }) {
+  if (slide.visual === "cover") return <LessonCover title={slide.title} objectives={slide.bullets || []} subject={subject} klass={klass} />;
+
   return (
     <div className="p-8 grid place-items-center text-center gap-3">
       <div className="text-4xl">☕</div>
@@ -1170,10 +1156,10 @@ function SlideCanvas({
               </Badge>
             </div>
             <div className="min-h-0 overflow-hidden">
-              <h3 className="px-6 pt-3 font-display text-lg sm:text-xl font-bold tracking-tight leading-tight line-clamp-2">{slide.title}</h3>
+              {slide.visual !== "cover" && <h3 className="px-6 pt-3 font-display text-lg sm:text-xl font-bold tracking-tight leading-tight line-clamp-2">{slide.title}</h3>}
               {kind === "mcq" && <McqSlideBody slide={slide} staticView={staticView} />}
               {kind === "chapter" && <ChapterSlideBody slide={slide} />}
-              {kind === "break" && <BreakSlideBody slide={slide} />}
+              {kind === "break" && <BreakSlideBody slide={slide} subject={subject} klass={klass} />}
             </div>
             <div className="px-4 sm:px-6 py-2 border-t border-border/60 bg-secondary/40 flex items-center justify-between text-[10px] text-muted-foreground">
               <span className="truncate max-w-[70%] italic">{slide.caption || slide.title}</span>
