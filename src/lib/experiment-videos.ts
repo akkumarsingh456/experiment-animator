@@ -47,6 +47,7 @@ function words(text:string){return text.toLowerCase().replace(/sulph/g,'sulf').r
 
 export function relevantExperimentVideos(input:{klass:string;subject:string;chapter:string;topic:string;activity?:string},sort='relevance',institutionOnly=false) {
   const grade=input.klass.match(/(?:^|\D)(9|10|11|12)(?=\D|$)/)?.[1]||input.klass;
+  if(!['9','10','11','12'].includes(grade))return [];
   const context=`${input.chapter} ${input.topic}`;
   const applicable=groups.filter(group=>group.chapter.test(context));
   const family:Family|undefined=/physics/i.test(input.subject)?'Physics':/chemistry/i.test(input.subject)?'Chemistry':/biology|botany|zoology/i.test(input.subject)?'Biology':
@@ -57,7 +58,9 @@ export function relevantExperimentVideos(input:{klass:string;subject:string;chap
   const narrow=`${input.topic!==input.chapter?input.topic:''} ${input.activity||''}`;
   const frequencies=new Map<string,number>();
   (catalog as ExperimentVideo[]).filter(video=>video.subject===family).forEach(video=>new Set(words(`${video.title} ${video.referenceTitle||''}`)).forEach(word=>frequencies.set(word,(frequencies.get(word)||0)+1)));
-  const matches=(catalog as ExperimentVideo[]).filter(video=>video.subject===family).map(video=>{
+  // Grade is an eligibility requirement, not a ranking preference. Never fill
+  // a sparse senior-class result list with junior-class concept supplements.
+  const matches=(catalog as ExperimentVideo[]).filter(video=>video.subject===family&&video.grades.includes(grade)).map(video=>{
     const text=`${video.title} ${video.referenceTitle||''}`,tokens=new Set(words(text));
     const hits=direct.filter(word=>tokens.has(word)),activeHits=active.filter(word=>tokens.has(word));
     const groupMatch=applicable.some(group=>group.subject===family&&group.video.test(text));
