@@ -224,7 +224,7 @@ function GeneratorBlock() {
                   </span>
                 </label>
                 {subOptions.length > 0 ? (
-                  <ScrollArea className="mt-1 h-40 rounded-md border border-border/60 bg-card/50 p-3">
+                  <ScrollArea className="lesson-subtopics mt-1 h-40 rounded-md border border-border/60 bg-card/50 p-3">
                     <div className="grid sm:grid-cols-2 gap-2">
                       {subOptions.map((s) => {
                         const checked = selectedSubs.includes(s);
