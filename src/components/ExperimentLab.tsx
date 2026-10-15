@@ -24,8 +24,8 @@ function saveBlob(blob: Blob, filename: string) {
 function Frame({ activity, step }: { activity: ExperimentActivity; step: number }) {
   const canvas=useRef<HTMLCanvasElement>(null);
   const {images,ready}=usePhotos(activity);
-  useEffect(()=>{if(canvas.current&&ready)drawPhotographicExperiment(canvas.current,activity,step,0,images);},[activity,step,images,ready]);
-  if(!ready)return <div className="grid aspect-video place-items-center rounded-xl bg-slate-50 text-sm">Loading apparatus photographs…</div>;
+  useEffect(()=>{if(canvas.current&&ready)drawPhotographicExperiment(canvas.current,activity,step,2.5,images);},[activity,step,images,ready]);
+  if(!ready)return <div className="grid aspect-video place-items-center rounded-xl bg-slate-50 text-sm">Preparing the illustrated procedure…</div>;
   return <canvas ref={canvas} className="w-full rounded-xl border bg-white" role="img" aria-label={`${activity.name}: ${activity.steps[step]?.description || activity.observation}`} />;
 }
 
@@ -49,7 +49,7 @@ function ExperimentPlayer({ activity }: { activity: ExperimentActivity }) {
         if(next===total){setPlaying(false);if(recorder.current?.state==='recording')recorder.current.stop();}
       }
       last=now;
-      if(ready && canvas.current && s.elapsed!==lastDraw){drawPhotographicExperiment(canvas.current,activity,sceneAt(s.elapsed),s.elapsed*2,images);lastDraw=s.elapsed;}
+      if(ready && canvas.current && s.elapsed!==lastDraw){drawPhotographicExperiment(canvas.current,activity,sceneAt(s.elapsed),s.elapsed-starts[sceneAt(s.elapsed)],images);lastDraw=s.elapsed;}
       frame=requestAnimationFrame(draw);
     };frame=requestAnimationFrame(draw);
     return()=>{cancelAnimationFrame(frame);if(recorder.current?.state==='recording')recorder.current.stop();stream.current?.getTracks().forEach(track=>track.stop());};
@@ -57,7 +57,7 @@ function ExperimentPlayer({ activity }: { activity: ExperimentActivity }) {
   useEffect(()=>{
     if(!voice||!playing||!('speechSynthesis' in window))return;
     const text=scene===activity.steps.length?`${activity.observation} ${activity.conclusion}`:activity.steps[scene].description;
-    window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.rate=speed*.9;window.speechSynthesis.speak(utterance);
+    window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.lang='en-IN';utterance.rate=speed*.9;window.speechSynthesis.speak(utterance);
     return()=>window.speechSynthesis.cancel();
   },[scene,voice,playing,speed,activity]);
   function record(){
@@ -74,7 +74,7 @@ function ExperimentPlayer({ activity }: { activity: ExperimentActivity }) {
     }catch{setError('Video saving could not start. Playback is still available.');stream.current?.getTracks().forEach(track=>track.stop());setRecording(false);}
   }
   return <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
-    <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 p-4 text-white"><div><p className="text-xs uppercase tracking-widest text-cyan-200">Watch • understand • explain</p><h3 className="mt-1 font-semibold">{photographic?'Real apparatus · guided photo demonstration':'Illustrated experiment · schematic'}</h3></div><span className="rounded-full bg-white/10 px-3 py-1 text-xs">{Math.ceil(total/60)} min · captions included · free</span></div>
+    <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 p-4 text-white"><div><p className="text-xs uppercase tracking-widest text-cyan-200">Watch • understand • explain</p><h3 className="mt-1 font-semibold">Step-by-step animated experiment · English subtitles</h3></div><span className="rounded-full bg-white/10 px-3 py-1 text-xs">{Math.ceil(total/60)} min · captions included · free</span></div>
     <canvas ref={canvas} className="block w-full" role="img" aria-label={`Animated apparatus and captions for ${activity.name}`} />
     <div className="flex flex-wrap items-center gap-3 border-t p-4">
       <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground" onClick={()=>{if(elapsed>=total){setElapsed(0);state.current.elapsed=0;}setPlaying(!playing);}} disabled={recording||!ready}>{playing?<Pause size={16}/>:<Play size={16}/>} {playing?'Pause':'Play full experiment'}</button>
@@ -84,7 +84,7 @@ function ExperimentPlayer({ activity }: { activity: ExperimentActivity }) {
       <button className="ml-auto inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm" disabled={recording||!ready} onClick={record}><Download size={16}/>{recording?'Saving as it plays…':'Save animation video'}</button>
       {recording&&<button className="text-sm underline" onClick={()=>{recorder.current?.stop();setPlaying(false);}}>Finish clip now</button>}
     </div>
-    <div className="px-4 pb-4"><input aria-label="Animation position" className="w-full" type="range" min={0} max={total} step={.1} value={elapsed} disabled={recording||!ready} onChange={event=>{const value=Number(event.target.value);setElapsed(value);state.current.elapsed=value;}}/><p className="text-xs text-muted-foreground">{Math.floor(elapsed)} / {total}s · {photographic?'Real photographs with animated highlights; not continuous lab footage.':'Schematic fallback: a matching apparatus photograph is not available.'} Saved WebM includes captions; browser read-aloud is not recorded.</p>{error&&<p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}</div>
+    <div className="px-4 pb-4"><input aria-label="Animation position" className="w-full" type="range" min={0} max={total} step={.1} value={elapsed} disabled={recording||!ready} onChange={event=>{const value=Number(event.target.value);setElapsed(value);state.current.elapsed=value;}}/><p className="text-xs text-muted-foreground">{Math.floor(elapsed)} / {total}s · Animated procedure with English subtitles{photographic?' and real equipment references':''}. This is an instructional animation. Saved WebM includes captions; browser read-aloud is not recorded.</p>{error&&<p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}</div>
     <div className="flex flex-wrap gap-2 border-t bg-slate-50 p-3">{[...activity.steps.map(step=>step.title),'Observe & explain'].map((title,index)=><button key={index} disabled={recording||!ready} className={`rounded-lg border px-3 py-2 text-xs ${index===scene?'bg-primary text-primary-foreground':'bg-white'}`} onClick={()=>{setElapsed(starts[index]);state.current.elapsed=starts[index];setPlaying(true);}}>{index+1}. {title}</button>)}</div>
   </div>;
 }
@@ -95,7 +95,7 @@ export function ExperimentLab({ activities, topic, klass, subject, chapter }: { 
   const activity=experiments[Math.min(selected,experiments.length-1)];
   const cues=activity?experimentCues(activity):null;
   return <section className="mb-10 space-y-5" aria-label="NCERT experiment studio">
-    <div className="flex items-center gap-3"><span className="rounded-xl bg-cyan-100 p-3 text-cyan-800"><FlaskConical size={23}/></span><div><h2 className="text-xl font-semibold">NCERT Experiment Studio</h2><p className="text-sm text-muted-foreground">Recognise real equipment, follow each step, then watch the recorded demonstration.</p></div></div>
+    <div className="flex items-center gap-3"><span className="rounded-xl bg-cyan-100 p-3 text-cyan-800"><FlaskConical size={23}/></span><div><h2 className="text-xl font-semibold">NCERT Experiment Studio</h2><p className="text-sm text-muted-foreground">Follow the illustrated actions, recognise real equipment, then play the complete subtitled animation.</p></div></div>
     <NcertManualLinks klass={klass} subject={subject} chapter={chapter} topic={topic}/>
     {!activity?<div className="rounded-2xl border bg-white p-6"><h3 className="font-semibold">A complete experiment procedure was not found for this topic</h3><p className="my-3 text-sm text-muted-foreground">Exercise questions are not shown as lab instructions. Upload or re-ingest the matching NCERT activity / laboratory-manual pages to build this guide.</p><p className="text-sm font-medium">Open the class-specific manual PDFs listed above.</p><a className="mt-3 block text-primary underline" href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`NCERT ${topic} experiment OLabs`)}`} target="_blank" rel="noopener noreferrer">Search YouTube for this topic’s demonstrations</a></div>:<>
       {experiments.length>1&&<label className="block text-sm font-medium">Choose activity <select className="ml-2 max-w-full rounded-lg border bg-white p-2" value={selected} onChange={event=>{setSelected(Number(event.target.value));setChecked({});}}>{experiments.map((item,index)=><option key={index} value={index}>{item.name}</option>)}</select></label>}

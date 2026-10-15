@@ -25,29 +25,31 @@ function lines(ctx:CanvasRenderingContext2D,text:string,x:number,y:number,width:
   for(const word of text.split(/\s+/)){if(ctx.measureText(`${line} ${word}`).width>width&&line){ctx.fillText(line,x,y+row++*size*1.4);line=word;}else line=line?`${line} ${word}`:word;}
   ctx.fillText(line,x,y+row*size*1.4);return y+(row+1)*size*1.4;
 }
+const procedureCanvases=new WeakMap<HTMLCanvasElement,HTMLCanvasElement>();
+/** Procedure animation remains the main view; real photographs identify the tools. */
 export function drawPhotographicExperiment(canvas:HTMLCanvasElement,activity:ExperimentActivity,scene:number,phase:number,images:PhotoImages){
-  const photos=apparatusPhotos(activity).filter(photo=>images.has(photo.id));
-  if(!photos.length){drawExperiment(canvas,activity,scene,phase);return;}
-  canvas.width=1280;canvas.height=800;const ctx=canvas.getContext('2d');if(!ctx)return;
-  ctx.fillStyle='#f5f7fa';ctx.fillRect(0,0,1280,800);ctx.fillStyle='#132e42';ctx.fillRect(0,0,1280,116);
-  ctx.fillStyle='#fff';lines(ctx,activity.name,28,38,1220,25);
-  ctx.fillStyle='#bde8ed';ctx.font='16px Arial';ctx.fillText(`REAL APPARATUS PHOTOGRAPHS  •  ${scene<activity.steps.length?`STEP ${scene+1} / ${activity.steps.length}`:'OBSERVE & EXPLAIN'}`,28,96);
-  const step=activity.steps[scene];const description=step?.description||`${activity.observation} ${activity.conclusion}`;
-  const relevant=photos.filter(photo=>matches[photo.id].test(description)||(/read|measure|range|least count/i.test(description)&&['ammeter','voltmeter'].includes(photo.id)));
-  const chosen=scene===0?photos.slice(0,4):relevant.length?relevant.slice(0,4):[photos[scene%photos.length]];
-  chosen.forEach((photo,index)=>{
-    const cols=chosen.length===1?1:2,rows=Math.ceil(chosen.length/cols),w=760/cols,h=450/rows,x=24+(index%cols)*w,y=140+Math.floor(index/cols)*h;
-    ctx.fillStyle='#fff';ctx.fillRect(x+4,y+4,w-12,h-12);
-    const image=images.get(photo.id)!;const scale=Math.min((w-42)/image.width,(h-64)/image.height);const iw=image.width*scale,ih=image.height*scale;
-    ctx.drawImage(image,x+(w-iw)/2,y+18+(h-64-ih)/2,iw,ih);
-    ctx.strokeStyle=`rgba(0,117,137,${.55+.35*Math.sin(phase)**2})`;ctx.lineWidth=3;ctx.strokeRect(x+4,y+4,w-12,h-12);
-    ctx.fillStyle='#12384b';lines(ctx,photo.label,x+17,y+h-28,w-32,17);
+  const photos=apparatusPhotos(activity).filter(photo=>images.has(photo.id)).slice(0,4);
+  let procedure=procedureCanvases.get(canvas);
+  if(!procedure){procedure=document.createElement('canvas');procedureCanvases.set(canvas,procedure);}
+  drawExperiment(procedure,activity,scene,phase);
+  canvas.width=1280;canvas.height=photos.length?940:780;
+  const ctx=canvas.getContext('2d');if(!ctx)return;
+  ctx.drawImage(procedure,0,0);
+  // Burn English subtitles into the saved video as well as on-screen playback.
+  const text=activity.steps[scene]?.description||`${activity.observation} ${activity.conclusion}`;
+  const chunks=text.match(/.{1,135}(?:\s|$)|\S{1,135}/g)||[text];
+  const subtitle=chunks[Math.min(chunks.length-1,Math.floor(phase/5))].trim();
+  ctx.fillStyle='#102b43';ctx.fillRect(0,720,1280,60);ctx.fillStyle='#fff';
+  lines(ctx,`English subtitles · ${subtitle}`,25,744,1230,18);
+  if(!photos.length)return;
+  ctx.fillStyle='#f1f5f9';ctx.fillRect(0,780,1280,160);
+  ctx.fillStyle='#244454';ctx.font='bold 15px Arial';ctx.fillText('REAL EQUIPMENT · identification reference (animated procedure above)',24,802);
+  photos.forEach((photo,index)=>{
+    const x=24+index*310,image=images.get(photo.id)!;
+    const scale=Math.min(95/image.width,94/image.height);
+    ctx.drawImage(image,x,816,image.width*scale,image.height*scale);
+    ctx.fillStyle='#12384b';lines(ctx,photo.label,x+105,834,195,15);
+    ctx.fillStyle='#526473';lines(ctx,`${photo.author} · ${photo.license}`,x+105,874,195,10);
   });
-  ctx.fillStyle='#12384b';ctx.font='bold 25px Arial';ctx.fillText(step?.title||'Observe & explain',815,166);
-  const words=description.split(/\s+/).length;
-  lines(ctx,description,815,208,430,words>100?16:words>70?18:21);
-  ctx.fillStyle='#e1edf1';ctx.fillRect(24,612,1232,76);ctx.fillStyle='#264759';
-  lines(ctx,'Equipment identification photos; these are not a photograph of the complete connected setup or measured results. Watch the recorded demonstration below for the actual procedure.',42,638,1190,18);
-  ctx.fillStyle='#526473';lines(ctx,chosen.map(photo=>`${photo.author} (${photo.license})`).join(' • '),28,721,1220,13);
-  ctx.fillText('Photo source links and licences are listed below the player. Guided photo animation; no AI-generated imagery.',28,780);
+  ctx.font='11px Arial';ctx.fillText('Photo sources below player. Animation illustrates the source procedure; actual laboratory results may vary.',24,932);
 }

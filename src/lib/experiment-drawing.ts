@@ -24,14 +24,13 @@ export function experimentKind(activity: ExperimentActivity) {
 }
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, width: number, lineHeight: number, maxLines = 5) {
-  const words = text.split(/\s+/); let line = '', row = 0;
-  for (const word of words) {
-    if (ctx.measureText(`${line} ${word}`).width > width && line) {
-      ctx.fillText(line, x, y + row++ * lineHeight); line = word;
-      if (row === maxLines - 1) break;
-    } else line = line ? `${line} ${word}` : word;
-  }
-  ctx.fillText(row === maxLines - 1 ? `${line} …` : line, x, y + row * lineHeight);
+  const words=text.split(/\s+/),rows:string[]=[];let line='';
+  for(const word of words){if(line&&ctx.measureText(`${line} ${word}`).width>width){rows.push(line);line=word;}else line=line?`${line} ${word}`:word;}
+  if(line)rows.push(line);
+  rows.slice(0,maxLines).forEach((row,index)=>{
+    if(index===maxLines-1&&rows.length>maxLines){while(row.length&&ctx.measureText(`${row}…`).width>width)row=row.slice(0,-1);row+='…';}
+    ctx.fillText(row,x,y+index*lineHeight);
+  });
 }
 
 /** Locally drawn apparatus animation; labels/captions are included in video exports. */
@@ -39,13 +38,13 @@ export function drawExperiment(canvas: HTMLCanvasElement, activity: ExperimentAc
   const c = canvas.getContext('2d'); if (!c) return;
   canvas.width = 1280; canvas.height = 720;
   const cues = experimentCues(activity), kind = experimentKind(activity);
-  const result = scene >= activity.steps.length, setup = scene === 0;
+  const result = scene >= activity.steps.length, setup = scene === 0 || /key.*open|open.*key/i.test(activity.steps[scene]?.description||'');
   const title = result ? 'Observe & explain' : activity.steps[scene]?.title || 'Prepare';
   const description = result ? activity.observation : activity.steps[scene]?.description || activity.objective;
   c.fillStyle = '#eff6fb'; c.fillRect(0, 0, 1280, 720);
   c.fillStyle = '#102b43'; c.fillRect(0, 0, 1280, 105);
-  c.font = 'bold 27px sans-serif'; c.fillStyle = '#fff'; wrap(c, activity.name, 35, 44, 1180, 32, 1);
-  c.font = '17px sans-serif'; c.fillStyle = '#aee0ea'; c.fillText(`SCHEMATIC ANIMATION  •  ${result ? 'RESULT' : `STEP ${scene + 1} / ${activity.steps.length}`}`, 35, 81);
+  c.font = 'bold 27px sans-serif'; c.fillStyle = '#fff'; c.fillText(activity.name.length>85?`${activity.name.slice(0,82)}…`:activity.name,35,44);
+  c.font = '17px sans-serif'; c.fillStyle = '#aee0ea'; c.fillText(`ANIMATED PROCEDURE  •  ${result ? 'RESULT' : `STEP ${scene + 1} / ${activity.steps.length}`}`, 35, 81);
   c.fillStyle = '#fff'; c.beginPath(); c.roundRect(28, 130, 805, 445, 22); c.fill();
   c.strokeStyle = '#237c91'; c.lineWidth = 5; c.fillStyle = '#237c91';
   const path = (points: number[][]) => { c.beginPath(); points.forEach(([x,y],i) => i ? c.lineTo(x,y) : c.moveTo(x,y)); c.stroke(); };
@@ -64,19 +63,54 @@ export function drawExperiment(canvas: HTMLCanvasElement, activity: ExperimentAc
     if (!setup) for(let i=0;i<8;i++){const x=145+((i*57+phase*100)%455);circle(x,245,4,'#e59725');} // direction is conventional current in this schematic
     label('Illustrative circuit • meter readings come from the real experiment',85,548);
   } else if (kind === 'chemistry') {
-    const x=320,y=225,w=100,h=240;
-    const g=c.createLinearGradient(x,0,x+w,0);g.addColorStop(0,'#e2eef2');g.addColorStop(.4,'#fff');g.addColorStop(1,'#d5e4eb');
-    c.fillStyle=g;c.beginPath();c.roundRect(x,y,w,h,[0,0,48,48]);c.fill();c.stroke();
-    c.save();c.beginPath();c.roundRect(x+5,y+5,w-10,h-10,[0,0,44,44]);c.clip();
-    c.fillStyle=result&&cues.colour?cues.colour:'#d5dfe5';c.fillRect(x+5,y+125,w-10,120);
-    if(result&&cues.precipitate){c.fillStyle=cues.colour||'#c3c6c9';c.fillRect(x,y+h-35,w,35);}
-    if(result&&cues.gas)for(let i=0;i<7;i++){const yy=y+h-25-((phase*115+i*29)%190);circle(x+25+i%3*23,yy,5,'#fff');}
-    c.restore();c.strokeStyle='#237c91';
-    if(!result&&/add|drop|pour|mix/i.test(description)){path([[360,165],[390,190],[385,218]]);circle(382,225+phase%1*70,6,'#8eabb7');label('Reagent / dropper',430,185);}
-    label('Test sample',320,503); label(result&&cues.colour?`Reported colour: ${cues.colourName}`:'Neutral shading • actual colour not assumed',110,545);
-    if(result&&cues.odour){label('≋  Odour reported in source',480,305);label('Do not directly inhale gases',480,338);}
-    if(result&&cues.precipitate)label('Solid deposit / precipitate',480,400);
-    if(result&&cues.gas)label('Gas evolution',480,444);
+    const observeAt=activity.steps.findIndex(step=>/observ|measur|compar|result|record/i.test(step.title));
+    const observing=result||(observeAt>=0&&scene>=observeAt);
+    const adding=!observing&&/add|drop|pour|mix/i.test(description);
+    const preparing=scene===0;
+    const transfer=!preparing&&!observing&&/sample|transfer|place|pipett/i.test(description);
+    const progress=Math.min(1,phase/3);
+    const reagentText=activity.apparatus.find(tool=>/ceric|reagent|iodine|bromine|indicator/i.test(tool))||'Source-specified reagent';
+    const ceric=/ceric ammonium nitrate/i.test(`${activity.name} ${activity.apparatus.join(' ')} ${description}`);
+    const reagentColour=ceric?'#ebc728':'#aac8d9';
+    const tube=(x:number,y:number,fill:number,colour:string)=>{
+      c.save();c.strokeStyle='#608a99';c.lineWidth=3;
+      const glass=c.createLinearGradient(x,0,x+90,0);glass.addColorStop(0,'#c5dce580');glass.addColorStop(.3,'#ffffffcc');glass.addColorStop(.8,'#e1eff455');glass.addColorStop(1,'#8aafc099');
+      c.beginPath();c.roundRect(x,y,90,230,[3,3,43,43]);c.fillStyle=glass;c.fill();
+      c.save();c.clip();c.fillStyle=colour;c.fillRect(x+4,y+230-fill,82,fill);c.restore();c.stroke();
+      c.beginPath();c.ellipse(x+45,y,48,8,0,0,Math.PI*2);c.stroke();
+      c.strokeStyle='#ffffffb0';c.lineWidth=7;path([[x+14,y+18],[x+14,y+175]]);c.restore();
+    };
+    // Reference and sample are shown as the same sample before / after, not an
+    // additional control tube unless the source procedure actually specifies one.
+    c.fillStyle='#dae4e9';c.fillRect(95,470,650,14);
+    tube(175,225,preparing?0:85,'#b8dbe9');
+    label('Starting sample',137,526);
+    const fill=preparing?0:transfer?85*progress:85;
+    const colour=observing&&cues.colour?cues.colour:'#b8dbe9';
+    tube(475,225,fill,colour);
+    label(observing?'After the stated test':'Test sample',448,526);
+    if(preparing){
+      c.fillStyle='#81512e';c.fillRect(350,277,70,135);c.fillStyle='#233745';c.fillRect(365,250,40,28);
+      c.fillStyle='#fff';c.fillRect(353,320,64,50);label('Sample',354,350);
+      label('Prepare the solution specified in the source',115,190);
+    } else if(adding||transfer){
+      const x=520+Math.sin(phase*.8)*3;
+      c.save();c.translate(x,180);c.rotate(.25);c.fillStyle='#263f53';c.beginPath();c.ellipse(0,-48,16,30,0,0,Math.PI*2);c.fill();
+      c.fillStyle='#d4e9ef';c.strokeStyle='#7195a3';c.lineWidth=2;c.fillRect(-6,-20,12,58);c.strokeRect(-6,-20,12,58);c.restore();
+      c.fillStyle=adding?reagentColour:'#a3d4e4';c.beginPath();c.ellipse(520,220+(phase%1)*105,5,8,0,0,Math.PI*2);c.fill();
+      label(adding?'Add the stated drops':'Transfer the stated volume',405,166);
+      c.font='16px sans-serif';wrap(c,adding?reagentText:description.match(/\d+(?:\.\d+)?\s*m[lL]/)?.[0]||'Use the source amount',590,240,180,24,3);
+      path([[610,320],[580,350],[554,350]]);
+    } else if(observing){
+      c.strokeStyle='#e3a031';path([[295,335],[410,335],[395,323]]);
+      label('Compare before → after',280,193);
+      if(cues.colour){c.fillStyle=cues.colour;c.fillRect(620,285,30,30);label(cues.colourName||'',665,309);}
+      if(cues.gas)for(let i=0;i<5;i++)circle(495+i%3*18,430-((phase*45+i*25)%90),4,'#fff');
+      if(cues.odour){label('Odour: source-reported',565,380);label('Never inhale directly',565,408);}
+      if(/record|compar/i.test(title)||result){c.fillStyle='#fff5d9';c.fillRect(605,425,170,55);c.font='16px sans-serif';c.fillStyle='#4f4225';c.fillText('Record observation',615,449);c.fillText('and conclusion',615,471);}
+    }
+    c.font='16px sans-serif';c.fillStyle='#325466';
+    wrap(c,observing&&cues.colour?`Expected ${cues.colourName} response · reported by the source`:'Illustrated apparatus · liquid shading is not a measured result',100,560,680,22,1);
   } else if (kind === 'leaf') {
     c.beginPath();c.ellipse(400,345,185,97,-.35,0,Math.PI*2);c.fillStyle=result?'#20234e':'#65a877';c.fill();c.stroke();
     c.save();c.translate(400,345);c.rotate(-.35);c.fillStyle=result?'#c5b280':'#29333a';c.fillRect(-40,-95,80,190);c.restore();
