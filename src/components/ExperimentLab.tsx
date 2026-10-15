@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { BookOpen, CheckCircle2, Download, Eye, FlaskConical, Play, Pause, RotateCcw, Volume2, Wind } from 'lucide-react';
+import { BookOpen, CheckCircle2, Download, Eye, FlaskConical, Play, Pause, RotateCcw, Volume2, Wind, Maximize2, Minimize2 } from 'lucide-react';
 import type { Activity } from '@/lib/generate.functions';
 import { displayExperiments, NCERT_LABS, type ExperimentActivity } from '@/lib/experiment-activities';
 import { experimentCues } from '@/lib/experiment-drawing';
@@ -26,6 +26,37 @@ function Frame({ activity, step }: { activity: ExperimentActivity; step: number 
 }
 
 function ExperimentPlayer({ activity }: { activity: ExperimentActivity }) {
+  const player=useRef<HTMLDivElement>(null),presentButton=useRef<HTMLButtonElement>(null);
+  const [presenting,setPresenting]=useState(false);
+  async function togglePresentation(){
+    if(presenting){
+      if(document.fullscreenElement===player.current)await document.exitFullscreen().catch(()=>{});
+      setPresenting(false);presentButton.current?.focus();return;
+    }
+    setPresenting(true);
+    // Keep an in-page presentation available if browser fullscreen is blocked.
+    await player.current?.requestFullscreen?.().catch(()=>{});
+  }
+  useEffect(()=>{
+    const changed=()=>{if(!document.fullscreenElement){setPresenting(false);presentButton.current?.focus();}};
+    document.addEventListener('fullscreenchange',changed);
+    return()=>document.removeEventListener('fullscreenchange',changed);
+  },[]);
+  useEffect(()=>{
+    if(!presenting)return;
+    const before=document.body.style.overflow;document.body.style.overflow='hidden';
+    const exit=(event:KeyboardEvent)=>{
+      if(event.key==='Escape'&&!document.fullscreenElement){setPresenting(false);presentButton.current?.focus();}
+      if(event.key==='Tab'){
+        const controls=Array.from(player.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled)')||[]);
+        const first=controls[0],last=controls[controls.length-1];
+        if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+        else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+      }
+    };
+    window.addEventListener('keydown',exit);
+    return()=>{document.body.style.overflow=before;window.removeEventListener('keydown',exit);};
+  },[presenting]);
   const {images,ready}=usePhotos(activity);
   const canvas=useRef<HTMLCanvasElement>(null), recorder=useRef<MediaRecorder|null>(null), stream=useRef<MediaStream|null>(null);
   const [playing,setPlaying]=useState(false),[elapsed,setElapsed]=useState(0),[speed,setSpeed]=useState(1),[voice,setVoice]=useState(false),[recording,setRecording]=useState(false),[error,setError]=useState('');
@@ -68,10 +99,10 @@ function ExperimentPlayer({ activity }: { activity: ExperimentActivity }) {
       setVoice(false);setSpeed(1);setElapsed(0);state.current.elapsed=0;setRecording(true);media.start(1000);setPlaying(true);
     }catch{setError('Video saving could not start. Playback is still available.');stream.current?.getTracks().forEach(track=>track.stop());setRecording(false);}
   }
-  return <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
-    <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 p-4 text-white"><div><p className="text-xs uppercase tracking-widest text-cyan-200">Watch • understand • explain</p><h3 className="mt-1 font-semibold">Step-by-step animated experiment · English subtitles</h3></div><span className="rounded-full bg-white/10 px-3 py-1 text-xs">{Math.ceil(total/60)} min · captions included · free</span></div>
-    <canvas ref={canvas} className="block w-full" role="img" aria-label={`Animated apparatus and captions for ${activity.name}`} />
-    <div className="flex flex-wrap items-center gap-3 border-t p-4">
+  return <div ref={player} role={presenting?'dialog':undefined} aria-modal={presenting?true:undefined} aria-label="Experiment animation player" className={presenting?'fixed inset-0 z-[100] flex h-[100dvh] w-screen flex-col overflow-auto bg-white':'overflow-hidden rounded-2xl border bg-white shadow-sm'}>
+    <div className="flex flex-wrap items-center justify-between gap-3 shrink-0 bg-slate-900 p-4 text-white"><div><p className="text-xs uppercase tracking-widest text-cyan-200">Watch • understand • explain</p><h3 className="mt-1 font-semibold">Step-by-step animated experiment · English subtitles</h3></div><div className="flex items-center gap-3"><span className="rounded-full bg-white/10 px-3 py-1 text-xs">{Math.ceil(total/60)} min · captions included · free</span><button ref={presentButton} type="button" aria-pressed={presenting} onClick={togglePresentation} className="inline-flex items-center gap-2 rounded-lg border border-white/40 px-3 py-2 text-sm hover:bg-white/10">{presenting?<Minimize2 size={17}/>:<Maximize2 size={17}/>} {presenting?'Exit presentation':'Present'}</button></div></div>
+    <div className={presenting?'min-h-0 flex-1 bg-slate-950':''}><canvas ref={canvas} className={presenting?'block h-full w-full object-contain':'block w-full'} role="img" aria-label={`Animated apparatus and captions for ${activity.name}`} /></div>
+    <div className="flex flex-wrap items-center gap-3 shrink-0 border-t p-4">
       <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground" onClick={()=>{if(elapsed>=total){setElapsed(0);state.current.elapsed=0;}setPlaying(!playing);}} disabled={recording||!ready}>{playing?<Pause size={16}/>:<Play size={16}/>} {playing?'Pause':'Play full experiment'}</button>
       <button title="Restart animation" aria-label="Restart animation" className="rounded-lg border p-2" disabled={recording||!ready} onClick={()=>{setElapsed(0);state.current.elapsed=0;setPlaying(true);}}><RotateCcw size={17}/></button>
       <label className="text-sm">Speed <select className="rounded border p-1" value={speed} disabled={recording||!ready} onChange={event=>setSpeed(Number(event.target.value))}>{[.75,1,1.5,2].map(value=><option key={value} value={value}>{value}×</option>)}</select></label>
@@ -79,8 +110,8 @@ function ExperimentPlayer({ activity }: { activity: ExperimentActivity }) {
       <button className="ml-auto inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm" disabled={recording||!ready} onClick={record}><Download size={16}/>{recording?'Saving as it plays…':'Save animation video'}</button>
       {recording&&<button className="text-sm underline" onClick={()=>{recorder.current?.stop();setPlaying(false);}}>Finish clip now</button>}
     </div>
-    <div className="px-4 pb-4"><input aria-label="Animation position" className="w-full" type="range" min={0} max={total} step={.1} value={elapsed} disabled={recording||!ready} onChange={event=>{const value=Number(event.target.value);setElapsed(value);state.current.elapsed=value;}}/><p className="text-xs text-muted-foreground">{Math.floor(elapsed)} / {total}s · Animated procedure with English subtitles. This is an instructional animation. Saved WebM includes captions; browser read-aloud is not recorded.</p>{error&&<p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}</div>
-    <div className="flex flex-wrap gap-2 border-t bg-slate-50 p-3">{[...activity.steps.map(step=>step.title),'Observe & explain'].map((title,index)=><button key={index} disabled={recording||!ready} className={`rounded-lg border px-3 py-2 text-xs ${index===scene?'bg-primary text-primary-foreground':'bg-white'}`} onClick={()=>{setElapsed(starts[index]);state.current.elapsed=starts[index];setPlaying(true);}}>{index+1}. {title}</button>)}</div>
+    <div className="shrink-0 px-4 pb-4"><input aria-label="Animation position" className="w-full" type="range" min={0} max={total} step={.1} value={elapsed} disabled={recording||!ready} onChange={event=>{const value=Number(event.target.value);setElapsed(value);state.current.elapsed=value;}}/><p className="text-xs text-muted-foreground">{Math.floor(elapsed)} / {total}s · Animated procedure with English subtitles. This is an instructional animation. Saved WebM includes captions; browser read-aloud is not recorded.</p>{error&&<p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}</div>
+    <div className="flex flex-wrap gap-2 shrink-0 border-t bg-slate-50 p-3">{[...activity.steps.map(step=>step.title),'Observe & explain'].map((title,index)=><button key={index} disabled={recording||!ready} className={`rounded-lg border px-3 py-2 text-xs ${index===scene?'bg-primary text-primary-foreground':'bg-white'}`} onClick={()=>{setElapsed(starts[index]);state.current.elapsed=starts[index];setPlaying(true);}}>{index+1}. {title}</button>)}</div>
   </div>;
 }
 
