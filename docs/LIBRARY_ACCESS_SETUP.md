@@ -6,7 +6,7 @@ The owner clarified on 17 October 2026 that authentication is for adding new boo
 
 New source uploads and source-data writes remain restricted to verified administrators: akkumarsingh456@gmail.com and ak25edi00022@student.nitw.ac.in. The server checks the verified Auth identity, never a client-supplied role, profile name or editable contact email. Upload tickets, book/page/chunk insertion, OCR ingestion and source captures retain their server-side administrator checks. Existing recorded originals cannot be overwritten through a new upload ticket.
 
-The `/upload` route retains its sign-in gate. `/history` is a public, read-only uploaded-books catalogue. Public download signing requires the exact storage path to belong to a recorded library book, rejects invalid paths, and issues a short-lived URL. It cannot sign arbitrary private storage files. Source storage remains private; public reading uses the controlled book reader rather than public upload permissions.
+The homepage Admin login button opens `/upload`, which retains its sign-in gate. Choosing the verified Google account akkumarsingh456@gmail.com automatically opens the existing book and notes PDF upload tools; no manual profile role is needed. Email sign-in links use the same server-verified allowlist. An administrator banner confirms when uploads are enabled. `/history` is a public, read-only uploaded-books catalogue. Public download signing requires the exact storage path to belong to a recorded library book, rejects invalid paths, and issues a short-lived URL. It cannot sign arbitrary private storage files. Source storage remains private; public reading uses the controlled book reader rather than public upload permissions.
 
 ## Restored generation
 

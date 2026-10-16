@@ -739,12 +739,11 @@ function UploadPage() {
       <main className="max-w-6xl mx-auto px-5 py-10">
         <div className="mb-8">
           <h1 className="font-display text-3xl md:text-4xl font-extrabold tracking-tight">
-            Upload an NCERT textbook
+            Upload books and notes
           </h1>
           <p className="mt-2 text-muted-foreground max-w-2xl">
-            Drop a Class 9–12 NCERT PDF. We read every word, build a chapter memory,
-            and store it in your Lovable Cloud library so the AI can reuse it for every
-            future generation.
+            Add textbook or notes PDFs to the library. Mark only official NCERT textbooks
+            as NCERT sources; other books and notes are stored as reference material.
           </p>
         </div>
 
