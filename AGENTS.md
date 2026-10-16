@@ -16,3 +16,5 @@
 - Screenshot refresh changes only reference_visuals; render those below the existing 2D illustration with strict grade, subject, chapter and topic matching.
 - Library Google sign-in uses the managed OAuth helper and a public callback; basic profiles are owner-scoped and never participate in administrator authorization.
 - Follow `docs/NOTES_AND_VISUAL_QUALITY.md` for all subject/chapter changes. Keep shared extraction guards, chapter-specific evidence constraints and explicit unavailable-diagram states; never route ambiguous words such as series, cell or unit without subject context.
+
+- Authentication restricts adding source books and notes only. Existing library reading, generation, saved lessons and PPT/PDF access stay public; never impose retrospective source approval on historical uploads.

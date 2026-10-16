@@ -37,12 +37,16 @@ export const createUploadTicket = createServerFn({ method: "POST" }).middleware(
     return { path: data.path, token: ticket.token, signedUrl: ticket.signedUrl };
   });
 
-export const signDownload = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
+export const signDownload = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({ path: z.string().min(1), expiresIn: z.number().int().positive().optional() }).parse(d),
+    z.object({ path: z.string().min(1).max(500).refine(path => !path.includes("..") && !path.startsWith("/"), "Invalid book path"), expiresIn: z.number().int().positive().optional() }).parse(d),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Public reading is limited to a recorded library book, never arbitrary storage paths.
+    const { data: book, error: lookupError } = await supabaseAdmin.from("ncert_books")
+      .select("id").eq("storage_path", data.path).limit(1).maybeSingle();
+    if (lookupError || !book) throw new Error("This book is not available in the uploaded library.");
     const { data: signed, error } = await supabaseAdmin.storage
       .from(BUCKET)
       .createSignedUrl(data.path, Math.min(data.expiresIn ?? 300, 300));

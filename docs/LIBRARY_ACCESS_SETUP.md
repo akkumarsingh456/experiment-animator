@@ -1,43 +1,43 @@
-# Restricted library access setup
+# Public learning and restricted uploads
 
-## Current migration workflow
+## Current access rules
 
-The newer Google sign-in update introduced `drizzle.config.ts` and the `drizzle/migrations` journal. Its first migration adds basic profiles and the three source fields, but leaves every historical source unreviewed. The follow-up `0001_complete_source_library_access.sql` carries the remaining source-library security rules into that same active migration chain. Deploy the pending Drizzle migration through Lovable's linked database workflow. The Supabase-folder script below is the equivalent standalone recovery script; do not reset either database or profiles.
+The owner clarified on 17 October 2026 that authentication is for adding new books and notes, not for using existing materials. Lesson preparation, saved notes, PPT/PDF views, the Notes Library, queue controls, the uploaded-book catalogue and opening recorded PDFs are public. Existing source records must not require retrospective NCERT approval or sign-in.
 
-The live read-only check on 17 October 2026 found the three fields present, with 295 unreviewed records and no approved NCERT records. A live Current Electricity generation reached the approval check and reported that no approved textbook was available. This supersedes the screenshot's earlier missing-column state. Existing sources still require an authorised review before generation can use them. This check did not modify records or complete the Google account round trip.
+New source uploads and source-data writes remain restricted to verified administrators: akkumarsingh456@gmail.com and ak25edi00022@student.nitw.ac.in. The server checks the verified Auth identity, never a client-supplied role, profile name or editable contact email. Upload tickets, book/page/chunk insertion, OCR ingestion and source captures retain their server-side administrator checks. Existing recorded originals cannot be overwritten through a new upload ticket.
 
-## Deployment steps — required
+The `/upload` route retains its sign-in gate. `/history` is a public, read-only uploaded-books catalogue. Public download signing requires the exact storage path to belong to a recorded library book, rejects invalid paths, and issues a short-lived URL. It cannot sign arbitrary private storage files. Source storage remains private; public reading uses the controlled book reader rather than public upload permissions.
 
-1. Apply the pending `drizzle/migrations/0001_complete_source_library_access.sql` through the linked Lovable database migration workflow **before publishing this version**. The equivalent standalone script is `supabase/migrations/20261016010000_lock_source_library.sql`. This session has no database-management credentials and has not applied the security migration to the live database.
-2. Preserve the newer managed Google OAuth helper and public `/auth/callback` route. Complete the interactive Google account-selection flow and verify its returned session. Do not replace this integration with a second provider or introduce manual OAuth secrets as part of this database repair.
-3. Verify the configured production site URL and the exact `/auth/callback` return route used by managed Google sign-in. Email links currently return to `/upload`. Add actual preview return URLs only if needed; avoid broad production redirect wildcards.
-4. Enable email authentication and configure an email-delivery provider if email-link sign-in is needed. Default hosted email delivery is restricted/rate limited; Google and email-provider availability must be checked in the actual account. No Clerk keys are required.
-5. Confirm the deployed server has SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY and SUPABASE_SERVICE_ROLE_KEY. The service-role key must never use a VITE_ prefix, appear in a client bundle or be pasted into a chat.
-6. Sign in as one of the two verified admin addresses. Open Upload status; open each existing NCERT PDF and use **Verify as NCERT** only after checking it. Existing records default to unreviewed, so notes fail closed until a matching NCERT source is approved. New uploads have an explicit NCERT confirmation checkbox; unchecked books are reference-only.
-7. Publish. Check anonymous access, an ordinary signed-in account, both admins, expired sessions, direct server calls, and direct anonymous database/storage requests before describing the deployment as secured.
+## Restored generation
 
-## Recover generation after a missing source_kind error
+The lesson reader accepts historical textbook records even when `source_kind` is absent or `unreviewed`. That field describes a source classification, not whether a visitor is allowed to learn. Known reference books and records explicitly classified as reference remain excluded from primary NCERT note text; their figures and reader links remain available separately. Class, subject and chapter scoping, scientific notation guards, curated formula additions, notes pagination and PPT layouts are retained.
 
-`column ncert_books.source_kind does not exist` means the app was published before the source-library database migration. It does not mean the textbook or generated notes were deleted. Re-uploading PDFs, changing subjects, and repeatedly retrying generation will not create the missing columns.
+The reader supports databases without the optional classification field. Only a missing classification-column error causes a compatibility retry; actual permission and connectivity errors are reported. There is no fallback to books from a different class or subject and no automatic relabelling of the owner's library.
 
-Apply the committed `20261016010000_lock_source_library.sql` through the linked project's migration workflow before publishing the matching application update. The script is transactional, can be rerun without duplicate constraint/policy failures, and reloads the PostgREST schema cache. Do not reset the database, delete books, revert recent UI changes, or remove the NCERT approval filter to work around this error. When using an SQL editor for emergency recovery, reconcile the migration history through the project's normal migration workflow afterwards.
+The earlier source-approval prerequisite was the misunderstanding behind the outage. It is removed. Restoring generation does not require approving all 295 historical records, uploading those PDFs again, resetting the database or reverting the owner's design and lesson changes.
 
-Sign in with an approved admin account and open **Library access**. The page checks the required columns before loading or classifying the inventory and reports a setup problem instead of claiming the inventory is empty. Once ready, open and verify the existing official NCERT sources. Historical records remain unreviewed until explicitly approved; the migration does not automatically trust filenames or reference books. Then retry the originally selected chapter. Check both Class 11 Units and Measurement and Class 12 Current Electricity with matching approved, readable sources. Verify that a reference-only source is still excluded.
+## Database migration alignment
 
-Local type checks and regression tests cannot confirm that a remote migration was applied. Record the actual migration outcome and a successful live lesson before describing the incident as resolved.
+The active migration journal is under `drizzle/migrations`. The follow-up `0002_public_library_reading_admin_uploads.sql` supersedes the read restrictions introduced in `0001_complete_source_library_access.sql`. Apply pending migrations in journal order through the linked Lovable database workflow. The equivalent standalone recovery file is `supabase/migrations/20261017020000_public_library_reading_admin_uploads.sql`; reconcile migration history if an SQL editor is used outside the normal workflow.
 
-## Access rules
+The current migration grants SELECT on book, page and chunk tables to anonymous and authenticated readers. Client insert, update and delete privileges remain revoked, and trusted server operations retain their access. No source records, saved notes, files or profiles are deleted or reclassified. Even where older restrictive read policies remain, the public catalogue and generation handlers perform the permitted read on the server, so public learning does not depend on the visitor having a database session.
 
-- Verified Auth email must exactly equal `akkumarsingh456@gmail.com` or `ak25edi00022@student.nitw.ac.in`. User-editable profile metadata and contact-form email fields never grant access.
-- `/upload` and `/history` mount their inventory components only after server validation. Upload tickets, signing, insertion, scanning, captures, source approval and shared queue management independently require admin authentication on the server.
-- Database reads of source books/pages/chunks are limited to these admins through RLS. Writes are server-only. Public lesson generation retrieves approved NCERT records through the server; it does not expose raw inventory queries to the browser.
-- Notes use approved NCERT text only. Existing Med Easy diagrams and reader links remain separate visual references. Curated formula-reference pages are labelled supplementary, rather than claimed as copied NCERT content.
-- Signed upload URLs use no upsert and existing recorded paths are rejected. No public operation replaces/deletes original PDFs. Admin OCR/indexing can still prepare pages; this is not a WORM archive or a promise of absolute security against a database owner/service-role-key holder.
-- Admin download links expire in at most five minutes. New book records do not store a download URL. **Previously issued long-lived signed URLs may remain usable until expiry**; removing stored URLs does not revoke them. Review/rotate the storage signing keys through Supabase if revocation is required, understanding the effect on existing sessions/links. Already downloaded copies cannot be revoked.
-- Signed-in nonadmins get an editable recommendation form. The mailto link opens a compose window in the device's configured email app; the site sends no email automatically. Name, email and message are encoded safely in the draft.
+Do not reset either database or profiles. Do not make the storage bucket publicly writable. Do not expose a service-role key or prefix it with VITE_. Server functions require SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY; identity verification also uses SUPABASE_PUBLISHABLE_KEY.
+
+## Google sign-in and contact flow
+
+Preserve the owner's managed Google OAuth helper and public `/auth/callback` route. Profiles remain owner-scoped and never grant administrator access. Complete the interactive account-selection flow to verify Google sign-in; do not introduce a second provider or manual client secrets as part of this public-reading repair. Email sign-in links are an alternative where delivery is configured.
+
+People without upload permission can still read books and generate lessons. If they choose to sign in to suggest a new book, the upload page offers an editable message addressed to akkumarsingh456@gmail.com. It opens their configured email composer and never sends automatically.
+
+## Verification
+
+Check generation while signed out for Class 10 Metals and Non-metals, Class 11 Units and Measurement and Class 12 Current Electricity. Confirm a meaningful result sourced from the matching saved textbook, and confirm the existing notes, formula references and PPT views remain available. Open `/history` without a session, browse the catalogue and open a saved PDF. Confirm the Notes Library and its existing generated lessons do not require sign-in.
+
+Separately confirm that an anonymous visitor and a nonadmin cannot obtain an upload ticket or insert source records, while a verified authorised administrator can add a new source. Test missing and unreviewed classification fields, known reference-book exclusion, invalid download paths and nonexistent storage objects. Record any missing source text or remote deployment limitation separately from authentication.
 
 ## References
 
 - https://supabase.com/docs/guides/auth/social-login/auth-google
-- https://supabase.com/docs/reference/javascript/auth-signinwithotp
 - https://supabase.com/docs/guides/database/postgres/row-level-security
+- https://supabase.com/docs/guides/deployment/database-migrations

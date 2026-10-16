@@ -1,10 +1,6 @@
 /** Keep a deployment/schema problem distinct from a missing textbook or bad PDF. */
 export const SOURCE_LIBRARY_SETUP_MESSAGE =
-  "The source library database update is pending. An administrator must apply the source-library migration, then verify the matching NCERT textbooks in Library access. Your uploaded books and saved notes have not been removed.";
-
-export function isSourceApprovalRequired(error: string): boolean {
-  return /^No approved Class .+ NCERT textbook is available\./.test(error);
-}
+  "The upload database update is pending. An administrator must finish upload setup before adding new books. Existing library reading and lesson generation do not require sign-in.";
 
 type DatabaseError = { code?: string; message?: string; details?: string };
 

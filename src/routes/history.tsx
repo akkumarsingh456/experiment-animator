@@ -1,6 +1,4 @@
-import { sourceLibraryError } from "@/lib/source-library-errors";
-import { approveNcertSource, getSourceLibraryStatus } from "@/lib/library-access.functions";
-import { LibraryAccessGate } from "@/components/LibraryAccessGate";
+import { listLibraryBooks } from "@/lib/library-books.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -24,14 +22,13 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-import { supabase } from "@/integrations/supabase/client";
-import { signDownload, classifyMedEasyLibrary } from "@/lib/ingest.functions";
+import { signDownload } from "@/lib/ingest.functions";
 import { medEasyLibraryMetadata, combinedReferenceMatches } from "@/lib/reference-books";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
     meta: [
-      { title: "Ingestion history — EduPlan AI" },
+      { title: "Uploaded books — EduPlan AI" },
       { property: "og:title", content: "Book Upload History — EduPlan AI" },
       { property: "og:description", content: "Review saved NCERT books by class, subject and upload status." },
       { property: "og:type", content: "website" },
@@ -43,13 +40,12 @@ export const Route = createFileRoute("/history")({
       },
     ],
   }),
-  component: () => <LibraryAccessGate><HistoryPage /></LibraryAccessGate>,
+  component: HistoryPage,
 });
 
 const BUCKET = "ncert-pdfs";
 
 type Row = {
-  source_kind?: string;
   id: string;
   class: string;
   subject: string;
@@ -57,7 +53,6 @@ type Row = {
   file_name: string;
   file_size: number;
   storage_path: string;
-  download_url: string | null;
   num_pages: number;
   num_chunks: number;
   status: string;
@@ -71,24 +66,14 @@ function HistoryPage() {
   const [klass, setKlass] = useState<string>("all");
   const [subject, setSubject] = useState<string>("all");
   const [signing, setSigning] = useState<string | null>(null);
-  const [classificationError, setClassificationError] = useState<string | null>(null);
   const [libraryError, setLibraryError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setLibraryError(null);
     try {
-      const status = await getSourceLibraryStatus();
-      if (!status.ready) { setLibraryError(status.message); return; }
-      try { await classifyMedEasyLibrary(); setClassificationError(null); }
-      catch { setClassificationError("Med Easy class labels could not be saved. Refresh to retry saving."); }
-      const { data, error } = await supabase
-        .from("ncert_books")
-        .select("id, source_kind, class, subject, chapter, file_name, file_size, storage_path, download_url, num_pages, num_chunks, status, created_at")
-        .order("created_at", { ascending: false })
-        .limit(500);
-      if (error) throw sourceLibraryError(error);
-      setRows(((data as Row[]) ?? []).map(medEasyLibraryMetadata));
+      const { books } = await listLibraryBooks();
+      setRows(((books as Row[]) ?? []).map(medEasyLibraryMetadata));
     } catch (error) {
       setLibraryError(error instanceof Error ? error.message : "The source library could not be loaded.");
     } finally { setLoading(false); }
@@ -148,7 +133,7 @@ function HistoryPage() {
           </Link>
           <div className="flex items-center gap-3">
             <Link to="/upload" className="text-sm underline-offset-4 hover:underline">
-              ← Back to upload
+              Upload a new book
             </Link>
           </div>
         </div>
@@ -158,11 +143,10 @@ function HistoryPage() {
         <div className="flex items-end justify-between gap-4 mb-6 flex-wrap">
           <div>
             <h1 className="font-display text-3xl md:text-4xl font-extrabold tracking-tight flex items-center gap-2">
-              <HistoryIcon className="h-7 w-7 text-primary" /> Ingestion history
+              <HistoryIcon className="h-7 w-7 text-primary" /> Uploaded books
             </h1>
             <p className="mt-2 text-muted-foreground max-w-2xl">
-              Every NCERT PDF that has been uploaded, parsed and stored — with class,
-              subject, current status, storage path and a direct file link.
+              Browse the existing library and open its PDFs without signing in. Only adding new books requires authorised access.
             </p>
           </div>
           <Button variant="outline" onClick={load} disabled={loading}>
@@ -175,7 +159,7 @@ function HistoryPage() {
           </Button>
         </div>
 
-        {libraryError && <div role="alert" className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-5 text-amber-950"><h2 className="font-semibold">Source library needs attention</h2><p className="mt-2 text-sm">{libraryError}</p><p className="mt-2 text-sm">For a pending database update, apply 20261016010000_lock_source_library.sql through the linked database SQL editor, then refresh this page and verify your NCERT sources.</p></div>}
+        {libraryError && <p role="alert" className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-5 text-amber-950">{libraryError}</p>}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -219,8 +203,6 @@ function HistoryPage() {
               </Select>
             </div>
 
-            {classificationError && <p className="text-sm text-muted-foreground" role="status">{classificationError}</p>}
-            {!libraryError && !loading && rows.length > 0 && !rows.some(row => row.source_kind === "ncert") && <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">None of the displayed books is approved for NCERT lesson generation yet. Your PDFs are still saved. Open each official NCERT textbook and select Verify as NCERT after checking it. Keep Med Easy and other reference books unapproved for notes.</p>}
             <div className="rounded-lg border border-border overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -278,7 +260,7 @@ function HistoryPage() {
                             {new Date(r.created_at).toLocaleString()}
                           </td>
                           <td className="px-3 py-2 text-right whitespace-nowrap">
-                            {r.source_kind === "ncert" ? <p className="text-xs text-emerald-700">Verified NCERT source</p> : <Button size="sm" variant="outline" disabled={!!libraryError} onClick={async()=>{if(!window.confirm("Have you opened and checked that this file is an official NCERT textbook? Approve only after verifying the publisher and content."))return;try{await approveNcertSource({data:{book_id:r.id,confirmed:true}});await load();}catch(error){window.alert(error instanceof Error?error.message:"Approval failed");}}}>Verify as NCERT</Button>}
+
                             <Button
                               size="sm"
                               variant="ghost"

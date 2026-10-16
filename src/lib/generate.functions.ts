@@ -1,4 +1,4 @@
-import { sourceLibraryError } from "@/lib/source-library-errors";
+import { readLessonTextbooks } from "@/lib/lesson-textbooks";
 import { sequenceChemistryNotes } from "@/lib/chemistry-note-sequence";
 import { withPhysicsDimensions } from "@/lib/physics-dimensions";
 import { ENGLISH_CHAPTERS } from "@/lib/english-chapters";
@@ -1627,30 +1627,12 @@ export const generateLesson = createServerFn({ method: "POST" })
     const s = await supa();
     const terms = buildTerms(data);
 
-    // 1. Find matching books by the selected class and subject.
-    //    Some uploaded "Med Easy" combined books cover BOTH Class 11 and 12
-    //    for the same subject (Physics Med Easy 2.0, Chemistry Med Easy,
-    //    Complete Zoology Med Easy). Pull them in for either class.
-    const wantedClass = classNumber(data.klass);
-    const combinedFilter = "file_name.ilike.%MED EASY%,file_name.ilike.%KOHINOOR%";
-    const { data: classBooks, error: bErr } = await s
-      .from("ncert_books")
-      .select("id, class, subject, chapter, file_name")
-      .eq("source_kind", "ncert")
-      .or(`class.ilike.%${wantedClass}%,${combinedFilter}`)
-      .limit(200);
-    if (bErr) throw sourceLibraryError(bErr);
-    let candidates = (classBooks ?? []).filter((book) => bookMatchesLesson(book, data.klass, data.subject));
-
-    // Retry against the full inventory, retaining the same class/subject scope.
+    // Existing textbooks are public learning sources. Only uploads require sign-in.
+    // Retain strict class/subject matching and exclude reference-only note sources.
+    const inventory = await readLessonTextbooks(s);
+    let candidates = inventory.filter(book => bookMatchesLesson(book, data.klass, data.subject));
     if (candidates.length === 0) {
-      const { data: allBooks, error: allBooksError } = await s.from("ncert_books").select("id, class, subject, chapter, file_name").eq("source_kind", "ncert").limit(500);
-      if (allBooksError) throw sourceLibraryError(allBooksError);
-      candidates = (allBooks ?? []).filter((b) => bookMatchesLesson(b, data.klass, data.subject));
-    }
-
-    if (candidates.length === 0) {
-      throw new Error(`No approved Class ${data.klass} ${data.subject} NCERT textbook is available. An administrator must verify the correct source in Upload status; material from another class or subject will not be substituted.`);
+      throw new Error(`No matching Class ${data.klass} ${data.subject} NCERT textbook is available in the uploaded library. You can browse existing books without signing in. An administrator can add the missing textbook; material from another class or subject will not be substituted.`);
     }
 
     // 2. Pre-rank by metadata
@@ -1734,8 +1716,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Broader inventory search, still restricted to the selected class/subject.
     const hasTopicalHit = (chunks ?? []).some((c) => score(c.content, terms) > 8);
     if (!hasTopicalHit) {
-      const { data: allBooks2, error: allBooksError2 } = await s.from("ncert_books").select("id, class, subject, chapter, file_name").eq("source_kind", "ncert").limit(500);
-      if (allBooksError2) throw sourceLibraryError(allBooksError2);
+      const allBooks2 = inventory;
       const ranked2 = (allBooks2 ?? [])
         .filter((b) => bookMatchesLesson(b, data.klass, data.subject))
         .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject} ${b.class}`, [...terms, ...chapterTerms]) }))

@@ -1,4 +1,3 @@
-import { isSourceApprovalRequired, isSourceLibrarySetupError, SOURCE_LIBRARY_SETUP_MESSAGE } from "@/lib/source-library-errors";
 import { withPhysicsFormulaReference } from "@/lib/physics-formula-reference";
 import { sequenceChemistryNotes } from "@/lib/chemistry-note-sequence";
 import { LessonCover } from "@/components/LessonCover";
@@ -235,7 +234,7 @@ function GeneratePage() {
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
               <p className="mt-4 font-medium">{readingStatus}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Using your chapter and already-read reference notes. Scanned books can be read separately from the upload library.
+                Using the matching saved NCERT chapter. No sign-in is needed to prepare or view lessons.
               </p>
             </CardContent>
           </Card>
@@ -244,11 +243,11 @@ function GeneratePage() {
         {error && (
           <Card className="border-destructive/40 bg-destructive/5">
             <CardContent className="p-6">
-              <p className="font-semibold text-destructive">{isSourceLibrarySetupError(error) ? "Library setup required" : isSourceApprovalRequired(error) ? "NCERT source approval required" : "Generation failed"}</p>
-              <p className="text-sm mt-1">{isSourceLibrarySetupError(error) ? SOURCE_LIBRARY_SETUP_MESSAGE : error}</p>
+              <p className="font-semibold text-destructive">Generation failed</p>
+              <p className="text-sm mt-1">{error}</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button size="sm" onClick={() => setRetryAttempt(value => value + 1)}>Retry generation</Button>
-                <Button size="sm" onClick={() => nav({ to: isSourceLibrarySetupError(error) || isSourceApprovalRequired(error) ? "/history" : "/upload" })}>{isSourceLibrarySetupError(error) || isSourceApprovalRequired(error) ? "Library access" : "Go to Upload"}</Button>
+                <Button size="sm" onClick={() => nav({ to: "/history" })}>Browse uploaded books</Button>
                 <Button size="sm" variant="outline" onClick={() => nav({ to: "/" })}>Back home</Button>
               </div>
             </CardContent>

@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { isSourceApprovalRequired, isSourceLibrarySetupError, sourceLibraryError, SOURCE_LIBRARY_SETUP_MESSAGE } from "../src/lib/source-library-errors";
+import { isSourceLibrarySetupError, sourceLibraryError, SOURCE_LIBRARY_SETUP_MESSAGE } from "../src/lib/source-library-errors";
 
 describe("source library deployment errors", () => {
-  it("distinguishes source approval from schema deployment and transient failures", () => {
-    const message="No approved Class 12 Physics NCERT textbook is available. An administrator must verify the correct source in Upload status; material from another class or subject will not be substituted.";
-    expect(isSourceApprovalRequired(message)).toBe(true);
-    expect(isSourceLibrarySetupError(message)).toBe(false);
-    expect(isSourceApprovalRequired("Network request failed")).toBe(false);
+  it("never tells public readers to approve historical uploads", () => {
+    expect(SOURCE_LIBRARY_SETUP_MESSAGE).toContain("do not require sign-in");
+    expect(SOURCE_LIBRARY_SETUP_MESSAGE).not.toContain("verify the matching NCERT");
   });
   it("identifies the reported missing approval column", () => {
     expect(isSourceLibrarySetupError({code:"42703",message:"column ncert_books.source_kind does not exist"})).toBe(true);
@@ -30,7 +28,7 @@ describe("source library deployment errors", () => {
     }
     expect(isSourceLibrarySetupError(null)).toBe(false);
   });
-  it("keeps source approval fail closed while making the migration repeatable", () => {
+  it("keeps the historical migration repeatable without reclassifying books", () => {
     const sql=readFileSync("supabase/migrations/20261016010000_lock_source_library.sql","utf8");
     expect(sql).toContain("DEFAULT 'unreviewed'");
     expect(sql).toContain("IF NOT EXISTS (SELECT 1 FROM pg_constraint");

@@ -1,4 +1,4 @@
-import { sourceLibraryError } from "@/lib/source-library-errors";
+import { readLessonTextbooks } from "@/lib/lesson-textbooks";
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -66,15 +66,7 @@ export const listChapters = createServerFn({ method: "POST" })
     const subjects = subjectCandidates(data.subject);
     if (!classes.length || !subjects.length) return { chapters: [] as Array<{ label: string; raw: string }> };
 
-    const { data: rows, error } = await (db as any)
-      .from("ncert_books").eq("source_kind", "ncert")
-      .select("chapter, file_name")
-      .in("class", classes)
-      .in("subject", subjects)
-      .limit(2000);
-    if (error) {
-      throw sourceLibraryError(error);
-    }
+    const rows = (await readLessonTextbooks(db)).filter(book => classes.includes(book.class) && subjects.includes(book.subject));
 
     const seen = new Map<string, { label: string; raw: string }>();
     for (const row of rows || []) {
@@ -107,14 +99,7 @@ export const listSubtopics = createServerFn({ method: "POST" })
     const subjects = subjectCandidates(data.subject);
     if (!classes.length || !subjects.length) return { subtopics: [] as string[] };
 
-    let q = (db as any)
-      .from("ncert_books").eq("source_kind", "ncert")
-      .select("id, chapter, file_name")
-      .in("class", classes)
-      .in("subject", subjects)
-      .limit(20);
-    const { data: books, error: booksError } = await q;
-    if (booksError) throw sourceLibraryError(booksError);
+    const books = (await readLessonTextbooks(db)).filter(book => classes.includes(book.class) && subjects.includes(book.subject));
     let filtered = (books || []) as Array<{ id: string; chapter: string; file_name: string }>;
     const wanted = String(data.chapter || "").trim().toLowerCase();
     if (wanted) {

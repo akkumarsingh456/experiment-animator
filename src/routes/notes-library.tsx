@@ -1,4 +1,3 @@
-import { getLibraryAccess } from "@/lib/library-access.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -63,8 +62,6 @@ function NotesLibrary() {
   const runBatch = useServerFn(runBuildBatch);
   const getBuilt = useServerFn(listBuiltChapters);
 
-  const [isAdmin, setIsAdmin] = useState(false);
-  useEffect(()=>{void getLibraryAccess().then(access=>setIsAdmin(access.admin)).catch(()=>setIsAdmin(false));},[]);
   const [status, setStatus] = useState<BuildStatus | null>(null);
   const [built, setBuilt] = useState<Awaited<ReturnType<typeof listBuiltChapters>>["chapters"]>([]);
   const [busy, setBusy] = useState(false);
@@ -74,13 +71,13 @@ function NotesLibrary() {
 
   const refresh = useCallback(async () => {
     const [st, bt] = await Promise.all([
-      isAdmin ? getStatus({ data: { klass: klass === "all" ? "" : klass } }) : Promise.resolve(null),
+      getStatus({ data: { klass: klass === "all" ? "" : klass } }),
       getBuilt({ data: { klass: klass === "all" ? "" : klass, subject: subject === "all" ? "" : subject } }),
     ]);
     setStatus(st);
     setBuilt(bt.chapters);
     return st;
-  }, [getStatus, getBuilt, klass, subject, isAdmin]);
+  }, [getStatus, getBuilt, klass, subject]);
 
   useEffect(() => {
     void refresh();
@@ -88,7 +85,7 @@ function NotesLibrary() {
 
   // Drive the queue while it is running: one small batch at a time, sequential.
   useEffect(() => {
-    if (!isAdmin || !status || status.state !== "running" || loopRef.current) return;
+    if (!status || status.state !== "running" || loopRef.current) return;
     loopRef.current = true;
     let stop = false;
     (async () => {
@@ -107,7 +104,7 @@ function NotesLibrary() {
     return () => {
       stop = true;
     };
-  }, [status?.state, runBatch, refresh, isAdmin]);
+  }, [status?.state, runBatch, refresh]);
 
   const act = async (fn: () => Promise<unknown>) => {
     setBusy(true);
@@ -172,7 +169,7 @@ function NotesLibrary() {
 
               <Button
                 variant="secondary"
-                disabled={busy || !isAdmin}
+                disabled={busy}
                 onClick={() =>
                   act(() =>
                     queueAll({
@@ -189,11 +186,11 @@ function NotesLibrary() {
               </Button>
 
               {status?.state === "running" ? (
-                <Button disabled={busy || !isAdmin} onClick={() => act(() => control({ data: { action: "pause" } }))}>
+                <Button disabled={busy} onClick={() => act(() => control({ data: { action: "pause" } }))}>
                   <Pause className="h-4 w-4" /> Pause build
                 </Button>
               ) : (
-                <Button disabled={busy || !isAdmin} onClick={() => act(() => control({ data: { action: "start" } }))}>
+                <Button disabled={busy} onClick={() => act(() => control({ data: { action: "start" } }))}>
                   <Play className="h-4 w-4" /> Start build
                 </Button>
               )}
@@ -201,7 +198,7 @@ function NotesLibrary() {
               {counts.failed > 0 && (
                 <Button
                   variant="outline"
-                  disabled={busy || !isAdmin}
+                  disabled={busy}
                   onClick={() => act(() => control({ data: { action: "retry_failed" } }))}
                 >
                   <RotateCcw className="h-4 w-4" /> Retry {counts.failed} failed
