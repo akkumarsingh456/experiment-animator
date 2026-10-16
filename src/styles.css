@@ -890,3 +890,14 @@
 .prep-timing span { display:block; font-size:14px; color:#3c5149; }
 .prep-timing strong { display:block; margin-top:3px; font-size:29px; line-height:1.2; font-variant-numeric:tabular-nums; color:var(--prep-ink); }
 .prep-copy .prep-request-status { font-size:14px; line-height:1.5; margin-top:10px; }
+
+/* Hide only the published platform credit, never OAuth, editor or error scripts. */
+#lovable-badge, #lovable-badge-container { display:none !important; }
+.creator-credit { position:fixed; right:max(14px,env(safe-area-inset-right)); bottom:max(12px,env(safe-area-inset-bottom)); z-index:40; display:flex; align-items:center; gap:8px; min-height:36px; padding:0 0 0 9px; border:1px solid #446760; border-radius:8px; background:#183c37; color:#fffdf3; box-shadow:0 3px 12px #142f3020; font:600 13px/1.2 'Segoe UI',Arial,sans-serif; }
+.creator-credit-monogram { color:#f3cc72; font-weight:800; font-size:12px; border-right:1px solid #6d8981; padding-right:8px; }
+.creator-credit button { display:grid; place-items:center; width:36px; height:36px; border:0; border-radius:0 7px 7px 0; background:transparent; color:#e0ebe6; cursor:pointer; }
+.creator-credit button:hover { background:#31584f; }
+.creator-credit button:focus-visible { outline:2px solid #f3cc72; outline-offset:2px; }
+@media(pointer:coarse) { .creator-credit button { width:44px; height:44px; } }
+@media print { .creator-credit { display:none!important; } }
+body:has(.presentation-overlay) .creator-credit { display:none; }

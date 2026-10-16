@@ -1,3 +1,4 @@
+import { CreatorCredit } from "@/components/CreatorCredit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -110,6 +111,7 @@ function RootShell({ children }: { children: ReactNode }) {
       </head>
       <body>
         {children}
+        <CreatorCredit />
         <Scripts />
       </body>
     </html>
