@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Add Google account selection and private basic profiles while preserving existing email sign-in and library permissions; verify available login flows.
+
 - [ ] Resume complete book-page capture, including Chemistry, Physics, Botany and Zoology, with durable checkpoints across Classes 9–12 and subjects.
 - [ ] Append chapter/topic-matched original screenshots below existing 2D illustrations; preserve all notes, diagrams and simulations.
 - [ ] Verify page capture progress and additive image rendering against the live library.
