@@ -1,3 +1,4 @@
+import { LESSON_REQUEST_TIMEOUT_MS } from "@/lib/generation-timing";
 import { LessonPreparation } from "@/components/LessonPreparation";
 import { withPhysicsFormulaReference } from "@/lib/physics-formula-reference";
 import { sequenceChemistryNotes } from "@/lib/chemistry-note-sequence";
@@ -176,6 +177,7 @@ function GeneratePage() {
   const [retryAttempt, setRetryAttempt] = useState(0);
   useEffect(() => () => { requestIdRef.current += 1;startedRequest.current=''; }, []);
   const [loading, setLoading] = useState(false);
+  const [requestStartedAt, setRequestStartedAt] = useState(0);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -186,11 +188,12 @@ function GeneratePage() {
     startedRequest.current=requestKey;
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
+    setRequestStartedAt(Date.now());
     setLoading(true);
     setError(null);
     let timeout: ReturnType<typeof setTimeout>;
     const deadline = new Promise<never>((_, reject) => {
-      timeout = setTimeout(() => reject(new Error("This request took too long. Please retry; any completed lesson is saved and will be reused.")), 180_000);
+      timeout = setTimeout(() => reject(new Error("This request took too long. Please retry; any completed lesson is saved and will be reused.")), LESSON_REQUEST_TIMEOUT_MS);
     });
     Promise.race([run({ data: search }), deadline])
       .then((r) => { if (requestIdRef.current === requestId) setResult(r as GenerationResult); })
@@ -228,7 +231,7 @@ function GeneratePage() {
           <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight ml-1">{search.topic || "Untitled"}</h1>
         </div>
 
-        {loading && <LessonPreparation subject={search.subject} chapter={search.chapter} topic={search.topic} />}
+        {loading && <LessonPreparation startedAt={requestStartedAt} subject={search.subject} chapter={search.chapter} topic={search.topic} />}
 
         {error && (
           <Card className="border-destructive/40 bg-destructive/5">

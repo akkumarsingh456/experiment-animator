@@ -1,4 +1,5 @@
-import {useState} from "react";
+import { LESSON_REQUEST_TIMEOUT_MS, preparationClock } from "@/lib/generation-timing";
+import {useEffect,useState} from "react";
 import {BookOpen,Pause,Play} from "lucide-react";
 
 type Motif = "circuit"|"pendulum"|"optics"|"waves"|"field"|"measure"|"elements"|"molecule"|"flask"|"graph"|"geometry"|"stack"|"database"|"network"|"leaf"|"book";
@@ -42,12 +43,27 @@ function PreparationSketch({motif}:{motif:Motif}){
  </g></svg>;
 }
 
-export function LessonPreparation({subject="",chapter="",topic=""}:{subject?:string;chapter?:string;topic?:string}){
+export function LessonPreparation({subject="",chapter="",topic="",startedAt}:{subject?:string;chapter?:string;topic?:string;startedAt:number}){
  const theme=preparationTheme(subject,`${chapter} ${topic}`);
  const [paused,setPaused]=useState(false);
+ const [now,setNow]=useState(startedAt);
+ const [online,setOnline]=useState(true);
+ useEffect(()=>{
+  const tick=()=>setNow(Date.now());
+  const connection=()=>setOnline(navigator.onLine);
+  tick();connection();
+  const interval=window.setInterval(tick,1000);
+  document.addEventListener("visibilitychange",tick);
+  window.addEventListener("online",connection);
+  window.addEventListener("offline",connection);
+  return()=>{window.clearInterval(interval);document.removeEventListener("visibilitychange",tick);window.removeEventListener("online",connection);window.removeEventListener("offline",connection);};
+ },[startedAt]);
+ const elapsed=Math.max(0,now-startedAt);
+ const remaining=Math.max(0,LESSON_REQUEST_TIMEOUT_MS-elapsed);
+
  return <section className={`lesson-preparation prep-${theme.family}${paused?" prep-paused":""}`} aria-busy="true" aria-label="Lesson preparation">
   <div className="prep-illustration"><div className="prep-sketch-label">{theme.label}</div><PreparationSketch motif={theme.motif}/><span className="prep-sketch-foot">EDUPLAN / CHAPTER STUDY</span></div>
-  <div className="prep-copy"><span className="prep-eyebrow">{theme.subject} · NCERT workspace</span><h2>Preparing your lesson<span className="prep-dots" aria-hidden="true">…</span></h2><p className="prep-topic">{topic||chapter||"Your selected chapter"}</p><p role="status" aria-live="polite">Your PPT and teacher notes are being prepared from the matching saved NCERT chapter.</p><div className="prep-materials"><BookOpen size={18}/><span>Notes · diagrams · classroom presentation</span></div><small>You can prepare and view lessons without signing in.</small></div>
+  <div className="prep-copy"><span className="prep-eyebrow">{theme.subject} · NCERT workspace</span><h2>Preparing your lesson<span className="prep-dots" aria-hidden="true">…</span></h2><p className="prep-topic">{topic||chapter||"Your selected chapter"}</p><p role="status" aria-live="polite">Your PPT and teacher notes are being prepared from the matching saved NCERT chapter.</p><div className="prep-timing" role="timer" aria-live="off" aria-label="Request timing"><div><span>Time elapsed</span><strong>{preparationClock(elapsed)}</strong></div><div><span>Time before timeout</span><strong>{preparationClock(Math.ceil(remaining/1000)*1000)}</strong></div></div><p className="prep-request-status" role="status">{!online?"Your device appears offline. Check your internet connection.":remaining===0?"The request time limit has been reached. Checking the result…":"Waiting for the server’s response. This timer shows the request limit, not an exact finishing time."}</p><div className="prep-materials"><BookOpen size={18}/><span>Notes · diagrams · classroom presentation</span></div><small>You can prepare and view lessons without signing in.</small></div>
   <button className="prep-motion-toggle" type="button" onClick={()=>setPaused(value=>!value)} aria-pressed={paused} aria-label={paused?"Resume decorative animation":"Pause decorative animation"}>{paused?<Play size={16}/>:<Pause size={16}/>}<span>{paused?"Resume animation":"Pause animation"}</span></button>
  </section>;
 }

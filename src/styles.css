@@ -884,3 +884,9 @@
 .library-dashboard-card:focus-visible { outline:3px solid #42634c; outline-offset:3px; }
 .library-dashboard-selection { margin-left:auto; font-size:13px; font-weight:700; }
 @media(max-width:640px) { .library-dashboard-home { padding:20px 16px; } .library-dashboard-home .library-admin-sections { grid-template-columns:minmax(0,1fr); } }
+
+.prep-timing { display:flex; flex-wrap:wrap; gap:12px; margin-top:18px; }
+.prep-timing > div { flex:1 1 145px; padding:12px 16px; border:1px solid #ccd7c9; border-radius:7px; background:var(--prep-soft); }
+.prep-timing span { display:block; font-size:14px; color:#3c5149; }
+.prep-timing strong { display:block; margin-top:3px; font-size:29px; line-height:1.2; font-variant-numeric:tabular-nums; color:var(--prep-ink); }
+.prep-copy .prep-request-status { font-size:14px; line-height:1.5; margin-top:10px; }
