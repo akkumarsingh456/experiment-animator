@@ -1,10 +1,16 @@
 # Restricted library access setup
 
+## Current migration workflow
+
+The newer Google sign-in update introduced `drizzle.config.ts` and the `drizzle/migrations` journal. Its first migration adds basic profiles and the three source fields, but leaves every historical source unreviewed. The follow-up `0001_complete_source_library_access.sql` carries the remaining source-library security rules into that same active migration chain. Deploy the pending Drizzle migration through Lovable's linked database workflow. The Supabase-folder script below is the equivalent standalone recovery script; do not reset either database or profiles.
+
+The live read-only check on 17 October 2026 found the three fields present, with 295 unreviewed records and no approved NCERT records. A live Current Electricity generation reached the approval check and reported that no approved textbook was available. This supersedes the screenshot's earlier missing-column state. Existing sources still require an authorised review before generation can use them. This check did not modify records or complete the Google account round trip.
+
 ## Deployment steps — required
 
-1. Apply `supabase/migrations/20261016010000_lock_source_library.sql` in the linked Supabase SQL editor / Lovable database migration workflow **before publishing this version**. The migration has been prepared in Git; this development session has no database-management credentials and has not applied it to the live database.
-2. In Supabase Authentication → Providers, enable Google with your Google OAuth web Client ID and secret. In Google Cloud use the Supabase project's `/auth/v1/callback` as the authorised redirect URI. Keep the Google secret only in Supabase provider settings.
-3. In Authentication → URL configuration set the production site URL and allow the exact production `/upload` URL. Add your actual Lovable preview `/upload` URL only if needed. Avoid broad production redirect wildcards.
+1. Apply the pending `drizzle/migrations/0001_complete_source_library_access.sql` through the linked Lovable database migration workflow **before publishing this version**. The equivalent standalone script is `supabase/migrations/20261016010000_lock_source_library.sql`. This session has no database-management credentials and has not applied the security migration to the live database.
+2. Preserve the newer managed Google OAuth helper and public `/auth/callback` route. Complete the interactive Google account-selection flow and verify its returned session. Do not replace this integration with a second provider or introduce manual OAuth secrets as part of this database repair.
+3. Verify the configured production site URL and the exact `/auth/callback` return route used by managed Google sign-in. Email links currently return to `/upload`. Add actual preview return URLs only if needed; avoid broad production redirect wildcards.
 4. Enable email authentication and configure an email-delivery provider if email-link sign-in is needed. Default hosted email delivery is restricted/rate limited; Google and email-provider availability must be checked in the actual account. No Clerk keys are required.
 5. Confirm the deployed server has SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY and SUPABASE_SERVICE_ROLE_KEY. The service-role key must never use a VITE_ prefix, appear in a client bundle or be pasted into a chat.
 6. Sign in as one of the two verified admin addresses. Open Upload status; open each existing NCERT PDF and use **Verify as NCERT** only after checking it. Existing records default to unreviewed, so notes fail closed until a matching NCERT source is approved. New uploads have an explicit NCERT confirmation checkbox; unchecked books are reference-only.

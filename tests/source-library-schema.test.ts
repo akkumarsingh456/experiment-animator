@@ -39,4 +39,14 @@ describe("source library deployment errors", () => {
     expect(sql).not.toMatch(/UPDATE\s+public\.ncert_books\s+SET\s+source_kind\s*=\s*'ncert'/i);
     expect(sql).not.toMatch(/(?:DELETE\s+FROM|TRUNCATE)\s+(?:public\.)?ncert_(?:books|pages|chunks)/i);
   });
+  it("includes the security repair in the newer active Drizzle migration chain", () => {
+    const journal=JSON.parse(readFileSync("drizzle/migrations/meta/_journal.json","utf8"));
+    expect(journal.entries.map((entry: {tag: string}) => entry.tag)).toContain("0000_library_basic_profiles_and_source_fields");
+    expect(journal.entries.map((entry: {tag: string}) => entry.tag)).toContain("0001_complete_source_library_access");
+    const sql=readFileSync("drizzle/migrations/0001_complete_source_library_access.sql","utf8");
+    expect(sql).toContain("DEFAULT 'unreviewed'");
+    expect(sql).toContain("CREATE OR REPLACE FUNCTION public.is_source_library_admin()");
+    expect(sql).toContain("NOTIFY pgrst, 'reload schema'");
+    expect(sql).not.toMatch(/(?:DROP|DELETE FROM|TRUNCATE)\s+(?:TABLE\s+)?(?:public\.)?profiles/i);
+  });
 });
