@@ -118,9 +118,8 @@ export type Database = {
       }
       ncert_books: {
         Row: {
-          source_kind: string
-          approved_by: string | null
           approved_at: string | null
+          approved_by: string | null
           chapter: string
           class: string
           created_at: string
@@ -133,15 +132,15 @@ export type Database = {
           learner_name: string | null
           num_chunks: number
           num_pages: number
+          source_kind: string
           status: string
           storage_path: string
           subject: string
           summary: string | null
         }
         Insert: {
-          source_kind?: string
-          approved_by?: string | null
           approved_at?: string | null
+          approved_by?: string | null
           chapter: string
           class: string
           created_at?: string
@@ -154,15 +153,15 @@ export type Database = {
           learner_name?: string | null
           num_chunks?: number
           num_pages?: number
+          source_kind?: string
           status?: string
           storage_path: string
           subject: string
           summary?: string | null
         }
         Update: {
-          source_kind?: string
-          approved_by?: string | null
           approved_at?: string | null
+          approved_by?: string | null
           chapter?: string
           class?: string
           created_at?: string
@@ -175,6 +174,7 @@ export type Database = {
           learner_name?: string | null
           num_chunks?: number
           num_pages?: number
+          source_kind?: string
           status?: string
           storage_path?: string
           subject?: string
@@ -245,6 +245,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string
+          created_at: string
+          display_name: string
+          id: string
+        }
+        Insert: {
+          avatar_url?: string
+          created_at?: string
+          display_name?: string
+          id: string
+        }
+        Update: {
+          avatar_url?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+        }
+        Relationships: []
       }
       slide_image_audit: {
         Row: {
