@@ -41,3 +41,13 @@ Separately confirm that an anonymous visitor and a nonadmin cannot obtain an upl
 - https://supabase.com/docs/guides/auth/social-login/auth-google
 - https://supabase.com/docs/guides/database/postgres/row-level-security
 - https://supabase.com/docs/guides/deployment/database-migrations
+
+## Administrator dashboard and book requests
+
+After verified administrator sign-in, `/upload` offers Upload books & notes and Book requests. Switching sections keeps the upload component mounted so a current upload is not discarded. The requests section lists website submissions newest first, 25 per page, with name, verified sign-in email, message, submission time and New/Reviewed status. It refreshes while open every 30 seconds and offers manual refresh. Only the existing server-verified administrators can list or review requests.
+
+Apply `drizzle/migrations/0003_private_book_requests.sql` through the linked database migration workflow before using requests. The equivalent standalone Supabase migration is `20261017030000_private_book_requests.sql`; do not execute both independently without reconciling migration history. This adds a separate private `book_requests` table with RLS and no anonymous or authenticated client privileges. Existing book tables, storage, notes, profiles and email integrations are unchanged. Service role access stays server-side. The local workspace cannot apply the linked database migration without database management access.
+
+Verified signed-in visitors can use Submit book request on their existing suggestions form. The server derives user ID and email from verified Auth, validates name/message lengths, and limits submissions to ten per account in a rolling 24-hour window. This application-level count is a basic abuse guard, not an atomic quota under concurrent requests. Names and messages render as text, never HTML. The contact-email field remains editable for the mailto draft only. No upload permission is granted by submitting a request or by changing a profile/contact field.
+
+The existing email draft link is preserved. Submitting a website request sends no email, and opening an email draft does not silently create a website request. Historical emails and previously opened drafts cannot appear in the dashboard: the feature never reads, imports, sends, edits or deletes mail. Missing-table errors are shown explicitly, never as a misleading empty inbox. Publish the app after applying its migration, then complete account-based verification for an administrator and a separate visitor.

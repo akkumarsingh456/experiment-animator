@@ -813,3 +813,16 @@
 /* Exception emphasis uses weight and a border as well as colour. */
 .note-exception { color: #92400e; font-weight: 700; background: #fff3ce; border-left: 3px solid #b36b12; padding: 2px 6px; border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .note-exception strong { color: inherit; font-weight: 750; }
+
+.library-admin-sections { display:flex; flex-wrap:wrap; gap:12px; padding:20px 24px; border-bottom:1px solid #d4ddce; background:#faf9f2; }
+.library-admin-sections button { gap:8px; min-height:44px; font-size:16px; }
+.book-requests-panel { width:min(1000px,calc(100% - 40px)); margin:28px auto; color:#29493f; }
+.book-requests-header,.book-request-card header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; }
+.book-requests-header h1 { font-size:30px; font-weight:700; }
+.book-requests-header p { margin:8px 0 18px; line-height:1.6; }
+.book-request-card { margin:18px 0; padding:22px; background:#fffef8; border:1px solid #cbd8c5; border-radius:8px; overflow-wrap:anywhere; }
+.book-request-card h2 { font-size:20px; font-weight:700; }
+.book-request-card time { display:block; margin-top:10px; color:#59665a; font-size:14px; }
+.book-request-message { white-space:pre-wrap; font-size:17px; line-height:1.65; margin:18px 0; }
+.book-request-status { padding:5px 12px; border:1px solid #c2cfb7; border-radius:20px; background:#edf3e9; font-weight:600; }
+.book-request-pagination { display:flex; align-items:center; gap:14px; margin:20px 0; }
