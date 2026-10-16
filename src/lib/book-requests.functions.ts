@@ -1,12 +1,13 @@
 import {createServerFn} from "@tanstack/react-start";
+import {requestBookTitle,requestMessageWithTitle} from "@/lib/book-request-content";
 import {z} from "zod";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {requireLibraryAdmin} from "@/lib/library-auth";
 
-export type BookRequest = {id:string; requester_name:string; verified_email:string; message:string; status:"new"|"reviewed"; created_at:string};
+export type BookRequest = {id:string; book_title:string|null; requester_name:string; verified_email:string; message:string; status:"new"|"reviewed"; created_at:string};
 
 export const submitBookRequest = createServerFn({method:"POST"})
- .inputValidator((raw:unknown)=>z.object({name:z.string().trim().min(1).max(120),message:z.string().trim().min(10).max(5000)}).parse(raw))
+ .inputValidator((raw:unknown)=>z.object({name:z.string().trim().min(1).max(120),bookTitle:z.string().trim().min(1).max(200).regex(/^[^\r\n]+$/).optional(),message:z.string().trim().min(10).max(5000)}).parse(raw))
  .handler(async({data})=>{
   const {readLibraryIdentity}=await import("@/lib/library-access.server");
   const identity=await readLibraryIdentity();
@@ -16,9 +17,11 @@ export const submitBookRequest = createServerFn({method:"POST"})
   const {count,error:countError}=await db.from("book_requests").select("id",{count:"exact",head:true}).eq("user_id",identity.id).gte("created_at",new Date(Date.now()-86400000).toISOString());
   if(countError)throw new Error("Book requests are currently unavailable. Please use the email draft option or try again later.");
   if((count||0)>=10)throw new Error("You have reached the daily request limit. Please try again tomorrow.");
-  const {error}=await db.from("book_requests").insert({user_id:identity.id,requester_name:data.name,verified_email:identity.email,message:data.message});
-  if(error)throw new Error("Your request could not be saved. Please try again later.");
-  return {saved:true};
+  const message=data.bookTitle?requestMessageWithTitle(data.bookTitle,data.message):data.message;
+  if(message.length>5000)throw new Error("Please shorten your message to leave room for the book title.");
+  const {data:saved,error}=await db.from("book_requests").insert({user_id:identity.id,requester_name:data.name,verified_email:identity.email,message}).select("id,created_at").single();
+  if(error||!saved)throw new Error("Your request could not be saved. Please try again later.");
+  return {saved:true,id:String(saved.id),createdAt:String(saved.created_at)};
  });
 
 export const listBookRequests = createServerFn({method:"POST"}).middleware([requireLibraryAdmin])
@@ -28,7 +31,7 @@ export const listBookRequests = createServerFn({method:"POST"}).middleware([requ
   const db=supabaseAdmin as SupabaseClient;
   const {data:requests,count,error}=await db.from("book_requests").select("id,requester_name,verified_email,message,status,created_at",{count:"exact"}).order("created_at",{ascending:false}).order("id").range(data.page*25,data.page*25+24);
   if(error)throw new Error("Requests could not be loaded. Check that the book requests database migration has been applied, then retry.");
-  return {requests:(requests||[]) as BookRequest[],total:count||0};
+  return {requests:(requests||[]).map(request=>({...request,book_title:requestBookTitle(request.message)})) as BookRequest[],total:count||0};
  });
 
 export const reviewBookRequest = createServerFn({method:"POST"}).middleware([requireLibraryAdmin])

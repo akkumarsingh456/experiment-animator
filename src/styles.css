@@ -901,3 +901,6 @@
 @media(pointer:coarse) { .creator-credit button { width:44px; height:44px; } }
 @media print { .creator-credit { display:none!important; } }
 body:has(.presentation-overlay) .creator-credit { display:none; }
+
+.book-request-sync { font-size:14px; color:#526451; margin:12px 0; }
+.book-request-card header p { margin:7px 0 3px; font-size:16px; }
