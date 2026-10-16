@@ -1,3 +1,4 @@
+import { LessonPreparation } from "@/components/LessonPreparation";
 import { withPhysicsFormulaReference } from "@/lib/physics-formula-reference";
 import { sequenceChemistryNotes } from "@/lib/chemistry-note-sequence";
 import { LessonCover } from "@/components/LessonCover";
@@ -175,7 +176,6 @@ function GeneratePage() {
   const [retryAttempt, setRetryAttempt] = useState(0);
   useEffect(() => () => { requestIdRef.current += 1;startedRequest.current=''; }, []);
   const [loading, setLoading] = useState(false);
-  const readingStatus = "Preparing your PPT and teacher notes…";
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -228,17 +228,7 @@ function GeneratePage() {
           <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight ml-1">{search.topic || "Untitled"}</h1>
         </div>
 
-        {loading && (
-          <Card className="border-dashed">
-            <CardContent className="p-12 text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-              <p className="mt-4 font-medium">{readingStatus}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Using the matching saved NCERT chapter. No sign-in is needed to prepare or view lessons.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        {loading && <LessonPreparation subject={search.subject} chapter={search.chapter} topic={search.topic} />}
 
         {error && (
           <Card className="border-destructive/40 bg-destructive/5">
