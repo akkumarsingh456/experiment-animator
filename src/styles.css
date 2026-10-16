@@ -808,7 +808,6 @@
 .lanthanoid-entry-note { margin: 4px 0; color: #4f5c69; }
 .lanthanoid-entry-source { color: #075985; text-decoration: underline; text-underline-offset: 2px; }
 
-.library-admin-hint { padding: 14px 16px; border-left: 3px solid #42634c; background: #edf3e9; font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; }
 .library-admin-bar span { font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
 
 /* Exception emphasis uses weight and a border as well as colour. */
