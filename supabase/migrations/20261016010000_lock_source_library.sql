@@ -3,7 +3,12 @@ BEGIN;
 ALTER TABLE public.ncert_books ADD COLUMN IF NOT EXISTS source_kind text NOT NULL DEFAULT 'unreviewed';
 ALTER TABLE public.ncert_books ADD COLUMN IF NOT EXISTS approved_by uuid;
 ALTER TABLE public.ncert_books ADD COLUMN IF NOT EXISTS approved_at timestamptz;
-ALTER TABLE public.ncert_books ADD CONSTRAINT ncert_source_kind_check CHECK (source_kind IN ('unreviewed','ncert','reference'));
+DO $$
+BEGIN
+ IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='ncert_source_kind_check' AND conrelid='public.ncert_books'::regclass) THEN
+  ALTER TABLE public.ncert_books ADD CONSTRAINT ncert_source_kind_check CHECK (source_kind IN ('unreviewed','ncert','reference'));
+ END IF;
+END $$;
 -- Historical filenames are not proof of provenance: existing books require an administrator review.
 UPDATE public.ncert_books SET download_url = NULL WHERE download_url IS NOT NULL;
 
@@ -35,10 +40,13 @@ BEGIN
 END $$;
 -- A restrictive bucket policy also overrides any unrelated permissive storage policy.
 UPDATE storage.buckets SET public=false WHERE id='ncert-pdfs';
+DROP POLICY IF EXISTS source_library_no_direct_access ON storage.objects;
 CREATE POLICY source_library_no_direct_access ON storage.objects AS RESTRICTIVE
  FOR ALL TO anon, authenticated
  USING (bucket_id <> 'ncert-pdfs') WITH CHECK (bucket_id <> 'ncert-pdfs');
 -- Clients cannot poison shared generated notes or control the shared build queue.
 REVOKE INSERT, UPDATE, DELETE ON public.lesson_cache, public.slide_image_cache, public.lesson_build_jobs, public.lesson_build_state FROM anon, authenticated;
 GRANT ALL ON public.lesson_cache, public.slide_image_cache, public.lesson_build_jobs, public.lesson_build_state TO service_role;
+-- Refresh PostgREST after the transaction commits so the new columns are visible.
+NOTIFY pgrst, 'reload schema';
 COMMIT;

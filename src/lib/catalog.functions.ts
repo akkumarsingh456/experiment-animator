@@ -1,3 +1,4 @@
+import { sourceLibraryError } from "@/lib/source-library-errors";
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -72,8 +73,7 @@ export const listChapters = createServerFn({ method: "POST" })
       .in("subject", subjects)
       .limit(2000);
     if (error) {
-      console.warn("listChapters query failed", error.message);
-      return { chapters: [] as Array<{ label: string; raw: string }> };
+      throw sourceLibraryError(error);
     }
 
     const seen = new Map<string, { label: string; raw: string }>();
@@ -113,7 +113,8 @@ export const listSubtopics = createServerFn({ method: "POST" })
       .in("class", classes)
       .in("subject", subjects)
       .limit(20);
-    const { data: books } = await q;
+    const { data: books, error: booksError } = await q;
+    if (booksError) throw sourceLibraryError(booksError);
     let filtered = (books || []) as Array<{ id: string; chapter: string; file_name: string }>;
     const wanted = String(data.chapter || "").trim().toLowerCase();
     if (wanted) {

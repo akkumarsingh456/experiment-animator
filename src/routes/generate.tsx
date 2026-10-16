@@ -1,3 +1,4 @@
+import { isSourceApprovalRequired, isSourceLibrarySetupError, SOURCE_LIBRARY_SETUP_MESSAGE } from "@/lib/source-library-errors";
 import { withPhysicsFormulaReference } from "@/lib/physics-formula-reference";
 import { sequenceChemistryNotes } from "@/lib/chemistry-note-sequence";
 import { LessonCover } from "@/components/LessonCover";
@@ -243,11 +244,11 @@ function GeneratePage() {
         {error && (
           <Card className="border-destructive/40 bg-destructive/5">
             <CardContent className="p-6">
-              <p className="font-semibold text-destructive">Generation failed</p>
-              <p className="text-sm mt-1">{error}</p>
-              <div className="mt-4 flex gap-2">
+              <p className="font-semibold text-destructive">{isSourceLibrarySetupError(error) ? "Library setup required" : isSourceApprovalRequired(error) ? "NCERT source approval required" : "Generation failed"}</p>
+              <p className="text-sm mt-1">{isSourceLibrarySetupError(error) ? SOURCE_LIBRARY_SETUP_MESSAGE : error}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
                 <Button size="sm" onClick={() => setRetryAttempt(value => value + 1)}>Retry generation</Button>
-                <Button size="sm" onClick={() => nav({ to: "/upload" })}>Go to Upload</Button>
+                <Button size="sm" onClick={() => nav({ to: isSourceLibrarySetupError(error) || isSourceApprovalRequired(error) ? "/history" : "/upload" })}>{isSourceLibrarySetupError(error) || isSourceApprovalRequired(error) ? "Library access" : "Go to Upload"}</Button>
                 <Button size="sm" variant="outline" onClick={() => nav({ to: "/" })}>Back home</Button>
               </div>
             </CardContent>

@@ -1,3 +1,4 @@
+import { sourceLibraryError } from "@/lib/source-library-errors";
 import { sequenceChemistryNotes } from "@/lib/chemistry-note-sequence";
 import { withPhysicsDimensions } from "@/lib/physics-dimensions";
 import { ENGLISH_CHAPTERS } from "@/lib/english-chapters";
@@ -1638,12 +1639,13 @@ export const generateLesson = createServerFn({ method: "POST" })
       .eq("source_kind", "ncert")
       .or(`class.ilike.%${wantedClass}%,${combinedFilter}`)
       .limit(200);
-    if (bErr) throw new Error(bErr.message);
+    if (bErr) throw sourceLibraryError(bErr);
     let candidates = (classBooks ?? []).filter((book) => bookMatchesLesson(book, data.klass, data.subject));
 
     // Retry against the full inventory, retaining the same class/subject scope.
     if (candidates.length === 0) {
-      const { data: allBooks } = await s.from("ncert_books").select("id, class, subject, chapter, file_name").eq("source_kind", "ncert").limit(500);
+      const { data: allBooks, error: allBooksError } = await s.from("ncert_books").select("id, class, subject, chapter, file_name").eq("source_kind", "ncert").limit(500);
+      if (allBooksError) throw sourceLibraryError(allBooksError);
       candidates = (allBooks ?? []).filter((b) => bookMatchesLesson(b, data.klass, data.subject));
     }
 
@@ -1732,7 +1734,8 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Broader inventory search, still restricted to the selected class/subject.
     const hasTopicalHit = (chunks ?? []).some((c) => score(c.content, terms) > 8);
     if (!hasTopicalHit) {
-      const { data: allBooks2 } = await s.from("ncert_books").select("id, class, subject, chapter, file_name").eq("source_kind", "ncert").limit(500);
+      const { data: allBooks2, error: allBooksError2 } = await s.from("ncert_books").select("id, class, subject, chapter, file_name").eq("source_kind", "ncert").limit(500);
+      if (allBooksError2) throw sourceLibraryError(allBooksError2);
       const ranked2 = (allBooks2 ?? [])
         .filter((b) => bookMatchesLesson(b, data.klass, data.subject))
         .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject} ${b.class}`, [...terms, ...chapterTerms]) }))

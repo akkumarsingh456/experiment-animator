@@ -1,4 +1,5 @@
-import { approveNcertSource } from "@/lib/library-access.functions";
+import { sourceLibraryError } from "@/lib/source-library-errors";
+import { approveNcertSource, getSourceLibraryStatus } from "@/lib/library-access.functions";
 import { LibraryAccessGate } from "@/components/LibraryAccessGate";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -71,20 +72,26 @@ function HistoryPage() {
   const [subject, setSubject] = useState<string>("all");
   const [signing, setSigning] = useState<string | null>(null);
   const [classificationError, setClassificationError] = useState<string | null>(null);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { await classifyMedEasyLibrary(); setClassificationError(null); }
-    catch { setClassificationError("Med Easy class labels could not be saved. Displaying the combined Class 11 & 12 classification; refresh to retry saving."); }
-    const { data } = await supabase
-      .from("ncert_books")
-      .select(
-        "id, source_kind, class, subject, chapter, file_name, file_size, storage_path, download_url, num_pages, num_chunks, status, created_at",
-      )
-      .order("created_at", { ascending: false })
-      .limit(500);
-    setRows(((data as Row[]) ?? []).map(medEasyLibraryMetadata));
-    setLoading(false);
+    setLibraryError(null);
+    try {
+      const status = await getSourceLibraryStatus();
+      if (!status.ready) { setLibraryError(status.message); return; }
+      try { await classifyMedEasyLibrary(); setClassificationError(null); }
+      catch { setClassificationError("Med Easy class labels could not be saved. Refresh to retry saving."); }
+      const { data, error } = await supabase
+        .from("ncert_books")
+        .select("id, source_kind, class, subject, chapter, file_name, file_size, storage_path, download_url, num_pages, num_chunks, status, created_at")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error) throw sourceLibraryError(error);
+      setRows(((data as Row[]) ?? []).map(medEasyLibraryMetadata));
+    } catch (error) {
+      setLibraryError(error instanceof Error ? error.message : "The source library could not be loaded.");
+    } finally { setLoading(false); }
   }, []);
 
   useEffect(() => {
@@ -168,6 +175,7 @@ function HistoryPage() {
           </Button>
         </div>
 
+        {libraryError && <div role="alert" className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-5 text-amber-950"><h2 className="font-semibold">Source library needs attention</h2><p className="mt-2 text-sm">{libraryError}</p><p className="mt-2 text-sm">For a pending database update, apply 20261016010000_lock_source_library.sql through the linked database SQL editor, then refresh this page and verify your NCERT sources.</p></div>}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -212,6 +220,7 @@ function HistoryPage() {
             </div>
 
             {classificationError && <p className="text-sm text-muted-foreground" role="status">{classificationError}</p>}
+            {!libraryError && !loading && rows.length > 0 && !rows.some(row => row.source_kind === "ncert") && <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">None of the displayed books is approved for NCERT lesson generation yet. Your PDFs are still saved. Open each official NCERT textbook and select Verify as NCERT after checking it. Keep Med Easy and other reference books unapproved for notes.</p>}
             <div className="rounded-lg border border-border overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -237,7 +246,7 @@ function HistoryPage() {
                     ) : filtered.length === 0 ? (
                       <tr>
                         <td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">
-                          No matching uploads yet.
+                          {libraryError ? "Inventory could not be loaded. Existing uploads have not been deleted." : "No matching uploads yet."}
                         </td>
                       </tr>
                     ) : (
@@ -269,12 +278,12 @@ function HistoryPage() {
                             {new Date(r.created_at).toLocaleString()}
                           </td>
                           <td className="px-3 py-2 text-right whitespace-nowrap">
-                            {r.source_kind === "ncert" ? <p className="text-xs text-emerald-700">Verified NCERT source</p> : <Button size="sm" variant="outline" onClick={async()=>{if(!window.confirm("Have you opened and checked that this file is an official NCERT textbook? Approve only after verifying the publisher and content."))return;try{await approveNcertSource({data:{book_id:r.id,confirmed:true}});await load();}catch(error){window.alert(error instanceof Error?error.message:"Approval failed");}}}>Verify as NCERT</Button>}
+                            {r.source_kind === "ncert" ? <p className="text-xs text-emerald-700">Verified NCERT source</p> : <Button size="sm" variant="outline" disabled={!!libraryError} onClick={async()=>{if(!window.confirm("Have you opened and checked that this file is an official NCERT textbook? Approve only after verifying the publisher and content."))return;try{await approveNcertSource({data:{book_id:r.id,confirmed:true}});await load();}catch(error){window.alert(error instanceof Error?error.message:"Approval failed");}}}>Verify as NCERT</Button>}
                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={() => openFile(r)}
-                              disabled={signing === r.id}
+                              disabled={!!libraryError || signing === r.id}
                             >
                               {signing === r.id ? (
                                 <Loader2 className="h-3 w-3 animate-spin" />
