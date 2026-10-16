@@ -4,7 +4,7 @@ import { lanthanoidSourceRow } from "@/lib/lanthanoid-table";
 
 // Start with fuller sheets; the rendered DOM reports overflow and lowers this
 // budget for the actual viewport, font metrics and mathematical content.
-export const DEFAULT_LECTURE_ROWS = 26;
+export const DEFAULT_LECTURE_ROWS = 32;
 
 /** Estimate rendered rows, accounting for card padding, math and memory explanations. */
 function lineRows(line: string, heading: string): number {
@@ -37,19 +37,19 @@ function continuationLines(line: string): string[] {
 }
 
 /** Layout only: preserve every source point; continue long proofs at step boundaries. */
-export function paginateLectureSections(sections: NoteSectionLike[] | undefined, maxRows = DEFAULT_LECTURE_ROWS): NoteSectionLike[][] {
+export function paginateLectureSections(sections: NoteSectionLike[] | undefined, maxRows = DEFAULT_LECTURE_ROWS, rowWeights: Record<string, number> = {}): NoteSectionLike[][] {
   const pages: NoteSectionLike[][] = [];
   let current: NoteSectionLike[] = [], rows = 0;
   let derivationTarget: string | undefined;
   const flush = () => { if (current.length) pages.push(current); current = []; rows = 0; };
   for (const section of sections || []) {
     // Cards and equations remain atomic; prose may continue at sentence boundaries.
-    const lines = section.lines.flatMap(line => section.heading === "MLT Dimensional Formula" || section.heading === "Problem-solving formula reference" || section.kind === "diagram" ? [line] : prosePoints(line).flatMap(continuationLines));
+    const lines = section.lines.flatMap(line => section.heading === "MLT Dimensional Formula" || section.heading === "Problem-solving formula reference" || section.kind === "diagram" || section.heading === "Source table — original extracted entries" ? [line] : prosePoints(line).flatMap(continuationLines));
     for (const line of lines) {
       const isStep = /^\s*\*\*derivation step/i.test(line);
       if (/^\s*\*\*derivation of/i.test(line)) derivationTarget = line;
       else if (!isStep) derivationTarget = undefined;
-      const cost = lineRows(line, section.heading);
+      const cost = lineRows(line, section.heading) * (rowWeights[line] || 1);
       const same = current.at(-1)?.heading === section.heading && current.at(-1)?.kind === section.kind;
       if (rows && rows + cost + (same ? 0 : 2) > maxRows) {
         flush();

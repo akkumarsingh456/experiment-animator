@@ -104,3 +104,7 @@ Repeated differential symbols and missing operands such as `E = − = + δ δ δ
 ## Verified lanthanoid table display
 
 NCERT Chemistry I, The d- and f-Block Elements, table 4.9 (https://ncert.nic.in/textbook/pdf/lech104.pdf#page=22) separates neutral-atom radii from 3+ ionic radii, both in pm. Recognised named source rows may use the verified table labels and configurations; require a matching name, symbol, orbital data and listed atomic-radius token. Never assign arbitrary flattened values by position. Keep the underlying extraction unchanged, format orbital occupancies and charges as superscripts, preserve chemical subscripts, and mark values absent from NCERT as not given. The lecture paginator must account for the labelled rows.
+
+## Content-local overflow and exceptions
+
+Lecture continuation packing starts with a fuller 32-row budget. Actual DOM overflow adjusts weights for only the lines on the overflowing page, never the whole source topic: a dense table must not force sparse practice pages elsewhere. Preserve source-table entries atomically before rendering verified chemistry labels. All text stays in source order; short final pages remain possible when the topic ends. Explicit exception, anomaly or unusual-behaviour wording receives bold amber emphasis in the shared math/text renderer. This is presentation of the supplied statement, not a new scientific assertion; names or numerical outliers alone must not trigger inferred exceptions.

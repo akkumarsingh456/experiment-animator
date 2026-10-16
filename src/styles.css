@@ -810,3 +810,7 @@
 
 .library-admin-hint { padding: 14px 16px; border-left: 3px solid #42634c; background: #edf3e9; font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; }
 .library-admin-bar span { font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+
+/* Exception emphasis uses weight and a border as well as colour. */
+.note-exception { color: #92400e; font-weight: 700; background: #fff3ce; border-left: 3px solid #b36b12; padding: 2px 6px; border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.note-exception strong { color: inherit; font-weight: 750; }

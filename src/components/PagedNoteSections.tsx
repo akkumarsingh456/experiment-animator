@@ -95,7 +95,7 @@ export function PagedNoteSections({
   scale?: "card" | "present";
   header?: React.ReactNode;
   subject?: string;
-  onOverflow?: (ratio: number) => void;
+  onOverflow?: (ratio: number, lines: string[]) => void;
 }) {
   const blocks = useMemo(() => toNoteBlocks(groupNoteLabels(sections)), [sections]);
   const maxPx = scale === "present" ? 22 : 18;
@@ -135,7 +135,7 @@ export function PagedNoteSections({
         if (!one && availableHeight > 0 && blocks.length > 1) {
           // Repack the source topic into additional outer slides using actual DOM size.
           fits(MIN_PX, 1);
-          onOverflow?.(content.scrollHeight / availableHeight);
+          onOverflow?.(content.scrollHeight / availableHeight, (sections || []).flatMap(section => section.lines));
         }
         const wide = box.clientWidth > 640;
         const two = wide && one < MIN_PX + 1 ? search(2) : 0;
@@ -164,7 +164,7 @@ export function PagedNoteSections({
       cancelAnimationFrame(frame);
       ro.disconnect();
     };
-  }, [blocks, maxPx, header, onOverflow]);
+  }, [blocks, sections, maxPx, header, onOverflow]);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col gap-1.5">

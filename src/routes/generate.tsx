@@ -563,12 +563,18 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
 
 
-  const [lectureRowBudgets, setLectureRowBudgets] = useState<Record<number, number>>({});
-  const continueOverflowingNotes = useCallback((sourceIndex: number, ratio: number) => {
-    setLectureRowBudgets(previous => {
-      const current = previous[sourceIndex] || DEFAULT_LECTURE_ROWS;
-      const next = Math.max(6, Math.min(current - 1, Math.floor(current / Math.max(1.05, ratio))));
-      return next < current ? {...previous, [sourceIndex]: next} : previous;
+  const [lectureRowWeights, setLectureRowWeights] = useState<Record<number, Record<string, number>>>({});
+  const continueOverflowingNotes = useCallback((sourceIndex: number, ratio: number, lines: string[]) => {
+    if (!Number.isFinite(ratio) || ratio <= 1 || !lines.length) return;
+    setLectureRowWeights(previous => {
+      const weights = {...previous[sourceIndex]};
+      let changed = false;
+      for (const line of new Set(lines)) {
+        const current = weights[line] || 1;
+        const next = Math.min(12, current * Math.max(1.1, Math.min(2, ratio)));
+        if (next > current) { weights[line] = next; changed = true; }
+      }
+      return changed ? {...previous, [sourceIndex]: weights} : previous;
     });
   }, []);
 
@@ -578,10 +584,10 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     const sections = slide.sections?.filter((section) => section.kind !== "diagram" && section.lines.some(line=>line.trim()));
     const fallback = slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...slide.bullets, ...slide.notes];
     const sourceSections = sections?.length ? sections : [{ heading: "Teacher Notes", kind: "bullets", lines: fallback }];
-    const notePages = paginateLectureSections(withPhysicsDimensions(sourceSections as NonNullable<Slide["sections"]>, search.subject || "", slide.title), lectureRowBudgets[sourceIndex] || DEFAULT_LECTURE_ROWS).map((page) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
+    const notePages = paginateLectureSections(withPhysicsDimensions(sourceSections as NonNullable<Slide["sections"]>, search.subject || "", slide.title), DEFAULT_LECTURE_ROWS, lectureRowWeights[sourceIndex]).map((page) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
       title: slide.title }));
     return notePages;
-  }), [slides, search.subject, lectureRowBudgets]);
+  }), [slides, search.subject, lectureRowWeights]);
   const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, section: "NCERT notes & illustration",
     content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} onNotesOverflow={continueOverflowingNotes} staticView />,
   }));
@@ -1130,7 +1136,7 @@ function SlideCanvas({
 }: {
   slide: Slide; index: number; total: number; editing: boolean; onChange: (p: Partial<Slide>) => void;
   imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void; klass?: string; subject?: string; chapter?: string; staticView?: boolean;
-  onNotesOverflow?: (sourceIndex: number, ratio: number) => void;
+  onNotesOverflow?: (sourceIndex: number, ratio: number, lines: string[]) => void;
 }) {
   if (!slide) return null;
   const sourceIndex = (slide as Slide & { sourceIndex?: number }).sourceIndex ?? index;
@@ -1254,7 +1260,7 @@ function SlideCanvas({
               ) : null}
               <PagedNoteSections
                 sections={slide.sections?.filter((section) => section.kind !== "diagram")}
-                onOverflow={onNotesOverflow ? ratio => onNotesOverflow(sourceIndex, ratio) : undefined}
+                onOverflow={onNotesOverflow ? (ratio, lines) => onNotesOverflow(sourceIndex, ratio, lines) : undefined}
                 subject={subject}
                 header={<PenNotesBlock index={sourceIndex} slide={slide} subject={subject} editable={!staticView} />}
               />
