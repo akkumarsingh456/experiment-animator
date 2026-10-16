@@ -96,3 +96,7 @@ Detect single running page/section headings embedded in equations, including OCR
 ## Additive senior Physics formula reference
 
 `physics-formula-reference.ts` provides 175 independently authored standard formula rows across all 14 configured Class 11 and 14 Class 12 Physics chapters. Match the selected class and complete chapter title exactly after punctuation normalisation. Insert the reference once before MCQs, retaining every original slide. These are curated supplementary identities, not claims of verbatim extraction from an uploaded PDF. Keep assumptions, sign conventions and model limits beside the equations. Rectifier-average formulas are explicitly supplementary and idealised. Never attach a chapter’s complete appendix to every individual topic slide. References use full-width continuation pages and remain in guided notes and PDF/PPTX exports.
+
+## Repeated equation syntax
+
+Repeated differential symbols and missing operands such as `E = − = + δ δ δ δ V l V l` indicate a flattened PDF equation, not a relation to simplify. The shared math-quality guard must catch these in normal notes and saved-lesson rendering. Preserve valid LaTeX chains, repeated variables and quoted examples. Keep an unrecoverable original in source review instead of guessing its numerator, denominator or sign.

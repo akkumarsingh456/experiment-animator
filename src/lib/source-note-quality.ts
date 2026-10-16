@@ -41,6 +41,15 @@ export function hasBrokenSourceMath(raw:string):boolean {
   if (hasSourcePrintIntrusion(text)) return true;
   if (/[\uFFFD\u25A1\u25AF\u0000\uE000-\uF8FF]/u.test(text)) return true;
   const mathematical=/[=∝]|\*\*(?:formula|equation|relation)|\bEq\./i.test(text);
+  // PDF equation layers can flatten fractions into duplicated operators and
+  // differential symbols. Never "repair" these by merely removing repeats:
+  // the missing numerator, denominator or sign cannot be inferred safely.
+  const unquoted = (value: string) => value.replace(/"[^"\n]*"|“[^”\n]*”|`[^`\n]*`/g, "");
+  const segments = splitMath(text);
+  const prose = segments.filter(part => part.type === 'text').map(part => unquoted(part.value)).join(' ');
+  const missingOperands = segments.some(part => /=\s*[+−-]\s*=|=\s*=\s*[+−-]/.test(unquoted(part.value)));
+  const repeatedDifferentials = /([δ∂Δ∆])(?:\s+\1){2,}(?=\s|$)/u.test(prose);
+  if (mathematical && (missingOperands || repeatedDifferentials)) return true;
   return mathematical && (
     /(?:\b\d{1,3}\s+){4,}\d{1,3}\b/.test(text) ||
     /\b([a-zA-Z]{1,3})\1{3,}\b/.test(text) ||
