@@ -118,9 +118,6 @@ export type Database = {
       }
       ncert_books: {
         Row: {
-          source_kind: string
-          approved_by: string | null
-          approved_at: string | null
           chapter: string
           class: string
           created_at: string
@@ -139,9 +136,6 @@ export type Database = {
           summary: string | null
         }
         Insert: {
-          source_kind?: string
-          approved_by?: string | null
-          approved_at?: string | null
           chapter: string
           class: string
           created_at?: string
@@ -160,9 +154,6 @@ export type Database = {
           summary?: string | null
         }
         Update: {
-          source_kind?: string
-          approved_by?: string | null
-          approved_at?: string | null
           chapter?: string
           class?: string
           created_at?: string
