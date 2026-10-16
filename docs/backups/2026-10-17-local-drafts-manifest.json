@@ -1,0 +1,152 @@
+[
+  {
+    "path": "book-figures-preview.html",
+    "bytes": 245,
+    "sha256": "1c76c79bca3ed93b1841990d4aa169f273630743998b2bc8ba6c8a1b10ecbb60"
+  },
+  {
+    "path": "book-figures-preview.tsx",
+    "bytes": 2771,
+    "sha256": "14d7bfd4909c14f6d524a5e255ba0e6999c96b5dfde0a80414802840729e3e82"
+  },
+  {
+    "path": "chapter-gallery-preview.html",
+    "bytes": 182,
+    "sha256": "dea592df82f60b37566d41cfbf070eddb78c63c4273263591436eca4d66a7a0f"
+  },
+  {
+    "path": "chapter-gallery-preview.tsx",
+    "bytes": 1009,
+    "sha256": "83f4ea186693b613f8dc1bb2d5715125f5580b3225a2cc130f4936c123ab89a1"
+  },
+  {
+    "path": "combined-visual-preview.html",
+    "bytes": 181,
+    "sha256": "2d8f6f65a7fd491705303d955ed64dde28dd0fad25c48dd8da1886a091e127aa"
+  },
+  {
+    "path": "combined-visual-preview.tsx",
+    "bytes": 1872,
+    "sha256": "a7891be86558185986b748b54e5b78b7d036fd90240f6fa60b70f6240bfec68e"
+  },
+  {
+    "path": "download-preview.html",
+    "bytes": 158,
+    "sha256": "d5f3a69baadee3aad17fe1ce846baecd22b2839430a049d4aa2d9d32846bdbb8"
+  },
+  {
+    "path": "download-preview.tsx",
+    "bytes": 2006,
+    "sha256": "36293995e71be38a990edd40c4444c7e30a6550445551d659b0e8391a79f3d4a"
+  },
+  {
+    "path": "enrichment-preview.html",
+    "bytes": 208,
+    "sha256": "e0a054e9f8047ec74bea38db9f4f156e674c73f2ece270956eea0b8e70ff078a"
+  },
+  {
+    "path": "enrichment-preview.tsx",
+    "bytes": 5089,
+    "sha256": "1cd9e33fbbf437566bf00c0b86ac7d80138e0705b2dd9847fb718dd988dcab9d"
+  },
+  {
+    "path": "formula-review-preview.html",
+    "bytes": 220,
+    "sha256": "22ae54b6e5fabb333e1f3a7c72c4e45c910b7e8e127ba02b31c8b08059a09fe5"
+  },
+  {
+    "path": "formula-review-preview.tsx",
+    "bytes": 1475,
+    "sha256": "6842e6cae8aa9a7104bea3e6c97c28bb1829f6c082a01ff5272be0faed0534b6"
+  },
+  {
+    "path": "free-reader-preview.html",
+    "bytes": 179,
+    "sha256": "2350876ee059bc1f91a096e617316dc9f0bfa5106dd0ae6e3505a996020fd247"
+  },
+  {
+    "path": "free-reader-preview.ts",
+    "bytes": 2099,
+    "sha256": "1522ce0321083a078c1121e8c14a8aa8d1f9124d156db6e5b6e324358ea6bf64"
+  },
+  {
+    "path": "map-preview.html",
+    "bytes": 247,
+    "sha256": "04c1d23d3f9c9eba86403547527f3cf1fe13039e1034913f590ebb0e6255f04b"
+  },
+  {
+    "path": "map-preview.tsx",
+    "bytes": 1024,
+    "sha256": "b14f2489d72c9b3125fee54b781aef98a92ceac1387ea8aa99981a8bce5fbc66"
+  },
+  {
+    "path": "mathematics-preview.html",
+    "bytes": 109,
+    "sha256": "ff41805688f06484449930b7590468a3e765c348de18ff2fd3efed3be19729fb"
+  },
+  {
+    "path": "mathematics-preview.tsx",
+    "bytes": 1610,
+    "sha256": "7635799811d2ac5dc3b3cf45262aa09d236e3e4d947a38a86ab7eabd8eab2797"
+  },
+  {
+    "path": "original-preview.tsx",
+    "bytes": 17435,
+    "sha256": "23c8a946b85171b214c21750fd29817cc2d58d167c1672a54973dde8de26148f"
+  },
+  {
+    "path": "package-lock.json",
+    "bytes": 340194,
+    "sha256": "f818f2596bb4799e9af5972e26be4f700a2e76b731c5098410f1cc6ada5a0fd9"
+  },
+  {
+    "path": "points-preview.html",
+    "bytes": 240,
+    "sha256": "005910e92c545316269d524e70c11255f4fcd959d5509453c3e5842af1bd442f"
+  },
+  {
+    "path": "points-preview.tsx",
+    "bytes": 1767,
+    "sha256": "9a0318ae0a2f3615534fbf9bc1cca8b53fcdd1e297fe0f55a924617a2d6c7174"
+  },
+  {
+    "path": "presentation-preview.config.ts",
+    "bytes": 354,
+    "sha256": "86ef5ec79939e38d2e18da13196e846d03c6ff485baec002263b963b6e3d6ce5"
+  },
+  {
+    "path": "presentation-preview.html",
+    "bytes": 249,
+    "sha256": "90b6a56c3942601100e3b37d35c9b781b54b3faff47128a6de8068cb3ba54686"
+  },
+  {
+    "path": "presentation-preview.tsx",
+    "bytes": 4065,
+    "sha256": "eca14500a0575b56ae453139e7af4b6c6129bf563be521cc03017fc59b2b92ec"
+  },
+  {
+    "path": "structure-style-preview.html",
+    "bytes": 102,
+    "sha256": "1bbd973bb4374829d4af98936af422f58b5e1b2f6535a5e809553a6ffaa12c03"
+  },
+  {
+    "path": "structure-style-preview.tsx",
+    "bytes": 1237,
+    "sha256": "4e7eb1240228b897830e7270af5e995ad938b9b80a9a69431fce7cf3c9db80b8"
+  },
+  {
+    "path": "public/apparatus/potted-plant.jpg",
+    "bytes": 301823,
+    "sha256": "2570a931e0dd13d958cb05f051bf9b4d7dbf421e7114d92c714ea8de6f013cc0"
+  },
+  {
+    "path": "reaction-map-reference.png",
+    "bytes": 233252,
+    "sha256": "72128caa0f711a18d090729b49b35d4f060231ea5c42860b82afa212d9e7906f"
+  },
+  {
+    "path": "outputs/week4-style-guide/AMAN_KUMAR_Week_4_Technical_Documentation_Style_Guide.docx",
+    "bytes": 50824,
+    "sha256": "4b9e11f1254d420260dcd7bbf845b69ae0075fee0715fcf98dcd33bb1d9c9860"
+  }
+]
