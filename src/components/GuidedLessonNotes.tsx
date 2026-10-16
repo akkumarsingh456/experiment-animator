@@ -14,18 +14,25 @@ import type { Slide } from "@/lib/generate.functions";
 import { TopicVisualStructures } from "@/components/TopicVisualStructures";
 import { FormulaMindMap } from "@/components/FormulaMindMap";
 import { FormulaDerivation } from "@/components/FormulaDerivation";
+import { presentNoteLabels } from "@/lib/note-label-presentation";
 
 function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }) {
+  const presentation = presentNoteLabels(group.lines, group.heading);
+  const runs = presentation.reduce<Array<{heading?: string; lines: string[]}>>((out, line) => {
+    if (line.heading || !out.length) out.push({heading:line.heading,lines:[]});
+    out.at(-1)!.lines.push(line.text);
+    return out;
+  }, []);
   return <section className={`guided-group guided-${group.kind}`} data-note-category={group.heading}>
     <h3>{group.heading}</h3>
-    {(group.heading === "Source table — original extracted entries" || group.heading === "Source review — original extraction") ? <div className="source-table-entries">{group.lines.map((line, i) => <div className="source-table-entry" key={i}><MathText text={line} /></div>)}</div> : group.heading === "MLT Dimensional Formula" ? <div className="dimension-cards">{group.lines.map((line, i) => {
+    {(group.heading === "Source table — original extracted entries" || group.heading === "Source review — original extraction") ? <div className="source-table-entries">{presentation.map((line, i) => <div key={i}>{line.heading && <h4 className="note-label-heading">{line.heading}</h4>}<div className="source-table-entry"><MathText text={line.text} /></div></div>)}</div> : group.heading === "MLT Dimensional Formula" ? <div className="dimension-cards">{group.lines.map((line, i) => {
       const cells = line.split(" | ");
       return cells.length === 3 ? <div className="dimension-card" key={i}><strong>{cells[0]}</strong><div className="dimension-expression"><MathText text={cells[1]} /></div><p><b>Remember: </b>{cells[2]}</p></div> : <p key={i}><MathText text={line} /></p>;
     })}</div> : group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula / relation</th><th>{group.heading === "Problem-solving formula reference" ? "Symbols, conditions & use" : "Unit / SI unit"}</th></tr></thead><tbody>
-      {group.lines.map((line, i) => { const row = guidedFormulaRow(line); return <tr key={i}><td><MathText text={row.concept} /></td><td><MathText text={row.expression} /></td><td><MathText text={row.unit} /></td></tr>; })}
+      {group.lines.map((line, i) => { const row = guidedFormulaRow(line); return <tr key={i}><td><MathText text={row.concept === "Formula" ? "—" : row.concept} /></td><td><MathText text={row.expression} /></td><td><MathText text={row.unit} /></td></tr>; })}
     </tbody></table></div> : group.kind === "prose" && group.lines.length === 1 ? group.lines.map((line, i) => isMathematics(subject) ? <div className="mathematics-prose" key={i}><MathematicsProse text={line} /></div> : <p key={i}><MathText text={line} /></p>) :
       group.kind === "derivation" ? <FormulaDerivation lines={group.lines} /> :
-      <ul>{group.lines.map((line, i) => <li key={i}>{isMathematics(subject) ? <MathematicsProse text={line} /> : <MathText text={line} />}</li>)}</ul>}
+      runs.map((run, i) => <div key={i}>{run.heading && <h4 className="note-label-heading">{run.heading}</h4>}<ul>{run.lines.map((line, j) => <li key={j}>{isMathematics(subject) ? <MathematicsProse text={line} /> : <MathText text={line} />}</li>)}</ul></div>)}
   </section>;
 }
 

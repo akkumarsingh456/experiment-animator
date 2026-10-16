@@ -1,5 +1,6 @@
 import { MathText } from "@/components/MathText";
 import { guidedFormulaRow } from "@/lib/guided-notes";
+import { presentNoteLabels } from "@/lib/note-label-presentation";
 
 /** Keep the target relation separate from the numbered reasoning that leads to it. */
 export function FormulaDerivation({ lines }: { lines: string[] }) {
@@ -8,6 +9,7 @@ export function FormulaDerivation({ lines }: { lines: string[] }) {
   const target = header?.replace(/^\s*\*\*[^*]+:\*\*\s*/, "") || "";
   const relation = guidedFormulaRow(target);
   const steps = lines.filter((line) => !/^\s*\*\*(?:formula|derivation of)\b/i.test(line));
+  const presentation = presentNoteLabels(steps.map(line => line.replace(/^\s*\*\*derivation step\s*\d*:\*\*\s*/i, "")), "Step-by-step derivation");
   return (
     <div className="formula-derivation">
       {header && (
@@ -27,7 +29,8 @@ export function FormulaDerivation({ lines }: { lines: string[] }) {
                 {number}
               </span>
               <div>
-                <MathText text={line.replace(/^\s*\*\*derivation step\s*\d*:\*\*\s*/i, "")} />
+                {presentation[index].heading && <h5 className="note-label-heading">{presentation[index].heading}</h5>}
+                <MathText text={presentation[index].text} />
               </div>
             </li>
           );

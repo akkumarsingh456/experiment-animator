@@ -15,6 +15,7 @@ import { FormulaDerivation } from "@/components/FormulaDerivation";
 import { guidedFormulaRow } from "@/lib/guided-notes";
 import { toNoteBlocks, type NoteBlock, type NoteSectionLike } from "@/lib/notes-paging";
 import { readableSourceRelation } from "@/lib/source-note-quality";
+import { presentNoteLabels } from "@/lib/note-label-presentation";
 
 // Present repeated prose labels as a single heading, keeping mathematical
 // derivation labels intact for the block grouping helpers.
@@ -39,8 +40,9 @@ export function groupNoteLabels(sections: NoteSectionLike[] | undefined): NoteSe
   return out;
 }
 
-function BlockView({ block, showHeading, subject }: { block: NoteBlock; showHeading: boolean; subject?: string }) {
+function BlockView({ block, showHeading, subject, previousLine }: { block: NoteBlock; showHeading: boolean; subject?: string; previousLine?: string }) {
   const isDeriv = block.lines.some((l) => /derivation (of|step)/i.test(l));
+  const presentation = presentNoteLabels(block.lines, block.heading, previousLine);
   return (
     <div className={`break-inside-avoid ${showHeading ? "pt-[0.4em] first:pt-0" : ""}`}>
       {showHeading && (
@@ -60,16 +62,17 @@ function BlockView({ block, showHeading, subject }: { block: NoteBlock; showHead
         >
           {block.lines.map((line, index) => (
             <li key={index} className="pl-[1em] -indent-[1em] [&_.katex-display]:my-[0.15em] [&_.katex-display]:indent-0 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden">
+              {presentation[index].heading && <h5 className="note-label-heading">{presentation[index].heading}</h5>}
               {block.heading === "Problem-solving formula reference" ? (() => {
                 const [name, expression, use] = line.split(" | ");
                 return <div className="physics-reference-row"><strong>{name}</strong><div className="physics-reference-equation"><MathText text={expression || line} /></div><p><MathText text={use || ""} /></p></div>;
-              })() : (block.heading === "Source table — original extracted entries" || block.heading === "Source review — original extraction") ? <div className="source-table-entry"><MathText text={line} /></div> : block.heading === "MLT Dimensional Formula" && line.split(" | ").length === 3 ? (() => {
+              })() : (block.heading === "Source table — original extracted entries" || block.heading === "Source review — original extraction") ? <div className="source-table-entry"><MathText text={presentation[index].text} /></div> : block.heading === "MLT Dimensional Formula" && line.split(" | ").length === 3 ? (() => {
                 const [quantity, expression, remember] = line.split(" | ");
                 return <div className="dimension-card" style={{textIndent: 0}}><strong>{quantity}</strong><div className="dimension-expression"><MathText text={expression} /></div><p><b>Remember: </b>{remember}</p></div>;
               })() : /^(?:\*\*)?(?:formula|equation|relation):/i.test(line) && readableSourceRelation(line) ? (() => {
                 const row = guidedFormulaRow(line.replace(/^\*\*[^*]+:\*\*\s*/, ""));
-                return <div className="note-formula-card"><strong><MathText text={row.concept} /></strong><div><MathText text={row.expression} /></div>{row.unit && <small>Unit: <MathText text={row.unit} /></small>}</div>;
-              })() : <>• {isMathematics(subject) ? <MathematicsProse text={line} /> : <MathText text={line} />}</>}
+                return <div className="note-formula-card">{row.concept !== "Formula" && <strong><MathText text={row.concept} /></strong>}<div><MathText text={row.expression} /></div>{row.unit && <small>Unit: <MathText text={row.unit} /></small>}</div>;
+              })() : <>• {isMathematics(subject) ? <MathematicsProse text={presentation[index].text} /> : <MathText text={presentation[index].text} />}</>}
             </li>
           ))}
         </ul>
@@ -180,6 +183,7 @@ export function PagedNoteSections({
                 key={`${block.sectionIndex}:${index}:${block.lines[0]}`}
                 subject={subject}
                 block={block}
+                previousLine={previous?.sectionIndex === block.sectionIndex ? previous.lines.at(-1) : undefined}
                 showHeading={!previous || previous.sectionIndex !== block.sectionIndex}
               />
             );

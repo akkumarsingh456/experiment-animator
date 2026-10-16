@@ -793,3 +793,6 @@
 
 .edu-brand { gap: 12px; }
 .edu-brand small { color: #142d46; font-weight: 700; font-size: 10px; letter-spacing: .14em; }
+
+/* Semantic labels appear once per consecutive group; the source text is unchanged. */
+.note-label-heading { margin: .45em 0 .2em; font: inherit; font-weight: 650; line-height: 1.4; text-indent: 0; color: inherit; }
