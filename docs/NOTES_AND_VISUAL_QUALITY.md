@@ -108,3 +108,5 @@ NCERT Chemistry I, The d- and f-Block Elements, table 4.9 (https://ncert.nic.in/
 ## Content-local overflow and exceptions
 
 Lecture continuation packing starts with a fuller 32-row budget. Actual DOM overflow adjusts weights for only the lines on the overflowing page, never the whole source topic: a dense table must not force sparse practice pages elsewhere. Preserve source-table entries atomically before rendering verified chemistry labels. All text stays in source order; short final pages remain possible when the topic ends. Explicit exception, anomaly or unusual-behaviour wording receives bold amber emphasis in the shared math/text renderer. This is presentation of the supplied statement, not a new scientific assertion; names or numerical outliers alone must not trigger inferred exceptions.
+
+Inline mathematical containers must reset text-indent themselves, including when nested inside shared text/highlight wrappers. Prose bullet hanging indents must never shift KaTeX back over the preceding word.

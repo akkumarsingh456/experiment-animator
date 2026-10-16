@@ -392,7 +392,7 @@
 .manual-image-controls input[type=range] { display: block; width: 100%; }
 .lesson-export-slide .manual-image-controls, .lesson-export-notes .manual-image-controls { display: none !important; }
 @media print { .manual-image-controls { display: none !important; } }
-.note-math { max-width: 100%; }
+.note-math { max-width: 100%; text-indent: 0; }
 .note-math-display { padding: 4px 2px; }
 .guided-group .note-math-display { scrollbar-width: thin; }
 .formula-derivation-target .note-math { color: #16445b; }
@@ -410,7 +410,7 @@
 .original-slide-display [data-note-sheet] h4 { padding-bottom: 8px; margin-bottom: 12px; }
 
 /* Bullet hanging indents belong to prose, never to inline mathematical symbols. */
-[data-note-content] li > span.inline-block { text-indent: 0; }
+[data-note-content] li .note-math { text-indent: 0; }
 
 /* Mathematics-only representations; other subject layouts stay unchanged. */
 .mathematics-topic-visual { width: 100%; padding: 28px 24px; color: #174455; font-size: 16px; line-height: 1.6; min-width: 0; }
