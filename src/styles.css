@@ -796,3 +796,14 @@
 
 /* Semantic labels appear once per consecutive group; the source text is unchanged. */
 .note-label-heading { margin: .45em 0 .2em; font: inherit; font-weight: 650; line-height: 1.4; text-indent: 0; color: inherit; }
+
+.lanthanoid-entry { font-family: 'Segoe UI',Arial,sans-serif; font-size: 1em; line-height: 1.5; padding: 10px 14px; }
+.lanthanoid-entry-title, .lanthanoid-radii { display: flex; flex-wrap: wrap; gap: 5px 20px; }
+.lanthanoid-entry-title { align-items: baseline; margin-bottom: 5px; }
+.lanthanoid-entry-title > span { font-size: .88em; color: #4f5c69; }
+.lanthanoid-radii { padding-block: 5px; border-block: 1px solid #e4dfd2; }
+.lanthanoid-configurations { margin: 6px 0; }
+.lanthanoid-configurations > span { display: inline-block; margin: 2px 16px 2px 0; }
+.lanthanoid-entry-note, .lanthanoid-entry-source { font-size: .82em; line-height: 1.5; }
+.lanthanoid-entry-note { margin: 4px 0; color: #4f5c69; }
+.lanthanoid-entry-source { color: #075985; text-decoration: underline; text-underline-offset: 2px; }

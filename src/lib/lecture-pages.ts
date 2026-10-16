@@ -1,5 +1,6 @@
 import type { NoteSectionLike } from "@/lib/notes-paging";
 import { prosePoints } from "@/lib/note-points";
+import { lanthanoidSourceRow } from "@/lib/lanthanoid-table";
 
 // Start with fuller sheets; the rendered DOM reports overflow and lowers this
 // budget for the actual viewport, font metrics and mathematical content.
@@ -7,6 +8,7 @@ export const DEFAULT_LECTURE_ROWS = 26;
 
 /** Estimate rendered rows, accounting for card padding, math and memory explanations. */
 function lineRows(line: string, heading: string): number {
+  if (heading === "Source table — original extracted entries" && lanthanoidSourceRow(line)) return 8;
   const plain = line.replace(/\$\$?|\\[a-zA-Z]+/g, "x");
   if (heading === "MLT Dimensional Formula" && line.split(" | ").length === 3) {
     const [quantity, , memory] = line.split(" | ");

@@ -16,6 +16,7 @@ import { guidedFormulaRow } from "@/lib/guided-notes";
 import { toNoteBlocks, type NoteBlock, type NoteSectionLike } from "@/lib/notes-paging";
 import { readableSourceRelation } from "@/lib/source-note-quality";
 import { presentNoteLabels } from "@/lib/note-label-presentation";
+import { ChemistrySourceEntry } from "@/components/ChemistrySourceEntry";
 
 // Present repeated prose labels as a single heading, keeping mathematical
 // derivation labels intact for the block grouping helpers.
@@ -66,7 +67,7 @@ function BlockView({ block, showHeading, subject, previousLine }: { block: NoteB
               {block.heading === "Problem-solving formula reference" ? (() => {
                 const [name, expression, use] = line.split(" | ");
                 return <div className="physics-reference-row"><strong>{name}</strong><div className="physics-reference-equation"><MathText text={expression || line} /></div><p><MathText text={use || ""} /></p></div>;
-              })() : (block.heading === "Source table — original extracted entries" || block.heading === "Source review — original extraction") ? <div className="source-table-entry"><MathText text={presentation[index].text} /></div> : block.heading === "MLT Dimensional Formula" && line.split(" | ").length === 3 ? (() => {
+              })() : block.heading === "Source table — original extracted entries" ? <ChemistrySourceEntry text={presentation[index].text} /> : block.heading === "Source review — original extraction" ? <div className="source-table-entry"><MathText text={presentation[index].text} /></div> : block.heading === "MLT Dimensional Formula" && line.split(" | ").length === 3 ? (() => {
                 const [quantity, expression, remember] = line.split(" | ");
                 return <div className="dimension-card" style={{textIndent: 0}}><strong>{quantity}</strong><div className="dimension-expression"><MathText text={expression} /></div><p><b>Remember: </b>{remember}</p></div>;
               })() : /^(?:\*\*)?(?:formula|equation|relation):/i.test(line) && readableSourceRelation(line) ? (() => {

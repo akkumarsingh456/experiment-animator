@@ -100,3 +100,7 @@ Detect single running page/section headings embedded in equations, including OCR
 ## Repeated equation syntax
 
 Repeated differential symbols and missing operands such as `E = − = + δ δ δ δ V l V l` indicate a flattened PDF equation, not a relation to simplify. The shared math-quality guard must catch these in normal notes and saved-lesson rendering. Preserve valid LaTeX chains, repeated variables and quoted examples. Keep an unrecoverable original in source review instead of guessing its numerator, denominator or sign.
+
+## Verified lanthanoid table display
+
+NCERT Chemistry I, The d- and f-Block Elements, table 4.9 (https://ncert.nic.in/textbook/pdf/lech104.pdf#page=22) separates neutral-atom radii from 3+ ionic radii, both in pm. Recognised named source rows may use the verified table labels and configurations; require a matching name, symbol, orbital data and listed atomic-radius token. Never assign arbitrary flattened values by position. Keep the underlying extraction unchanged, format orbital occupancies and charges as superscripts, preserve chemical subscripts, and mark values absent from NCERT as not given. The lecture paginator must account for the labelled rows.

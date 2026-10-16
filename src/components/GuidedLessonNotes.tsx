@@ -15,6 +15,7 @@ import { TopicVisualStructures } from "@/components/TopicVisualStructures";
 import { FormulaMindMap } from "@/components/FormulaMindMap";
 import { FormulaDerivation } from "@/components/FormulaDerivation";
 import { presentNoteLabels } from "@/lib/note-label-presentation";
+import { ChemistrySourceEntry } from "@/components/ChemistrySourceEntry";
 
 function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }) {
   const presentation = presentNoteLabels(group.lines, group.heading);
@@ -25,7 +26,7 @@ function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }
   }, []);
   return <section className={`guided-group guided-${group.kind}`} data-note-category={group.heading}>
     <h3>{group.heading}</h3>
-    {(group.heading === "Source table — original extracted entries" || group.heading === "Source review — original extraction") ? <div className="source-table-entries">{presentation.map((line, i) => <div key={i}>{line.heading && <h4 className="note-label-heading">{line.heading}</h4>}<div className="source-table-entry"><MathText text={line.text} /></div></div>)}</div> : group.heading === "MLT Dimensional Formula" ? <div className="dimension-cards">{group.lines.map((line, i) => {
+    {(group.heading === "Source table — original extracted entries" || group.heading === "Source review — original extraction") ? <div className="source-table-entries">{presentation.map((line, i) => <div key={i}>{line.heading && <h4 className="note-label-heading">{line.heading}</h4>}{group.heading === "Source table — original extracted entries" ? <ChemistrySourceEntry text={line.text} /> : <div className="source-table-entry"><MathText text={line.text} /></div>}</div>)}</div> : group.heading === "MLT Dimensional Formula" ? <div className="dimension-cards">{group.lines.map((line, i) => {
       const cells = line.split(" | ");
       return cells.length === 3 ? <div className="dimension-card" key={i}><strong>{cells[0]}</strong><div className="dimension-expression"><MathText text={cells[1]} /></div><p><b>Remember: </b>{cells[2]}</p></div> : <p key={i}><MathText text={line} /></p>;
     })}</div> : group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula / relation</th><th>{group.heading === "Problem-solving formula reference" ? "Symbols, conditions & use" : "Unit / SI unit"}</th></tr></thead><tbody>
