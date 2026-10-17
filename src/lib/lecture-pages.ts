@@ -65,5 +65,19 @@ export function paginateLectureSections(sections: NoteSectionLike[] | undefined,
     }
   }
   flush();
+  // Rebalance a sparse final continuation page without changing point order.
+  if(pages.length>1){
+    const before=pages[pages.length-2],last=pages[pages.length-1];
+    const cost=(page:NoteSectionLike[])=>page.reduce((sum,section)=>sum+2+section.lines.reduce((n,line)=>n+lineRows(line,section.heading)*(rowWeights[line]||1),0),0);
+    while(cost(last)<maxRows*.45 && before.length){
+      const section=before.at(-1)!,line=section.lines.at(-1)!;
+      if(/derivation/i.test(section.heading)||/derivation (?:step|of)/i.test(line))break;
+      const amount=lineRows(line,section.heading)*(rowWeights[line]||1)+2;
+      if(cost(last)+amount>maxRows || cost(before)-amount<cost(last))break;
+      section.lines.pop();if(!section.lines.length)before.pop();
+      if(last[0]?.heading===section.heading&&last[0]?.kind===section.kind)last[0].lines.unshift(line);
+      else last.unshift({...section,lines:[line]});
+    }
+  }
   return pages.length ? pages : [sections || []];
 }

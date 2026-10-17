@@ -169,7 +169,7 @@ export function PagedNoteSections({
   return (
     <div className="flex-1 min-h-0 flex flex-col gap-1.5">
       {header}
-      <div ref={boxRef} data-note-sheet className="flex-1 min-h-0 overflow-hidden pr-2">
+      <div ref={boxRef} data-note-sheet className="min-h-0 overflow-hidden pr-2" style={{flex:"0 1 auto",maxHeight:"100%"}}>
         <div
           ref={contentRef}
           data-note-content

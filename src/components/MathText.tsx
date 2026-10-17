@@ -1,3 +1,4 @@
+import {quantumNumberNotation} from '@/lib/quantum-number-notation';
 import katex from "katex";
 import { normalNoteLabel } from "@/lib/note-labels";
 import { autoLatex, splitMath, normalizeLatex, latexToUnicode } from "@/lib/latex-notation";
@@ -12,7 +13,7 @@ export function MathText({ text }: { text: string }) {
   // scientific exception from an element name, numerical value or equation.
   const exception = /\b(?:exceptions?|exceptional|anomalous|anomaly|anomalies|unusual behavio[u]?r|deviat(?:es?|ion) from (?:the )?(?:general|usual|expected))\b/i.test(text)
     && !/\b(?:no exceptions?|without exception|not an exception)\b/i.test(text);
-  const segments = splitMath(autoLatex(normalNoteLabel(text)));
+  const segments = splitMath(autoLatex(quantumNumberNotation(normalNoteLabel(text))));
   return (
     <span className={exception ? "note-exception" : undefined}>
       {segments.map((seg, i) => {
