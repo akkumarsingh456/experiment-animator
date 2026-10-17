@@ -62,3 +62,18 @@ export function scopeEnglishChapterPages(pages: Array<{page_number: number; text
   }
   return result;
 }
+
+/** Social textbooks often flatten an entire page, including its running title. */
+export function scopeSocialChapterPages(pages: Array<{page_number:number;text:string}>, chapter:string, titles:string[]):string[]{
+ const escaped=(s:string)=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+ const patterns=titles.map(title=>({title,pattern:new RegExp("^\\s*(?:(?:chapter\\s*)?[0-9ivxlcdm]+[.):\\-]?\\s+)?"+title.split(/\s+/).map(escaped).join("\\s+")+"(?=\\s|$)","i")}));
+ let active=false;const out:string[]=[];
+ for(const page of [...pages].sort((a,b)=>a.page_number-b.page_number)){
+  const text=splitReferenceContent(page.text).text.replace(/^\[SOURCE_OCR_PAGE\]\s*/,"");
+  if(!text.trim()||isContentsListing(text)||/^\s*(?:contents|table of contents)\b/i.test(text))continue;
+  const hit=patterns.find(row=>row.pattern.test(text.slice(0,250)));
+  if(hit)active=key(hit.title)===key(chapter);
+  if(active)out.push(text);
+ }
+ return out.length?out:scopeEnglishChapterPages(pages,chapter,titles);
+}

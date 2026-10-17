@@ -18,7 +18,7 @@ import { topicEvidence } from "@/lib/topic-evidence";
 import { cleanSourceNoteLine, isSourceTask, validStudyTerm, readableSourceRelation } from "@/lib/source-note-quality";
 import { isDefinitionStatement } from "@/lib/note-labels";
 import { extractExperimentActivities } from "@/lib/experiment-activities";
-import { scopeTextbookPages, scopeEnglishChapterPages, referenceFormulaEvidence } from "@/lib/lesson-source-scope";
+import { scopeTextbookPages, scopeSocialChapterPages, scopeEnglishChapterPages, referenceFormulaEvidence } from "@/lib/lesson-source-scope";
 import { chaptersFor } from "@/lib/ncert-syllabus";
 import { REF_BOOK_PATTERN, combinedReferenceMatches } from "@/lib/reference-books";
 import { sourceDiscussion, reviewNotes, learningScaffold } from "@/lib/learning-design";
@@ -700,6 +700,7 @@ export type Mcq = {
 };
 
 export type Slide = {
+  teacher_pdf?: {path:string;page:number;file_name:string};
   teacher_revision?: {book_id:string;file_name:string;page?:number};
   context_illustration?: { url: string; provider: "Hugging Face"; description: string };
   reference_visuals?: import("@/lib/reference-visuals").ReferenceVisual[];
@@ -1789,12 +1790,12 @@ export const generateLesson = createServerFn({ method: "POST" })
         if (data.subject === "Social Science") {
           const target = socialTitle(data.chapter);
           const headings = titles.map(socialTitle);
-          const scoped = scopeEnglishChapterPages(pages || [], target, headings);
+          const scoped = scopeSocialChapterPages(pages || [], target, headings);
           if (scoped.length) return scoped;
           // Some historical chapter PDFs saved chunks but no page records.
           const { data: ordered, error: readError } = await s.from("ncert_chunks").select("chunk_index,content").eq("book_id",bookId).order("chunk_index").limit(3000);
           if(readError)throw new Error("The selected Social Science chapter text could not be read.");
-          return scopeEnglishChapterPages((ordered||[]).map(row=>({page_number:row.chunk_index,text:row.content})),target,headings);
+          return scopeSocialChapterPages((ordered||[]).map(row=>({page_number:row.chunk_index,text:row.content})),target,headings);
         }
         if (data.subject !== "English") return scopeTextbookPages(pages || [], data.chapter, titles);
         const scoped = scopeEnglishChapterPages(pages || [], data.chapter, titles);

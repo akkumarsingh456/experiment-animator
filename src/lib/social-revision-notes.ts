@@ -1,7 +1,7 @@
 import type {SupabaseClient} from "@supabase/supabase-js";
 import type {Database} from "@/integrations/supabase/types";
 import type {GenerationResult,Slide} from "@/lib/generate.functions";
-import {socialRevisionChapter,socialKey,socialTitle} from "@/lib/social-science-chapters";
+import {socialRevisionChapter,socialKey,socialTitle,SOCIAL_REFERENCE_PATTERN,socialBookSubject} from "@/lib/social-science-chapters";
 import {splitReferenceContent} from "@/lib/reference-visuals";
 import {cleanSourceNoteLine,hasBrokenSourceMath} from "@/lib/source-note-quality";
 
@@ -20,7 +20,7 @@ export async function appendSocialRevisionNotes(result:GenerationResult,db:Supab
  for(const book of books){
   if(book.class.replace(/[^0-9]/g,"")!==klass.replace(/[^0-9]/g,""))continue;
   const named=socialRevisionChapter(book);
-  if(!named||socialKey(socialTitle(named))!==target)continue;
+  if(named ? socialKey(socialTitle(named))!==target : !(SOCIAL_REFERENCE_PATTERN.test(book.file_name)&&socialBookSubject(book)==="Social Science"))continue;
   const key=socialKey(book.file_name.replace(/\(\s*\d+\s*\)/g,"")),prior=unique.get(key);
   if(!prior||(book.num_pages||0)+(book.num_chunks||0)>(prior.num_pages||0)+(prior.num_chunks||0))unique.set(key,book);
  }
@@ -33,6 +33,9 @@ export async function appendSocialRevisionNotes(result:GenerationResult,db:Supab
    pages.push(...(data||[]).map(row=>({page:row.page_number,text:row.text})));
    if(!data||data.length<1000)break;
   }
+  const chapterSpecific=!!socialRevisionChapter(book);
+  if(!chapterSpecific){pages=pages.filter(page=>socialKey(splitReferenceContent(page.text).text).includes(target));if(!pages.length)continue;}
+  const imagePages=chapterSpecific?Array.from({length:book.num_pages||0},(_,i)=>i+1):pages.map(page=>page.page);
   if(!pages.some(page=>splitReferenceContent(page.text).text.trim())){
    pages=[];
    for(let offset=0;;offset+=1000){
@@ -43,10 +46,12 @@ export async function appendSocialRevisionNotes(result:GenerationResult,db:Supab
     if(!data||data.length<1000)break;
    }
   }
+  // Preserve the actual teacher layouts, including scanned notes with no text layer.
+  for(const page of imagePages)additions.push({title:`${socialTitle(chapter)} — original teacher PDF`,kind:"content",visual:"book",bullets:[],notes:[],key_terms:[],sections:[{heading:"Book structure and explanation",kind:"text",lines:[`${book.file_name} · PDF page ${page}`]}],caption:`Uploaded teacher PDF · ${book.file_name} · PDF page ${page}`,teacher_revision:{book_id:book.id,file_name:book.file_name,page},teacher_pdf:{path:book.storage_path,page,file_name:book.file_name}});
   const attribution=/shobhit|nirwan|arihant|oswaal/i.test(book.file_name)?"Uploaded teacher revision notes":"Shubham Pathak — teacher revision notes (identified by the library owner)";
   const readable=pages.filter(page=>splitReferenceContent(page.text).text.trim());
   if(!readable.length){
-   additions.push({title:`Teacher revision PDF — ${socialTitle(chapter)}`,kind:"content",visual:"book",bullets:[],notes:[],key_terms:[],sections:[{heading:"Uploaded teacher PDF",kind:"text",lines:[`${attribution}. Source: ${book.file_name}. No readable text has been saved for this PDF. Open the original from the Social Science materials panel; re-ingest it to include its text. No content has been invented.`]}],caption:`Teacher PDF: ${book.file_name}`,teacher_revision:{book_id:book.id,file_name:book.file_name}});continue;
+   additions.push({title:`Teacher revision PDF — ${socialTitle(chapter)}`,kind:"content",visual:"book",bullets:[],notes:[],key_terms:[],sections:[{heading:"Uploaded teacher PDF",kind:"text",lines:[`${attribution}. Source: ${book.file_name}. No readable text has been saved for this PDF. The original PDF pages are included in this presentation; their text has not been reconstructed. No content has been invented.`]}],caption:`Teacher PDF: ${book.file_name}`,teacher_revision:{book_id:book.id,file_name:book.file_name}});continue;
   }
   for(const page of readable){
    const parsed=splitReferenceContent(page.text);
