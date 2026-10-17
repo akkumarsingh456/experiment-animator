@@ -904,3 +904,14 @@ body:has(.presentation-overlay) .creator-credit { display:none; }
 
 .book-request-sync { font-size:14px; color:#526451; margin:12px 0; }
 .book-request-card header p { margin:7px 0 3px; font-size:16px; }
+
+.social-source-panel { padding:18px; border:1px solid #c7d4c0; border-left:4px solid #42634c; border-radius:7px; background:#f6f7ed; color:#29493f; }
+.social-source-panel h3 { font-size:19px; font-weight:700; }
+.social-source-panel p { margin:8px 0; font-size:15px; line-height:1.6; }
+.social-source-list { max-height:300px; overflow:auto; margin:14px 0; }
+.social-source-list article { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid #d4ddce; }
+.social-source-list article > div { flex:1 1 220px; min-width:0; }
+.social-source-list strong { font-size:16px; overflow-wrap:anywhere; }
+.social-source-list small { display:block; margin-top:4px; font-size:14px; }
+.social-source-panel a,.social-source-panel button { display:inline-block; padding:8px 10px; margin:4px; border:1px solid #b6c7b0; border-radius:5px; background:#fffef8; color:#29493f; font-size:15px; text-decoration:underline; cursor:pointer; }
+.social-source-panel button:disabled { opacity:.6; cursor:wait; }

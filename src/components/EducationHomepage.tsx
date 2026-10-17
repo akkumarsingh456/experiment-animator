@@ -19,6 +19,7 @@ const features = [
   {Icon: Download, title: "Present and export", text: "Lecture slides, guided notes, the Notes Library and PDF or PPTX downloads."},
 ];
 const subjects = [
+  {name: "Social Science", Icon: BookOpen, label: "CLASSES 9 & 10", text: "History, Geography, Civics and Economics, with uploaded revision PDFs."},
   {name: "Science", Icon: Leaf, label: "CLASSES 9 & 10", text: "Physics, Chemistry and Biology in one subject."},
   {name: "Physics", Icon: CircuitBoard, label: "CLASSES 11 & 12", text: "Laws, units, dimensions and derivations."},
   {name: "Chemistry", Icon: FlaskConical, label: "CLASSES 11 & 12", text: "Reactions, structures, properties and conditions."},

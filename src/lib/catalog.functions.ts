@@ -10,6 +10,7 @@ async function supa() {
 
 // Map form values ("10", "Science") to stored values ("Class 10", subject aliases).
 const SUBJECT_ALIASES: Record<string, string[]> = {
+  "Social Science": ["Social Science", "History", "Geography", "Political Science", "Civics", "Economics", "SST"],
   Science: ["Science", "Physics", "Chemistry", "Biology", "General"],
   Physics: ["Physics", "Science"],
   Chemistry: ["Chemistry", "Science"],

@@ -1,3 +1,4 @@
+import { SOCIAL_SCIENCE_CHAPTERS } from "@/lib/social-science-chapters";
 /**
  * Canonical NCERT syllabus (Class 9–12) used by the Advanced NCERT Topic
  * Generator. Chapter names and subtopics come strictly from this catalog —
@@ -13,6 +14,7 @@ export type ClassSyllabus = Record<string, SyllabusChapter[]>;
 
 export const NCERT_SYLLABUS: Record<string, ClassSyllabus> = {
   "9": {
+    "Social Science": SOCIAL_SCIENCE_CHAPTERS["9"],
     Mathematics: [
       { chapter: "Chapter 1: Number Systems", subtopics: ["Rational and irrational numbers", "Real numbers and their decimal expansions", "Representing real numbers on the number line", "Operations on real numbers", "Laws of exponents for real numbers"] },
       { chapter: "Chapter 2: Polynomials", subtopics: ["Polynomials in one variable", "Zeroes of a polynomial", "Remainder Theorem", "Factorisation of polynomials", "Algebraic identities"] },
@@ -58,6 +60,7 @@ export const NCERT_SYLLABUS: Record<string, ClassSyllabus> = {
   },
 
   "10": {
+    "Social Science": SOCIAL_SCIENCE_CHAPTERS["10"],
     Mathematics: [
       { chapter: "Chapter 1: Real Numbers", subtopics: ["Fundamental Theorem of Arithmetic", "Revisiting rational and irrational numbers"] },
       { chapter: "Chapter 2: Polynomials", subtopics: ["Geometrical meaning of zeroes", "Relationship between zeroes and coefficients", "Division algorithm for polynomials"] },

@@ -1,3 +1,4 @@
+import { socialBookSubject } from "@/lib/social-science-chapters";
 import { LibraryAccessGate } from "@/components/LibraryAccessGate";
 import { encodeReferenceVisuals, splitReferenceContent } from "@/lib/reference-visuals";
 import { prepareScannedReferenceBooks, type ReferenceReadSummary } from "@/lib/prepare-reference-books";
@@ -69,7 +70,7 @@ export const Route = createFileRoute("/upload")({
 });
 
 const CLASSES = ["Class 9", "Class 10", "Class 11", "Class 12"] as const;
-const SUBJECTS = ["Chemistry", "Physics", "Biology", "Mathematics"] as const;
+const SUBJECTS = ["Science", "Social Science", "History", "Geography", "Political Science", "Economics", "Chemistry", "Physics", "Biology", "Mathematics", "Computer Science"] as const;
 const BUCKET = "ncert-pdfs";
 
 type Stage =
@@ -531,6 +532,8 @@ function UploadPage() {
           break;
         }
       }
+
+      detectedSubject = socialBookSubject({subject:detectedSubject, file_name:joined}) || detectedSubject;
 
       // Always fall back so NO file is skipped.
       if (!detectedClass) detectedClass = klass || "Unspecified Class";

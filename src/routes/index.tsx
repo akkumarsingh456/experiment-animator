@@ -1,3 +1,5 @@
+import { socialChapterPart } from "@/lib/social-science-chapters";
+import { SocialScienceResources } from "@/components/SocialScienceResources";
 import { EducationHomepage } from "@/components/EducationHomepage";
 import { ENGLISH_CHAPTERS } from "@/lib/english-chapters";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -167,7 +169,7 @@ function GeneratorBlock() {
             <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
               Chapter {chaptersLoading && <Loader2 className="h-3 w-3 animate-spin" />}
               <span className="text-[10px] text-muted-foreground/70">
-                ({chapters.length} in the NCERT syllabus for Class {klass} · {subject})
+                ({chapters.length} {subject === "Social Science" ? "textbook chapters" : "in the NCERT syllabus"} for Class {klass} · {subject})
               </span>
             </label>
             {chapters.length > 0 ? (
@@ -183,6 +185,8 @@ function GeneratorBlock() {
                         <SelectItem key={c.chapter} value={c.chapter}>{c.chapter}</SelectItem>
                       ))}
                     </SelectGroup>
+                  )) : subject === "Social Science" ? ["History", "Geography", "Political Science", "Economics"].map(part => (
+                    <SelectGroup key={part}><SelectLabel>{part}</SelectLabel>{chapters.filter(c=>socialChapterPart(c.chapter)===part).map(c=><SelectItem key={c.chapter} value={c.chapter}>{c.chapter}</SelectItem>)}</SelectGroup>
                   )) : chapters.map((c) => (
                     <SelectItem key={c.chapter} value={c.chapter}>{c.chapter}</SelectItem>
                   ))}
@@ -198,6 +202,8 @@ function GeneratorBlock() {
               />
             )}
           </div>
+
+          {subject === "Social Science" && <SocialScienceResources klass={klass} chapter={chapter} />}
 
           {!lang && (
             <>

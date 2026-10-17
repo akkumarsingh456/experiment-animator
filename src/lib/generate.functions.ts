@@ -1,3 +1,4 @@
+import { socialChapterPart, socialTitle } from "@/lib/social-science-chapters";
 import { readLessonTextbooks } from "@/lib/lesson-textbooks";
 import { sequenceChemistryNotes } from "@/lib/chemistry-note-sequence";
 import { withPhysicsDimensions } from "@/lib/physics-dimensions";
@@ -1630,7 +1631,8 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Existing textbooks are public learning sources. Only uploads require sign-in.
     // Retain strict class/subject matching and exclude reference-only note sources.
     const inventory = await readLessonTextbooks(s);
-    let candidates = inventory.filter(book => bookMatchesLesson(book, data.klass, data.subject));
+    const lessonSubject = data.subject === "Social Science" ? socialChapterPart(data.chapter||"") || data.subject : data.subject;
+    let candidates = inventory.filter(book => bookMatchesLesson(book, data.klass, lessonSubject));
     if (candidates.length === 0) {
       throw new Error(`No matching Class ${data.klass} ${data.subject} NCERT textbook is available in the uploaded library. You can browse existing books without signing in. An administrator can add the missing textbook; material from another class or subject will not be substituted.`);
     }
@@ -1718,7 +1720,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     if (!hasTopicalHit) {
       const allBooks2 = inventory;
       const ranked2 = (allBooks2 ?? [])
-        .filter((b) => bookMatchesLesson(b, data.klass, data.subject))
+        .filter((b) => bookMatchesLesson(b, data.klass, lessonSubject))
         .map((b) => ({ b, m: score(`${b.chapter} ${b.file_name} ${b.subject} ${b.class}`, [...terms, ...chapterTerms]) }))
         .sort((a, z) => z.m - a.m)
         .slice(0, 10)
@@ -1781,6 +1783,16 @@ export const generateLesson = createServerFn({ method: "POST" })
       const sourcePages = await Promise.all([...primaryIds].map(async bookId => {
         const { data: pages } = await s.from("ncert_pages").select("page_number,text").eq("book_id", bookId).order("page_number").limit(1000);
         const titles = chaptersFor(classNumber(data.klass), data.subject).map(chapter => chapter.chapter);
+        if (data.subject === "Social Science") {
+          const target = socialTitle(data.chapter);
+          const headings = titles.map(socialTitle);
+          const scoped = scopeEnglishChapterPages(pages || [], target, headings);
+          if (scoped.length) return scoped;
+          // Some historical chapter PDFs saved chunks but no page records.
+          const { data: ordered, error: readError } = await s.from("ncert_chunks").select("chunk_index,content").eq("book_id",bookId).order("chunk_index").limit(3000);
+          if(readError)throw new Error("The selected Social Science chapter text could not be read.");
+          return scopeEnglishChapterPages((ordered||[]).map(row=>({page_number:row.chunk_index,text:row.content})),target,headings);
+        }
         if (data.subject !== "English") return scopeTextbookPages(pages || [], data.chapter, titles);
         const scoped = scopeEnglishChapterPages(pages || [], data.chapter, titles);
         if (scoped.length) return scoped;
@@ -1790,6 +1802,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       }));
       const scoped = sourcePages.flat();
       if (scoped.length) context = scoped.join("\n\n").slice(0, 160000);
+      else if (data.subject === "Social Science") throw new Error(`Readable text for “${socialTitle(data.chapter)}” was not located in the matching uploaded Class ${data.klass} textbook. Teacher PDF links remain available below your selection; another chapter will not be substituted.`);
       else if (data.subject === "English") throw new Error(`Readable text for “${data.chapter}” was not located in the uploaded Class ${data.klass} English books. Upload or re-ingest the matching chapter PDF. Other chapters will not be used in its place.`);
     }
     if (!context.trim()) {
