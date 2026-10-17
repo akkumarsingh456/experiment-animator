@@ -1,5 +1,5 @@
 import { socialChapterPart } from "@/lib/social-science-chapters";
-import { SocialScienceResources } from "@/components/SocialScienceResources";
+
 import { EducationHomepage } from "@/components/EducationHomepage";
 import { ENGLISH_CHAPTERS } from "@/lib/english-chapters";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -203,7 +203,7 @@ function GeneratorBlock() {
             )}
           </div>
 
-          {subject === "Social Science" && <SocialScienceResources klass={klass} chapter={chapter} />}
+          
 
           {!lang && (
             <>
