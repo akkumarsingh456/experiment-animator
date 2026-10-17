@@ -1,3 +1,4 @@
+import { hasBrokenSourceMath } from "@/lib/source-note-quality";
 import { topicScienceDrawing } from "@/lib/topic-science-visuals";
 import { plainMathText } from "@/lib/latex-notation";
 import { currentElectricityDiagram, wrapTextbookDrawing } from "@/lib/current-electricity-diagrams";
@@ -130,6 +131,7 @@ function factsFrom(input: FactInput): Fact[] {
     if (label) candidates.push({ label, caption: clean(item.meaning) });
   }
   for (const source of [...(input.bullets || []), ...(input.notes || [])]) {
+    if (hasBrokenSourceMath(source)) continue;
     const line = clean(source);
     if (line.length < 8) continue;
     const split = line.match(/^(.{3,34}?)(?:\s*[:—–]\s+)(.+)$/);

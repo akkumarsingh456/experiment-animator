@@ -38,7 +38,7 @@ const categories: Array<[RegExp, string, GuidedGroup["kind"]]> = [
 export function guidedGroups(sections: NoteSection[] | undefined, fallback: string[] = []): GuidedGroup[] {
   const sectionLines = sections?.filter((s) => s.kind !== "diagram" && s.heading !== "Source table — original extracted entries" && s.heading !== "Source review — original extraction").flatMap((s) => s.lines.map((line) =>
     /^\*\*/.test(line) || s.heading === "Teacher Notes" ? line : `**${s.heading.replace(/^\d+\.\s*/, "")}:** ${line}`));
-  const lines = dedupeLabelled((sectionLines?.length ? sectionLines : fallback).map(normalNoteLabel));
+  const lines = dedupeLabelled((sections?.length ? sectionLines || [] : fallback).map(normalNoteLabel));
   const groups: GuidedGroup[] = (sections || []).filter(section => (section.heading === "Source table — original extracted entries" || section.heading === "Source review — original extraction")).map(section => ({heading: section.heading, kind: "list", lines: section.lines}));
   const get = (heading: string, kind: GuidedGroup["kind"]) => {
     let group = groups.find((g) => g.heading === heading);
@@ -57,6 +57,7 @@ export function guidedGroups(sections: NoteSection[] | undefined, fallback: stri
       const label = match?.[1] || "Explanation";
       if (/^Teacher revision (?:source|notes)$/i.test(label)) { get(label, "list").lines.push(match?.[2] || line); continue; }
       if (/^Reference notes —/.test(label)) { get(label, "list").lines.push(match?.[2] || line); continue; }
+      if (/^(?:activity(?: source| materials| steps| outcome)?|discussion|experiment)$/i.test(label)) { get(label.charAt(0).toUpperCase()+label.slice(1), "list").lines.push(match?.[2] || line); continue; }
       const category = categories.find(([pattern]) => pattern.test(label));
       let [heading, kind] = category ? [category[1], category[2]] : ["Important points", "list" as const];
       const body = match?.[2] || line;

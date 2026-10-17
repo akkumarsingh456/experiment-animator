@@ -37,7 +37,7 @@ export function topicScienceDrawing(input: ConceptMapInput, subject=''): TopicDr
  const classroom=classroomDiscussionVisual(input);
  if(classroom)return classroom;
  if(/electric flux/i.test(input.title) && /^(physics|science)$/i.test(subject))return additionalTopicDrawing('Electric flux','Physics');
- const displayed=(input.sections||[]).filter(section=>section.kind!=='diagram' && !/^Reference notes/i.test(section.heading)).flatMap(section=>section.lines)
+ const displayed=(input.sections||[]).filter(section=>section.kind!=='diagram' && !/^Reference notes|^Source (?:review|table)/i.test(section.heading)).flatMap(section=>section.lines)
    .filter(line=>!/^\*\*(?:learning objective|prerequisite|exit ticket|practice|answer|activity|support practice|core practice|challenge practice)/i.test(line));
  // Paginated slides share their parent title and key terms, but their visible
  // notes differ. Resolve the actual page before those shared parent fields.
@@ -54,7 +54,7 @@ export function topicScienceDrawing(input: ConceptMapInput, subject=''): TopicDr
  const candidates=(input.keyTerms||[]).map(term=>topicDrawingByTitle(term.term,subject)).filter((drawing):drawing is TopicDrawing=>!!drawing);
  const unique=new Map(candidates.map(drawing=>[drawing.id,drawing]));
  if(unique.size===1)return [...unique.values()][0];
- const evidence=[...(input.notes||[]),...(input.bullets||[]),...(input.sections||[]).filter(section=>!/^Reference notes/i.test(section.heading)).flatMap(section=>section.lines)].slice(0,4);
+ const evidence=[...(input.notes||[]),...(input.bullets||[]),...(input.sections||[]).filter(section=>!/^Reference notes|^Source (?:review|table)/i.test(section.heading)).flatMap(section=>section.lines)].slice(0,4);
  const models=evidence.map(line=>topicDrawingByTitle(plainMathText(line).slice(0,180),subject)).filter((drawing):drawing is TopicDrawing=>!!drawing);
  const distinct=new Map(models.map(drawing=>[drawing.id,drawing]));
  if(distinct.size===1)return [...distinct.values()][0];

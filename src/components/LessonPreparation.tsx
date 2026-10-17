@@ -2,28 +2,31 @@ import { LESSON_REQUEST_TIMEOUT_MS, preparationClock } from "@/lib/generation-ti
 import {useEffect,useState} from "react";
 import {BookOpen,Pause,Play} from "lucide-react";
 
-type Motif = "circuit"|"pendulum"|"optics"|"waves"|"field"|"measure"|"elements"|"molecule"|"flask"|"graph"|"geometry"|"stack"|"database"|"network"|"leaf"|"book";
+type Motif = "matrix"|"charge"|"circuit"|"pendulum"|"optics"|"waves"|"field"|"measure"|"elements"|"molecule"|"flask"|"graph"|"geometry"|"stack"|"database"|"network"|"leaf"|"book";
 function preparationTheme(subject:string,chapter:string):{subject:string;family:string;motif:Motif;label:string}{
  const s=subject.toLowerCase(), c=chapter.toLowerCase();
- const family=/chemistry/.test(s)?"chemistry":/physics/.test(s)?"physics":/math/.test(s)?"mathematics":/computer|informatics/.test(s)?"computing":/biology|botany|zoology/.test(s)?"biology":/science/.test(s)?(/chemical|acid|metal|carbon|atom|molecule|periodic/.test(c)?"chemistry":/motion|force|work|energy|sound|light|electric|magnet|gravitation/.test(c)?"physics":/life|organism|reproduction|heredity|tissue|cell/.test(c)?"biology":"general"):"general";
+ const family=/chemistry/.test(s)?"chemistry":/physics/.test(s)?"physics":/math/.test(s)?"mathematics":/computer|informatics/.test(s)?"computing":/biology|botany|zoology/.test(s)?"biology" :/^science$/.test(s)?(/chemical|acid|metal|carbon|atom|molecule|periodic/.test(c)?"chemistry":/motion|force|work|energy|sound|light|electric|magnet|gravitation/.test(c)?"physics":/life|organism|reproduction|heredity|tissue|cell/.test(c)?"biology":"general"):"general";
  if(family==="physics"){
   if(/optic|light|ray/.test(c))return {subject:"Physics",family,motif:"optics",label:"Light & lenses"};
   if(/wave|sound/.test(c))return {subject:"Physics",family,motif:"waves",label:"Waves & oscillations"};
   if(/magnet/.test(c) && !/induction/.test(c))return {subject:"Physics",family,motif:"field",label:"Magnetic field sketch"};
-  if(/electric|current|capacitan|induction|alternating/.test(c))return {subject:"Physics",family,motif:"circuit",label:"Circuit notebook"};
-  if(/oscillation|motion|gravitation/.test(c))return {subject:"Physics",family,motif:"pendulum",label:"Motion study"};
-  return {subject:"Physics",family,motif:"measure",label:"Measurements & quantities"};
+  if(/electrostatic|electric charges|electric potential|capacitance/.test(c))return {subject:"Physics",family,motif:"charge",label:"Electric field study"};
+  if(/current electricity|electricity|alternating current/.test(c))return {subject:"Physics",family,motif:"circuit",label:"Circuit notebook"};
+  if(/oscillation/.test(c))return {subject:"Physics",family,motif:"pendulum",label:"Motion study"};
+  return {subject:"Physics",family,motif:/units|measurement/.test(c)?"measure":"book",label:"Physics chapter notebook"};
  }
- if(family==="chemistry")return {subject:"Chemistry",family,motif:/block|periodic|classification of elements/.test(c)?"elements":/organic|carbon|hydrocarbon|compound|biomolecule|amine|alcohol|aldehyde/.test(c)?"molecule":"flask",label:/block|periodic/.test(c)?"Elements notebook":/organic|carbon|compound|molecule/.test(c)?"Bonds & structures":"Laboratory notebook"};
- if(family==="mathematics")return {subject:"Mathematics",family,motif:/geometr|triangle|circle|vector|conic/.test(c)?"geometry":"graph",label:/geometr|triangle|circle|vector|conic/.test(c)?"Geometry sketchbook":"Patterns & relationships"};
- if(family==="computing")return {subject:"Computer Science",family,motif:/sql|database/.test(c)?"database":/network/.test(c)?"network":"stack",label:/sql|database/.test(c)?"Data & queries":/network/.test(c)?"Connections & systems":"Code & logic"};
- if(family==="biology")return {subject:"Biology",family,motif:"leaf",label:"Life science notebook"};
+ if(family==="chemistry")return {subject:"Chemistry",family,motif:/block|periodic|classification of elements/.test(c)?"elements":"book",label:/block|periodic/.test(c)?"Elements notebook":/organic|carbon|compound|molecule/.test(c)?"Bonds & structures":"Laboratory notebook"};
+ if(family==="mathematics")return {subject:"Mathematics",family,motif:/determinant|matrices|matrix/.test(c)?"matrix":/quadratic/.test(c)?"graph":"book",label:/determinant|matrices|matrix/.test(c)?"Rows & columns":"Mathematics chapter notebook"};
+ if(family==="computing")return {subject:"Computer Science",family,motif:/sql|database/.test(c)?"database":/network/.test(c)?"network":/stack/.test(c)?"stack":"book",label:/sql|database/.test(c)?"Data & queries":/network/.test(c)?"Connections & systems":"Code & logic"};
+ if(family==="biology")return {subject:"Biology",family,motif:/plant|photosynth|leaf/.test(c)?"leaf":"book",label:"Life science notebook"};
  return {subject:subject||"Your subject",family,motif:"book",label:"Chapter notebook"};
 }
 
 /** Authored editorial sketches; motion indicates waiting, never measured progress. */
 function PreparationSketch({motif}:{motif:Motif}){
  return <svg viewBox="0 0 360 210" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+ {motif==="matrix"&&<><path d="M95 36H80V178H95 M265 36H280V178H265"/>{[0,1,2].flatMap(row=>[0,1,2].map(col=><text key={`${row}:${col}`} x={111+col*62} y={70+row*43}>a<tspan baselineShift="sub" fontSize="12">{row+1}{col+1}</tspan></text>))}<text x="108" y="207">Schematic · rows and columns</text></>}
+ {motif==="charge"&&<><circle cx="180" cy="104" r="23" fill="var(--prep-soft)"/><text x="174" y="111">+</text>{[0,1,2,3,4,5,6,7].map(i=><g key={i} transform={`rotate(${i*45} 180 104)`}><path className="prep-draw" d="M213 104H273 M265 97L273 104L265 111"/></g>)}<text x="102" y="207">Positive charge · field direction</text></>}
  {motif==="circuit"&&<><path d="M52 65H115V51H212V79H115V65 M212 65H310V160H190 M168 160H52V65 M168 145V175 M190 151V169"/><circle className="prep-charge" cx="0" cy="0" r="5" fill="currentColor"/><text x="130" y="38">Resistor</text><text x="151" y="197">Cell</text></>}
  {motif==="pendulum"&&<><path d="M110 28H250 M180 28V174" strokeDasharray="4 7"/><g className="prep-pendulum"><path d="M180 28V160"/><circle cx="180" cy="173" r="15" fill="var(--prep-soft)"/></g><text x="128" y="15">Pivot</text><path d="M110 180Q180 216 250 180" strokeDasharray="3 7"/></>}
  {motif==="optics"&&<><path d="M25 108H335" strokeDasharray="4 7"/><path d="M180 30Q210 108 180 185Q150 108 180 30Z" fill="var(--prep-soft)"/><path className="prep-draw" d="M30 60H177L300 157 M30 156H177L300 60"/><text x="151" y="204">Lens</text></>}
@@ -44,7 +47,7 @@ function PreparationSketch({motif}:{motif:Motif}){
 }
 
 export function LessonPreparation({subject="",chapter="",topic="",startedAt}:{subject?:string;chapter?:string;topic?:string;startedAt:number}){
- const theme=preparationTheme(subject,`${chapter} ${topic}`);
+ const theme=preparationTheme(subject,chapter||topic);
  const [paused,setPaused]=useState(false);
  const [now,setNow]=useState(startedAt);
  const [online,setOnline]=useState(true);

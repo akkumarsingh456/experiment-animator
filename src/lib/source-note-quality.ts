@@ -39,6 +39,7 @@ export function hasSourcePrintIntrusion(text: string): boolean {
 export function hasBrokenSourceMath(raw:string):boolean {
   const text=String(raw||'');
   if (hasSourcePrintIntrusion(text)) return true;
+  if (/[=∝]/.test(text) && /\b[abcxyz]{8,}\b/i.test(text.replace(/\$[^$]*\$/g," "))) return true;
   if (/[\uFFFD\u25A1\u25AF\u0000\uE000-\uF8FF]/u.test(text)) return true;
   const mathematical=/[=∝]|\*\*(?:formula|equation|relation)|\bEq\./i.test(text);
   // PDF equation layers can flatten fractions into duplicated operators and

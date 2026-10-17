@@ -1,3 +1,4 @@
+import { hasBrokenSourceMath } from "@/lib/source-note-quality";
 import { plainMathText } from "@/lib/latex-notation";
 
 export type ConceptMapInput = {
@@ -14,12 +15,12 @@ const text = (value: string) => plainMathText(value.replace(/\*\*/g, "")).replac
 
 /** Branches show membership in the topic, never an invented cause or chronology. */
 export function sourceConceptFacts(input: ConceptMapInput): string[] {
-  const sections = input.sections?.filter((section) => section.kind !== "diagram").flatMap((section) => section.lines.map((line) =>
+  const sections = input.sections?.filter((section) => section.kind !== "diagram" && !/^Source (?:review|table)/i.test(section.heading)).flatMap((section) => section.lines.map((line) =>
     /^\*\*/.test(line) || section.heading === "Teacher Notes" ? line : `**${section.heading}:** ${line}`)) || [];
   const factual = sections.filter((line) => !/^\*\*(?:learning objective|prerequisite|activity|experiment|discussion|support practice|core practice|challenge practice|exit ticket|check your understanding|practice|answer|solution|derivation|formula|equation|variable|si unit|unit|dimension)/i.test(line));
-  const lines = factual.length ? factual : sections.length ? sections.filter(line=>!/^\*\*(?:learning objective|prerequisite|exit ticket|practice|answer|activity|support practice|core practice|challenge practice)/i.test(line)) : [...(input.bullets || []), ...(input.notes || []), ...(input.keyTerms || []).map((term) => `${term.term}: ${term.meaning}`)];
+  const lines = factual.length ? factual : sections.length ? sections.filter(line=>!/^\*\*(?:learning objective|prerequisite|exit ticket|practice|answer|activity|support practice|core practice|challenge practice)/i.test(line)) : input.sections?.length ? [] : [...(input.bullets || []), ...(input.notes || []), ...(input.keyTerms || []).map((term) => `${term.term}: ${term.meaning}`)];
   // Retain authored LaTeX for HTML study maps. Only the SVG fallback flattens it.
-  return [...new Set(lines.map((line) => line.replace(/^\*\*([^*]+):\*\*\s*/, "").trim()).filter(Boolean))];
+  return [...new Set(lines.map((line) => line.replace(/^\*\*([^*]+):\*\*\s*/, "").trim()).filter(line => !!line && !hasBrokenSourceMath(line)))];
 }
 
 function wrap(value: string, width: number): string[] {
