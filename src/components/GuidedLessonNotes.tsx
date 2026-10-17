@@ -49,6 +49,13 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
     {content.map((slide, index) => {
       if (slide.visual === "cover" && includeCover) return null;
       if (slide.kind === "break") return <article className="guided-topic" key={`break:${index}`}><h2>{slide.title}</h2><ul>{[...slide.bullets, ...slide.notes].map((line, i) => <li key={i}><MathText text={line} /></li>)}</ul></article>;
+      if (slide.teacher_pdf) {
+        const image = slide.reference_visuals?.find(figure => figure.url);
+        return <article className="guided-topic guided-original-page" data-teacher-page="true" key={`original:${index}`}>
+          <h2>{slide.title}</h2>
+          {image ? <figure><img src={image.url} alt={`${slide.teacher_pdf.file_name} · original PDF page ${slide.teacher_pdf.page}`} style={{width:"100%",maxHeight:"580px",objectFit:"contain"}}/><figcaption>{slide.teacher_pdf.file_name} · PDF page {slide.teacher_pdf.page}</figcaption></figure> : <p role="alert">The original chapter PDF page has not loaded. Reload the lesson before exporting.</p>}
+        </article>;
+      }
       const groups = topicGroups[index];
       const goals = groups.filter((g) => /^(Learning objectives|Before you begin)$/.test(g.heading));
       const terms = groups.filter((g) => g.kind === "terms");

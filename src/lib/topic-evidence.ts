@@ -6,8 +6,8 @@ import { matchesTopicScope } from './notes-quality-policy';
 const tokens = (text: string) => text.toLowerCase().replace(/isation\b/g, 'ization')
   .replace(/\bbehaviour/g, 'behavior').replace(/\bcolour/g, 'color')
   .replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(/\s+/)
-  .map(word => word.length > 5 ? word.replace(/ies$/, 'y').replace(/s$/, '') : word);
-const ignored = new Set(['the', 'and', 'for', 'with', 'from', 'chapter', 'introduction', 'basic', 'concept', 'property', 'law', 'rule']);
+  .map(word => word.length > 4 && !/ss$/.test(word) ? word.replace(/ies$/, 'y').replace(/s$/, '') : word);
+const ignored = new Set(['the', 'and', 'what', 'is', 'are', 'an', 'of', 'for', 'with', 'from', 'chapter', 'introduction', 'basic', 'concept', 'property', 'law', 'rule']);
 
 export function topicEvidence(title: string, lines: string[]): string[] {
   const terms = [...new Set(tokens(title).filter(word => word.length > 2 && !ignored.has(word)))];

@@ -1,3 +1,4 @@
+import { sourceQuizItems } from "@/lib/source-quiz";
 import { appendSocialRevisionNotes } from "@/lib/social-revision-notes";
 import { socialChapterPart, socialTitle } from "@/lib/social-science-chapters";
 import { readLessonTextbooks } from "@/lib/lesson-textbooks";
@@ -18,7 +19,7 @@ import { topicEvidence } from "@/lib/topic-evidence";
 import { cleanSourceNoteLine, isSourceTask, validStudyTerm, readableSourceRelation } from "@/lib/source-note-quality";
 import { isDefinitionStatement } from "@/lib/note-labels";
 import { extractExperimentActivities } from "@/lib/experiment-activities";
-import { scopeTextbookPages, scopeSocialChapterPages, scopeEnglishChapterPages, referenceFormulaEvidence } from "@/lib/lesson-source-scope";
+import { languageVolumeMatches, scopeTextbookPages, scopeSocialChapterPages, scopeEnglishChapterPages, referenceFormulaEvidence } from "@/lib/lesson-source-scope";
 import { chaptersFor } from "@/lib/ncert-syllabus";
 import { REF_BOOK_PATTERN, combinedReferenceMatches } from "@/lib/reference-books";
 import { sourceDiscussion, reviewNotes, learningScaffold } from "@/lib/learning-design";
@@ -1167,11 +1168,6 @@ function extractKeyTerms(sentences: string[], topic: string): { term: string; me
       if (normalizeText(term).length > 2 && meaning.length > 20) candidates.push({ term, meaning });
     }
   }
-  const topicWords = normalizeText(topic).split(" ").filter((w) => w.length > 4);
-  for (const word of topicWords) {
-    const sentence = sentences.find((s) => normalizeText(s).includes(word));
-    if (sentence) candidates.push({ term: titleCase(word), meaning: trimToWords(sentence, 130) });
-  }
   const seen = new Set<string>();
   return candidates.filter((item) => {
     if(!validStudyTerm(item.term,item.meaning))return false;
@@ -1236,75 +1232,7 @@ function pickAnswerKey(seed: number): "A" | "B" | "C" | "D" {
 }
 
 function buildMcqsFromContext(topic: string, sentences: string[], subject: string, count = 10): Mcq[] {
-  const pool = uniqueByNormalized(filterJunkSentences(sentences)).filter((s) => s.length > 40 && s.length < 260);
-  const defs = pool.filter((s) => /\bis\b|\bare\b|defined as|called|known as|means|refers to/i.test(s));
-  const lang = isLanguageSubject(subject);
-  const rand = Date.now() % 997; // varies across regenerations
-  const source = [...defs, ...pool];
-  const mcqs: Mcq[] = [];
-  const usedQ = new Set<string>();
-
-  for (let i = 0; i < source.length && mcqs.length < count; i++) {
-    const s = source[(i + rand) % source.length];
-    // Prefer "X is Y" cloze: hide the subject.
-    const m = s.match(/^\s*([A-Z][A-Za-z][A-Za-z\s\-]{2,40})\s+(is|are|means|refers to|is defined as|is called)\s+(.{20,180})$/);
-    let question = "";
-    let correct = "";
-    if (m) {
-      correct = m[1].trim();
-      question = `Which of the following ${m[2]} ${trimToWords(m[3], 140)}?`;
-    } else {
-      // Fallback cloze on the longest content word
-      const words = s.split(/\s+/).filter((w) => w.length > 5 && /^[A-Za-z][A-Za-z-]+$/.test(w));
-      if (words.length === 0) continue;
-      correct = words[Math.floor((i + rand) % words.length)];
-      question = `Fill in the blank (${lang ? "from the chapter" : "NCERT"}): ${beautifyMath(s.replace(correct, "_____"))}`;
-    }
-    const qKey = normalizeText(question).slice(0, 80);
-    if (!qKey || usedQ.has(qKey)) continue;
-    usedQ.add(qKey);
-
-    // Distractors: pick other prominent nouns from the pool
-    const distractorPool = uniqueByNormalized(
-      source.flatMap((x) => x.split(/\s+/))
-        .filter((w) => w.length > 4 && /^[A-Za-z][A-Za-z-]+$/.test(w) && w.toLowerCase() !== correct.toLowerCase())
-        .map((w) => w.replace(/[.,;:]$/g, "")),
-    );
-    const distractors: string[] = [];
-    for (let k = 0; distractors.length < 3 && k < distractorPool.length; k++) {
-      const cand = distractorPool[(k + i + rand) % distractorPool.length];
-      if (cand && !distractors.includes(cand) && cand.toLowerCase() !== correct.toLowerCase()) distractors.push(cand);
-    }
-    while (distractors.length < 3) distractors.push(`Option ${distractors.length + 1}`);
-
-    const answerKey = pickAnswerKey(i + rand);
-    const answerIdx = ["A", "B", "C", "D"].indexOf(answerKey);
-    const opts = [...distractors];
-    opts.splice(answerIdx, 0, correct);
-    mcqs.push({
-      question: beautifyMath(question),
-      options: (["A", "B", "C", "D"] as const).map((k, idx) => ({ key: k, text: beautifyMath(trimToWords(opts[idx], 90)) })),
-      answer: answerKey,
-      explanation: beautifyMath(trimToWords(s, 200)),
-    });
-  }
-
-  // Pad if we couldn't extract enough
-  while (mcqs.length < count) {
-    const idx = mcqs.length;
-    mcqs.push({
-      question: `${topic}: revise NCERT concept #${idx + 1} — which option matches the chapter?`,
-      options: [
-        { key: "A", text: `Concept from ${topic}` },
-        { key: "B", text: "Unrelated topic" },
-        { key: "C", text: "Not in NCERT" },
-        { key: "D", text: "None of the above" },
-      ],
-      answer: "A",
-      explanation: `Refer the ${topic} NCERT chapter for the exact statement.`,
-    });
-  }
-  return mcqs.slice(0, count);
+  return sourceQuizItems(sentences, subject, count);
 }
 
 function makeMcqSlide(mcq: Mcq, index: number, total: number, topic: string): Slide {
@@ -1509,7 +1437,19 @@ export function buildLocalSlides(topic: string, subtopics: string, context: stri
   // ---------- TOPIC MODE (science / math / social) ----------
   // Each selected concept gets its own evidence, with no unrelated filler to
   // reach a fixed slide count. The presentation layer handles continuation pages.
-  const selectedConcepts = [...new Set((subtopics || "").split(/[,;\n]/).map((s) => s.trim()).filter(Boolean))];
+  const selectedConcepts: string[] = [];
+  let depth = 0, start = 0;
+  const selection = subtopics || "";
+  for (let i=0;i<=selection.length;i++) {
+    const char = selection[i];
+    if (char === "(" || char === "[") depth++;
+    if (char === ")" || char === "]") depth=Math.max(0,depth-1);
+    if (i===selection.length || (depth===0 && /[,;\n]/.test(char))) {
+      const name=selection.slice(start,i).trim();
+      if(name&&!selectedConcepts.includes(name))selectedConcepts.push(name);
+      start=i+1;
+    }
+  }
   const concepts = selectedConcepts.length ? selectedConcepts : [cleanSyllabusLabel(topic)];
   const conceptSlides: Slide[] = [];
   for (const name of concepts) {
@@ -1590,9 +1530,9 @@ export const generateLesson = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }): Promise<GenerationResult> => {
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
-    // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
+    // Quiz items are rebuilt from source statements after cache lookup.
     const lessonKey = hashKey([
-      "lesson-v58-social-chapter-headings-and-uploaded-pages",
+      "lesson-v59-preserved-source-pictures-and-evidence-only-quiz",
       data.klass,
       data.subject,
       data.chapter,
@@ -1609,8 +1549,7 @@ export const generateLesson = createServerFn({ method: "POST" })
           .eq("cache_key", lessonKey)
           .maybeSingle();
         if (hit?.result) {
-          // Strip cached MCQ slides and regenerate a fresh unique set every time
-          // so the student never sees the exact same 10 questions twice.
+          // Rebuild cached quizzes with the current source-quality rules.
           const cached = hit.result as GenerationResult;
           const contentOnly = (cached.slides || []).filter((sl) => sl.kind !== "mcq" && !sl.teacher_revision);
           const seedSentences: string[] = [];
@@ -1642,7 +1581,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Retain strict class/subject matching and exclude reference-only note sources.
     const inventory = await readLessonTextbooks(s);
     const lessonSubject = data.subject === "Social Science" ? socialChapterPart(data.chapter||"") || data.subject : data.subject;
-    let candidates = inventory.filter(book => bookMatchesLesson(book, data.klass, lessonSubject));
+    let candidates = inventory.filter(book => bookMatchesLesson(book, data.klass, lessonSubject) && (!/^(Hindi|Sanskrit)$/.test(data.subject) || languageVolumeMatches(book,data.chapter||data.topic)));
     if (candidates.length === 0) {
       const supplied=await uploadedSocialFallback();if(supplied)return supplied;
       throw new Error(`No matching Class ${data.klass} ${data.subject} NCERT textbook is available in the uploaded library. You can browse existing books without signing in. An administrator can add the missing textbook; material from another class or subject will not be substituted.`);
@@ -1794,6 +1733,12 @@ export const generateLesson = createServerFn({ method: "POST" })
       const sourcePages = await Promise.all([...primaryIds].map(async bookId => {
         const { data: pages } = await s.from("ncert_pages").select("page_number,text").eq("book_id", bookId).order("page_number").limit(1000);
         const titles = chaptersFor(classNumber(data.klass), data.subject).map(chapter => chapter.chapter);
+        if (/^(Hindi|Sanskrit)$/.test(data.subject)) {
+          if(pages?.length)return pages.map(page=>splitReferenceContent(page.text).text);
+          const {data:ordered,error}=await s.from("ncert_chunks").select("chunk_index,content").eq("book_id",bookId).order("chunk_index").limit(3000);
+          if(error)throw new Error("The selected language volume could not be read. Please retry.");
+          return (ordered||[]).map(row=>splitReferenceContent(row.content).text);
+        }
         if (data.subject === "Social Science") {
           const target = socialTitle(data.chapter);
           const headings = titles.filter(title=>socialChapterPart(title)===lessonSubject).map(socialTitle);
@@ -1805,7 +1750,13 @@ export const generateLesson = createServerFn({ method: "POST" })
           const recovered=scopeSocialChapterPages((ordered||[]).map(row=>({page_number:row.chunk_index,text:row.content})),target,headings);
           return recovered;
         }
-        if (data.subject !== "English") return scopeTextbookPages(pages || [], data.chapter, titles);
+        if (data.subject !== "English") {
+          const scoped=scopeTextbookPages(pages||[],data.chapter,titles);
+          if(scoped.length)return scoped;
+          const {data:chunks,error}=await s.from("ncert_chunks").select("chunk_index,content").eq("book_id",bookId).order("chunk_index").limit(3000);
+          if(error)throw new Error("The selected chapter source could not be read. Please retry.");
+          return scopeTextbookPages((chunks||[]).map(row=>({page_number:row.chunk_index,text:row.content})),data.chapter,titles);
+        }
         const scoped = scopeEnglishChapterPages(pages || [], data.chapter, titles);
         if (scoped.length) return scoped;
         // Older uploads may have chunks but no page records. Keep their source order.
@@ -1814,12 +1765,13 @@ export const generateLesson = createServerFn({ method: "POST" })
       }));
       // Duplicate uploads can have different whitespace/OCR layers. Choose one complete
       // matching textbook instead of concatenating the same chapter from several copies.
-      const chosen=data.subject==="Social Science"?sourcePages.map((pages,index)=>({pages,index,words:(pages.join(" ").match(/[A-Za-z]{3,}/g)||[]).length})).filter(row=>row.pages.length).sort((a,b)=>b.words-a.words)[0]:undefined;
+      const chosen=sourcePages.map((pages,index)=>({pages,index,words:(pages.join(" ").match(/[A-Za-z]{3,}/g)||[]).length})).filter(row=>row.pages.length).sort((a,b)=>b.words-a.words)[0];
       const scoped = [...new Set(chosen?chosen.pages:sourcePages.flat())];
-      if(data.subject === "Social Science" && chosen){const bookId=[...primaryIds][chosen.index];selectedBooks=bookScores.filter(book=>book.id===bookId);}
-      if (scoped.length) context = scoped.join("\n\n").slice(0, 160000);
+      if(chosen){const bookId=[...primaryIds][chosen.index];selectedBooks=bookScores.filter(book=>book.id===bookId);}
+      if (scoped.length) context = scoped.join("\n\n");
       else if (data.subject === "Social Science") {const supplied=await uploadedSocialFallback();if(supplied)return supplied;throw new Error(`The uploaded sources for “${socialTitle(data.chapter)}” do not contain readable chapter text or matching teacher PDF pages. Add the correct chapter PDF in Upload books and notes.`);}
       else if (data.subject === "English") throw new Error(`Readable text for “${data.chapter}” was not located in the uploaded Class ${data.klass} English books. Upload or re-ingest the matching chapter PDF. Other chapters will not be used in its place.`);
+      else throw new Error(`Readable text for “${data.chapter}” was not located in the matching Class ${data.klass} ${data.subject} source. Material from another chapter will not be used. An administrator can add or reprocess the matching chapter PDF.`);
     }
     if (!context.trim()) {
       throw new Error(`The matching Class ${data.klass} ${data.subject} PDF was found, but no readable text chunks were saved. Re-ingest that PDF from Upload.`);
@@ -1848,8 +1800,8 @@ export const generateLesson = createServerFn({ method: "POST" })
       verification: { ...(sl.verification as SlideVerification), figures_check: figCheck.perSlide[i], overall_pass: (sl.verification?.overall_pass ?? false) && figCheck.perSlide[i].pass },
     }));
 
-    // Append 10 MCQ slides (unique per generation — pool is shuffled from the
-    // current NCERT sentences, so re-running produces different questions).
+    // Add source-supported comprehension questions only when usable definitions
+    // and distinct alternatives exist. Never pad to a fixed question count.
     const mcqSource = splitSentences(context);
     const mcqs = buildMcqsFromContext(data.topic, mcqSource, data.subject, 10);
     const mcqSlides: Slide[] = mcqs.map((m, i) => makeMcqSlide(m, i, mcqs.length, data.topic));
@@ -1912,7 +1864,11 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Build verifiable activity matches with confidence
     const bookMeta = new Map(selectedBooks.map((b) => [b.id, b]));
     const maxRaw = Math.max(1, ...activityChunks.map((c) => c._s));
-    const matchPool = activityChunks.length > 0 ? activityChunks : ranked.slice(0, 5).map((c) => ({ ...c, _s: c._s }));
+    const chapterEvidence = normalizeText(context);
+    const matchPool = (activityChunks.length > 0 ? activityChunks : ranked.slice(0, 5).map((c) => ({ ...c, _s: c._s }))).filter(chunk => {
+      const excerpt = normalizeText(splitReferenceContent(chunk.content).text).slice(0,120);
+      return bookMeta.has(chunk.book_id) && excerpt.length>=40 && chapterEvidence.includes(excerpt);
+    });
 
     const activity_matches: ActivityMatch[] = matchPool.slice(0, 6).map((c) => {
       const text = String(c.content || "");

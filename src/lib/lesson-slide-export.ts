@@ -4,6 +4,9 @@ import { paginateGuidedArticles, PRESENTATION_WIDTH, PRESENTATION_HEIGHT } from 
 
 /** Use the same measured content for the projector, slide PDF and PowerPoint. */
 export async function prepareSlideExport(root: HTMLElement) {
+  for (const page of root.querySelectorAll<HTMLElement>('[data-teacher-page="true"]')) {
+    if (!page.querySelector('img')) throw new Error('An original chapter PDF page has not loaded. Reload the lesson before exporting; a filename-only slide cannot be downloaded.');
+  }
   root.querySelectorAll('.manual-image-controls').forEach(controls=>controls.remove());
   if (root.dataset.presentationStyle === "lovable") {
     root.style.width = `${PRESENTATION_WIDTH}px`;

@@ -1,7 +1,9 @@
 import { mapOutsideMath, splitMath } from './latex-notation';
 
 export function validStudyTerm(term:string,meaning:string):boolean {
-  return term.trim().length>=3&&term.length<=48&&meaning.trim().length>=18
+  return term.trim().length>=3&&term.length<=48
+    && !/\b[A-Z](?:\s+[A-Z]){3,}\b/.test(term)
+    && !/^(?:For|From|With|Thus|Since|However)\b/i.test(term)&&meaning.trim().length>=18
     && !/^(?:and|or|but|s core|they|there|these|those|this|that|it|how|what|why|when|which|where|who|if|thus|hence|therefore|we|you|one of)\b/i.test(term.trim())
     && !/[?]|\b(?:intext question|example\s+\d|solution solution)\b/i.test(`${term} ${meaning}`);
 }

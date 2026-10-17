@@ -25,8 +25,8 @@ describe("Classroom notes planner", () => {
   });
   it("does not treat equation references or the word hence as equations and derivations", () => {
     const groups = guidedGroups([{ heading: "Teacher Notes", kind: "bullets", lines: ["**Formula:** Equation (3.33) has an important application to power transmission."] }]);
-    expect(groups[0].kind).toBe("list");
-    expect(guidedGroups([{ heading: "Teacher Notes", kind: "bullets", lines: ["**Formula:** Let the length be $l$."] }])[0].kind).toBe("list");
+    expect(groups[0].kind).not.toMatch(/formula|derivation/);
+    expect(guidedGroups([{ heading: "Teacher Notes", kind: "bullets", lines: ["**Formula:** Let the length be $l$."] }])[0].kind).not.toMatch(/formula|derivation/);
     const lines = buildLocalSections({ title: "Current", bullets: ["Hence no electric current flows through the conductor.", "The following equation illustrates this observation."] })[0].lines;
     expect(lines.every((line) => !/^\*\*(Formula|Derivation)/.test(line))).toBe(true);
   });

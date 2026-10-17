@@ -70,13 +70,10 @@ export function cleanNcertLine(raw: string): string {
   if (/\b(?:TheSI|dveEm)\b|\bCurrent Electricity\s+\d{2,3}\b/.test(raw)) return "";
   let s = mapOutsideMath(repairNotation(String(raw || "")), (t) => t
     .replace(/\s+/g, " ")
-    .replace(/\b(19|20)\d{2}\s*[-–]\s*\d{2}\b/g, " ")
+    .replace(/\b(?:Reprint(?:ed)?|Rationalised(?: Edition)?)\s+20\d{2}(?:\s*[-–]\s*\d{2})?\b/gi, " ")
     .replace(/\brationalised\b/gi, " ")
     .replace(/\breprint\b/gi, " ")
     .replace(/\(?\s*(see\s+)?(fig(ure)?s?\.?|table)\s*[\d.]*\s*(\([a-z]\))?\s*\)?/gi, " ")
-    .replace(/\bchapter\s+\d+\b/gi, " ")
-    .replace(/\bpage\s*\d+\b/gi, " ")
-    .replace(/\b\d{2,4}\s+(?=[A-Z][a-z])/g, " ")
     .replace(/\s*[,;]\s*(?=[,;.])/g, " ")
     .replace(/\s+([,.;:])/g, "$1")
     .replace(/\s{2,}/g, " "))
@@ -101,6 +98,7 @@ function sentences(text: string): string[] {
 
 /** Include more topic-specific chapter evidence for detailed guided notes. */
 export function selectSlideExcerpts(slide: NoteSourceSlide, context: string): string[] {
+  if (!slide.grounding && !slide.chapter_text && slide.bullets?.some(line => /Readable source text.*(?:missing|unavailable|not available|not found)/i.test(line))) return [];
   const own = dedupe([...(slide.bullets || []), ...(slide.notes || []), ...sentences(slide.chapter_text || ""), ...sentences(slide.grounding || "")]).filter(line => !!line && !isContentsListing(line));
   const stop = new Set(["chapter", "introduction", "important", "concept", "current", "electricity", "the", "and", "for", "with", "from", "ncert", "point", "overview", "core", "definitions", "symbols", "quantities", "units", "activity", "working", "relationships", "applications", "interpretation", "common", "exam", "points", "final", "revision"]);
   const terms = norm(slide.title).split(" ").filter((word) => word.length > 3 && !stop.has(word));

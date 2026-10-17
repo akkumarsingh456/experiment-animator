@@ -24,7 +24,7 @@ describe("Classes 9–12 curriculum output coverage", () => {
     expect(task.lines.join(" ")).toContain("Activity outcome"); expect(task.lines.join(" ")).toContain("Teacher-designed");
     const sections = learningScaffold(chapter, [...notes, task]);
     const html = renderToStaticMarkup(<GuidedLessonNotes title={chapter} klass={klass} subject={subject} slides={[{ title: chapter, bullets: [], notes: [], visual: "book", sections }]} />);
-    expect(html).toContain("Investigate and discuss"); expect(html).toContain("Core practice");
+    expect(html).toContain("Activity"); expect(html).toContain("Discussion"); expect(html).toContain("Core practice");
     // Synthetic prose has no diagram evidence. Verify document coverage; real topic visuals are checked separately.
     expect(html).toContain('aria-label="Complete guided lesson notes"');
     expect(reviewNotes(sections).activity).toBe(true);
@@ -40,7 +40,7 @@ describe("Source correctness and meaningful quality checks", () => {
     const slides = buildLocalSlides("Motion", "Uniform motion, Acceleration", "Uniform motion covers equal distances in equal intervals of time. Uniform motion can be described using a constant speed. Uniform motion has a straight distance-time graph.", "Physics");
     expect(slides).toHaveLength(2);
     expect(slides[0].grounding).toContain("equal distances");
-    expect(slides[1].bullets).toEqual([]);
+    expect(slides[1].bullets.join(" ")).toMatch(/Readable source text/i); expect(slides[1].grounding || "").toBe("");
     expect(selectSlideExcerpts(slides[1], "Acceleration is the rate of change of velocity.")).toEqual([]);
   });
   it("never substitutes a different class or subject", () => {

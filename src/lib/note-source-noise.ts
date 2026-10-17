@@ -11,7 +11,7 @@ export function isContentsListing(raw: string): boolean {
   const sections = (body.match(/(?:^|\s)\d{1,2}\.\d{1,2}\s+(?=\p{L})/gu) || []).length;
   const pages = (body.match(/[\p{L}\p{M})]\s+\d{1,3}(?=\s|$)/gu) || []).length;
   const chapters = (body.match(/\bchapter\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b|अध्याय\s+\S+/gi) || []).length;
-  const leaders = (body.match(/\.{3,}\s*\d{1,3}/g) || []).length;
+  const leaders = (body.match(/(?:\.\s*){3,}\d{1,3}/g) || []).length;
   return (sections >= 4 && pages >= 3) || (chapters >= 2 && pages >= 3) || leaders >= 3;
 }
 

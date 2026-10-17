@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { encodeReferenceVisuals } from "@/lib/reference-visuals";
 const mock = vi.hoisted(() => ({ read:vi.fn(), extract:vi.fn(), finish:vi.fn(), sign:vi.fn(), paid:vi.fn(), recognize:vi.fn(), close:vi.fn() }));
 vi.mock("@/integrations/supabase/client", () => ({supabase:{from:(table:string)=>{const query:any={select:()=>query,or:()=>query,eq:()=>query,order:()=>query,limit:async()=>({data:table==="ncert_books"?[{id:"book",file_name:"CHEMISTRY MED EASY.pdf",storage_path:"book.pdf",num_pages:2,num_chunks:1}]:[]})};return query;}}}));
+vi.mock("@/lib/library-access.functions",()=>({getLibraryAccess:async()=>({admin:true})}));
 vi.mock("@/lib/ingest.functions",()=>({classifyMedEasyLibrary:async()=>{},signDownload:mock.sign}));
 vi.mock("@/lib/reference-ocr.functions",()=>({readScannedPage:mock.paid,finishReferenceReading:mock.finish,saveExtractedReferencePage:vi.fn()}));
 vi.mock("@/lib/reference-capture.functions",()=>({saveCapturedReferencePage:mock.read}));

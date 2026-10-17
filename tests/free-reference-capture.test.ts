@@ -7,7 +7,8 @@ const fixture = vi.hoisted(() => ({
   fileName: "PHYSICS MED EASY.pdf", saved: null as { text: string } | null,
   upload: vi.fn(), updateBucket: vi.fn(), upsert: vi.fn(), update: vi.fn(), paidReader: vi.fn(), pages: [] as Array<{ page_number: number; text: string }>,
 }));
-vi.mock("@tanstack/react-start", () => ({ createServerFn: () => ({ inputValidator: (parse: (data: unknown) => unknown) => ({
+vi.mock("@/lib/library-auth",()=>({requireLibraryAdmin:{}}));
+vi.mock("@tanstack/react-start", () => ({ createServerFn: () => ({ middleware(){return this}, inputValidator: (parse: (data: unknown) => unknown) => ({
   handler: (handler: (options: { data: unknown }) => unknown) => (options: { data: unknown }) => handler({ data: parse(options.data) }),
 }) }) }));
 vi.mock("@/lib/book-image-gateway", () => ({ readBookImageJSON: fixture.paidReader }));

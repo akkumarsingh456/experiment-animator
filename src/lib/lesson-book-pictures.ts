@@ -10,6 +10,14 @@ export function mergeLessonBookPictures(slides: Slide[], pictures: Array<{ title
   return slides.map((slide, index) => {
     const match = pictures[index];
     if (!match || match.title !== slide.title || slide.kind === 'break' || slide.kind === 'mcq') return slide;
-    return { ...slide, reference_visuals: match.visuals };
+    // Chapter PDF pages have already been rendered in the browser. The generic
+    // catalogue refresh has no replacement for them and must never erase them.
+    if (slide.teacher_pdf) return slide;
+    const existing = slide.reference_visuals || [];
+    const merged = new Map(existing.map(visual => [visual.storage_path, visual]));
+    for (const visual of match.visuals) {
+      if(visual.url || !merged.has(visual.storage_path)) merged.set(visual.storage_path, visual);
+    }
+    return { ...slide, reference_visuals: [...merged.values()] };
   });
 }

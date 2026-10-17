@@ -52,7 +52,8 @@ export async function appendSocialRevisionNotes(result:GenerationResult,db:Supab
   }
   // Preserve the actual teacher layouts, including scanned notes with no text layer.
   for(const page of imagePages)additions.push({title:`${socialTitle(chapter)} — original teacher PDF`,kind:"content",visual:"book",bullets:[],notes:[],key_terms:[],sections:[{heading:"Book structure and explanation",kind:"text",lines:[`${book.file_name} · PDF page ${page}`]}],caption:`Uploaded teacher PDF · ${book.file_name} · PDF page ${page}`,teacher_revision:{book_id:book.id,file_name:book.file_name,page},teacher_pdf:{path:book.storage_path,page,file_name:book.file_name}});
-  const attribution=/shobhit|nirwan|arihant|oswaal/i.test(book.file_name)?"Uploaded teacher revision notes":"Shubham Pathak — teacher revision notes (identified by the library owner)";
+  const authorEvidence=book.file_name+" "+pages.map(page=>splitReferenceContent(page.text).text).join(" ");
+  const attribution=/shobhit\s*nirwan/i.test(authorEvidence)?"Shobhit Nirwan — uploaded teacher notes":/oswaal/i.test(authorEvidence)?"Oswaal — uploaded revision material":/shubham\s*pathak/i.test(authorEvidence)?"Shubham Pathak — uploaded teacher notes":"Uploaded teacher notes — author not independently verified";
   const readable=pages.filter(page=>splitReferenceContent(page.text).text.trim());
   if(!readable.length){
    additions.push({title:`Teacher revision PDF — ${socialTitle(chapter)}`,kind:"content",visual:"book",bullets:[],notes:[],key_terms:[],sections:[{heading:"Uploaded teacher PDF",kind:"text",lines:[`${attribution}. Source: ${book.file_name}. No readable text has been saved for this PDF. The original PDF pages are included in this presentation; their text has not been reconstructed. No content has been invented.`]}],caption:`Teacher PDF: ${book.file_name}`,teacher_revision:{book_id:book.id,file_name:book.file_name}});continue;
@@ -64,6 +65,7 @@ export async function appendSocialRevisionNotes(result:GenerationResult,db:Supab
    for(const line of original){const clean=cleanSocialNoteText(cleanSourceNoteLine(line));if(clean&&!hasBrokenSourceMath(line))good.push(clean);if(!clean||clean!==line||hasBrokenSourceMath(line))review.push(line);}
    const label=page.page>0?`PDF page ${page.page}`:`Saved text segment ${-page.page}`;
    const sections:NonNullable<Slide["sections"]>=[{heading:"Teacher revision source",kind:"text",lines:[`${attribution}. ${book.file_name} · ${label}. This supplement is separate from the NCERT textbook notes.`]}];
+   if(!good.some(line=>line.length>=35 && /[a-z]{3}/i.test(line)))continue;
    if(good.length)sections.push({heading:"Teacher revision notes",kind:"bullets",lines:good});
    if(review.length)sections.push({heading:"Source review — original extraction",kind:"text",lines:review});
    additions.push({title:`${socialTitle(chapter)} — teacher revision`,kind:"content",visual:"book",bullets:[],notes:[],key_terms:[],sections,grounding:parsed.text,caption:`Teacher revision · ${book.file_name} · ${label}`,teacher_revision:{book_id:book.id,file_name:book.file_name,page:page.page>0?page.page:undefined},reference_visuals:parsed.visuals.filter(v=>v.storage_path===`${book.storage_path}.page-${v.page}.jpg`).map(v=>({...v,book_id:book.id,book:book.file_name,chapter}))});

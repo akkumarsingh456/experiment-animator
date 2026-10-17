@@ -1140,6 +1140,16 @@ function SlideCanvas({
   const kind = slide.kind === "chapter" && slide.sections?.length ? "content" : slide.kind || "content";
   const lang = isLanguageSubject(subject) || slide.visual === "formula-reference";
   const bookFigurePage = slide.sections?.some(section => section.heading === "Book structure and explanation") && slide.reference_visuals?.some(figure => figure.url);
+  if(slide.teacher_pdf){
+    const source=slide.reference_visuals?.find(figure=>figure.url);
+    return <Card data-teacher-page="true" className="lesson-slide-canvas h-[calc(100dvh-7rem)] min-h-[560px] w-full overflow-hidden border-border/60 shadow-soft">
+      <CardContent className="h-full p-4 flex flex-col gap-2 bg-white">
+        <h3 className="text-xl font-semibold shrink-0">{slide.title}</h3>
+        {source?<img src={source.url} alt={`${slide.teacher_pdf.file_name} · original PDF page ${slide.teacher_pdf.page}`} className="flex-1 min-h-0 w-full object-contain"/>:<p role="alert">The original chapter PDF page has not loaded. Reload the lesson to view and export it.</p>}
+        <p className="text-xs text-muted-foreground shrink-0">{slide.caption}</p>
+      </CardContent>
+    </Card>;
+  }
   const v = slide.verification;
   const vTone = !v ? "" :
     v.coverage >= 80 ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" :
