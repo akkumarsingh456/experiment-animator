@@ -158,3 +158,7 @@ At the owner's explicit request, remove only these two automatic sentences from 
 ## Sparse continuation sheets and quantum-number typography
 
 Keep the notes border at the natural content height, within the available slide height. Rebalance sparse final continuation pages by moving complete points in source order; never invent filler or move a derivation step away from its target. Display explicit initial/final principal quantum-number labels as n with i/f subscripts. Keep prose “and” outside unformatted mathematical tokens; preserve the source strings and numerical values. Apply this presentation fix to source-review entries as well as ordinary notes, without rewriting the original extraction.
+
+## Shared LaTeX regression command
+
+Follow `FORMULA_PRESENTATION_WORKFLOW.md`. Run `npm run check:formulas` before publishing formula-related changes. Use `formulaPresentation` through MathText for every rendered source-review and ordinary note entry. Preserve stored source strings, duplicate entries, page/edition text and unrelated notes. Formatting adjacent plain spans must work even when authored LaTeX already exists. Restrict recovery of collapsed scientific notation to complete, independently unambiguous expressions; never assume an arbitrary number is an exponent. Curriculum fixtures certify renderer behaviour, not the factual correctness of all uploaded content.
