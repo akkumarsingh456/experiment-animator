@@ -431,7 +431,7 @@ export const socialTitle = (label:string) => label.replace(/^chapter\s*\d+\s*[:.
 export function socialChapterPart(label:string):string|null {
  return label.match(/\((History|Geography|Political Science|Economics)\)\s*$/i)?.[1] || null;
 }
-export const socialKey = (text:string) => text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+export const socialKey = (text:string) => text.toLowerCase().replace(/[_-]/g," ").replace(/&/g," and ").replace(/\bthe\b/g,"").replace(/globalization/g,"globalisation").replace(/industrialization/g,"industrialisation").replace(/[^\p{L}\p{N}]/gu, "");
 export function socialBookSubject(book:{subject:string;file_name?:string|null;chapter?:string|null}):string|null {
  const title=`${book.file_name||""} ${book.chapter||""}`.replace(/[_-]/g," ");
  if(/political science|democratic politics|civics|loktantrik|rajniti/i.test(title))return "Political Science";
@@ -447,3 +447,14 @@ export function socialLibraryMetadata<T extends {class:string;subject:string;fil
  const subject=socialBookSubject(book);return subject?{...book,subject}:book;
 }
 export const SOCIAL_REFERENCE_PATTERN = /shubham\s*pathak|shubham|pathak|shobhit\s*nirwan|mind\s*maps?|revision\s*notes|teacher\s*notes/i;
+
+/** The owner identifies chapter-named junior Social Science PDFs as teacher notes. */
+export function socialRevisionChapter(book:{class:string;file_name?:string|null;chapter?:string|null}):string|null {
+ const grade=book.class.match(/(?:^|\D)(9|10)(?=\D|$)/)?.[1];
+ if(!grade)return null;
+ const label=`${book.file_name||""} ${book.chapter||""}`.replace(/[_-]/g," ");
+ if(/\bncert\b|contemporary india|contemporary world|democratic politics|understanding economic development|arthashas|arthik vikas|samkalin bharat|samkalin vishv|loktantrik/i.test(label))return null;
+ const key=socialKey(label);
+ const matches=SOCIAL_SCIENCE_CHAPTERS[grade as "9"|"10"].filter(row=>key.includes(socialKey(socialTitle(row.chapter)))).sort((a,b)=>socialTitle(b.chapter).length-socialTitle(a.chapter).length);
+ return matches[0]?.chapter||null;
+}

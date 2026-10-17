@@ -1,3 +1,4 @@
+import { appendSocialRevisionNotes } from "@/lib/social-revision-notes";
 import { socialChapterPart, socialTitle } from "@/lib/social-science-chapters";
 import { readLessonTextbooks } from "@/lib/lesson-textbooks";
 import { sequenceChemistryNotes } from "@/lib/chemistry-note-sequence";
@@ -699,6 +700,7 @@ export type Mcq = {
 };
 
 export type Slide = {
+  teacher_revision?: {book_id:string;file_name:string;page?:number};
   context_illustration?: { url: string; provider: "Hugging Face"; description: string };
   reference_visuals?: import("@/lib/reference-visuals").ReferenceVisual[];
   notes_quality?: ReturnType<typeof reviewNotes>;
@@ -1608,7 +1610,7 @@ export const generateLesson = createServerFn({ method: "POST" })
           // Strip cached MCQ slides and regenerate a fresh unique set every time
           // so the student never sees the exact same 10 questions twice.
           const cached = hit.result as GenerationResult;
-          const contentOnly = (cached.slides || []).filter((sl) => sl.kind !== "mcq");
+          const contentOnly = (cached.slides || []).filter((sl) => sl.kind !== "mcq" && !sl.teacher_revision);
           const seedSentences: string[] = [];
           for (const sl of contentOnly) {
             if (sl.chapter_text) seedSentences.push(...splitSentences(sl.chapter_text));
@@ -1618,7 +1620,8 @@ export const generateLesson = createServerFn({ method: "POST" })
           }
           const freshMcqs = buildMcqsFromContext(data.topic, seedSentences, data.subject, 10);
           const mcqSlides: Slide[] = freshMcqs.map((m, i) => makeMcqSlide(m, i, freshMcqs.length, data.topic));
-          return appendUploadedReferenceNotes({ ...cached, slides: [...contentOnly, ...mcqSlides] }, await supa(), data.klass, data.subject, data.chapter || data.topic);
+          const db=await supa();
+          return appendSocialRevisionNotes(await appendUploadedReferenceNotes({ ...cached, slides: [...contentOnly, ...mcqSlides] }, db, data.klass, data.subject, data.chapter || data.topic),db,data.klass,data.subject,data.chapter||data.topic);
         }
       } catch {
         /* miss */
@@ -1916,7 +1919,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       };
     });
 
-    const out: GenerationResult = await appendUploadedReferenceNotes({
+    const baseOutput: GenerationResult = await appendUploadedReferenceNotes({
       source_books: selectedBooks.map((b) => ({ id: b.id, chapter: b.chapter, class: b.class, subject: b.subject })),
       context_chars: context.length,
       slides,
@@ -1926,6 +1929,8 @@ export const generateLesson = createServerFn({ method: "POST" })
       figures_report: figCheck.report,
       notes_report,
     }, s, data.klass, data.subject, data.chapter || data.topic);
+
+    const out=await appendSocialRevisionNotes(baseOutput,s,data.klass,data.subject,data.chapter||data.topic);
 
     // Save lesson cache (best-effort)
     try {

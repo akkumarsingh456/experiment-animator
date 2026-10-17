@@ -1,4 +1,4 @@
-import { socialLibraryMetadata, SOCIAL_REFERENCE_PATTERN } from "@/lib/social-science-chapters";
+import { socialLibraryMetadata, socialRevisionChapter, SOCIAL_REFERENCE_PATTERN } from "@/lib/social-science-chapters";
 import { REF_BOOK_PATTERN } from "@/lib/reference-books";
 import { isSourceLibrarySetupError, sourceLibraryError } from "@/lib/source-library-errors";
 
@@ -30,7 +30,7 @@ export async function readLessonTextbooks(db: { from: (table: string) => any }):
     }
     if (result.error) throw sourceLibraryError(result.error);
     const rows = (result.data || []) as LessonTextbook[];
-    books.push(...rows.filter(isLessonTextbook).map(socialLibraryMetadata));
+    books.push(...rows.filter(book=>isLessonTextbook(book)&&!socialRevisionChapter(book)).map(socialLibraryMetadata));
     if (rows.length < 1000) return books;
   }
 }

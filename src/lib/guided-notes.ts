@@ -55,6 +55,7 @@ export function guidedGroups(sections: NoteSection[] | undefined, fallback: stri
     for (const line of block.lines) {
       const match = line.match(/^\*\*([^*]+):\*\*\s*(.*)$/s);
       const label = match?.[1] || "Explanation";
+      if (/^Teacher revision (?:source|notes)$/i.test(label)) { get(label, "list").lines.push(match?.[2] || line); continue; }
       if (/^Reference notes —/.test(label)) { get(label, "list").lines.push(match?.[2] || line); continue; }
       const category = categories.find(([pattern]) => pattern.test(label));
       let [heading, kind] = category ? [category[1], category[2]] : ["Important points", "list" as const];
@@ -79,7 +80,7 @@ export function guidedGroups(sections: NoteSection[] | undefined, fallback: stri
 export function uniqueTopicGroups(topics: GuidedGroup[][]): GuidedGroup[][] {
   const seen = new Set<string>();
   return topics.map((groups) => groups.map((group) => {
-    if ((group.heading === "Source table — original extracted entries" || group.heading === "Source review — original extraction") || group.kind === "formula" || group.kind === "derivation" || /practice|answers|check your understanding|objectives|exit ticket|before you begin|recap|discuss|activities/i.test(group.heading)) return group;
+    if (/^Teacher revision (?:source|notes)$/i.test(group.heading) || (group.heading === "Source table — original extracted entries" || group.heading === "Source review — original extraction") || group.kind === "formula" || group.kind === "derivation" || /practice|answers|check your understanding|objectives|exit ticket|before you begin|recap|discuss|activities/i.test(group.heading)) return group;
     const lines = group.lines.filter((line) => {
       const key = line.replace(/\*\*/g, "").replace(/\s+/g, " ").trim().toLowerCase();
       if (seen.has(key)) return false;
