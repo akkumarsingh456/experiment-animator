@@ -69,7 +69,7 @@ export const generateSlideImage = createServerFn({ method: "POST" })
     // Cache lookup — same (class, subject, title, visual_prompt) returns instantly.
     // v13: topic-aware textbook renderer with large labels and visual models.
     const cacheKey = hashKey([
-      "img-v25-subject-scoped-diagrams-no-placeholder-icons",
+      "img-v26-atomic-topic-diagrams",
       process.env.HF_IMAGES_FREE_ONLY === "true" && !!process.env.HF_IMAGE_TOKEN ? "hf-enabled" : "local-only",
       data.klass,
       data.subject,
@@ -1532,7 +1532,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // Quiz items are rebuilt from source statements after cache lookup.
     const lessonKey = hashKey([
-      "lesson-v59-preserved-source-pictures-and-evidence-only-quiz",
+      "lesson-v60-topic-specific-dimensions-and-source-review",
       data.klass,
       data.subject,
       data.chapter,

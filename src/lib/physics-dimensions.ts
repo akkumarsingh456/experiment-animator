@@ -53,14 +53,27 @@ const quantities: Array<{name: string; pattern: RegExp; dimension: string; remem
   {name: "Decay constant", pattern: /\b(?:decay constant)\b/i, dimension: "T^{-1}", remember: "Probability rate per unit time."},
   {name: "Activity (radioactivity)", pattern: /\b(?:radioactivity|radioactive activity)\b/i, dimension: "T^{-1}", remember: "Number of decays per unit time."},
   {name: "Young modulus / bulk modulus", pattern: /\b(?:young.?s? modulus|bulk modulus|shear modulus)\b/i, dimension: "M L^{-1} T^{-2}", remember: "Stress divided by dimensionless strain."},
+  {name:"Coulomb constant",pattern:/\b(?:coulomb.?s? constant|electrostatic constant)\b/i,dimension:"M L^{3} T^{-4} I^{-2}",remember:"From k = F r² / (q₁ q₂); use the Coulomb interaction in the atomic model."},
+  {name:"Rydberg constant",pattern:/\brydberg constant\b/i,dimension:"L^{-1}",remember:"In the spectral relation, R multiplies a dimensionless factor to give reciprocal wavelength."},
+  {name:"Bohr radius",pattern:/\bbohr radius\b/i,dimension:"L",remember:"The Bohr radius is the characteristic orbital length in the hydrogen model."},
  ];
 
 export function withPhysicsDimensions(sections: NoteSection[] | undefined, subject: string, title = ""): NoteSection[] {
-  const existing = sections || [];
-  if (!/^physics$/i.test(subject) || existing.some(s => s.heading === "MLT Dimensional Formula" || s.heading === "Problem-solving formula reference")) return existing;
+  if (!/^physics$/i.test(subject)) return sections || [];
+  // Rebuild the automatic appendix for this topic, including saved lessons.
+  const existing = (sections || []).filter(section=>section.heading!=="MLT Dimensional Formula");
+  if(existing.some(section=>section.heading==="Problem-solving formula reference"))return existing;
+  const evidence=existing.filter(section=>!/^Source (?:review|table)|activity|practice|discussion|learning|reference/i.test(section.heading)).flatMap(section=>section.lines);
+  const atomic=/rutherford|bohr|atomic|\batoms?\b|scattering|impact parameter/i.test(title);
+
   const text = [title, ...existing.flatMap(s => s.lines)].join(" ");
   if (!text.trim()) return existing;
-  const matches = quantities.filter(q => q.pattern.test(text)).filter(q => {
+  const matches = quantities.filter(q => {
+    const definingLine=evidence.some(line=>q.pattern.test(line)&&/[=∝]|\\(?:frac|propto)\b/.test(line));
+    if(atomic)return /constant|Bohr radius|Angular momentum/.test(q.name)&&definingLine;
+    return q.pattern.test(title)||definingLine;
+  }).filter(q => {
+    if(q.name === "Force" && /electromotive force/i.test(text) && !/mechanical force|electric force|magnetic force|net force/i.test(text))return false;
     if (q.name === "Power" && /power of (?:a |the )?lens|lens power|optical power|resolving power|magnifying power/i.test(text) && !/electrical power|power dissipated|power consumed|power delivered|mechanical power/i.test(text)) return false;
     if (q.name === "Electric potential / voltage" && /electric potential energy/i.test(text) && !/potential difference|voltage|electromotive force|electric potential(?! energy)/i.test(text)) return false;
     if (q.name === "Mass density" && /charge density|current density|energy density|flux density/i.test(text) && !/mass density/i.test(text)) return false;
@@ -71,9 +84,6 @@ export function withPhysicsDimensions(sections: NoteSection[] | undefined, subje
     return true;
   });
   const lines = matches.map(q => `${q.name} | $[${q.dimension}]$ | ${q.remember}`);
-  return [...existing, {heading: "MLT Dimensional Formula", kind: "bullets", lines: [
-    "M = mass; L = length; T = time. I = electric current; Θ = temperature when required. A zero power means that base dimension is absent.",
-    ...lines,
-    ...(matches.length ? ["Remember: start with a defining equation, substitute dimensions, then add powers when multiplying and subtract powers when dividing. Both sides of an equation must have the same dimensions; this check alone does not prove the equation correct."] : ["This concept has no single dimensional formula. Identify the physical quantity and its defining equation before assigning dimensions; do not assign dimensions to a chapter name."]),
-  ]}];
+  if(!lines.length)return existing;
+  return [...existing,{heading:"MLT Dimensional Formula",kind:"bullets",lines}];
 }

@@ -1,3 +1,4 @@
+import { atomicTopicDrawing } from '@/lib/atomic-topic-diagrams';
 import type { ConceptMapInput } from '@/lib/source-concept-map';
 import { plainMathText } from '@/lib/latex-notation';
 import { additionalTopicDrawing } from '@/lib/chapter-topic-diagrams';
@@ -33,6 +34,10 @@ export function topicScienceDrawing(input: ConceptMapInput, subject=''): TopicDr
  if(/^science$/i.test(subject)){
   const discipline=input.chapter?.match(/\((Physics|Chemistry|Biology)\)/i)?.[1];
   if(discipline)return topicScienceDrawing(input,discipline);
+ }
+ if(/^(physics|science)$/i.test(subject)){
+  const atomic=atomicTopicDrawing(input.title);
+  if(atomic)return atomic;
  }
  const classroom=classroomDiscussionVisual(input);
  if(classroom)return classroom;

@@ -1,12 +1,14 @@
+import {atomicTopicDrawing} from '@/lib/atomic-topic-diagrams';
 import { LESSON_REQUEST_TIMEOUT_MS, preparationClock } from "@/lib/generation-timing";
 import {useEffect,useState} from "react";
 import {BookOpen,Pause,Play} from "lucide-react";
 
-type Motif = "matrix"|"charge"|"circuit"|"pendulum"|"optics"|"waves"|"field"|"measure"|"elements"|"molecule"|"flask"|"graph"|"geometry"|"stack"|"database"|"network"|"leaf"|"book";
+type Motif = "atomic"|"matrix"|"charge"|"circuit"|"pendulum"|"optics"|"waves"|"field"|"measure"|"elements"|"molecule"|"flask"|"graph"|"geometry"|"stack"|"database"|"network"|"leaf"|"book";
 function preparationTheme(subject:string,chapter:string):{subject:string;family:string;motif:Motif;label:string}{
  const s=subject.toLowerCase(), c=chapter.toLowerCase();
  const family=/chemistry/.test(s)?"chemistry":/physics/.test(s)?"physics":/math/.test(s)?"mathematics":/computer|informatics/.test(s)?"computing":/biology|botany|zoology/.test(s)?"biology" :/^science$/.test(s)?(/chemical|acid|metal|carbon|atom|molecule|periodic/.test(c)?"chemistry":/motion|force|work|energy|sound|light|electric|magnet|gravitation/.test(c)?"physics":/life|organism|reproduction|heredity|tissue|cell/.test(c)?"biology":"general"):"general";
  if(family==="physics"){
+  if(/\batoms?\b|rutherford|bohr|atomic spectra/.test(c))return {subject:"Physics",family,motif:"atomic",label:chapter.replace(/^chapter\s*\d+\s*:\s*/i,"")};
   if(/optic|light|ray/.test(c))return {subject:"Physics",family,motif:"optics",label:"Light & lenses"};
   if(/wave|sound/.test(c))return {subject:"Physics",family,motif:"waves",label:"Waves & oscillations"};
   if(/magnet/.test(c) && !/induction/.test(c))return {subject:"Physics",family,motif:"field",label:"Magnetic field sketch"};
@@ -24,6 +26,7 @@ function preparationTheme(subject:string,chapter:string):{subject:string;family:
 
 /** Authored editorial sketches; motion indicates waiting, never measured progress. */
 function PreparationSketch({motif}:{motif:Motif}){
+ if(motif==="atomic"){const atomic=atomicTopicDrawing("Atoms")!;return <svg viewBox="0 0 760 540" aria-label="Atoms: positive nucleus and electron" role="img" dangerouslySetInnerHTML={{__html:atomic.drawing}}/>;}
  return <svg viewBox="0 0 360 210" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
  {motif==="matrix"&&<><path d="M95 36H80V178H95 M265 36H280V178H265"/>{[0,1,2].flatMap(row=>[0,1,2].map(col=><text key={`${row}:${col}`} x={111+col*62} y={70+row*43}>a<tspan baselineShift="sub" fontSize="12">{row+1}{col+1}</tspan></text>))}<text x="108" y="207">Schematic · rows and columns</text></>}
  {motif==="charge"&&<><circle cx="180" cy="104" r="23" fill="var(--prep-soft)"/><text x="174" y="111">+</text>{[0,1,2,3,4,5,6,7].map(i=><g key={i} transform={`rotate(${i*45} 180 104)`}><path className="prep-draw" d="M213 104H273 M265 97L273 104L265 111"/></g>)}<text x="102" y="207">Positive charge · field direction</text></>}
@@ -65,7 +68,7 @@ export function LessonPreparation({subject="",chapter="",topic="",startedAt}:{su
  const remaining=Math.max(0,LESSON_REQUEST_TIMEOUT_MS-elapsed);
 
  return <section className={`lesson-preparation prep-${theme.family}${paused?" prep-paused":""}`} aria-busy="true" aria-label="Lesson preparation">
-  <div className="prep-illustration"><div className="prep-sketch-label">{theme.label}</div><PreparationSketch motif={theme.motif}/><span className="prep-sketch-foot">EDUPLAN / CHAPTER STUDY</span></div>
+  <div className="prep-illustration"><div className="prep-sketch-label">{chapter||topic||theme.label}</div><PreparationSketch motif={theme.motif}/><span className="prep-sketch-foot">EDUPLAN / CHAPTER STUDY</span></div>
   <div className="prep-copy"><span className="prep-eyebrow">{theme.subject} · NCERT workspace</span><h2>Preparing your lesson<span className="prep-dots" aria-hidden="true">…</span></h2><p className="prep-topic">{topic||chapter||"Your selected chapter"}</p><p role="status" aria-live="polite">Your PPT and teacher notes are being prepared from the matching saved NCERT chapter.</p><div className="prep-timing" role="timer" aria-live="off" aria-label="Request timing"><div><span>Time elapsed</span><strong>{preparationClock(elapsed)}</strong></div><div><span>Time before timeout</span><strong>{preparationClock(Math.ceil(remaining/1000)*1000)}</strong></div></div><p className="prep-request-status" role="status">{!online?"Your device appears offline. Check your internet connection.":remaining===0?"The request time limit has been reached. Checking the result…":"Waiting for the server’s response. This timer shows the request limit, not an exact finishing time."}</p><div className="prep-materials"><BookOpen size={18}/><span>Notes · diagrams · classroom presentation</span></div><small>You can prepare and view lessons without signing in.</small></div>
   <button className="prep-motion-toggle" type="button" onClick={()=>setPaused(value=>!value)} aria-pressed={paused} aria-label={paused?"Resume decorative animation":"Pause decorative animation"}>{paused?<Play size={16}/>:<Pause size={16}/>}<span>{paused?"Resume animation":"Pause animation"}</span></button>
  </section>;

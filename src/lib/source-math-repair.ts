@@ -21,6 +21,9 @@ export function repairSourceMathLine(line: string): string {
 
 export function repairSourceMathSlide(slide: Slide): Slide {
   slide = layoutChemistrySlide(slide);
+  const notices=["These original entries contain damaged extraction or exercise options whose answer has not been established.","They are retained for comparison with the textbook, not presented as verified formulas or facts."];
+  slide={...slide,sections:slide.sections?.map(section=>section.heading!=="Source review — original extraction"?section:{...section,lines:section.lines.map(line=>notices.some(notice=>line.includes(notice))?notices.reduce((value,notice)=>value.replace(notice,""),line).trim():line).filter(Boolean)}).filter(section=>section.lines.length)};
+
   const reviewHeading = "Source review — original extraction";
   const originals: string[] = [];
   const inputSections = slide.sections?.map(section => {
@@ -37,7 +40,7 @@ export function repairSourceMathSlide(slide: Slide): Slide {
   }).filter(section => section.lines.length);
   if (originals.length) {
     const review = {heading: reviewHeading, kind: "text" as const, lines: [
-      "These original entries contain damaged extraction or exercise options whose answer has not been established. They are retained for comparison with the textbook, not presented as verified formulas or facts.", ...originals]};
+      ...originals]};
     slide = {...slide, sections: [...(inputSections || []), review], notes_quality: {ready:false,lines:0,derivations:0,activity:false,issues:[...(slide.notes_quality?.issues || []), "Source extraction or exercise options require textbook review."]}};
   }
   const repairLines = (lines: string[]) =>
