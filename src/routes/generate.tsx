@@ -1,3 +1,4 @@
+import { socialNotesPresentationSlide } from "@/lib/social-note-presentation";
 import { prepareTeacherPdfPages } from "@/lib/teacher-pdf-pages";
 import { LESSON_REQUEST_TIMEOUT_MS } from "@/lib/generation-timing";
 import { LessonPreparation } from "@/components/LessonPreparation";
@@ -277,7 +278,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       ...slide.bullets, ...slide.notes, ...(slide.sections || []).filter(section => section.kind !== 'diagram').flatMap(section => section.lines)]
       .flatMap(line => line.split(/\n\s*\n|(?<=[.!?])\s+(?=\p{Lu})/u)).filter(line => line.trim());
     const available = items.flatMap(sourceLines);
-    const repaired = items.map(omitContentsListings).map(slide => {
+    const repaired = items.map(slide => socialNotesPresentationSlide(slide, search.subject)).map(omitContentsListings).map(slide => {
       if (slide.kind === 'break' || slide.kind === 'mcq' ||
         slide.sections?.some(section => section.kind !== 'diagram' && section.lines.some(line => line.trim()))) return slide;
       const own = sourceLines(slide);

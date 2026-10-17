@@ -1,3 +1,4 @@
+import { socialNotesPresentationSlide, cleanSocialNoteText } from "@/lib/social-note-presentation";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import type {Database} from "@/integrations/supabase/types";
 import type {GenerationResult,Slide} from "@/lib/generate.functions";
@@ -57,7 +58,7 @@ export async function appendSocialRevisionNotes(result:GenerationResult,db:Supab
    const parsed=splitReferenceContent(page.text);
    const original=parsed.text.split(/\n\s*\n|\r?\n/).map(line=>line.trim()).filter(Boolean);
    const good:string[]=[],review:string[]=[];
-   for(const line of original){const clean=cleanSourceNoteLine(line);if(clean&&!hasBrokenSourceMath(line))good.push(clean);if(!clean||clean!==line||hasBrokenSourceMath(line))review.push(line);}
+   for(const line of original){const clean=cleanSocialNoteText(cleanSourceNoteLine(line));if(clean&&!hasBrokenSourceMath(line))good.push(clean);if(!clean||clean!==line||hasBrokenSourceMath(line))review.push(line);}
    const label=page.page>0?`PDF page ${page.page}`:`Saved text segment ${-page.page}`;
    const sections:NonNullable<Slide["sections"]>=[{heading:"Teacher revision source",kind:"text",lines:[`${attribution}. ${book.file_name} · ${label}. This supplement is separate from the NCERT textbook notes.`]}];
    if(good.length)sections.push({heading:"Teacher revision notes",kind:"bullets",lines:good});
@@ -65,7 +66,8 @@ export async function appendSocialRevisionNotes(result:GenerationResult,db:Supab
    additions.push({title:`${socialTitle(chapter)} — teacher revision`,kind:"content",visual:"book",bullets:[],notes:[],key_terms:[],sections,grounding:parsed.text,caption:`Teacher revision · ${book.file_name} · ${label}`,teacher_revision:{book_id:book.id,file_name:book.file_name,page:page.page>0?page.page:undefined},reference_visuals:parsed.visuals.filter(v=>v.storage_path===`${book.storage_path}.page-${v.page}.jpg`).map(v=>({...v,book_id:book.id,book:book.file_name,chapter}))});
   }
  }
- const core=result.slides.filter(slide=>!slide.teacher_revision);
- const at=core.findIndex(slide=>slide.kind==="mcq");
- return {...result,slides:at<0?[...core,...additions]:[...core.slice(0,at),...additions,...core.slice(at)]};
+ const core=result.slides.filter(slide=>!slide.teacher_revision).map(slide=>socialNotesPresentationSlide(slide,subject));
+ // The uploaded chapter notes and their unchanged diagrams lead the lesson.
+ // NCERT explanations and questions remain available after the supplied material.
+ return {...result,slides:[...additions,...core]};
 }

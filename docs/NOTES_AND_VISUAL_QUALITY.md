@@ -136,3 +136,7 @@ Read all saved pages in order, falling back to ordered text segments only when p
 ## Loading illustrations and source-review isolation
 
 Loading illustrations use the selected chapter before custom topic text. Determinants and matrices use a row/column schematic; electrostatics uses charge/field imagery rather than a current circuit. Unmapped chapters use the subject notebook instead of an unrelated default graph, pendulum, stack or leaf. Shared concept maps exclude original extraction review/table sections and damaged relations. Review-only pages must not fall back to the same extracted text as Important points. Activity and discussion labels group once while retaining their source wording. These are shared presentation safeguards, not a factual verification of every stored PDF.
+
+## Junior Social Science chapter PDFs
+
+For Classes 9 and 10 Social Science, matching uploaded chapter notes and unchanged original PDF pages lead the generated lesson, ahead of the retained NCERT explanation and question slides. Original teacher diagrams are rendered from their own PDF pages rather than redrawn from OCR. Text presentation removes recognised textbook running titles with page numbers and numbered title headings; dates, quotations, formulas, original source-review entries and original PDF page images remain untouched. Same-class chapter matching remains required; missing chapter files must not be replaced by another chapter.
