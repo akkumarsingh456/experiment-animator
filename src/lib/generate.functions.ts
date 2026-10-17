@@ -969,6 +969,7 @@ export type ActivityMatch = {
 };
 
 export type GenerationResult = {
+  source_basis?: "uploaded-teacher-pdfs";
   source_books: Array<{ id: string; chapter: string; class: string; subject: string }>;
   context_chars: number;
   slides: Slide[];
@@ -1591,7 +1592,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // MCQ slides are appended after cache lookup so every regeneration produces unique MCQs.
     const lessonKey = hashKey([
-      "lesson-v56-approved-ncert-only-source-policy",
+      "lesson-v58-social-chapter-headings-and-uploaded-pages",
       data.klass,
       data.subject,
       data.chapter,
@@ -1630,6 +1631,11 @@ export const generateLesson = createServerFn({ method: "POST" })
     }
 
     const s = await supa();
+    const uploadedSocialFallback=async()=>{
+      if(data.subject!=="Social Science")return null;
+      const supplied=await appendSocialRevisionNotes({source_basis:"uploaded-teacher-pdfs",source_books:[],context_chars:0,slides:[],activities:[],activity_matches:[],video:{title:data.chapter||data.topic,scenes:[]}},s,data.klass,data.subject,data.chapter||data.topic);
+      return supplied.slides.some(slide=>slide.teacher_pdf)?supplied:null;
+    };
     const terms = buildTerms(data);
 
     // Existing textbooks are public learning sources. Only uploads require sign-in.
@@ -1638,6 +1644,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     const lessonSubject = data.subject === "Social Science" ? socialChapterPart(data.chapter||"") || data.subject : data.subject;
     let candidates = inventory.filter(book => bookMatchesLesson(book, data.klass, lessonSubject));
     if (candidates.length === 0) {
+      const supplied=await uploadedSocialFallback();if(supplied)return supplied;
       throw new Error(`No matching Class ${data.klass} ${data.subject} NCERT textbook is available in the uploaded library. You can browse existing books without signing in. An administrator can add the missing textbook; material from another class or subject will not be substituted.`);
     }
 
@@ -1756,7 +1763,7 @@ export const generateLesson = createServerFn({ method: "POST" })
 
     // 3. Rank chunks by topic/subtopic/chapter relevance
     // Reference supplements stay separate from the primary textbook evidence.
-    const primaryIds = new Set(selectedBooks.filter((b) => !isRef(b)).map((b) => b.id));
+    const primaryIds = new Set((data.subject === "Social Science" ? topCandidates : selectedBooks).filter((b) => !isRef(b)).map((b) => b.id));
     if (!primaryIds.size) throw new Error(`Upload the Class ${data.klass} ${data.subject} NCERT textbook for this lesson. Reference notes alone cannot establish the chapter's prescribed content.`);
     selectedChunks = selectedChunks.filter((chunk) => primaryIds.has(chunk.book_id));
     const ranked = selectedChunks
@@ -1789,13 +1796,14 @@ export const generateLesson = createServerFn({ method: "POST" })
         const titles = chaptersFor(classNumber(data.klass), data.subject).map(chapter => chapter.chapter);
         if (data.subject === "Social Science") {
           const target = socialTitle(data.chapter);
-          const headings = titles.map(socialTitle);
+          const headings = titles.filter(title=>socialChapterPart(title)===lessonSubject).map(socialTitle);
           const scoped = scopeSocialChapterPages(pages || [], target, headings);
           if (scoped.length) return scoped;
           // Some historical chapter PDFs saved chunks but no page records.
           const { data: ordered, error: readError } = await s.from("ncert_chunks").select("chunk_index,content").eq("book_id",bookId).order("chunk_index").limit(3000);
           if(readError)throw new Error("The selected Social Science chapter text could not be read.");
-          return scopeSocialChapterPages((ordered||[]).map(row=>({page_number:row.chunk_index,text:row.content})),target,headings);
+          const recovered=scopeSocialChapterPages((ordered||[]).map(row=>({page_number:row.chunk_index,text:row.content})),target,headings);
+          return recovered;
         }
         if (data.subject !== "English") return scopeTextbookPages(pages || [], data.chapter, titles);
         const scoped = scopeEnglishChapterPages(pages || [], data.chapter, titles);
@@ -1804,9 +1812,13 @@ export const generateLesson = createServerFn({ method: "POST" })
         const { data: orderedChunks } = await s.from("ncert_chunks").select("chunk_index,content").eq("book_id", bookId).order("chunk_index").limit(3000);
         return scopeEnglishChapterPages([{page_number: 1, text: (orderedChunks || []).map(c => c.content).join("\n")}], data.chapter, titles);
       }));
-      const scoped = sourcePages.flat();
+      // Duplicate uploads can have different whitespace/OCR layers. Choose one complete
+      // matching textbook instead of concatenating the same chapter from several copies.
+      const chosen=data.subject==="Social Science"?sourcePages.map((pages,index)=>({pages,index,words:(pages.join(" ").match(/[A-Za-z]{3,}/g)||[]).length})).filter(row=>row.pages.length).sort((a,b)=>b.words-a.words)[0]:undefined;
+      const scoped = [...new Set(chosen?chosen.pages:sourcePages.flat())];
+      if(data.subject === "Social Science" && chosen){const bookId=[...primaryIds][chosen.index];selectedBooks=bookScores.filter(book=>book.id===bookId);}
       if (scoped.length) context = scoped.join("\n\n").slice(0, 160000);
-      else if (data.subject === "Social Science") throw new Error(`Readable text for “${socialTitle(data.chapter)}” was not located in the matching uploaded Class ${data.klass} textbook. Teacher PDF links remain available below your selection; another chapter will not be substituted.`);
+      else if (data.subject === "Social Science") {const supplied=await uploadedSocialFallback();if(supplied)return supplied;throw new Error(`The uploaded sources for “${socialTitle(data.chapter)}” do not contain readable chapter text or matching teacher PDF pages. Add the correct chapter PDF in Upload books and notes.`);}
       else if (data.subject === "English") throw new Error(`Readable text for “${data.chapter}” was not located in the uploaded Class ${data.klass} English books. Upload or re-ingest the matching chapter PDF. Other chapters will not be used in its place.`);
     }
     if (!context.trim()) {

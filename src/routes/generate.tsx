@@ -921,7 +921,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       )}
 
       <p className="text-xs text-muted-foreground mt-10 print:hidden">
-        Source: {result.source_books.map((b) => `${b.subject} · Class ${b.class} · ${b.chapter}`).join(", ")} ({result.context_chars.toLocaleString()} chars of NCERT text)
+        Source: {result.source_books.map((b) => `${b.subject} · Class ${b.class} · ${b.chapter}`).join(", ")} ({result.source_basis === "uploaded-teacher-pdfs" ? "Original uploaded teacher chapter PDFs; NCERT text unavailable" : `${result.context_chars.toLocaleString()} chars of NCERT text`})
       </p>
 
       {exportMode && <div ref={exportRef} className={`lesson-export-root lesson-export-${exportMode === "notes" ? "notes" : "slides"} ${exportMode === "slides" ? "original-slide-deck" : ""}`} data-presentation-style={exportMode === "slides" ? "lovable" : "guided"} aria-hidden="true">

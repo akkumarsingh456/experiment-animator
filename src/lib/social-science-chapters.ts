@@ -455,6 +455,20 @@ export function socialRevisionChapter(book:{class:string;file_name?:string|null;
  const label=`${book.file_name||""} ${book.chapter||""}`.replace(/[_-]/g," ");
  if(/\bncert\b|contemporary india|contemporary world|democratic politics|understanding economic development|arthashas|arthik vikas|samkalin bharat|samkalin vishv|loktantrik/i.test(label))return null;
  const key=socialKey(label);
- const matches=SOCIAL_SCIENCE_CHAPTERS[grade as "9"|"10"].filter(row=>key.includes(socialKey(socialTitle(row.chapter)))).sort((a,b)=>socialTitle(b.chapter).length-socialTitle(a.chapter).length);
- return matches[0]?.chapter||null;
+ const aliases:Record<string,string[]>={"Forest and Wildlife Resources":["Forest and Wildlife"],"Print Culture and the Modern World":["Print Culture"],"The Rise of Nationalism in Europe":["Rise of Nationalism in Europe"],"Sectors of the Indian Economy":["Sectors of Indian Economy"]};
+ const matches=SOCIAL_SCIENCE_CHAPTERS[grade as "9"|"10"].filter(row=>[socialTitle(row.chapter),...(aliases[socialTitle(row.chapter)]||[])].some(title=>key.includes(socialKey(title)))).sort((a,b)=>socialTitle(b.chapter).length-socialTitle(a.chapter).length);
+ if(matches.length)return matches[0].chapter;
+ // Historical bulk imports used Class 9 for uniquely named Class 10 chapters.
+ // Only recover an unambiguous curriculum title with no contradictory filename grade.
+ if(grade==="9"&&!/class[ _-]*9|class[ _-]*ix\b/i.test(label)){const corrected=SOCIAL_SCIENCE_CHAPTERS["10"].filter(row=>key.includes(socialKey(socialTitle(row.chapter))));if(corrected.length===1)return corrected[0].chapter;}
+ return null;
+}
+
+/** Combined mind maps must match the first chapter heading, not a word mentioned later. */
+export function socialRevisionPageMatches(text:string,chapter:string,grade:string):boolean {
+ const rows=SOCIAL_SCIENCE_CHAPTERS[grade as "9"|"10"];
+ if(!rows)return false;
+ const head=socialKey(text.slice(0,400).replace(/solcialism/gi,"socialism"));
+ const hits=rows.map(row=>({chapter:row.chapter,key:socialKey(socialTitle(row.chapter))})).map(row=>({...row,at:head.indexOf(row.key)})).filter(row=>row.at>=0).sort((a,b)=>a.at-b.at||b.key.length-a.key.length);
+ return hits[0]?.key===socialKey(socialTitle(chapter));
 }

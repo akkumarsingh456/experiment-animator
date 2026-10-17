@@ -2,7 +2,7 @@ import { socialNotesPresentationSlide, cleanSocialNoteText } from "@/lib/social-
 import type {SupabaseClient} from "@supabase/supabase-js";
 import type {Database} from "@/integrations/supabase/types";
 import type {GenerationResult,Slide} from "@/lib/generate.functions";
-import {socialRevisionChapter,socialKey,socialTitle,SOCIAL_REFERENCE_PATTERN,socialBookSubject} from "@/lib/social-science-chapters";
+import {socialRevisionChapter,socialKey,socialTitle,SOCIAL_REFERENCE_PATTERN,socialBookSubject,socialRevisionPageMatches,SOCIAL_SCIENCE_CHAPTERS} from "@/lib/social-science-chapters";
 import {splitReferenceContent} from "@/lib/reference-visuals";
 import {cleanSourceNoteLine,hasBrokenSourceMath} from "@/lib/source-note-quality";
 
@@ -19,8 +19,11 @@ export async function appendSocialRevisionNotes(result:GenerationResult,db:Supab
  }
  const unique=new Map<string,typeof books[number]>();
  for(const book of books){
-  if(book.class.replace(/[^0-9]/g,"")!==klass.replace(/[^0-9]/g,""))continue;
   const named=socialRevisionChapter(book);
+  const recoveredGrade=named&&SOCIAL_SCIENCE_CHAPTERS["10"].some(row=>row.chapter===named)?"10":book.class.replace(/[^0-9]/g,"");
+  if(recoveredGrade!==klass.replace(/[^0-9]/g,""))continue;
+  // Prefer the chapter PDFs filed under the correct class over duplicate legacy imports.
+  if(book.class.replace(/[^0-9]/g,"")!==recoveredGrade && books.some(other=>other.class.replace(/[^0-9]/g,"")===recoveredGrade&&socialRevisionChapter(other)===named))continue;
   if(named ? socialKey(socialTitle(named))!==target : !(SOCIAL_REFERENCE_PATTERN.test(book.file_name)&&socialBookSubject(book)==="Social Science"))continue;
   const key=socialKey(book.file_name.replace(/\(\s*\d+\s*\)/g,"")),prior=unique.get(key);
   if(!prior||(book.num_pages||0)+(book.num_chunks||0)>(prior.num_pages||0)+(prior.num_chunks||0))unique.set(key,book);
@@ -35,7 +38,7 @@ export async function appendSocialRevisionNotes(result:GenerationResult,db:Supab
    if(!data||data.length<1000)break;
   }
   const chapterSpecific=!!socialRevisionChapter(book);
-  if(!chapterSpecific){pages=pages.filter(page=>socialKey(splitReferenceContent(page.text).text).includes(target));if(!pages.length)continue;}
+  if(!chapterSpecific){pages=pages.filter(page=>socialRevisionPageMatches(splitReferenceContent(page.text).text,chapter,klass.replace(/[^0-9]/g,"")));if(!pages.length)continue;}
   const imagePages=chapterSpecific?Array.from({length:book.num_pages||0},(_,i)=>i+1):pages.map(page=>page.page);
   if(!pages.some(page=>splitReferenceContent(page.text).text.trim())){
    pages=[];

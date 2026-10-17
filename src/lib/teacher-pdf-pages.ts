@@ -15,7 +15,8 @@ export async function prepareTeacherPdfPages(result:GenerationResult):Promise<Ge
   try{
    for(const slide of slides){
     const source=slide.teacher_pdf;if(!source||source.path!==path)continue;
-    const page=await pdf.getPage(source.page),viewport=page.getViewport({scale:1.5});
+    const page=await pdf.getPage(source.page),base=page.getViewport({scale:1});
+    const viewport=page.getViewport({scale:Math.min(1.5,1800/Math.max(base.width,base.height))});
     const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
     const context=canvas.getContext('2d');if(!context)throw new Error('The original teacher PDF could not be displayed. Please retry.');
     await page.render({canvas,canvasContext:context,viewport}).promise;

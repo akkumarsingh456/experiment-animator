@@ -63,16 +63,26 @@ export function scopeEnglishChapterPages(pages: Array<{page_number: number; text
   return result;
 }
 
-/** Social textbooks often flatten an entire page, including its running title. */
+/** Match flattened/spaced PDF headings; chapter markers also stop omitted legacy chapters. */
 export function scopeSocialChapterPages(pages: Array<{page_number:number;text:string}>, chapter:string, titles:string[]):string[]{
- const escaped=(s:string)=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
- const patterns=titles.map(title=>({title,pattern:new RegExp("^\\s*(?:(?:chapter\\s*)?[0-9ivxlcdm]+[.):\\-]?\\s+)?"+title.split(/\s+/).map(escaped).join("\\s+")+"(?=\\s|$)","i")}));
+ const normalize=(s:string)=>s.replace(/[\uF020-\uF07E]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xF000)).toLowerCase().replace(/[^a-z]/g,"");
+ const aliases:Record<string,string[]>={"The Rise of Nationalism in Europe":["Nationalism in Europe"],"Print Culture and the Modern World":["Print Culture"]};
+ const wanted=normalize(chapter),names=[...new Set(titles)].flatMap(title=>[title,...(aliases[title]||[])].map(alias=>({title,key:normalize(alias)}))).sort((a,b)=>b.key.length-a.key.length);
  let active=false;const out:string[]=[];
  for(const page of [...pages].sort((a,b)=>a.page_number-b.page_number)){
   const text=splitReferenceContent(page.text).text.replace(/^\[SOURCE_OCR_PAGE\]\s*/,"");
-  if(!text.trim()||isContentsListing(text)||/^\s*(?:contents|table of contents)\b/i.test(text))continue;
-  const hit=patterns.find(row=>row.pattern.test(text.slice(0,250)));
-  if(hit)active=key(hit.title)===key(chapter);
+  if(!text.trim()||/^\s*(?:contents|table of contents)\b/i.test(text)||((text.match(/\bchapter\s+(?:\d+|[ivx]+)\b/gi)||[]).length>=3&&!/o\s*verview/i.test(text)))continue;
+  const head=text.slice(0,320),tail=text.slice(-300);
+  const headKey=normalize(head).replace(/^(?:democraticpolitics|indiaandthecontemporaryworld|contemporaryindia)/,"").replace(/^chapter(?:iv|iii|ii|i|v|vi|vii|viii|ix|x)?/,"");
+  let hit=names.find(row=>headKey.startsWith(row.key));
+  // Overview-first pages put their chapter label at the bottom of the page.
+  if(!hit && /\bCHAPTER\s+(?:\d+|[IVX]+)\b/.test(tail))hit=names.find(row=>normalize(tail).includes(row.key));
+  if(!hit && /\bCHAPTER\s+(?:\d+|[IVX]+)\b/.test(head))hit=names.find(row=>normalize(head).includes(row.key));
+  // Economics chapter labels survive even when duplicated display-font headings do not.
+  if(!hit && titles.includes("Money and Credit") && !titles.includes("Nationalism in India")){const opening=/^notesforteacher/.test(normalize(text.slice(0,160)))?text:text.slice(0,1800);const number=opening.match(/\bCHAPTER\s+([1-5]|IV|III|II|I|V)\b/)?.[1];if(number){const index=/^[1-5]$/.test(number)?Number(number):["I","II","III","IV","V"].indexOf(number)+1;const title=["Development","Sectors of the Indian Economy","Money and Credit","Globalisation and the Indian Economy","Consumer Rights"][index-1];hit=names.find(row=>row.title===title);}}
+  if(hit)active=normalize(hit.title)===wanted;
+  else if(/\bchapter\s+(?:\d+|[ivx]+)\b.{0,160}\bo\s*verview\b/i.test(head)||/\bchapter\s+(?:\d+|[ivx]+)\s+[A-Z][A-Za-z ]{4,}\s+20\d{2}/.test(tail))active=false;
+  if(/^(?:appendix|suggestedreadings|bibliography)/.test(normalize(head)))active=false;
   if(active)out.push(text);
  }
  return out.length?out:scopeEnglishChapterPages(pages,chapter,titles);
