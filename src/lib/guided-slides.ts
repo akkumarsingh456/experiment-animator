@@ -1,3 +1,4 @@
+import {balanceGuidedPage} from "./slide-space-organizer";
 export const PRESENTATION_WIDTH = 1280;
 export const PRESENTATION_HEIGHT = 720;
 
@@ -8,6 +9,7 @@ export function paginateGuidedArticles(root: HTMLElement, maxHeight: number): HT
   const articles = Array.from(root.querySelectorAll<HTMLElement>(":scope > .guided-notes > .guided-topic"));
   const measure = document.createElement("div"); measure.className = "guided-notes guided-slide-measure"; root.appendChild(measure);
   for (const article of articles) {
+    if (!article.textContent?.trim() && !article.querySelector("img,svg,canvas,video,table")) continue;
     if (article.classList.contains("guided-cover")) {
       const page = article.cloneNode(true) as HTMLElement;
       page.classList.add("guided-slide-page");
@@ -75,6 +77,7 @@ export function paginateGuidedArticles(root: HTMLElement, maxHeight: number): HT
   // Fit that page as a whole only after ordinary text has been paginated.
   const width = root.clientWidth || root.getBoundingClientRect().width || 1100;
   pages.forEach((page) => {
+    balanceGuidedPage(page, maxHeight);
     const factor = slideFitScale(width, maxHeight, Math.max(width, page.scrollWidth), page.scrollHeight);
     page.style.transformOrigin = "top left";
     page.style.transform = `scale(${factor})`;

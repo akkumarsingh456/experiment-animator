@@ -1,3 +1,4 @@
+import {hasMeaningfulSlide} from "@/lib/slide-space-organizer";
 import {SlideLayoutCheck} from '@/components/SlideLayoutCheck';
 import {layoutKey,materializeLayout} from '@/lib/slide-layout-check';
 import { socialNotesPresentationSlide } from "@/lib/social-note-presentation";
@@ -582,6 +583,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
   // Retain Lovable's notes-and-illustration layout independently of guided worksheets.
   const baseOriginalPages = useMemo(() => slides.flatMap((slide, sourceIndex) => {
+    if (!hasMeaningfulSlide(slide)) return [];
     if (slide.kind === "break" || slide.kind === "mcq") return [{ ...slide, sourceIndex }];
     const sections = slide.sections?.filter((section) => section.kind !== "diagram" && section.lines.some(line=>line.trim()));
     const fallback = slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...slide.bullets, ...slide.notes];
@@ -1283,6 +1285,7 @@ function SlideCanvas({
                 </ul>
               ) : null}
               <PagedNoteSections
+                organizeSpace
                 sections={slide.sections?.filter((section) => section.kind !== "diagram")}
                 onOverflow={onNotesOverflow ? (ratio, lines) => onNotesOverflow(sourceIndex, ratio, lines) : undefined}
                 subject={subject}

@@ -33,6 +33,7 @@ export function SlideLayoutCheck({
   const [phase, setPhase] = useState<"checking" | "verifying" | "done" | "off" | "error">(
     "checking",
   );
+  const [resultKey, setResultKey] = useState("");
   const [results, setResults] = useState<PageSpace[]>([]),
     [message, setMessage] = useState("");
   const probe = useRef<HTMLDivElement>(null),
@@ -50,6 +51,7 @@ export function SlideLayoutCheck({
       lastBase.current = baseKey;
     }
     measurements.current = [];
+    setResultKey(key);
     setResults([]);
     setMessage("");
     if (!enabled) {
@@ -124,8 +126,9 @@ export function SlideLayoutCheck({
       stopped = true;
     };
   }, [index, key, baseKey, enabled, run]);
-  const sparse = results.filter((item) => !item.exempt && item.fill < SPARSE_FILL).length,
-    overflow = results.filter((item) => item.overflow).length;
+  const currentResults = resultKey === key ? results : [];
+  const sparse = currentResults.filter((item) => !item.exempt && item.fill < SPARSE_FILL).length,
+    overflow = currentResults.filter((item) => item.overflow).length;
   return (
     <section
       className="my-4 rounded-xl border border-border bg-card p-4 print:hidden"
@@ -152,10 +155,10 @@ export function SlideLayoutCheck({
           : phase === "error"
             ? message
             : phase === "done"
-              ? `Checked ${results.length}/${pages.length} slides · ${Math.max(0, base.length - pages.length)} continuation pages combined · ${sparse} short pages · ${overflow} overflow issues.`
-              : `${phase === "verifying" ? "Verifying corrected layout" : "Checking slide spacing"}: ${results.length}/${pages.length}`}
+              ? `Checked ${currentResults.length}/${pages.length} slides · ${Math.max(0, base.length - pages.length)} continuation pages combined · ${sparse} short pages · ${overflow} overflow issues.`
+              : `${phase === "verifying" ? "Verifying corrected layout" : "Checking slide spacing"}: ${currentResults.length}/${pages.length}`}
       </p>
-      {phase === "done" && (
+      {phase === "done" && resultKey === key && (
         <p className="mt-1 text-sm text-muted-foreground">
           {sparse || overflow
             ? "Some pages need attention. Naturally short topics are retained when no safe same-topic merge is possible."
@@ -173,11 +176,11 @@ export function SlideLayoutCheck({
       >
         Check again
       </button>
-      {phase === "done" && (
+      {phase === "done" && resultKey === key && (
         <details className="mt-2 text-sm">
           <summary className="cursor-pointer">Per-slide results</summary>
           <ol className="mt-2 max-h-48 overflow-auto list-decimal pl-6">
-            {results.map((item, i) => (
+            {currentResults.map((item, i) => (
               <li key={i}>
                 {pages[i].title} —{" "}
                 {item.exempt

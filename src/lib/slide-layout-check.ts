@@ -7,6 +7,10 @@ export function layoutKey(pages: LayoutPage[]): string {
     pages.map((page) => [page.sourceIndex, page.title, page.kind, page.teacher_pdf, page.sections]),
   );
 }
+const identity = (page: LayoutPage) => {
+  const { sections: _sections, ...rest } = page;
+  return JSON.stringify(rest);
+};
 const protectedPage = (page: LayoutPage) =>
   !!page.teacher_pdf ||
   page.kind === "mcq" ||
@@ -28,7 +32,8 @@ export function materializeLayout(pages: LayoutPage[], groups: number[][]): Layo
         (index) =>
           protectedPage(pages[index]) ||
           pages[index].sourceIndex !== pages[group[0]].sourceIndex ||
-          pages[index].title !== pages[group[0]].title,
+          pages[index].title !== pages[group[0]].title ||
+          identity(pages[index]) !== identity(pages[group[0]]),
       )
     )
       throw new Error("Only continuation pages of the same topic may be combined.");
@@ -62,7 +67,13 @@ export function sameLayoutContent(before: LayoutPage[], after: LayoutPage[]): bo
       ),
     );
   const special = (pages: LayoutPage[]) => JSON.stringify(pages.filter(protectedPage));
-  return content(before) === content(after) && special(before) === special(after);
+  const identities = (pages: LayoutPage[]) =>
+    pages.map(identity).filter((value, index, all) => index === 0 || value !== all[index - 1]);
+  return (
+    content(before) === content(after) &&
+    special(before) === special(after) &&
+    JSON.stringify(identities(before)) === JSON.stringify(identities(after))
+  );
 }
 /** Conservative adjacent merges only; independent DOM measurement verifies the result. */
 export function compactLayoutGroups(pages: LayoutPage[], measured: PageSpace[]): number[][] {
@@ -86,6 +97,7 @@ export function compactLayoutGroups(pages: LayoutPage[], measured: PageSpace[]):
       priorSafe &&
       prior?.sourceIndex === page.sourceIndex &&
       prior.title === page.title &&
+      identity(prior) === identity(page) &&
       fill + measurement.fill + 0.06 <= 0.88 &&
       (fill < SPARSE_FILL || measurement.fill < SPARSE_FILL)
     ) {
@@ -124,7 +136,9 @@ export function slideSpace(element: HTMLElement, page: LayoutPage, index: number
     number(style.paddingTop) -
     number(style.paddingBottom) -
     number(style.borderTopWidth) -
-    number(style.borderBottomWidth);
+    number(style.borderBottomWidth) -
+    number(style.marginTop) -
+    number(style.marginBottom);
   const width = box.clientWidth - number(style.paddingLeft) - number(style.paddingRight);
   const height = content!.scrollHeight;
   if (available <= 0)

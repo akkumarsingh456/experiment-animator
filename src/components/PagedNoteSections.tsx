@@ -1,3 +1,4 @@
+import {noteSpaceBalance} from "@/lib/slide-space-organizer";
 import { MathematicsProse } from "@/components/MathematicsProse";
 import { isMathematics } from "@/lib/mathematics-presentation";
 /**
@@ -99,12 +100,14 @@ export function PagedNoteSections({
   header,
   subject,
   onOverflow,
+  organizeSpace = false,
 }: {
   sections?: NoteSectionLike[];
   scale?: "card" | "present";
   header?: React.ReactNode;
   subject?: string;
   onOverflow?: (ratio: number, lines: string[]) => void;
+  organizeSpace?: boolean;
 }) {
   const blocks = useMemo(() => toNoteBlocks(groupNoteLabels(sections)), [sections]);
   const maxPx = scale === "present" ? 22 : 18;
@@ -123,6 +126,7 @@ export function PagedNoteSections({
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         content.style.setProperty("--note-block-gap", "0px");
+        box.style.marginTop = "0px";
         const inset = getComputedStyle(box);
         const availableHeight = noteSheetCapacity(host,box);
         const availableWidth = box.clientWidth - parseFloat(inset.paddingLeft) - parseFloat(inset.paddingRight);
@@ -161,7 +165,9 @@ export function PagedNoteSections({
         // Reset first so measuring never counts spacing from the previous pass.
         content.style.setProperty("--note-block-gap", "0px");
         const spare = Math.max(0, availableHeight - content.scrollHeight - 24);
-        const gap = Math.min(4, spare / Math.max(1, blocks.length));
+        const balanced = noteSpaceBalance(availableHeight, content.scrollHeight, blocks.length);
+        const gap = organizeSpace ? balanced.gap : Math.min(4, spare / Math.max(1, blocks.length));
+        box.style.marginTop = `${organizeSpace ? balanced.inset : 0}px`;
         content.style.setProperty("--note-block-gap", `${gap}px`);
         setFit((prev) => (Math.abs(prev.px - next.px) < 0.2 && prev.cols === next.cols ? prev : next));
       });
@@ -176,7 +182,7 @@ export function PagedNoteSections({
       cancelAnimationFrame(frame);
       ro.disconnect();
     };
-  }, [blocks, sections, maxPx, header, onOverflow]);
+  }, [blocks, sections, maxPx, header, onOverflow, organizeSpace]);
 
   return (
     <div ref={hostRef} className="flex-1 min-h-0 flex flex-col gap-1.5">
