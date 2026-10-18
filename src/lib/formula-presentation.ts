@@ -1,14 +1,16 @@
+import {opticsNotation,joinOpticsFragments} from './optics-notation';
 import {autoLatex,mapOutsideMath,splitMath} from './latex-notation';
 import {quantumNumberNotation} from './quantum-number-notation';
 /** Display only. Never write repairs back to the uploaded extraction. */
 export function formulaPresentation(raw:string):string {
- const joined=raw
+ const joined=joinOpticsFragments(raw)
   .replace(/\bn\s*e\s*n\s*\$(h\s*=\s*n\s*i\s*(?:2|²))\$/g,'n e n $1')
   .replace(/\bn\s*\$(h\s*=\s*\(\s*2\.25[^$]+)\$/g,'n $1');
  const semiconductor=/number of holes|semiconductor|p[-– ]n junction/i.test(raw);
  const massDefect=/mass defect|binding energy|atomic mass unit/i.test(raw);
  const correct=(value:string,math:boolean)=>{
   const wrap=(body:string)=>math?body:`$${body}$`;
+  value=opticsNotation(value,math);
   if(massDefect){
    value=value.replace(/\bE\s*b\s*=\s*(?:Δ|\\Delta)\s*M\s*c\s*(?:\^\{?2\}?|2|²)(?=\s|[.,;(]|$)/g,()=>wrap(String.raw`E_{b}=\Delta M c^{2}`));
    value=value.replace(/\bE\s+b\b/g,()=>wrap(String.raw`E_{b}`));
@@ -24,7 +26,8 @@ export function formulaPresentation(raw:string):string {
  };
  const repaired=splitMath(joined).map(segment=>{
   if(segment.type==='text')return correct(segment.value,false);
-  const mark=segment.type==='block'?'$$':'$';return mark+correct(segment.value,true)+mark;
+  const body=correct(segment.value,true);
+  const mark=segment.type==='block'||body.startsWith(String.raw`\begin{aligned}\tan\angle\mathrm{NOM}`)?'$$':'$';return mark+body+mark;
  }).join('');
  // Format each remaining plain span, even next to existing authored LaTeX.
  return mapOutsideMath(quantumNumberNotation(repaired),autoLatex);

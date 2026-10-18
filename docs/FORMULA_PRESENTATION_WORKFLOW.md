@@ -28,3 +28,10 @@ npm run build
 ## Standing implementation instruction
 
 “Correct formula typography through the shared LaTeX presentation layer for all chapter views and exports. Preserve every original source string and all unrelated information. Add a regression fixture, run `npm run check:formulas`, type-check and build before publishing. Never delete source-review entries, deduplicate them or silently guess missing mathematical content.”
+
+
+## Refraction regression safeguards
+
+Never add a second backslash to existing LaTeX function commands during Unicode normalization: this converts sine/cosine/tangent into unintended line breaks. Check both notes and formula visual cards with `n_1\sin i=n_2\sin r`. The complete known NCERT NOM/NCM/NIM tangent triplet may recover its MN/OM, MN/MC and MN/MI fractions only through the shared display layer; arbitrary joined letters remain untouched. Keep equation (9.3), section 9.2.3 and the following prose outside the focal-length equation. Preserve source strings and generated lesson content. A Refraction topic retains the labelled refraction diagram on discussion pages; general discussion pages retain their existing illustration.
+
+Reference for the tangent triplet: NCERT/CIET Physics-04, Leph_20906, refraction at a spherical surface, https://ciet.nic.in/moocspdf/physics%2004/leph_20906_eContent2019.pdf .

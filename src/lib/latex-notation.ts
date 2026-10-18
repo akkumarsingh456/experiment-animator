@@ -225,7 +225,7 @@ export function unicodeToLatex(frag: string): string {
   }
 
   // Multi-letter roman words inside math read better upright.
-  s = s.replace(/\b(sin|cos|tan|log|ln|lim|max|min|exp)\b(?!\{)/g, "\\$1 ");
+  s = s.replace(/(?<!\\)\b(sin|cos|tan|log|ln|lim|max|min|exp)\b(?!\{)/g, "\\$1 ");
 
   const out = sanitizeLatex(s.replace(/\s{2,}/g, " ").trim());
   return isValidLatex(out) ? out : sanitizeLatex(out.replace(/\\[a-zA-Z]+\s*$/, ""));

@@ -12,7 +12,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:slides": "vitest run tests/slides.test.ts",
-    "check:formulas": "vitest run tests/formula-presentation.test.tsx tests/mass-defect-layout.test.tsx tests/latex.test.ts tests/source-formulas-offline.test.tsx tests/source-formula-supplements.test.ts tests/repeated-source-syntax.test.ts tests/all-subject-notes.test.tsx"
+    "check:formulas": "vitest run tests/optics-presentation.test.tsx tests/formula-presentation.test.tsx tests/mass-defect-layout.test.tsx tests/latex.test.ts tests/source-formulas-offline.test.tsx tests/source-formula-supplements.test.ts tests/repeated-source-syntax.test.ts tests/all-subject-notes.test.tsx"
   },
   "dependencies": {
     "@gradio/client": "^2.7.1",
