@@ -166,3 +166,8 @@ Follow `FORMULA_PRESENTATION_WORKFLOW.md`. Run `npm run check:formulas` before p
 ## Prevent sparse-page feedback loops
 
 Measure overflow against the allocated notes viewport minus headers and padding, never against the natural height of a short notes card. Otherwise font/card changes can inflate row weights repeatedly and produce one-line continuation slides. Reset measured weights for a new lesson and on viewport resize. Retain every practice point and source-review entry; compact pagination rather than removing content. Nuclear mass-defect typography belongs in the shared formula presentation layer: E with b subscript, ΔM times c squared, MeV divided by c squared and explicit isotope super/subscripts. Preserve equation numbers and all unrelated source wording.
+
+
+## Free slide spacing check
+
+Keep the automatic spacing checkbox enabled by default. Measure every rendered PPT slide against its allocated notes viewport after fonts settle. Combine only adjacent sparse continuation pages of the same source topic, with conservative spare capacity. Never merge covers, questions, breaks or original teacher PDF pages. Preserve every source entry, formula, duplicate and its order; do not add filler. Re-measure the corrected pages independently, undo any overflowing merge, and report unmergeable short pages honestly. The verifier runs in the browser with no paid model/API. Exports and cached files must use the verified arrangement; changing the arrangement invalidates old download caches. Run the slide-layout-check and slide-layout-checkbox regression suites when changing this workflow.

@@ -1,3 +1,5 @@
+import {SlideLayoutCheck} from '@/components/SlideLayoutCheck';
+import {layoutKey,materializeLayout} from '@/lib/slide-layout-check';
 import { socialNotesPresentationSlide } from "@/lib/social-note-presentation";
 import { prepareTeacherPdfPages } from "@/lib/teacher-pdf-pages";
 import { LESSON_REQUEST_TIMEOUT_MS } from "@/lib/generation-timing";
@@ -339,7 +341,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const [exportProgress, setExportProgress] = useState("");
   const [readyDownloads, setReadyDownloads] = useState<Record<string, { url: string; filename: string }>>({});
   const setReadyDownload = (key: string, file: { url: string; filename: string }) => setReadyDownloads(current => ({ ...current, [key]: file }));
-  const downloadCache = useRef(new Map<string, { slides: Slide[]; url: string; filename: string }>());
+  const downloadCache = useRef(new Map<string, { slides: Slide[]; layoutKey:string; url: string; filename: string }>());
   useEffect(() => () => { downloadCache.current.forEach(file => URL.revokeObjectURL(file.url)); }, []);
   function savePreparedFile(file: { url: string; filename: string }) {
     const link = document.createElement("a"); link.href = file.url; link.download = file.filename;
@@ -348,7 +350,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   function rememberDownload(key: string, blob: Blob, filename: string) {
     const previous = downloadCache.current.get(key);
     if (previous) URL.revokeObjectURL(previous.url);
-    const file = { slides, url: URL.createObjectURL(blob), filename };
+    const file = { slides, layoutKey:displayLayoutKey, url: URL.createObjectURL(blob), filename };
     downloadCache.current.set(key, file);
     savePreparedFile(file);
     return file;
@@ -579,7 +581,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   }, []);
 
   // Retain Lovable's notes-and-illustration layout independently of guided worksheets.
-  const originalPages = useMemo(() => slides.flatMap((slide, sourceIndex) => {
+  const baseOriginalPages = useMemo(() => slides.flatMap((slide, sourceIndex) => {
     if (slide.kind === "break" || slide.kind === "mcq") return [{ ...slide, sourceIndex }];
     const sections = slide.sections?.filter((section) => section.kind !== "diagram" && section.lines.some(line=>line.trim()));
     const fallback = slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...slide.bullets, ...slide.notes];
@@ -588,15 +590,23 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       title: slide.title }));
     return notePages;
   }), [slides, search.subject, lectureRowWeights]);
+  const baselineLayoutKey=useMemo(()=>layoutKey(baseOriginalPages),[baseOriginalPages]);
+  const [layoutPlan,setLayoutPlan]=useState<{key:string;groups:number[][]}|null>(null);
+  const [layoutChecking,setLayoutChecking]=useState(true);
+  const layoutGroups=useMemo(()=>layoutPlan?.key===baselineLayoutKey?layoutPlan.groups:baseOriginalPages.map((_,index)=>[index]),[baselineLayoutKey,layoutPlan]);
+  const originalPages=useMemo(()=>materializeLayout(baseOriginalPages,layoutGroups),[baseOriginalPages,layoutGroups]);
+  const displayLayoutKey=useMemo(()=>layoutKey(originalPages),[originalPages]);
+  useEffect(()=>setOriginalPage(current=>Math.min(current,Math.max(0,originalPages.length-1))),[originalPages.length]);
   const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, section: "NCERT notes & illustration",
     content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} onNotesOverflow={continueOverflowingNotes} staticView />,
   }));
 
   async function downloadPDF(mode: "notes" | "slides" | "guided-slides" = lessonView) {
+    if(mode==="slides"&&layoutChecking){toast.info("The free layout check is still running. Please wait for verification before downloading.");return;}
     await loadManualVisuals().catch(()=>{});
     if (exportMode) return;
     const cached = downloadCache.current.get(`pdf-${mode}`);
-    if (cached?.slides === slides) { setReadyDownload(`pdf-${mode}`, cached); savePreparedFile(cached); return; }
+    if (cached?.slides === slides && cached.layoutKey===displayLayoutKey) { setReadyDownload(`pdf-${mode}`, cached); savePreparedFile(cached); return; }
     setExportMode(mode);
     setExportProgress("Preparing PDF...");
     let exportCopy: HTMLElement | undefined;
@@ -624,11 +634,12 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   }
 
   async function downloadPPTX(mode: "guided-slides" | "slides") {
+    if(mode==="slides"&&layoutChecking){toast.info("The free layout check is still running. Please wait for verification before downloading.");return;}
     await loadManualVisuals().catch(()=>{});
     if (exportMode) return;
     const key = `pptx-${mode}`;
     const cached = downloadCache.current.get(key);
-    if (cached?.slides === slides) { setReadyDownload(key, cached); savePreparedFile(cached); return; }
+    if (cached?.slides === slides && cached.layoutKey===displayLayoutKey) { setReadyDownload(key, cached); savePreparedFile(cached); return; }
     setExportProgress("Preparing PowerPoint...");
     setExportMode(mode);
     let exportCopy: HTMLElement | undefined;
@@ -711,10 +722,13 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               {exportProgress && <span>{exportProgress}</span>}
               {(lessonView === "notes" ? [
                 ["pdf-notes", "Save guided notes PDF"], ["pdf-guided-slides", "Save guided presentation PDF"], ["pptx-guided-slides", "Save guided PPTX"],
-              ] : [["pdf-slides", "Save Lovable slides PDF"], ["pptx-slides", "Save Lovable PPTX"] ]).map(([key, label]) => readyDownloads[key] && downloadCache.current.get(key)?.slides === slides &&
+              ] : [["pdf-slides", "Save Lovable slides PDF"], ["pptx-slides", "Save Lovable PPTX"] ]).map(([key, label]) => readyDownloads[key] && downloadCache.current.get(key)?.slides === slides && downloadCache.current.get(key)?.layoutKey===displayLayoutKey &&
                 <a key={key} className="text-primary underline" href={readyDownloads[key].url} download={readyDownloads[key].filename}>{label}</a>)}
             </div>
 
+            <SlideLayoutCheck base={baseOriginalPages} pages={originalPages} groups={layoutGroups} onBusyChange={setLayoutChecking}
+              onOrganise={groups=>setLayoutPlan({key:baselineLayoutKey,groups})}
+              renderPage={(page,index)=><SlideCanvas slide={page} index={index} total={originalPages.length} editing={false} onChange={()=>{}} klass={search.klass} subject={search.subject} chapter={search.chapter||title} staticView/>}/>
             {lessonView === "notes" && <>
               <div className="flex flex-wrap gap-2 mb-4 print:hidden" aria-label="Guided notes layout">
                 <Button size="sm" variant={guidedDisplay === "page" ? "default" : "outline"} onClick={() => setGuidedDisplay("page")}>Read guided notes</Button>
