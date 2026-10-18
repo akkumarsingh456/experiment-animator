@@ -1,3 +1,4 @@
+import {chemicalTextNotation} from "@/lib/chemical-notation";
 import {formulaPresentation} from '@/lib/formula-presentation';
 import katex from "katex";
 import { normalNoteLabel } from "@/lib/note-labels";
@@ -8,12 +9,12 @@ import { splitMath, normalizeLatex, latexToUnicode } from "@/lib/latex-notation"
  * (`$inline$`, `$$display$$`) using KaTeX. Falls back to the raw
  * source text when a fragment fails to parse, so notes never break.
  */
-export function MathText({ text }: { text: string }) {
+export function MathText({ text, subject }: { text: string; subject?:string }) {
   // Presentation only: highlight explicit exception wording; never infer a
   // scientific exception from an element name, numerical value or equation.
   const exception = /\b(?:exceptions?|exceptional|anomalous|anomaly|anomalies|unusual behavio[u]?r|deviat(?:es?|ion) from (?:the )?(?:general|usual|expected))\b/i.test(text)
     && !/\b(?:no exceptions?|without exception|not an exception)\b/i.test(text);
-  const segments = splitMath(formulaPresentation(normalNoteLabel(text)));
+  const segments = splitMath(formulaPresentation(normalNoteLabel(/chemistry/i.test(subject||"")?chemicalTextNotation(text):text)));
   return (
     <span className={exception ? "note-exception" : undefined}>
       {segments.map((seg, i) => {

@@ -8,6 +8,7 @@
  */
 
 import katex from "katex";
+import "katex/contrib/mhchem";
 
 export type MathSegment = { type: "text" | "inline" | "block"; value: string };
 
@@ -177,15 +178,18 @@ export function isValidLatex(body: string): boolean {
   return ok;
 }
 
-const CHEM = /\b((?:[A-Z][a-z]?\d*){1,6})(\^?\d*[+-]?)\b/g;
+const CHEM = /\b((?:[A-Z][a-z]?\d*){1,6})(\^?\d*[+-]?)(?![A-Za-z0-9_])/g;
 
 /** Subscript chemical species: H2SO4 → H_{2}SO_{4}, SO4^2- → SO_{4}^{2-}. */
 function chemSubscripts(s: string): string {
   return s.replace(CHEM, (m) => {
     if (!/[A-Z]/.test(m) || !/\d/.test(m) || /\\/.test(m)) return m;
+    const ion=m.match(/^(Li|Na|K|Mg|Ca|Al|Sc|Ti|V|Cr|Mn|Fe|Co|Ni|Cu|Zn|Ag|Cd|Hg|Pb|Sn|La|Ce|Pr|Nd|Pm|Sm|Eu|Gd|Tb|Dy|Ho|Er|Tm|Yb|Lu)([1-8])([+-])$/);
+    if(ion)return `${ion[1]}^{${ion[2]}${ion[3]}}`;
     return m
       .replace(/\^(\d+)([+-])?/g, (_x, d, sign) => `^{${d}${sign || ""}}`)
-      .replace(/([A-Za-z])(\d+)(?![}])/g, "$1_{$2}");
+      .replace(/([A-Za-z])(\d+)(?![}])/g, "$1_{$2}")
+      .replace(/(?<=[}A-Za-z])([+-])$/, "^{$1}");
   });
 }
 
@@ -199,6 +203,11 @@ export function unicodeToLatex(frag: string): string {
       `^{${[...m].map((c) => UNI_SUP[c]).join("")}}`)
     .replace(new RegExp(`[${Object.keys(UNI_SUB).join("")}]+`, "g"), (m) =>
       `_{${[...m].map((c) => UNI_SUB[c]).join("")}}`);
+
+  // Keep an explicitly written ionic magnitude and sign together before the
+  // generic exponent formatter can separate them. A following algebraic operand
+  // prevents this rule from treating subtraction as an ionic charge.
+  s=s.replace(/\b((?:[A-Z][a-z]?\d*)+)\^(\d+)([+-])(?=$|[,;)}\]]|\s*(?:\+|=|\\(?:rightarrow|rightleftharpoons)))/g,'$1^{$2$3}');
 
   // ASCII helpers before symbol substitution.
   s = s
@@ -238,6 +247,7 @@ export function unicodeToLatex(frag: string): string {
 export function normalizeLatex(body: string): string {
   const raw = String(body || "").trim();
   if (!raw) return "";
+  if (/\\(?:ce|pu)\s*\{/.test(raw) && isValidLatex(raw)) return raw;
   // Even valid-but-ugly input is rewritten: linear fractions, unbraced
   // scripts, unicode scripts/symbols and unsubscripted chemical species.
   const NEEDS_WORK = /[₀-₉⁰-⁹⁻⁺εμπΔδθφλωΩσραβγηΦ×·÷±∝∞→←⇌⇒≈≠≤≥√∫∮∂∇°½⅓¼]|(?<!\\)\//.test(raw)

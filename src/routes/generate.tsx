@@ -1,3 +1,4 @@
+import {polishChemistryPresentation} from "@/lib/chemistry-note-presentation";
 import {withPhysicalChemistryRevision, PHYSICAL_REVISION} from "@/lib/physical-chemistry-revision";
 import {SourceIndexReview} from "@/components/SourceIndexReview";
 import {readableIndexPresentation} from "@/lib/source-index-presentation";
@@ -586,7 +587,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
   // Retain Lovable's notes-and-illustration layout independently of guided worksheets.
   const baseOriginalPages = useMemo(() => withPhysicalChemistryRevision(slides, String(search.klass||""), search.subject||"", search.chapter||title).flatMap((originalSlide, sourceIndex) => {
-    const slide=readableIndexPresentation(originalSlide);
+    const slide=polishChemistryPresentation(readableIndexPresentation(originalSlide), search.subject||"");
     if (!hasMeaningfulSlide(slide)) return [];
     if (slide.kind === "break" || slide.kind === "mcq") return [{ ...slide, sourceIndex }];
     const sections = slide.sections?.filter((section) => section.kind !== "diagram" && section.lines.some(line=>line.trim()));
@@ -1349,7 +1350,7 @@ function SlideCanvas({
                   </button>
                 )}
               </div>
-              {!slide.reference_visuals?.some(figure => figure.url) && <FormulaVisualCards slide={slide} limit={slide.context_illustration ? 1 : 2} />}
+              {!slide.reference_visuals?.some(figure => figure.url) && <FormulaVisualCards subject={subject} slide={slide} limit={slide.context_illustration ? 1 : 2} />}
               {!slide.reference_visuals?.some(figure => figure.url) && <div className="px-3 py-2 rounded-md bg-card border border-border/50 text-[11px] leading-snug shrink-0">
                 <p className="font-medium text-primary notebook-guide-heading">{illustrationCaption.startsWith('No suitable')?'Add a diagram':'Read the diagram'}</p>
                 <p>{illustrationCaption}</p>

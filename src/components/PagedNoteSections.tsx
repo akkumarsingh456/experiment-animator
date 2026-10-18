@@ -56,7 +56,7 @@ function BlockView({ block, showHeading, subject, previousLine }: { block: NoteB
         <pre className="text-[0.85em] font-mono leading-[1.4] whitespace-pre overflow-x-auto text-foreground/90 rounded-md border border-border/50 bg-secondary/40 p-[0.7em]">
           {block.lines.join("\n")}
         </pre>
-      ) : isDeriv ? <FormulaDerivation lines={block.lines} /> : (
+      ) : isDeriv ? <FormulaDerivation subject={subject} lines={block.lines} /> : (
         <ul
           className={`leading-relaxed space-y-[0.4em] text-foreground/90 break-words ${
             isDeriv ? "rounded-md border-l-2 border-primary/50 bg-secondary/30 py-[0.2em] pr-[0.3em]" : ""
@@ -67,14 +67,14 @@ function BlockView({ block, showHeading, subject, previousLine }: { block: NoteB
               {presentation[index].heading && <h5 className="note-label-heading">{presentation[index].heading}</h5>}
               {block.heading === "Problem-solving formula reference" ? (() => {
                 const [name, expression, use] = line.split(" | ");
-                return <div className="physics-reference-row"><strong>{name}</strong><div className="physics-reference-equation"><MathText text={expression || line} /></div><p><MathText text={use || ""} /></p></div>;
-              })() : block.heading === "Source table — original extracted entries" ? <ChemistrySourceEntry text={presentation[index].text} /> : block.heading === "Source review — original extraction" ? <div className="source-table-entry"><MathText text={presentation[index].text} /></div> : block.heading === "MLT Dimensional Formula" && line.split(" | ").length === 3 ? (() => {
+                return <div className="physics-reference-row"><strong>{name}</strong><div className="physics-reference-equation"><MathText subject={subject} text={expression || line} /></div><p><MathText subject={subject} text={use || ""} /></p></div>;
+              })() : block.heading === "Source table — original extracted entries" ? <ChemistrySourceEntry text={presentation[index].text} /> : block.heading === "Source review — original extraction" ? <div className="source-table-entry"><MathText subject={subject} text={presentation[index].text} /></div> : block.heading === "MLT Dimensional Formula" && line.split(" | ").length === 3 ? (() => {
                 const [quantity, expression, remember] = line.split(" | ");
-                return <div className="dimension-card" style={{textIndent: 0}}><strong>{quantity}</strong><div className="dimension-expression"><MathText text={expression} /></div><p><b>Remember: </b>{remember}</p></div>;
+                return <div className="dimension-card" style={{textIndent: 0}}><strong>{quantity}</strong><div className="dimension-expression"><MathText subject={subject} text={expression} /></div><p><b>Remember: </b>{remember}</p></div>;
               })() : /^(?:\*\*)?(?:formula|equation|relation):/i.test(line) && readableSourceRelation(line) ? (() => {
                 const row = guidedFormulaRow(line.replace(/^\*\*[^*]+:\*\*\s*/, ""));
-                return <div className="note-formula-card">{row.concept !== "Formula" && <strong><MathText text={row.concept} /></strong>}<div><MathText text={row.expression} /></div>{row.unit && <small>Unit: <MathText text={row.unit} /></small>}</div>;
-              })() : <>• {isMathematics(subject) ? <MathematicsProse text={presentation[index].text} /> : <MathText text={presentation[index].text} />}</>}
+                return <div className="note-formula-card">{row.concept !== "Formula" && <strong><MathText subject={subject} text={row.concept} /></strong>}<div><MathText subject={subject} text={row.expression} /></div>{row.unit && <small>Unit: <MathText subject={subject} text={row.unit} /></small>}</div>;
+              })() : <>• {isMathematics(subject) ? <MathematicsProse text={presentation[index].text} /> : <MathText subject={subject} text={presentation[index].text} />}</>}
             </li>
           ))}
         </ul>

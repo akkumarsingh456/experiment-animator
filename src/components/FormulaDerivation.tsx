@@ -3,7 +3,7 @@ import { guidedFormulaRow } from "@/lib/guided-notes";
 import { presentNoteLabels } from "@/lib/note-label-presentation";
 
 /** Keep the target relation separate from the numbered reasoning that leads to it. */
-export function FormulaDerivation({ lines }: { lines: string[] }) {
+export function FormulaDerivation({ lines, subject }: { lines: string[]; subject?:string }) {
   const header = lines.find((line) => /^\s*\*\*derivation of\b/i.test(line));
   const label = header?.match(/^\s*\*\*derivation of\s*(.*?):\*\*/i)?.[1] || "Derivation";
   const target = header?.replace(/^\s*\*\*[^*]+:\*\*\s*/, "") || "";
@@ -16,7 +16,7 @@ export function FormulaDerivation({ lines }: { lines: string[] }) {
         <div className="formula-derivation-target">
           <strong>{label}</strong>
           <div>
-            <MathText text={relation.expression} />
+            <MathText subject={subject} text={relation.expression} />
           </div>
         </div>
       )}
@@ -30,7 +30,7 @@ export function FormulaDerivation({ lines }: { lines: string[] }) {
               </span>
               <div>
                 {presentation[index].heading && <h5 className="note-label-heading">{presentation[index].heading}</h5>}
-                <MathText text={presentation[index].text} />
+                <MathText subject={subject} text={presentation[index].text} />
               </div>
             </li>
           );

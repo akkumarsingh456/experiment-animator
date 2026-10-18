@@ -1,3 +1,4 @@
+import {polishChemistryPresentation} from "@/lib/chemistry-note-presentation";
 import {physicalChemistryRevision} from "@/lib/physical-chemistry-revision";
 import {readableIndexPresentation} from "@/lib/source-index-presentation";
 import {hasMeaningfulSlide} from "@/lib/slide-space-organizer";
@@ -29,19 +30,19 @@ function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }
   }, []);
   return <section className={`guided-group guided-${group.kind}`} data-note-category={group.heading}>
     <h3>{group.heading}</h3>
-    {(group.heading === "Source table — original extracted entries" || group.heading === "Source review — original extraction") ? <div className="source-table-entries">{presentation.map((line, i) => <div key={i}>{line.heading && <h4 className="note-label-heading">{line.heading}</h4>}{group.heading === "Source table — original extracted entries" ? <ChemistrySourceEntry text={line.text} /> : <div className="source-table-entry"><MathText text={line.text} /></div>}</div>)}</div> : group.heading === "MLT Dimensional Formula" ? <div className="dimension-cards">{group.lines.map((line, i) => {
+    {(group.heading === "Source table — original extracted entries" || group.heading === "Source review — original extraction") ? <div className="source-table-entries">{presentation.map((line, i) => <div key={i}>{line.heading && <h4 className="note-label-heading">{line.heading}</h4>}{group.heading === "Source table — original extracted entries" ? <ChemistrySourceEntry text={line.text} /> : <div className="source-table-entry"><MathText subject={subject} text={line.text} /></div>}</div>)}</div> : group.heading === "MLT Dimensional Formula" ? <div className="dimension-cards">{group.lines.map((line, i) => {
       const cells = line.split(" | ");
-      return cells.length === 3 ? <div className="dimension-card" key={i}><strong>{cells[0]}</strong><div className="dimension-expression"><MathText text={cells[1]} /></div><p><b>Remember: </b>{cells[2]}</p></div> : <p key={i}><MathText text={line} /></p>;
+      return cells.length === 3 ? <div className="dimension-card" key={i}><strong>{cells[0]}</strong><div className="dimension-expression"><MathText subject={subject} text={cells[1]} /></div><p><b>Remember: </b>{cells[2]}</p></div> : <p key={i}><MathText subject={subject} text={line} /></p>;
     })}</div> : group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula / relation</th><th>{group.heading === "Problem-solving formula reference" ? "Symbols, conditions & use" : "Unit / SI unit"}</th></tr></thead><tbody>
-      {group.lines.map((line, i) => { const row = guidedFormulaRow(line); return <tr key={i}><td><MathText text={row.concept === "Formula" ? "—" : row.concept} /></td><td><MathText text={row.expression} /></td><td><MathText text={row.unit} /></td></tr>; })}
-    </tbody></table></div> : group.kind === "prose" && group.lines.length === 1 ? group.lines.map((line, i) => isMathematics(subject) ? <div className="mathematics-prose" key={i}><MathematicsProse text={line} /></div> : <p key={i}><MathText text={line} /></p>) :
-      group.kind === "derivation" ? <FormulaDerivation lines={group.lines} /> :
-      runs.map((run, i) => <div key={i}>{run.heading && <h4 className="note-label-heading">{run.heading}</h4>}<ul>{run.lines.map((line, j) => <li key={j}>{isMathematics(subject) ? <MathematicsProse text={line} /> : <MathText text={line} />}</li>)}</ul></div>)}
+      {group.lines.map((line, i) => { const row = guidedFormulaRow(line); return <tr key={i}><td><MathText subject={subject} text={row.concept === "Formula" ? "—" : row.concept} /></td><td><MathText subject={subject} text={row.expression} /></td><td><MathText subject={subject} text={row.unit} /></td></tr>; })}
+    </tbody></table></div> : group.kind === "prose" && group.lines.length === 1 ? group.lines.map((line, i) => isMathematics(subject) ? <div className="mathematics-prose" key={i}><MathematicsProse text={line} /></div> : <p key={i}><MathText subject={subject} text={line} /></p>) :
+      group.kind === "derivation" ? <FormulaDerivation subject={subject} lines={group.lines} /> :
+      runs.map((run, i) => <div key={i}>{run.heading && <h4 className="note-label-heading">{run.heading}</h4>}<ul>{run.lines.map((line, j) => <li key={j}>{isMathematics(subject) ? <MathematicsProse text={line} /> : <MathText subject={subject} text={line} />}</li>)}</ul></div>)}
   </section>;
 }
 
 export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks = false, includeCover = false }: { slides: Slide[]; title: string; subject?: string; klass?: string; includeBreaks?: boolean; includeCover?: boolean }) {
-  slides = withPhysicsFormulaReference(slides.map(readableIndexPresentation).filter(hasMeaningfulSlide), klass || "", subject || "", slides.find(slide => slide.visual === "cover")?.title || title).map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(withPhysicsDimensions(slide.sections, subject || "", slide.title), subject || "", title)}));
+  slides = withPhysicsFormulaReference(slides.map(slide=>polishChemistryPresentation(readableIndexPresentation(slide),subject||"")).filter(hasMeaningfulSlide), klass || "", subject || "", slides.find(slide => slide.visual === "cover")?.title || title).map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(withPhysicsDimensions(slide.sections, subject || "", slide.title), subject || "", title)}));
   const finalRevision=physicalChemistryRevision(slides, klass||"", subject||"", slides.find(slide=>slide.visual==="cover")?.title||title);
   const content = slides.filter((slide) => (slide.kind ?? "content") === "content" || slide.kind === "chapter" || (includeBreaks && slide.kind === "break"));
   const questions = slides.flatMap((slide) => slide.mcq ? [slide.mcq] : []);
@@ -52,7 +53,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
     {!!content.length && <LessonNotesPlanner topics={content.map((slide) => slide.title)} subject={subject} klass={klass} />}
     {content.map((slide, index) => {
       if (slide.visual === "cover" && includeCover) return null;
-      if (slide.kind === "break") return <article className="guided-topic" key={`break:${index}`}><h2>{slide.title}</h2><ul>{[...slide.bullets, ...slide.notes].map((line, i) => <li key={i}><MathText text={line} /></li>)}</ul></article>;
+      if (slide.kind === "break") return <article className="guided-topic" key={`break:${index}`}><h2>{slide.title}</h2><ul>{[...slide.bullets, ...slide.notes].map((line, i) => <li key={i}><MathText subject={subject} text={line} /></li>)}</ul></article>;
       if (slide.teacher_pdf) {
         const image = slide.reference_visuals?.find(figure => figure.url);
         return <article className="guided-topic guided-original-page" data-teacher-page="true" key={`original:${index}`}>
@@ -82,9 +83,9 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
       </article>;
     })}
     {!!questions.length && <article className="guided-topic guided-practice"><h2>Check your understanding</h2>
-      <ol>{questions.map((question, i) => <li key={i}><p><MathText text={question.question} /></p><ul>{question.options.map((option) => <li key={option.key}><strong>{option.key}.</strong> <MathText text={option.text} /></li>)}</ul></li>)}</ol>
+      <ol>{questions.map((question, i) => <li key={i}><p><MathText subject={subject} text={question.question} /></p><ul>{question.options.map((option) => <li key={option.key}><strong>{option.key}.</strong> <MathText subject={subject} text={option.text} /></li>)}</ul></li>)}</ol>
     </article>}
-    {!!questions.length && <article className="guided-topic guided-answer-key"><h2>Answer key</h2><ol>{questions.map((question, i) => <li key={i}><strong>{question.answer}.</strong> <MathText text={question.explanation || question.options.find((option) => option.key === question.answer)?.text || ""} /></li>)}</ol></article>}
+    {!!questions.length && <article className="guided-topic guided-answer-key"><h2>Answer key</h2><ol>{questions.map((question, i) => <li key={i}><strong>{question.answer}.</strong> <MathText subject={subject} text={question.explanation || question.options.find((option) => option.key === question.answer)?.text || ""} /></li>)}</ol></article>}
     <FormulaMindMap slides={content} />
     {finalRevision&&<article className="guided-topic physical-chemistry-final-revision" data-physical-revision="true"><h2>{finalRevision.title}</h2><p>{finalRevision.caption}</p>{finalRevision.sections?.map((section,index)=><NotesGroup key={index} subject={subject} group={{heading:section.heading,kind:"list",lines:section.lines}}/>)}</article>}
   </div>;
