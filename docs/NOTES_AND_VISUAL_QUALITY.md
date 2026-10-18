@@ -176,3 +176,8 @@ Keep the automatic spacing checkbox enabled by default. Measure every rendered P
 ## Generation is unchanged by the Slide Space Organizer
 
 The organizer is strictly a browser presentation layer after generation. Do not modify models, prompts, generation functions, integrations, chapter matching, content, examples, teaching sequence or source strings for spacing. Omit only genuinely empty records at presentation boundaries; keep title-only dividers, original PDFs, missing source assets, equations and visual-only records. Use existing pagination for dense notes, bounded spacing for short notes, and identical guided pagination for preview and slide PDF/PPTX. Never add filler or enlarge gaps without limits. A merge must preserve every non-section field as well as all note entries, duplicate entries and their order. Clear old verification results before showing a different lesson. Fixture coverage verifies layout and preservation, not every historical lesson or factual accuracy.
+
+
+## Collapsed textbook indexes in lesson notes
+
+Dense term-and-page listings must not appear as explanations merely because OCR joined their rows. Handle confirmed listings in the presentation layer only: retain the original generated/saved object, expose the unchanged entries in a collapsed source-reference panel, and exclude those listings from teaching notes and slide exports. Use conservative page-pair density and distinct terms; preserve scientific sentences, worked examples, equations, tables, original PDF pages and all Source review / Source table entries. Do not generate replacement explanations, remove source data or change prompts, models or retrieval to address this display issue.

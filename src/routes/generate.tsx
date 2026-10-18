@@ -1,3 +1,5 @@
+import {SourceIndexReview} from "@/components/SourceIndexReview";
+import {readableIndexPresentation} from "@/lib/source-index-presentation";
 import {hasMeaningfulSlide} from "@/lib/slide-space-organizer";
 import {SlideLayoutCheck} from '@/components/SlideLayoutCheck';
 import {layoutKey,materializeLayout} from '@/lib/slide-layout-check';
@@ -582,7 +584,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   }, []);
 
   // Retain Lovable's notes-and-illustration layout independently of guided worksheets.
-  const baseOriginalPages = useMemo(() => slides.flatMap((slide, sourceIndex) => {
+  const baseOriginalPages = useMemo(() => slides.flatMap((originalSlide, sourceIndex) => {
+    const slide=readableIndexPresentation(originalSlide);
     if (!hasMeaningfulSlide(slide)) return [];
     if (slide.kind === "break" || slide.kind === "mcq") return [{ ...slide, sourceIndex }];
     const sections = slide.sections?.filter((section) => section.kind !== "diagram" && section.lines.some(line=>line.trim()));
@@ -728,6 +731,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 <a key={key} className="text-primary underline" href={readyDownloads[key].url} download={readyDownloads[key].filename}>{label}</a>)}
             </div>
 
+            <SourceIndexReview slides={slides}/>
             <SlideLayoutCheck base={baseOriginalPages} pages={originalPages} groups={layoutGroups} onBusyChange={setLayoutChecking}
               onOrganise={groups=>setLayoutPlan({key:baselineLayoutKey,groups})}
               renderPage={(page,index)=><SlideCanvas slide={page} index={index} total={originalPages.length} editing={false} onChange={()=>{}} klass={search.klass} subject={search.subject} chapter={search.chapter||title} staticView/>}/>
