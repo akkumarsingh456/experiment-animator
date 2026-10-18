@@ -1,3 +1,4 @@
+import {withPhysicalChemistryRevision, PHYSICAL_REVISION} from "@/lib/physical-chemistry-revision";
 import {SourceIndexReview} from "@/components/SourceIndexReview";
 import {readableIndexPresentation} from "@/lib/source-index-presentation";
 import {hasMeaningfulSlide} from "@/lib/slide-space-organizer";
@@ -584,7 +585,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   }, []);
 
   // Retain Lovable's notes-and-illustration layout independently of guided worksheets.
-  const baseOriginalPages = useMemo(() => slides.flatMap((originalSlide, sourceIndex) => {
+  const baseOriginalPages = useMemo(() => withPhysicalChemistryRevision(slides, String(search.klass||""), search.subject||"", search.chapter||title).flatMap((originalSlide, sourceIndex) => {
     const slide=readableIndexPresentation(originalSlide);
     if (!hasMeaningfulSlide(slide)) return [];
     if (slide.kind === "break" || slide.kind === "mcq") return [{ ...slide, sourceIndex }];
@@ -594,7 +595,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     const notePages = paginateLectureSections(withPhysicsDimensions(sourceSections as NonNullable<Slide["sections"]>, search.subject || "", slide.title), DEFAULT_LECTURE_ROWS, lectureRowWeights[sourceIndex]).map((page) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
       title: slide.title }));
     return notePages;
-  }), [slides, search.subject, lectureRowWeights]);
+  }), [slides, search.klass, search.subject, search.chapter, title, lectureRowWeights]);
   const baselineLayoutKey=useMemo(()=>layoutKey(baseOriginalPages),[baseOriginalPages]);
   const [layoutPlan,setLayoutPlan]=useState<{key:string;groups:number[][]}|null>(null);
   const [layoutChecking,setLayoutChecking]=useState(true);
@@ -1163,7 +1164,7 @@ function SlideCanvas({
   imageUrl = renderLessonIllustrationDataUrl({ ...slide, keyTerms: slide.key_terms, chapter, subject, slideIndex: sourceIndex });
   const illustrationCaption=lessonIllustrationCaption(slide.title,subject,{...slide,keyTerms:slide.key_terms,chapter});
   const kind = slide.kind === "chapter" && slide.sections?.length ? "content" : slide.kind || "content";
-  const lang = isLanguageSubject(subject) || slide.visual === "formula-reference";
+  const lang = isLanguageSubject(subject) || slide.visual === "formula-reference" || slide.visual === PHYSICAL_REVISION;
   const bookFigurePage = slide.sections?.some(section => section.heading === "Book structure and explanation") && slide.reference_visuals?.some(figure => figure.url);
   if(slide.teacher_pdf){
     const source=slide.reference_visuals?.find(figure=>figure.url);
