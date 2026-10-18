@@ -162,3 +162,7 @@ Keep the notes border at the natural content height, within the available slide 
 ## Shared LaTeX regression command
 
 Follow `FORMULA_PRESENTATION_WORKFLOW.md`. Run `npm run check:formulas` before publishing formula-related changes. Use `formulaPresentation` through MathText for every rendered source-review and ordinary note entry. Preserve stored source strings, duplicate entries, page/edition text and unrelated notes. Formatting adjacent plain spans must work even when authored LaTeX already exists. Restrict recovery of collapsed scientific notation to complete, independently unambiguous expressions; never assume an arbitrary number is an exponent. Curriculum fixtures certify renderer behaviour, not the factual correctness of all uploaded content.
+
+## Prevent sparse-page feedback loops
+
+Measure overflow against the allocated notes viewport minus headers and padding, never against the natural height of a short notes card. Otherwise font/card changes can inflate row weights repeatedly and produce one-line continuation slides. Reset measured weights for a new lesson and on viewport resize. Retain every practice point and source-review entry; compact pagination rather than removing content. Nuclear mass-defect typography belongs in the shared formula presentation layer: E with b subscript, ΔM times c squared, MeV divided by c squared and explicit isotope super/subscripts. Preserve equation numbers and all unrelated source wording.

@@ -559,6 +559,11 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
 
   const [lectureRowWeights, setLectureRowWeights] = useState<Record<number, Record<string, number>>>({});
+  useEffect(()=>{
+    const reset=()=>setLectureRowWeights({});
+    reset();window.addEventListener("resize",reset);
+    return()=>window.removeEventListener("resize",reset);
+  },[result]);
   const continueOverflowingNotes = useCallback((sourceIndex: number, ratio: number, lines: string[]) => {
     if (!Number.isFinite(ratio) || ratio <= 1 || !lines.length) return;
     setLectureRowWeights(previous => {

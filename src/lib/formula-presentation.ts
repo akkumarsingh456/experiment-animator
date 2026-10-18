@@ -6,9 +6,17 @@ export function formulaPresentation(raw:string):string {
   .replace(/\bn\s*e\s*n\s*\$(h\s*=\s*n\s*i\s*(?:2|²))\$/g,'n e n $1')
   .replace(/\bn\s*\$(h\s*=\s*\(\s*2\.25[^$]+)\$/g,'n $1');
  const semiconductor=/number of holes|semiconductor|p[-– ]n junction/i.test(raw);
+ const massDefect=/mass defect|binding energy|atomic mass unit/i.test(raw);
  const correct=(value:string,math:boolean)=>{
-  if(!semiconductor)return value;
   const wrap=(body:string)=>math?body:`$${body}$`;
+  if(massDefect){
+   value=value.replace(/\bE\s*b\s*=\s*(?:Δ|\\Delta)\s*M\s*c\s*(?:\^\{?2\}?|2|²)(?=\s|[.,;(]|$)/g,()=>wrap(String.raw`E_{b}=\Delta M c^{2}`));
+   value=value.replace(/\bE\s+b\b/g,()=>wrap(String.raw`E_{b}`));
+   value=value.replace(/Δ\s*M\b/g,()=>wrap(String.raw`\Delta M`));
+   value=value.replace(/\bMeV\s*\/\s*c\s*(?:\^\{?2\}?|2|²)(?=\s|[.,;)]|$)/g,()=>wrap(String.raw`\frac{\mathrm{MeV}}{c^{2}}`));
+   value=value.replace(/(?<=mass defect of\s)16\s+8\s+[O0](?=\s|[.,;)]|$)/gi,()=>wrap(String.raw`{}^{16}_{8}\mathrm{O}`));
+  }
+  if(!semiconductor)return value;
   value=value.replace(/\bn\s*e\s*n\s*h\s*=\s*n\s*i\s*(?:\^\s*2|2|²)(?=\s|[,.;]|$)/g,()=>wrap(String.raw`n_{e}n_{h}=n_{i}^{2}`));
   // This exact numeric example is attested by its complete quotient, result,
   // unit and semiconductor context. Never interpret arbitrary 1032 as 10^32.

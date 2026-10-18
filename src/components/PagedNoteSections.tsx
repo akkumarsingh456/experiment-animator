@@ -82,6 +82,15 @@ function BlockView({ block, showHeading, subject, previousLine }: { block: NoteB
   );
 }
 
+/** Measure the available viewport, never the naturally short notes card itself. */
+export function noteSheetCapacity(host:HTMLElement,box:HTMLElement):number {
+  const style=getComputedStyle(host),inset=getComputedStyle(box);
+  const siblings=Array.from(host.children).filter(child=>child!==box) as HTMLElement[];
+  const occupied=siblings.reduce((height,child)=>height+child.offsetHeight,0);
+  const gap=(parseFloat(style.rowGap)||0)*Math.max(0,host.children.length-1);
+  return Math.max(0,host.clientHeight-occupied-gap-(parseFloat(inset.paddingTop)||0)-(parseFloat(inset.paddingBottom)||0)-(parseFloat(inset.borderTopWidth)||0)-(parseFloat(inset.borderBottomWidth)||0));
+}
+
 const MIN_PX = 14;
 
 export function PagedNoteSections({
@@ -99,6 +108,7 @@ export function PagedNoteSections({
 }) {
   const blocks = useMemo(() => toNoteBlocks(groupNoteLabels(sections)), [sections]);
   const maxPx = scale === "present" ? 22 : 18;
+  const hostRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState<{ px: number; cols: 1 | 2 }>({ px: maxPx, cols: 1 });
@@ -106,14 +116,15 @@ export function PagedNoteSections({
   useLayoutEffect(() => {
     const box = boxRef.current;
     const content = contentRef.current;
-    if (!box || !content) return;
+    const host=hostRef.current;
+    if (!box || !content || !host) return;
     let frame = 0;
     const measure = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         content.style.setProperty("--note-block-gap", "0px");
         const inset = getComputedStyle(box);
-        const availableHeight = box.clientHeight - parseFloat(inset.paddingTop) - parseFloat(inset.paddingBottom);
+        const availableHeight = noteSheetCapacity(host,box);
         const availableWidth = box.clientWidth - parseFloat(inset.paddingLeft) - parseFloat(inset.paddingRight);
         const fits = (px: number, cols: 1 | 2) => {
           content.style.fontSize = `${px}px`;
@@ -157,6 +168,7 @@ export function PagedNoteSections({
     };
     measure();
     const ro = new ResizeObserver(measure);
+    ro.observe(host);
     ro.observe(box);
     // KaTeX fonts can change heights after first paint.
     document.fonts?.ready.then(measure).catch(() => {});
@@ -167,7 +179,7 @@ export function PagedNoteSections({
   }, [blocks, sections, maxPx, header, onOverflow]);
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col gap-1.5">
+    <div ref={hostRef} className="flex-1 min-h-0 flex flex-col gap-1.5">
       {header}
       <div ref={boxRef} data-note-sheet className="min-h-0 overflow-hidden pr-2" style={{flex:"0 1 auto",maxHeight:"100%"}}>
         <div
