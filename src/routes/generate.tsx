@@ -1,3 +1,4 @@
+import {ncertNotesDisplaySlide} from "@/lib/ncert-display-cleanup";
 import {polishChemistryPresentation} from "@/lib/chemistry-note-presentation";
 import {withPhysicalChemistryRevision, PHYSICAL_REVISION} from "@/lib/physical-chemistry-revision";
 import {SourceIndexReview} from "@/components/SourceIndexReview";
@@ -587,7 +588,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
   // Retain Lovable's notes-and-illustration layout independently of guided worksheets.
   const baseOriginalPages = useMemo(() => withPhysicalChemistryRevision(slides, String(search.klass||""), search.subject||"", search.chapter||title).flatMap((originalSlide, sourceIndex) => {
-    const slide=polishChemistryPresentation(readableIndexPresentation(originalSlide), search.subject||"");
+    const slide=ncertNotesDisplaySlide(polishChemistryPresentation(readableIndexPresentation(originalSlide), search.subject||""),search.subject);
     if (!hasMeaningfulSlide(slide)) return [];
     if (slide.kind === "break" || slide.kind === "mcq") return [{ ...slide, sourceIndex }];
     const sections = slide.sections?.filter((section) => section.kind !== "diagram" && section.lines.some(line=>line.trim()));

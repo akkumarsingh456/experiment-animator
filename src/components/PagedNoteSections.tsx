@@ -72,7 +72,7 @@ function BlockView({ block, showHeading, subject, previousLine }: { block: NoteB
                 const [quantity, expression, remember] = line.split(" | ");
                 return <div className="dimension-card" style={{textIndent: 0}}><strong>{quantity}</strong><div className="dimension-expression"><MathText subject={subject} text={expression} /></div><p><b>Remember: </b>{remember}</p></div>;
               })() : /^(?:\*\*)?(?:formula|equation|relation):/i.test(line) && readableSourceRelation(line) ? (() => {
-                const row = guidedFormulaRow(line.replace(/^\*\*[^*]+:\*\*\s*/, ""));
+                const row = guidedFormulaRow(presentation[index].text.replace(/^\*\*[^*]+:\*\*\s*/, ""));
                 return <div className="note-formula-card">{row.concept !== "Formula" && <strong><MathText subject={subject} text={row.concept} /></strong>}<div><MathText subject={subject} text={row.expression} /></div>{row.unit && <small>Unit: <MathText subject={subject} text={row.unit} /></small>}</div>;
               })() : <>• {isMathematics(subject) ? <MathematicsProse text={presentation[index].text} /> : <MathText subject={subject} text={presentation[index].text} />}</>}
             </li>

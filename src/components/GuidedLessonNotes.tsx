@@ -1,3 +1,4 @@
+import {ncertNotesDisplaySlide} from "@/lib/ncert-display-cleanup";
 import {polishChemistryPresentation} from "@/lib/chemistry-note-presentation";
 import {physicalChemistryRevision} from "@/lib/physical-chemistry-revision";
 import {readableIndexPresentation} from "@/lib/source-index-presentation";
@@ -34,7 +35,7 @@ function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }
       const cells = line.split(" | ");
       return cells.length === 3 ? <div className="dimension-card" key={i}><strong>{cells[0]}</strong><div className="dimension-expression"><MathText subject={subject} text={cells[1]} /></div><p><b>Remember: </b>{cells[2]}</p></div> : <p key={i}><MathText subject={subject} text={line} /></p>;
     })}</div> : group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula / relation</th><th>{group.heading === "Problem-solving formula reference" ? "Symbols, conditions & use" : "Unit / SI unit"}</th></tr></thead><tbody>
-      {group.lines.map((line, i) => { const row = guidedFormulaRow(line); return <tr key={i}><td><MathText subject={subject} text={row.concept === "Formula" ? "—" : row.concept} /></td><td><MathText subject={subject} text={row.expression} /></td><td><MathText subject={subject} text={row.unit} /></td></tr>; })}
+      {presentation.map((line, i) => { const row = guidedFormulaRow(line.text); return <tr key={i}><td><MathText subject={subject} text={row.concept === "Formula" ? "—" : row.concept} /></td><td><MathText subject={subject} text={row.expression} /></td><td><MathText subject={subject} text={row.unit} /></td></tr>; })}
     </tbody></table></div> : group.kind === "prose" && group.lines.length === 1 ? group.lines.map((line, i) => isMathematics(subject) ? <div className="mathematics-prose" key={i}><MathematicsProse text={line} /></div> : <p key={i}><MathText subject={subject} text={line} /></p>) :
       group.kind === "derivation" ? <FormulaDerivation subject={subject} lines={group.lines} /> :
       runs.map((run, i) => <div key={i}>{run.heading && <h4 className="note-label-heading">{run.heading}</h4>}<ul>{run.lines.map((line, j) => <li key={j}>{isMathematics(subject) ? <MathematicsProse text={line} /> : <MathText subject={subject} text={line} />}</li>)}</ul></div>)}
@@ -42,7 +43,7 @@ function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }
 }
 
 export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks = false, includeCover = false }: { slides: Slide[]; title: string; subject?: string; klass?: string; includeBreaks?: boolean; includeCover?: boolean }) {
-  slides = withPhysicsFormulaReference(slides.map(slide=>polishChemistryPresentation(readableIndexPresentation(slide),subject||"")).filter(hasMeaningfulSlide), klass || "", subject || "", slides.find(slide => slide.visual === "cover")?.title || title).map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(withPhysicsDimensions(slide.sections, subject || "", slide.title), subject || "", title)}));
+  slides = withPhysicsFormulaReference(slides.map(slide=>ncertNotesDisplaySlide(polishChemistryPresentation(readableIndexPresentation(slide),subject||""),subject)).filter(hasMeaningfulSlide), klass || "", subject || "", slides.find(slide => slide.visual === "cover")?.title || title).map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(withPhysicsDimensions(slide.sections, subject || "", slide.title), subject || "", title)}));
   const finalRevision=physicalChemistryRevision(slides, klass||"", subject||"", slides.find(slide=>slide.visual==="cover")?.title||title);
   const content = slides.filter((slide) => (slide.kind ?? "content") === "content" || slide.kind === "chapter" || (includeBreaks && slide.kind === "break"));
   const questions = slides.flatMap((slide) => slide.mcq ? [slide.mcq] : []);

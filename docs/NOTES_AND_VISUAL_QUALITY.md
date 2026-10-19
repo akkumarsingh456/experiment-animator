@@ -204,3 +204,8 @@ Present explicit spaced CH/NH/OH atom counts and the fully written grouped leuci
 ## Combined Science notation
 
 Route the exact Science subject through the existing explicit chemical-notation formatter, as well as Chemistry. Do not match Computer Science or Social Science. Preserve authored physics mathematics and source prose. The selected-subjects audit covers only the screenshot subjects for Classes 9-12 and records chapter-level local-reference limits in SELECTED_SUBJECT_FORMULA_AUDIT.md.
+
+
+## NCERT print furniture and repeated-word display cleanup
+
+The user's latest instruction authorizes removing clear NCERT running-header intrusions and accidental adjacent repeated function words from displayed ordinary notes only. Use ncertNotesDisplaySlide after generation and cleanNcertDisplayText through shared note-label rendering; leave stored notes, model settings, prompts, generation/retrieval functions and original teacher pages unchanged. Require a recognised running title, an edition range and a page number together before hiding that print furniture. Do not remove arbitrary numbers, historical/economic dates, equation/figure/exercise numbers, values, coefficients, steps, mathematical spans, code or quotations. Preserve source-review/source-table entries and repeated source rows verbatim. Do not collapse grammar such as "had had" or "that that", repeated variables or numeric values. Keep concept-map/recap display consistent with ordinary notes. Run check:selected-subjects for the selected 189-chapter renderer/cleanup fixtures; these fixtures do not certify the factual accuracy of every saved lesson.

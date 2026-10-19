@@ -1,3 +1,4 @@
+import { cleanNcertDisplayText } from "./ncert-display-cleanup";
 /** Presentation only: retain every body and equation, show a repeated label once. */
 const labels: Record<string, {title: string; parents?: string[]}> = {
   definition: {title:"Definitions",parents:["definitions","key terms and definitions"]},
@@ -41,7 +42,8 @@ function parse(line: string) {
 
 export function presentNoteLabels(lines: string[], parentHeading: string, previousLine?: string) {
   let previous = previousLine ? parse(previousLine)?.key : undefined;
-  return lines.map(line => {
+  return lines.map(originalLine => {
+    const line = cleanNcertDisplayText(originalLine, parentHeading);
     const label = parse(line);
     if (!label) { previous = undefined; return {text:line,heading:undefined as string|undefined}; }
     const heading = label.key === previous || label.parents?.includes(parentHeading.toLowerCase()) ? undefined : label.title;

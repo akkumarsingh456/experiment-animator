@@ -31,6 +31,10 @@ Configured chapters checked: **189** across **16** class/subject combinations.
 - Computer Science and Social Science are explicitly excluded from chemical-formatting routing.
 - Notes, models, prompts and generation logic are unchanged.
 
+## NCERT extraction display follow-up
+
+The follow-up adds 206 cleanup/source-preservation checks, including both slide and guided-note rendering for each of the 189 selected chapters. Confirmed edition + page + running-title intrusions are hidden in ordinary displayed notes; accidental adjacent repeats of a small set of function words are collapsed. Original arrays, source-review/table rows, formulas, quantities, equation/figure numbers, dates, code and quotations remain unchanged. Concept maps and recaps use the same cleaned presentation copy. No lesson-generation code or prompts are modified.
+
 ## Limit
 
 These are local rendering and available-reference checks. They do not certify the factual accuracy of every saved lesson or every uploaded source. Rows without local chapter references require the actual notes and textbook for that comparison.
