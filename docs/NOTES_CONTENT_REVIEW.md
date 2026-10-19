@@ -2,7 +2,7 @@
 
 ## What the website adds
 
-The selected Class 9-12 subject lesson screens have an enabled-by-default, free source-check panel. It reads the existing matching uploaded textbook chapter separately from the lesson-generation pathway. Repeated source requests are cached for five minutes; Check again retries a source read. Checking never changes or regenerates notes, invokes an AI model, writes source records or blocks existing exports.
+The selected Class 9-12 subject lesson screens have a collapsed, free, view-only source-check report. Source reading starts only when the report is opened. It reads the existing matching uploaded textbook chapter separately from the lesson-generation pathway. Repeated source requests are cached for five minutes; Check again retries a source read. Checking never changes or regenerates notes, invokes an AI model, writes source records or blocks existing exports.
 
 The review distinguishes:
 

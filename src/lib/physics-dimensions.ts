@@ -58,9 +58,13 @@ const quantities: Array<{name: string; pattern: RegExp; dimension: string; remem
   {name:"Bohr radius",pattern:/\bbohr radius\b/i,dimension:"L",remember:"The Bohr radius is the characteristic orbital length in the hydrogen model."},
  ];
 
-export function withPhysicsDimensions(sections: NoteSection[] | undefined, subject: string, title = ""): NoteSection[] {
+export function withPhysicsDimensions(sections: NoteSection[] | undefined, subject: string, title = "", preserveExisting = false): NoteSection[] {
   if (!/^physics$/i.test(subject)) return sections || [];
-  // Rebuild the automatic appendix for this topic, including saved lessons.
+  // Existing formula rows belong to the saved lesson. A review report must
+  // never replace this section with a newly inferred, shorter appendix.
+  if (preserveExisting && sections?.some(section => section.heading === "MLT Dimensional Formula" && section.lines.some(line =>
+    line.split(" | ").length === 3 || /\$[^$]+\$|\[[^\]]+\]/.test(line)))) return sections;
+  // Only refresh an old generic reminder that contains no dimensional formula.
   const existing = (sections || []).filter(section=>section.heading!=="MLT Dimensional Formula");
   if(existing.some(section=>section.heading==="Problem-solving formula reference"))return existing;
   const evidence=existing.filter(section=>!/^Source (?:review|table)|activity|practice|discussion|learning|reference/i.test(section.heading)).flatMap(section=>section.lines);

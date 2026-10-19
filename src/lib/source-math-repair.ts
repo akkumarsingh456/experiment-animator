@@ -27,7 +27,7 @@ export function repairSourceMathSlide(slide: Slide): Slide {
   const reviewHeading = "Source review — original extraction";
   const originals: string[] = [];
   const inputSections = slide.sections?.map(section => {
-    if (section.heading === reviewHeading || section.heading === SOURCE_TABLE_HEADING) return section;
+    if (section.heading === reviewHeading || section.heading === SOURCE_TABLE_HEADING || section.heading === "MLT Dimensional Formula" || section.heading === "Problem-solving formula reference") return section;
     // An exercise option is not an asserted textbook fact. Preserve its siblings
     // together so a false option cannot survive as an independent key point.
     const optionList = /^(key points|important points|teacher notes)$/i.test(section.heading) && section.lines.length >= 3
@@ -66,7 +66,7 @@ export function repairSourceMathSlide(slide: Slide): Slide {
     key_terms: (slide.key_terms||[]).filter(term=>validStudyTerm(term.term,term.meaning)),
     sections: slide.sections?.map((section) => ({
       ...section,
-      lines: (section.heading === SOURCE_TABLE_HEADING || section.heading === reviewHeading) ? section.lines : repairLines(section.lines),
+      lines: (section.heading === SOURCE_TABLE_HEADING || section.heading === reviewHeading || section.heading === "MLT Dimensional Formula" || section.heading === "Problem-solving formula reference") ? section.lines : repairLines(section.lines),
     })).filter(section=>section.lines.length),
   };
   const count=(item:Slide)=>(item.sections||[]).filter(section=>section.kind!=='diagram').reduce((n,section)=>n+section.lines.length,0)+item.notes.length+item.bullets.length;
