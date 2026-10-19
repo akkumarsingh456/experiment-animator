@@ -195,3 +195,7 @@ Use chemistry-aware MathText in notes, source-entry presentation, derivations an
 Hide only exact duplicate ordinary prose entries inside the same original chemistry notes section. Preserve original arrays and source strings; never deduplicate source review/table entries, reactions, procedures, derivations, examples, conditions, practice or entries from distinct sections/topics. This review covers renderer behaviour and representative configured Organic/Inorganic chapter fixtures, not a factual audit of every saved uploaded PDF. Models, prompts, retrieval, synthesis and content generation remain unchanged.
 
 Notation references: IUPAC Green Book, https://iupac.org/wp-content/uploads/2025/03/IUPAC-GB4Abridged.pdf ; KaTeX mhchem extension, https://github.com/KaTeX/KaTeX/blob/main/contrib/mhchem/README.md .
+
+## Biomolecule formula spacing
+
+Present explicit spaced CH/NH/OH atom counts and the fully written grouped leucine side-chain fragment through chemistry MathText. Typeset explicit inverse-mole energy units with upright units and superscript -1. Preserve surrounding table fragments, page references, prose, numbers and authored math; do not reconstruct missing amino-acid table columns or change stored notes.

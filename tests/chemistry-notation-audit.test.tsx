@@ -184,3 +184,23 @@ describe("Organic and Inorganic Chemistry presentation audit", () => {
  });
 
 });
+
+
+describe("Biomolecule notation only", () => {
+  it("formats the reported explicit leucine side chain without reconstructing surrounding table text", () => {
+    const source = "Leucine × (H 3 C) 2 CH-CH 2 - Leu L Name of the Characteristic feature";
+    const result = chemicalTextNotation(source);
+    expect(result).toBe(String.raw`Leucine × $\ce{(H3C)2CH-CH2}$ - Leu L Name of the Characteristic feature`);
+    expect(renderToStaticMarkup(<MathText subject="Chemistry" text={source} />)).not.toContain("katex-error");
+  });
+  it("typesets explicit amino groups and inverse-mole units while keeping values and prose", () => {
+    const source = "COOH NH 2; activation energy is 6.22 kJ mol −1 and 2.15 kJ mol -1.";
+    expect(chemicalTextNotation(source)).toBe(String.raw`COOH $\ce{NH2}$; activation energy is 6.22 $\mathrm{kJ}\,\mathrm{mol}^{-1}$ and 2.15 $\mathrm{kJ}\,\mathrm{mol}^{-1}$.`);
+    expect(renderToStaticMarkup(<MathText subject="Chemistry" text={source} />)).not.toContain("katex-error");
+  });
+  it("keeps prose, page numbers, uncertain table fragments and authored math intact", () => {
+    const source = String.raw`2019-20 417 Biomolecules COOH H 2 N H R. Almost all the enzymes are globular proteins. $\ce{NH2}$`;
+    expect(chemicalTextNotation(source)).toBe(source);
+    expect(chemicalTextNotation("6.22 kJ mol −1")).toBe(chemicalTextNotation(chemicalTextNotation("6.22 kJ mol −1")));
+  });
+});

@@ -44,9 +44,19 @@ export function chemicalSpeciesLatex(raw: string): string | null {
   written = written.replace(/\](\d+)([+-])$/, "]^$1$2");
   return `\\ce{${written}}`;
 }
+/** Recover only explicit atom-count spacing; never reconstruct table columns. */
+function spacedChemistry(text: string): string {
+  return text
+    .replace(/\(\s*H\s*3\s*C\s*\)\s*2\s*CH\s*[-–]\s*CH\s*2\b/g,
+      () => String.raw`$\ce{(H3C)2CH-CH2}$`)
+    .replace(/\b(CH|NH|OH)\s+([234])\b/g, (_, group, count) =>
+      `$\\ce{${group}${count}}$`)
+    .replace(/\b(kJ|J)\s+mol\s*(?:\^\s*)?[−–-]\s*1\b/g, (_, unit) =>
+      `$\\mathrm{${unit}}\\,\\mathrm{mol}^{-1}$`);
+}
 function plainChemistry(text: string): string {
   // Orbital occupancies and hybridisation labels have independent meanings.
-  const orbital = text
+  const orbital = spacedChemistry(text)
     .replace(/\b([1-7])\s*([spdf])\s*(\d{1,2})\b/g, (original, shell, letter, count) => {
       const cap: Record<string, number> = { s: 2, p: 6, d: 10, f: 14 };
       return Number(count) <= cap[letter] ? `$${shell}${letter}^{${count}}$` : original;
