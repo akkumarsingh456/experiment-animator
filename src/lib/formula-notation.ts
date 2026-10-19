@@ -11,7 +11,7 @@
  */
 
 import { hasMath, mapOutsideMath, normalizeLine } from "@/lib/latex-notation";
-import { gatewayJSON, hasGatewayKey } from "@/lib/ai-gateway-json";
+import { gatewayJSON, hasGatewayKey } from "@/lib/structured-response-client";
 import { repairSourceMathLine } from "@/lib/source-math-repair";
 import { hasBrokenSourceMath, cleanSourceNoteLine } from "@/lib/source-note-quality";
 

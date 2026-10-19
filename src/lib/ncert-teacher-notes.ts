@@ -15,7 +15,7 @@ import { notesQualityPolicy } from "@/lib/notes-quality-policy";
  */
 
 import { aiFixFormulas, aiFormulaSheet, cleanFormulaLine, needsFormulaAI, repairNotation, hasQuantitativeFormulaEvidence, formulaReferenceContextForTopic } from "@/lib/formula-notation";
-import { gatewayJSON, hasGatewayKey } from "@/lib/ai-gateway-json";
+import { gatewayJSON, hasGatewayKey } from "@/lib/structured-response-client";
 import { learningProfile } from "@/lib/learning-design";
 import { mapOutsideMath, splitMath } from "@/lib/latex-notation";
 import { DIAGRAM_HEADING, aiNoteDiagrams, buildLocalDiagram } from "@/lib/note-diagram";

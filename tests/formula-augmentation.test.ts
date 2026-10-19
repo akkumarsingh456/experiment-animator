@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { gatewayJSON } from "@/lib/ai-gateway-json";
+import { gatewayJSON } from "@/lib/structured-response-client";
 import { ensureFormulaBlocks, type NoteSection } from "@/lib/ncert-teacher-notes";
 
-vi.mock("@/lib/ai-gateway-json", () => ({
+vi.mock("@/lib/structured-response-client", () => ({
   gatewayJSON: vi.fn(),
   hasGatewayKey: () => true,
 }));

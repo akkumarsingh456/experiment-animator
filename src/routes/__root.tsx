@@ -13,7 +13,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { pauseBookPreparation } from '@/lib/book-preparation';
-import { reportLovableError } from "../lib/lovable-error-reporting";
+import { reportLovableError } from "../lib/browser-error-reporting";
 
 function NotFoundComponent() {
   return (
