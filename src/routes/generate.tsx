@@ -1,3 +1,4 @@
+import {NotesContentCheck} from "@/components/NotesContentCheck";
 import {ncertNotesDisplaySlide} from "@/lib/ncert-display-cleanup";
 import {polishChemistryPresentation} from "@/lib/chemistry-note-presentation";
 import {withPhysicalChemistryRevision, PHYSICAL_REVISION} from "@/lib/physical-chemistry-revision";
@@ -676,6 +677,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         <Button variant={lessonView === "slides" ? "default" : "outline"} aria-pressed={lessonView === "slides"} onClick={() => setLessonView("slides")}>Generate PPT &amp; Notes</Button>
         <Button variant="outline" onClick={presentSelectedView}><Maximize2 className="h-4 w-4" />Present {lessonView === "notes" ? "guided notes" : "PPT slides"}</Button>
       </div>
+      {/^(?:Science|Physics|Chemistry|Mathematics|Social Science|Computer Science)$/.test(search.subject||"") && <NotesContentCheck slides={slides} klass={String(search.klass||"")} subject={search.subject||""} chapter={search.chapter||title} />}
       {/* Step 1 — Activity verification (skipped for language chapters) */}
       {!skipVerify && lessonView === "slides" && (
         <ActivityVerification
