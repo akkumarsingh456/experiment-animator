@@ -17,3 +17,11 @@ describe("latex", () => {
     expect(isValidLatex(normalizeLatex(reaction))).toBe(true);
   });
 });
+
+
+describe("Preserve valid authored notation before repair", () => {
+  it.each([String.raw`\frac12mv^2`, String.raw`t_{1/2}=\frac{\ln2}{k}`, String.raw`\begin{pmatrix}a&b\\c&d\end{pmatrix}`, String.raw`C_1+C_2`])("leaves %s intact", source => {
+    expect(normalizeLatex(source)).toBe(source);
+    expect(sanitizeLatex(source)).toBe(source);
+  });
+});

@@ -35,3 +35,8 @@ npm run build
 Never add a second backslash to existing LaTeX function commands during Unicode normalization: this converts sine/cosine/tangent into unintended line breaks. Check both notes and formula visual cards with `n_1\sin i=n_2\sin r`. The complete known NCERT NOM/NCM/NIM tangent triplet may recover its MN/OM, MN/MC and MN/MI fractions only through the shared display layer; arbitrary joined letters remain untouched. Keep equation (9.3), section 9.2.3 and the following prose outside the focal-length equation. Preserve source strings and generated lesson content. A Refraction topic retains the labelled refraction diagram on discussion pages; general discussion pages retain their existing illustration.
 
 Reference for the tangent triplet: NCERT/CIET Physics-04, Leph_20906, refraction at a spherical surface, https://ciet.nic.in/moocspdf/physics%2004/leph_20906_eContent2019.pdf .
+
+
+## Preserve valid authored mathematics
+
+Before plain-text repair, preserve parseable LaTeX commands and explicit braced scripts. In particular, never strip short fraction commands or apply slash recovery inside authored subscripts such as t_{1/2}. The chapter-formula-audit suite compares the rendered MathML structure against all existing curated formula references and records coverage for every configured chapter. Run it together with chemistry notation checks through check:formulas. Reports in CHAPTER_FORMULA_AUDIT.md and CHAPTER_FORMULA_AUDIT.json distinguish available chapter references from shared-renderer checks; neither certifies unseen saved lesson content.

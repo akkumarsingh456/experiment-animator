@@ -1,0 +1,2359 @@
+{
+  "scope": "Local configured curriculum, existing curated formula references and shared note renderer. Does not certify every saved/generated lesson or factual correctness of every uploaded textbook formula.",
+  "chapters": 294,
+  "formulaEntries": 253,
+  "chapterResults": [
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: The French Revolution (History)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 2: Socialism in Europe and the Russian Revolution (History)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Nazism and the Rise of Hitler (History)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Forest Society and Colonialism (History)",
+      "subtopics": 5,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 5: Pastoralists in the Modern World (History)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: India – Size and Location (Geography)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 2: Physical Features of India (Geography)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Drainage (Geography)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Climate (Geography)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 5: Natural Vegetation and Wildlife (Geography)",
+      "subtopics": 5,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 6: Population (Geography)",
+      "subtopics": 5,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: What is Democracy? Why Democracy? (Political Science)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 2: Constitutional Design (Political Science)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Electoral Politics (Political Science)",
+      "subtopics": 5,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Working of Institutions (Political Science)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 5: Democratic Rights (Political Science)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: The Story of Village Palampur (Economics)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 2: People as Resource (Economics)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Poverty as a Challenge (Economics)",
+      "subtopics": 5,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Food Security in India (Economics)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 1: Number Systems",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 2: Polynomials",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 3: Coordinate Geometry",
+      "subtopics": 7,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 4: Linear Equations in Two Variables",
+      "subtopics": 8,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 5: Introduction to Euclid's Geometry",
+      "subtopics": 8,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 6: Lines and Angles",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 7: Triangles",
+      "subtopics": 9,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 8: Quadrilaterals",
+      "subtopics": 9,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 9: Circles",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 10: Heron's Formula",
+      "subtopics": 7,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 11: Surface Areas and Volumes",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 12: Statistics",
+      "subtopics": 9,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 1: Matter in Our Surroundings (Chemistry)",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 2: Is Matter Around Us Pure? (Chemistry)",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 3: Atoms and Molecules (Chemistry)",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 4: Structure of the Atom (Chemistry)",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 5: The Fundamental Unit of Life (Biology)",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 6: Tissues (Biology)",
+      "subtopics": 9,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 7: Motion (Physics)",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 8: Force and Laws of Motion (Physics)",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 9: Gravitation (Physics)",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 10: Work and Energy (Physics)",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 11: Sound (Physics)",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 12: Improvement in Food Resources (Biology)",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer System Overview",
+      "subtopics": 9,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Data Representation and Basic Software",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Office Productivity Tools (Word Processing, Spreadsheets, Presentations)",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Cyber Safety and Security",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Fun They Had",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Road Not Taken",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Sound of Music",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "Wind",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Little Girl",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "Rain on the Roof",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "A Truly Beautiful Mind",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Lake Isle of Innisfree",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Snake and the Mirror",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "A Legend of the Northland",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "My Childhood",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "No Men Are Foreign",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "Packing",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Duck and the Kangaroo",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "Reach for the Top",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "On Killing a Tree",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Bond of Love",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Snake Trying",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "Kathmandu",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "A Slumber Did My Spirit Seal",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "If I Were You",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Lost Child",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Adventures of Toto",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "Iswaran the Storyteller",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "In the Kingdom of Fools",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Happy Prince",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "Weathering the Storm in Ersama",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Last Leaf",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "A House Is Not a Home",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Accidental Tourist",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "English",
+      "chapter": "The Beggar",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Hindi",
+      "chapter": "क्षितिज भाग 1 (गद्य खंड एवं काव्य खंड)",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Hindi",
+      "chapter": "कृतिका भाग 1",
+      "subtopics": 5,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "9",
+      "subject": "Sanskrit",
+      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: The Rise of Nationalism in Europe (History)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 2: Nationalism in India (History)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: The Making of a Global World (History)",
+      "subtopics": 5,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: The Age of Industrialisation (History)",
+      "subtopics": 5,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 5: Print Culture and the Modern World (History)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: Resources and Development (Geography)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 2: Forest and Wildlife Resources (Geography)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Water Resources (Geography)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Agriculture (Geography)",
+      "subtopics": 5,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 5: Minerals and Energy Resources (Geography)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 6: Manufacturing Industries (Geography)",
+      "subtopics": 5,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 7: Lifelines of National Economy (Geography)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: Power-sharing (Political Science)",
+      "subtopics": 3,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 2: Federalism (Political Science)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Gender, Religion and Caste (Political Science)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Political Parties (Political Science)",
+      "subtopics": 5,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 5: Outcomes of Democracy (Political Science)",
+      "subtopics": 5,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: Development (Economics)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 2: Sectors of the Indian Economy (Economics)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Money and Credit (Economics)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Globalisation and the Indian Economy (Economics)",
+      "subtopics": 6,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 5: Consumer Rights (Economics)",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 1: Real Numbers",
+      "subtopics": 7,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 2: Polynomials",
+      "subtopics": 8,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 3: Pair of Linear Equations in Two Variables",
+      "subtopics": 8,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 4: Quadratic Equations",
+      "subtopics": 8,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 5: Arithmetic Progressions",
+      "subtopics": 8,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 6: Triangles",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 7: Coordinate Geometry",
+      "subtopics": 8,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 8: Introduction to Trigonometry",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 9: Some Applications of Trigonometry",
+      "subtopics": 7,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 10: Circles",
+      "subtopics": 8,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 11: Areas Related to Circles",
+      "subtopics": 7,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 12: Surface Areas and Volumes",
+      "subtopics": 8,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 13: Statistics",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 14: Probability",
+      "subtopics": 8,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 1: Chemical Reactions and Equations (Chemistry)",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 2: Acids, Bases and Salts (Chemistry)",
+      "subtopics": 9,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 4: Carbon and its Compounds (Chemistry)",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 5: Life Processes (Biology)",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 6: Control and Coordination (Biology)",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 7: How do Organisms Reproduce? (Biology)",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 8: Heredity and Evolution (Biology)",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 9: Light – Reflection and Refraction (Physics)",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 10: The Human Eye and the Colourful World (Physics)",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 11: Electricity (Physics)",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 12: Magnetic Effects of Electric Current (Physics)",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 13: Our Environment (Biology)",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Internet Basics and Web Services",
+      "subtopics": 9,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: HTML Fundamentals & Cascading Style Sheets (CSS)",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Cyber Ethics and Security",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Database Concepts (MySQL Basics)",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "A Letter to God",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "Nelson Mandela – Long Walk to Freedom",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "Two Stories about Flying",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "From the Diary of Anne Frank",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "Glimpses of India",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "Mijbil the Otter",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "Madam Rides the Bus",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "The Sermon at Benares",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "The Proposal",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "Dust of Snow",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "Fire and Ice",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "A Tiger in the Zoo",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "How to Tell Wild Animals",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "The Ball Poem",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "Amanda!",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "The Trees",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "Fog",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "The Tale of Custard the Dragon",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "For Anne Gregory",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "A Triumph of Surgery",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "The Thief’s Story",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "The Midnight Visitor",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "A Question of Trust",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "Footprints Without Feet",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "The Making of a Scientist",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "The Necklace",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "Bholi",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "English",
+      "chapter": "The Book That Saved the Earth",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Hindi",
+      "chapter": "क्षितिज भाग 2",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Hindi",
+      "chapter": "कृतिका भाग 2",
+      "subtopics": 5,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "10",
+      "subject": "Sanskrit",
+      "chapter": "शेमुषी भाग 2 (पाठ 1–12)",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 1: Sets",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 2: Relations and Functions",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 3: Trigonometric Functions",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 4: Complex Numbers and Quadratic Equations",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 5: Linear Inequalities",
+      "subtopics": 7,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 6: Permutations and Combinations",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 7: Binomial Theorem",
+      "subtopics": 9,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 8: Sequences and Series",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 9: Straight Lines",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 10: Conic Sections",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 11: Introduction to Three Dimensional Geometry",
+      "subtopics": 8,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 12: Limits and Derivatives",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 13: Statistics",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 14: Probability",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 1: Units and Measurement",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 5,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 2: Motion in a Straight Line",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 6,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 3: Motion in a Plane",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 6,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 4: Laws of Motion",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 7,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 5: Work, Energy and Power",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 7,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 6: System of Particles and Rotational Motion",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 7,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 7: Gravitation",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 6,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 8: Mechanical Properties of Solids",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 5,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 9: Mechanical Properties of Fluids",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 7,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 10: Thermal Properties of Matter",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 6,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 11: Thermodynamics",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 7,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 12: Kinetic Theory",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 6,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 13: Oscillations",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 6,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 14: Waves",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 6,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 1: Some Basic Concepts of Chemistry",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 2: Structure of Atom",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 3: Classification of Elements and Periodicity in Properties",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 4: Chemical Bonding and Molecular Structure",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 5: Chemical Thermodynamics",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 6: Equilibrium",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 7: Redox Reactions",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 8: Organic Chemistry – Some Basic Principles and Techniques",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 9: Hydrocarbons",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer Systems and Organization",
+      "subtopics": 9,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Encoding Schemes and Number Systems",
+      "subtopics": 9,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Getting Started with Python",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Control Statements",
+      "subtopics": 8,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Functions",
+      "subtopics": 9,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Strings and Lists",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 7: Tuples and Dictionaries",
+      "subtopics": 9,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 8: Societal Impacts",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "The Portrait of a Lady",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "A Photograph",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "We’re Not Afraid to Die… if We Can All Be Together",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "Discovering Tut: The Saga Continues",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "The Laburnum Top",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "The Voice of the Rain",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "Childhood",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "The Adventure",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "Silk Road",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "Father to Son",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "The Summer of the Beautiful White Horse",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "The Address",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "Mother’s Day",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "Birth",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "English",
+      "chapter": "The Tale of Melon City",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Hindi",
+      "chapter": "अंतरा भाग 1",
+      "subtopics": 20,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Hindi",
+      "chapter": "अंतराल भाग 1",
+      "subtopics": 3,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "11",
+      "subject": "Sanskrit",
+      "chapter": "भास्वती भाग 1 (पाठ 1–12)",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 1: Relations and Functions",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 2: Inverse Trigonometric Functions",
+      "subtopics": 9,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 3: Matrices",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 4: Determinants",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 5: Continuity and Differentiability",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 6: Application of Derivatives",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 7: Integrals",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 8: Application of Integrals",
+      "subtopics": 7,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 9: Differential Equations",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 10: Vector Algebra",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 11: Three Dimensional Geometry",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 12: Linear Programming",
+      "subtopics": 7,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 13: Probability",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 1: Electric Charges and Fields",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 6,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 2: Electrostatic Potential and Capacitance",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 6,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 3: Current Electricity",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 10,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 4: Moving Charges and Magnetism",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 7,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 5: Magnetism and Matter",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 6,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 6: Electromagnetic Induction",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 6,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 7: Alternating Current",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 6,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 8: Electromagnetic Waves",
+      "subtopics": 8,
+      "chapterReferenceFormulas": 5,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 9: Ray Optics and Optical Instruments",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 8,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 10: Wave Optics",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 6,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 11: Dual Nature of Radiation and Matter",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 5,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 12: Atoms",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 5,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 13: Nuclei",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 7,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 14: Semiconductor Electronics",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 5,
+      "status": "Chapter reference formulas rendered and source preserved"
+    },
+    {
+      "klass": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 1: Solutions",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 2: Electrochemistry",
+      "subtopics": 15,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 3: Chemical Kinetics",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 4: The d- and f-Block Elements",
+      "subtopics": 11,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 5: Coordination Compounds",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 6: Haloalkanes and Haloarenes",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 7: Alcohols, Phenols and Ethers",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 8: Aldehydes, Ketones and Carboxylic Acids",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 9: Amines",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 10: Biomolecules",
+      "subtopics": 15,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Python Revision Tour",
+      "subtopics": 9,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Functions",
+      "subtopics": 8,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: File Handling",
+      "subtopics": 10,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Data Structures (Stack & Queue)",
+      "subtopics": 7,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Computer Networks",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "subtopics": 14,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "The Last Lesson",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "Lost Spring",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "Deep Water",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "The Rattrap",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "Indigo",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "Poets and Pancakes",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "The Interview",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "Going Places",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "My Mother at Sixty-six",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "Keeping Quiet",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "A Thing of Beauty",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "A Roadside Stand",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "Aunt Jennifer’s Tigers",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "The Third Level",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "The Tiger King",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "Journey to the End of the Earth",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "The Enemy",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "On the Face of It",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "English",
+      "chapter": "Memories of Childhood",
+      "subtopics": 0,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Hindi",
+      "chapter": "आरोह भाग 2",
+      "subtopics": 12,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Hindi",
+      "chapter": "वितान भाग 2",
+      "subtopics": 4,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    },
+    {
+      "klass": "12",
+      "subject": "Sanskrit",
+      "chapter": "भास्वती भाग 2 (पाठ 1–12)",
+      "subtopics": 13,
+      "chapterReferenceFormulas": 0,
+      "status": "Shared renderer and source preservation checked; no chapter formula corpus available locally"
+    }
+  ]
+}

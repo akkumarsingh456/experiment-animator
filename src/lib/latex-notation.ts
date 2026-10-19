@@ -137,6 +137,9 @@ const UNI_CMD: Array<[RegExp, string]> = [
 /** Balance braces, drop dangling scripts, escape characters KaTeX chokes on. */
 export function sanitizeLatex(body: string): string {
   let s = String(body || "");
+  // Valid authored math is already authoritative, including short fractions
+  // and alignment separators. Repair only fragments that fail parsing.
+  if (isValidLatex(s)) return s.trim();
 
   // Escape bare specials that are not already escaped.
   s = s.replace(/(?<!\\)([%#&])/g, "\\$1");
@@ -247,7 +250,9 @@ export function unicodeToLatex(frag: string): string {
 export function normalizeLatex(body: string): string {
   const raw = String(body || "").trim();
   if (!raw) return "";
-  if (/\\(?:ce|pu)\s*\{/.test(raw) && isValidLatex(raw)) return raw;
+  // Preserve authored LaTeX semantics before generic plain-text heuristics.
+  // Slashes in t_{1/2}, short fractions and scripts are not OCR damage.
+  if ((/\\[A-Za-z]+|[_^]\s*\{/.test(raw)) && isValidLatex(raw)) return raw;
   // Even valid-but-ugly input is rewritten: linear fractions, unbraced
   // scripts, unicode scripts/symbols and unsubscripted chemical species.
   const NEEDS_WORK = /[₀-₉⁰-⁹⁻⁺εμπΔδθφλωΩσραβγηΦ×·÷±∝∞→←⇌⇒≈≠≤≥√∫∮∂∇°½⅓¼]|(?<!\\)\//.test(raw)
