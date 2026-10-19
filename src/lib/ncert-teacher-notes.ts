@@ -19,7 +19,7 @@ import { gatewayJSON, hasGatewayKey } from "@/lib/structured-response-client";
 import { learningProfile } from "@/lib/learning-design";
 import { mapOutsideMath, splitMath } from "@/lib/latex-notation";
 import { DIAGRAM_HEADING, aiNoteDiagrams, buildLocalDiagram } from "@/lib/note-diagram";
-import { PW_EXTRACTION_RULES, normalizeNoteLine } from "@/lib/pwNotesNormalizer";
+import { PW_EXTRACTION_RULES, normalizeNoteLine } from "@/lib/reference-note-normalizer";
 import { referenceBooksPrompt } from "@/lib/reference-books";
 import { sourceFormulaBlocks } from "@/lib/source-derivations";
 import { isUnitStatement, isDefinitionStatement, sourceDetailLabel } from "@/lib/note-labels";
