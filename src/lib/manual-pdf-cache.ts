@@ -12,4 +12,4 @@ export function cachedManualPdf(id:string,klass:string,subject:string):Promise<P
  if(documents.size>2){const first=documents.keys().next().value!;const old=documents.get(first)!;documents.delete(first);void old.promise.then(pdf=>pdf.loadingTask.destroy()).catch(()=>{});}
  return entry.promise;
 }
-export function retryManualPdf(id:string,klass:string,subject:string){const key=manualPdfUrl(id,klass,subject);const old=documents.get(key);documents.delete(key);void old?.promise.then(pdf=>pdf.loadingTask.destroy()).catch(()=>{});}
+export function retryManualPdf(id:string,klass:string,subject:string){const key=manualPdfUrl(id,klass,subject);const old=documents.get(key);documents.delete(key);if(old?.task?.destroy)void old.task.destroy().catch(()=>{});else void old?.promise.then(pdf=>pdf.loadingTask.destroy()).catch(()=>{});}

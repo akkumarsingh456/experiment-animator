@@ -1,3 +1,4 @@
+import {cachedManualBookLinks} from "@/lib/manual-book-links-cache";
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {ImagePlus,Save,Move,RotateCcw,BookOpen,Search,Crop} from 'lucide-react';
 import {loadManualBookLinks} from '@/lib/manual-book-links.functions';
@@ -36,7 +37,7 @@ export function ManualVisualEditor({storageKey,autoUrl,autoContent,alt,klass='',
  }
  function change(patch:Partial<ManualVisual>){setVisual(current=>current?{...current,...patch}:current);}
  async function save(){setSaving(true);try{await saveManualVisual(storageKey,visual);setOpen(false);toast.success('Image and layout saved on this device.');}catch{toast.error('Image could not be saved. Device storage may be full.');}finally{setSaving(false);}}
- async function openBooks(){if(!medEasyAllowed)return;setBookOpen(value=>!value);if(bookOpen)return;setBookLoading(true);setBookError('');try{const result=await loadManualBookLinks({data:{klass,subject,chapter,topic}});setBooks(result);if(result[0])void cachedManualPdf(result[0].id,klass,subject).catch(()=>{});}catch{setBookError('Book links are unavailable. You can still paste a screenshot or import from your device.');}finally{setBookLoading(false);}}
+ async function openBooks(){if(!medEasyAllowed)return;setBookOpen(value=>!value);if(bookOpen)return;setBookLoading(true);setBookError('');try{const requestedKey=currentKey.current;const result=await cachedManualBookLinks({klass,subject,chapter,topic});if(currentKey.current!==requestedKey)return;setBooks(result);if(result[0])void cachedManualPdf(result[0].id,klass,subject).catch(()=>{});}catch{setBookError('Book links are unavailable. You can still paste a screenshot or import from your device.');}finally{setBookLoading(false);}}
  return <div ref={panel} tabIndex={0} aria-label="Topic image editor: click here and paste a screenshot" className="manual-visual-editor relative w-full h-full min-h-0" onPaste={paste} onDragOver={event=>event.preventDefault()} onDrop={drop}>
    {(!visual||visual.showAuto)&&(autoContent||<img className="w-full h-full object-contain" src={autoUrl} alt={alt}/>)}
    {visual&&<div className="absolute overflow-hidden" style={{left:`${visual.x}%`,top:`${visual.y}%`,width:`${visual.width}%`,maxHeight:'90%',borderRadius:visual.shape==='circle'?'50%':visual.shape==='rounded'?16:0,aspectRatio:visual.shape==='circle'?'1':undefined,cursor:open?'move':'default',touchAction:open?'none':undefined}}

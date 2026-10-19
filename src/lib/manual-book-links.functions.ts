@@ -35,10 +35,10 @@ export const loadManualBookLinks=createServerFn({method:'POST'}).inputValidator(
    ]);
    const candidates:Array<{page:number;topic:boolean}>=[];
    const printedRanges:Array<{start:number;end:number}>=[];
-   const inspect=(content:string,page?:number)=>{const source=splitReferenceContent(content);const matches=(chapter?:string)=>!!chapter&&key(chapter)===key(data.chapter);
+   const inspect=(content:string,page?:number)=>{const source=splitReferenceContent(content);const headingChapter=indexLocalBookPage(data.subject,source.context?.match_text||source.text).chapter;const matches=(chapter?:string)=>!!chapter&&key(chapter)===key(data.chapter);
      for(const range of parseBookContents(data.subject,source.context?.match_text||source.text))if(canonicalBookChapter(data.subject,range.chapter)===canonicalBookChapter(data.subject,data.chapter))printedRanges.push({start:range.start,end:range.end});
-     if(page&&matches(source.context?.chapter))candidates.push({page,topic:terms.some(term=>(source.context?.match_text||source.text).toLowerCase().includes(term))});
-     for(const visual of source.visuals)if(matches(visual.chapter||source.context?.chapter))candidates.push({page:visual.page,topic:terms.some(term=>`${visual.title} ${visual.description} ${visual.match_text||''}`.toLowerCase().includes(term))});
+     if(page&&matches(headingChapter || source.context?.chapter))candidates.push({page,topic:terms.some(term=>(source.context?.match_text||source.text).toLowerCase().includes(term))});
+     for(const visual of source.visuals)if((!headingChapter||matches(headingChapter))&&matches(visual.chapter||source.context?.chapter))candidates.push({page:visual.page,topic:terms.some(term=>`${visual.title} ${visual.description} ${visual.match_text||''}`.toLowerCase().includes(term))});
    };
    for(const page of pages||[])inspect(page.text,page.page_number);
    for(const chunk of chunks||[])inspect(chunk.content);
@@ -46,6 +46,6 @@ export const loadManualBookLinks=createServerFn({method:'POST'}).inputValidator(
    return {id:book.id,name:book.file_name,url:`/api/med-easy-pdf?${new URLSearchParams({id:book.id,klass:data.klass,subject:data.subject})}`,printedRange:printedRanges[0],pages:[...unique].map(([page,topic])=>({page,topic})).sort((a,b)=>Number(b.topic)-Number(a.topic)||a.page-b.page).slice(0,12)};
  }));
  const uniqueBooks=new Map<string,typeof results[number]>();
- for(const book of results){const name=book.name.toLowerCase().replace(/\.pdf$/,'').replace(/\(\s*\d+\s*\)/g,'').replace(/[^\p{L}\p{N}]/gu,'');const current=uniqueBooks.get(name);if(!current){uniqueBooks.set(name,book);continue;}const preferred=book.pages.length>current.pages.length?book:current;uniqueBooks.set(name,{...preferred,printedRange:preferred.printedRange||current.printedRange||book.printedRange,pages:[...new Map([...current.pages,...book.pages].map(page=>[page.page,page])).values()].sort((a,b)=>Number(b.topic)-Number(a.topic)||a.page-b.page).slice(0,12)});}
+ for(const book of results){const name=book.name.toLowerCase().replace(/\.pdf$/,'').replace(/\(\s*\d+\s*\)/g,'').replace(/[^\p{L}\p{N}]/gu,'');const current=uniqueBooks.get(name);if(!current){uniqueBooks.set(name,book);continue;}const preferred=book.pages.length>current.pages.length?book:current;uniqueBooks.set(name,preferred);}
  return [...uniqueBooks.values()];
 });

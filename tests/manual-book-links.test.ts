@@ -2,10 +2,10 @@ import {describe,it,expect,vi} from 'vitest';
 import {encodeReferenceVisuals} from '@/lib/reference-visuals';
 import {loadManualBookLinks,openManualBookPdf} from '@/lib/manual-book-links.functions';
 vi.mock('@tanstack/react-start',()=>({createServerFn:()=>({inputValidator:(parse:(data:unknown)=>unknown)=>({handler:(handler:(options:{data:unknown})=>unknown)=>(options:{data:unknown})=>handler({data:parse(options.data)})})})}));
-const fixture=vi.hoisted(()=>({signed:vi.fn(async(path:string)=>({data:{signedUrl:`https://example.test/${path}?signed=1`}})),pages:[] as Array<{page_number:number;text:string}>}));
+const fixture=vi.hoisted(()=>({signed:vi.fn(async(path:string)=>({data:{signedUrl:`https://example.test/${path}?signed=1`}})),pagesByBook:{} as Record<string,Array<{page_number:number;text:string}>>,pages:[] as Array<{page_number:number;text:string}>}));
 vi.mock('@/integrations/supabase/client.server',()=>({supabaseAdmin:{
  storage:{from:()=>({createSignedUrl:fixture.signed})},
- from:(table:string)=>{const query={select:()=>query,eq:()=>query,maybeSingle:async()=>({data:{id:'p',class:'Unspecified Class',subject:'Physics',chapter:'',file_name:'PHYSICS MED EASY.pdf',storage_path:'physics.pdf'},error:null}),limit:async()=>({data:table==='ncert_books'?[{id:'p',class:'Unspecified Class',subject:'Physics',chapter:'',file_name:'PHYSICS MED EASY.pdf',storage_path:'physics.pdf'},{id:'p-copy',class:'Class 11 & 12',subject:'Physics',chapter:'',file_name:'PHYSICS MED EASY (1).pdf',storage_path:'physics-copy.pdf'},{id:'c',class:'Unspecified Class',subject:'Chemistry',chapter:'',file_name:'CHEMISTRY MED EASY.pdf',storage_path:'chemistry.pdf'}]:table==='ncert_pages'?fixture.pages:[],error:null})};return query;},
+ from:(table:string)=>{let bookId='';const query={select:()=>query,eq:(column:string,value:string)=>{if(column==='book_id')bookId=value;return query;},maybeSingle:async()=>({data:{id:'p',class:'Unspecified Class',subject:'Physics',chapter:'',file_name:'PHYSICS MED EASY.pdf',storage_path:'physics.pdf'},error:null}),limit:async()=>({data:table==='ncert_books'?[{id:'p',class:'Unspecified Class',subject:'Physics',chapter:'',file_name:'PHYSICS MED EASY.pdf',storage_path:'physics.pdf'},{id:'p-copy',class:'Class 11 & 12',subject:'Physics',chapter:'',file_name:'PHYSICS MED EASY (1).pdf',storage_path:'physics-copy.pdf'},{id:'c',class:'Unspecified Class',subject:'Chemistry',chapter:'',file_name:'CHEMISTRY MED EASY.pdf',storage_path:'chemistry.pdf'}]:table==='ncert_pages'?(fixture.pagesByBook[bookId]||fixture.pages):[],error:null})};return query;},
 }}));
 describe('manual book PDF access',()=>{
  it('streams PDF bytes through the website server without redirecting to storage',async()=>{
@@ -33,4 +33,31 @@ describe('manual book PDF access',()=>{
   const books=await loadManualBookLinks({data:{klass:'Class 12',subject:'Physics',chapter:'Chapter 6: Electromagnetic Induction',topic:'Faraday law'}});
   expect(books).toHaveLength(1);expect(books[0].pages).toEqual([]);expect(books[0].printedRange).toEqual({start:251,end:260});
  });
+});
+
+
+it("recognises a saved chapter heading without optional chapter metadata", async () => {
+  fixture.pages=[{page_number:209,text:"Moving Charges and Magnetism\nBiot-Savart law\nThe magnetic field of a current carrying conductor."},
+    {page_number:210,text:"Current Electricity\nBiot-Savart mentioned in another chapter."}];
+  const books=await loadManualBookLinks({data:{klass:"12",subject:"Physics",chapter:"Chapter 4: Moving Charges and Magnetism",topic:"Biot-Savart"}});
+  expect(books[0].pages).toEqual([{page:209,topic:true}]);
+});
+
+
+it("does not merge PDF page numbers across differently paginated duplicate uploads", async () => {
+  fixture.pagesByBook={
+    p:[{page_number:209,text:"Moving Charges and Magnetism\nBiot-Savart law"}],
+    "p-copy":[{page_number:211,text:"Moving Charges and Magnetism\nBiot-Savart law"}],
+  };
+  try {
+    const books=await loadManualBookLinks({data:{klass:"12",subject:"Physics",chapter:"Moving Charges and Magnetism",topic:"Biot-Savart"}});
+    expect(books).toHaveLength(1);expect(books[0].id).toBe("p");expect(books[0].pages.map(page=>page.page)).toEqual([209]);
+  } finally {fixture.pagesByBook={};}
+});
+
+
+it("uses a clearly visible new chapter heading before inherited chapter metadata", async () => {
+  fixture.pages=[{page_number:100,text:encodeReferenceVisuals("Current Electricity\nOhm law",[],{chapter:"Moving Charges and Magnetism",match_text:"Current Electricity\nOhm law"})}];
+  const books=await loadManualBookLinks({data:{klass:"12",subject:"Physics",chapter:"Moving Charges and Magnetism",topic:"Ohm"}});
+  expect(books[0].pages).toEqual([]);
 });

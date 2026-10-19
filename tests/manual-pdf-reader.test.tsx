@@ -18,7 +18,7 @@ describe('PDF reader controls',()=>{
   expect([...dialog.querySelectorAll('strong')].some(text=>text.textContent?.includes('Go to PDF page 40'))).toBe(true);
   const button=(label:string)=>dialog.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
   const input=dialog.querySelector<HTMLInputElement>('[aria-label="Go to PDF page"]')!;
-  expect(button('First page').disabled).toBe(true);
+  expect(f.page).toHaveBeenLastCalledWith(40);expect(button('First page').disabled).toBe(false);
   await act(async()=>{input.value='40';input.dispatchEvent(new Event('input',{bubbles:true}));});
   await act(async()=>input.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})));
   expect(f.page).toHaveBeenLastCalledWith(40);
@@ -44,4 +44,29 @@ describe('PDF reader controls',()=>{
   expect(importPage).toHaveBeenCalledWith(expect.objectContaining({name:'book-page-1.png',type:'image/png'}));expect(close).toHaveBeenCalledOnce();
   await act(async()=>root.unmount());host.remove();
  });
+});
+
+
+it("opens an explicitly selected saved page instead of overriding it with the first suggestion", async () => {
+  f.page.mockImplementation(async()=>({rotate:0,getViewport:f.viewport,render:f.render}));
+  vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({} as CanvasRenderingContext2D);
+  const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
+  await act(async()=>root.render(<ManualBookPdfViewer id="specific-page" name="Physics.pdf" klass="12" subject="Physics" chapter="Moving Charges and Magnetism" suggestedPages={[209,211]} initialPage={211} onClose={()=>{}} onImport={()=>{}}/>));
+  expect(f.page).toHaveBeenLastCalledWith(211);
+  await act(async()=>root.unmount());host.remove();
+});
+
+it("shows an unresolved chapter clearly and allows deliberate manual navigation", async () => {
+  f.render.mockClear();
+  f.page.mockImplementation(async()=>({rotate:0,getViewport:f.viewport,render:f.render,getTextContent:async()=>({items:[]})}));
+  vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({} as CanvasRenderingContext2D);
+  const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
+  await act(async()=>root.render(<ManualBookPdfViewer id="unindexed-chapter" name="Physics.pdf" klass="12" subject="Physics" chapter="Moving Charges and Magnetism" initialPage={1} onClose={()=>{}} onImport={()=>{}}/>));
+  expect(document.querySelector('[role=dialog]')?.textContent).toContain('no verified page');
+  expect(f.render).not.toHaveBeenCalled();
+  const input=document.querySelector<HTMLInputElement>('[aria-label="Go to PDF page"]')!;
+  await act(async()=>{input.value='209';input.dispatchEvent(new Event('input',{bubbles:true}));});
+  await act(async()=>input.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})));
+  expect(f.page).toHaveBeenLastCalledWith(209);expect(f.render).toHaveBeenCalled();
+  await act(async()=>root.unmount());host.remove();
 });
