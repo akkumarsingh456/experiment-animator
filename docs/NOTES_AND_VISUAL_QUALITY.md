@@ -199,3 +199,8 @@ Notation references: IUPAC Green Book, https://iupac.org/wp-content/uploads/2025
 ## Biomolecule formula spacing
 
 Present explicit spaced CH/NH/OH atom counts and the fully written grouped leucine side-chain fragment through chemistry MathText. Typeset explicit inverse-mole energy units with upright units and superscript -1. Preserve surrounding table fragments, page references, prose, numbers and authored math; do not reconstruct missing amino-acid table columns or change stored notes.
+
+
+## Combined Science notation
+
+Route the exact Science subject through the existing explicit chemical-notation formatter, as well as Chemistry. Do not match Computer Science or Social Science. Preserve authored physics mathematics and source prose. The selected-subjects audit covers only the screenshot subjects for Classes 9-12 and records chapter-level local-reference limits in SELECTED_SUBJECT_FORMULA_AUDIT.md.

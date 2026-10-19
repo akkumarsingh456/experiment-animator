@@ -14,7 +14,7 @@ export function MathText({ text, subject }: { text: string; subject?:string }) {
   // scientific exception from an element name, numerical value or equation.
   const exception = /\b(?:exceptions?|exceptional|anomalous|anomaly|anomalies|unusual behavio[u]?r|deviat(?:es?|ion) from (?:the )?(?:general|usual|expected))\b/i.test(text)
     && !/\b(?:no exceptions?|without exception|not an exception)\b/i.test(text);
-  const segments = splitMath(formulaPresentation(normalNoteLabel(/chemistry/i.test(subject||"")?chemicalTextNotation(text):text)));
+  const segments = splitMath(formulaPresentation(normalNoteLabel(/chemistry|^science$/i.test(subject||"")?chemicalTextNotation(text):text)));
   return (
     <span className={exception ? "note-exception" : undefined}>
       {segments.map((seg, i) => {
