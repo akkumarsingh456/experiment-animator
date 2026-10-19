@@ -1,3 +1,4 @@
+import {orderTopicSections} from "@/lib/topic-lecture-order";
 import {NotesContentCheck} from "@/components/NotesContentCheck";
 import {ncertNotesDisplaySlide} from "@/lib/ncert-display-cleanup";
 import {polishChemistryPresentation} from "@/lib/chemistry-note-presentation";
@@ -595,7 +596,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     const sections = slide.sections?.filter((section) => section.kind !== "diagram" && section.lines.some(line=>line.trim()));
     const fallback = slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...slide.bullets, ...slide.notes];
     const sourceSections = sections?.length ? sections : [{ heading: "Teacher Notes", kind: "bullets", lines: fallback }];
-    const notePages = paginateLectureSections(withPhysicsDimensions(sourceSections as NonNullable<Slide["sections"]>, search.subject || "", slide.title, true), DEFAULT_LECTURE_ROWS, lectureRowWeights[sourceIndex]).map((page) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
+    const notePages = paginateLectureSections(orderTopicSections(withPhysicsDimensions(sourceSections as NonNullable<Slide["sections"]>, search.subject || "", slide.title, true)), DEFAULT_LECTURE_ROWS, lectureRowWeights[sourceIndex]).map((page) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
       title: slide.title }));
     return notePages;
   }), [slides, search.klass, search.subject, search.chapter, title, lectureRowWeights]);

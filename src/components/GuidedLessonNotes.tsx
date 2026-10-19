@@ -1,3 +1,4 @@
+import {orderTopicGroups,topicOrderRank} from "@/lib/topic-lecture-order";
 import {ncertNotesDisplaySlide} from "@/lib/ncert-display-cleanup";
 import {polishChemistryPresentation} from "@/lib/chemistry-note-presentation";
 import {physicalChemistryRevision} from "@/lib/physical-chemistry-revision";
@@ -13,7 +14,7 @@ import { isMathematics, mathematicsPresentationSlide } from "@/lib/mathematics-p
 import { omitContentsListings } from "@/lib/note-source-noise";
 import { repairSourceMathSlide } from "@/lib/source-math-repair";
 import { MathText } from "@/components/MathText";
-import { guidedFormulaRow, guidedGroups, uniqueTopicGroups, type GuidedGroup } from "@/lib/guided-notes";
+import { guidedFormulaRow, guidedGroups, type GuidedGroup } from "@/lib/guided-notes";
 import { LessonNotesPlanner, TopicLearningTasks, TopicRecap } from "@/components/LessonNotesPlanner";
 import type { Slide } from "@/lib/generate.functions";
 import { TopicVisualStructures } from "@/components/TopicVisualStructures";
@@ -47,7 +48,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
   const finalRevision=physicalChemistryRevision(slides, klass||"", subject||"", slides.find(slide=>slide.visual==="cover")?.title||title);
   const content = slides.filter((slide) => (slide.kind ?? "content") === "content" || slide.kind === "chapter" || (includeBreaks && slide.kind === "break"));
   const questions = slides.flatMap((slide) => slide.mcq ? [slide.mcq] : []);
-  const topicGroups = uniqueTopicGroups(content.map((slide) => guidedGroups(slide.sections, slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...(slide.bullets || []), ...(slide.notes || [])])));
+  const topicGroups = content.map((slide) => guidedGroups(slide.sections, slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...(slide.bullets || []), ...(slide.notes || [])], true));
   return <div className="guided-notes" aria-label="Complete guided lesson notes">
     <div className="guided-document-title"><span>Class {klass} · {subject}</span><h2>{title}</h2><p>Read · Investigate · Practise · Reflect</p></div>
     {includeCover && <article className="guided-topic guided-cover"><LessonCover title={slides.find(slide => slide.visual === "cover")?.title || title} objectives={slides.find(slide => slide.visual === "cover")?.bullets || content.map(slide => slide.title)} subject={subject} klass={klass} /></article>}
@@ -62,20 +63,16 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
           {image ? <figure><img src={image.url} alt={`${slide.teacher_pdf.file_name} · original PDF page ${slide.teacher_pdf.page}`} style={{width:"100%",maxHeight:"580px",objectFit:"contain"}}/><figcaption>{slide.teacher_pdf.file_name} · PDF page {slide.teacher_pdf.page}</figcaption></figure> : <p role="alert">The original chapter PDF page has not loaded. Reload the lesson before exporting.</p>}
         </article>;
       }
-      const groups = topicGroups[index];
-      const goals = groups.filter((g) => /^(Learning objectives|Before you begin)$/.test(g.heading));
-      const terms = groups.filter((g) => g.kind === "terms");
-      const explanation = groups.filter((g) => g.heading === "Understanding the concept");
-      const rest = groups.filter((g) => !goals.includes(g) && g.kind !== "terms" && g.heading !== "Understanding the concept");
+      const groups = orderTopicGroups(topicGroups[index]);
+      const firstDetail = groups.findIndex(group => topicOrderRank(group.heading) >= 20);
+      const visualAt = firstDetail < 0 ? groups.length : firstDetail;
       return <article className="guided-topic" key={`${index}:${slide.title}`}>
         <div className="guided-student-line"><span>Name: ____________________</span><span>Date: ____________________</span></div>
         <h2><span className="guided-topic-number">{String(index + 1).padStart(2, "0")}</span>{slide.title}</h2>
-        {goals.map((group, i) => <NotesGroup subject={subject} group={group} key={`goals:${i}`} />)}
         {slide.notes_quality?.issues.length ? <p className="guided-quality-note">Source review: {slide.notes_quality.issues.join(" ")}</p> : null}
-        {explanation.map((group, i) => <NotesGroup subject={subject} key={`prose:${i}`} group={group} />)}
-        {terms.map((group, i) => <NotesGroup subject={subject} group={group} key={`terms:${i}`} />)}
+        {groups.slice(0, visualAt).map((group, i) => <NotesGroup subject={subject} group={group} key={`intro:${i}`} />)}
         <TopicVisualStructures input={{ ...slide, chapter: title, keyTerms: slide.key_terms }} subject={subject} />
-        {rest.map((group, i) => <NotesGroup subject={subject} group={group} key={`body:${i}`} />)}
+        {groups.slice(visualAt).map((group, i) => <NotesGroup subject={subject} group={group} key={`body:${i}`} />)}
         <BookReferenceFigures figures={slide.reference_visuals} subject={subject} />
         {slide.context_illustration && <figure className="guided-context-illustration"><img src={slide.context_illustration.url} alt={slide.context_illustration.description} /><figcaption>AI context illustration · {slide.context_illustration.provider}. Exact relationships are shown in the labelled diagram and source notes.</figcaption></figure>}
         {!groups.length && <p>No verified source notes are available for this topic. Regenerate the lesson after uploading the relevant textbook pages.</p>}

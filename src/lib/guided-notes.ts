@@ -35,10 +35,16 @@ const categories: Array<[RegExp, string, GuidedGroup["kind"]]> = [
 ];
 
 /** Reorganise every verified note, without shortening or dropping extra lines. */
-export function guidedGroups(sections: NoteSection[] | undefined, fallback: string[] = []): GuidedGroup[] {
+export function guidedGroups(sections: NoteSection[] | undefined, fallback: string[] = [], preserveTopicEntries = false): GuidedGroup[] {
   const sectionLines = sections?.filter((s) => s.kind !== "diagram" && s.heading !== "Source table — original extracted entries" && s.heading !== "Source review — original extraction").flatMap((s) => s.lines.map((line) =>
     /^\*\*/.test(line) || s.heading === "Teacher Notes" ? line : `**${s.heading.replace(/^\d+\.\s*/, "")}:** ${line}`));
-  const lines = dedupeLabelled((sections?.length ? sectionLines || [] : fallback).map(normalNoteLabel));
+  const prepared = (sections?.length ? sectionLines || [] : fallback).map(line => {
+    const normalized = normalNoteLabel(line);
+    const tag = line.match(/^\s*\*\*([^*]+):\*\*/)?.[1];
+    // Retain the original category when display typography returns plain prose.
+    return preserveTopicEntries && tag && !/^\s*\*\*/.test(normalized) ? `**${tag}:** ${normalized}` : normalized;
+  });
+  const lines = preserveTopicEntries ? prepared : dedupeLabelled(prepared);
   const groups: GuidedGroup[] = (sections || []).filter(section => (section.heading === "Source table — original extracted entries" || section.heading === "Source review — original extraction")).map(section => ({heading: section.heading, kind: "list", lines: section.lines}));
   const get = (heading: string, kind: GuidedGroup["kind"]) => {
     let group = groups.find((g) => g.heading === heading);
