@@ -2,10 +2,10 @@ import {describe,it,expect,vi} from 'vitest';
 import {encodeReferenceVisuals} from '@/lib/reference-visuals';
 import {loadManualBookLinks,openManualBookPdf} from '@/lib/manual-book-links.functions';
 vi.mock('@tanstack/react-start',()=>({createServerFn:()=>({inputValidator:(parse:(data:unknown)=>unknown)=>({handler:(handler:(options:{data:unknown})=>unknown)=>(options:{data:unknown})=>handler({data:parse(options.data)})})})}));
-const fixture=vi.hoisted(()=>({signed:vi.fn(async(path:string)=>({data:{signedUrl:`https://example.test/${path}?signed=1`}})),pagesByBook:{} as Record<string,Array<{page_number:number;text:string}>>,pages:[] as Array<{page_number:number;text:string}>}));
+const fixture=vi.hoisted(()=>({bookName:'PHYSICS MED EASY.pdf',queries:[] as string[],signed:vi.fn(async(path:string)=>({data:{signedUrl:`https://example.test/${path}?signed=1`}})),pagesByBook:{} as Record<string,Array<{page_number:number;text:string}>>,pages:[] as Array<{page_number:number;text:string}>}));
 vi.mock('@/integrations/supabase/client.server',()=>({supabaseAdmin:{
  storage:{from:()=>({createSignedUrl:fixture.signed})},
- from:(table:string)=>{let bookId='';const query={select:()=>query,eq:(column:string,value:string)=>{if(column==='book_id')bookId=value;return query;},maybeSingle:async()=>({data:{id:'p',class:'Unspecified Class',subject:'Physics',chapter:'',file_name:'PHYSICS MED EASY.pdf',storage_path:'physics.pdf'},error:null}),limit:async()=>({data:table==='ncert_books'?[{id:'p',class:'Unspecified Class',subject:'Physics',chapter:'',file_name:'PHYSICS MED EASY.pdf',storage_path:'physics.pdf'},{id:'p-copy',class:'Class 11 & 12',subject:'Physics',chapter:'',file_name:'PHYSICS MED EASY (1).pdf',storage_path:'physics-copy.pdf'},{id:'c',class:'Unspecified Class',subject:'Chemistry',chapter:'',file_name:'CHEMISTRY MED EASY.pdf',storage_path:'chemistry.pdf'}]:table==='ncert_pages'?(fixture.pagesByBook[bookId]||fixture.pages):[],error:null})};return query;},
+ from:(table:string)=>{fixture.queries.push(table);let bookId='';const query={select:()=>query,eq:(column:string,value:string)=>{if(column==='book_id')bookId=value;return query;},maybeSingle:async()=>({data:{id:'p',class:'Unspecified Class',subject:'Physics',chapter:'',file_name:fixture.bookName,storage_path:'physics.pdf'},error:null}),limit:async()=>({data:table==='ncert_books'?[{id:'p',class:'Unspecified Class',subject:'Physics',chapter:'',file_name:fixture.bookName,storage_path:'physics.pdf'},{id:'p-copy',class:'Class 11 & 12',subject:'Physics',chapter:'',file_name:'PHYSICS MED EASY (1).pdf',storage_path:'physics-copy.pdf'},{id:'c',class:'Unspecified Class',subject:'Chemistry',chapter:'',file_name:'CHEMISTRY MED EASY.pdf',storage_path:'chemistry.pdf'}]:table==='ncert_pages'?(fixture.pagesByBook[bookId]||fixture.pages):[],error:null})};return query;},
 }}));
 describe('manual book PDF access',()=>{
  it('streams PDF bytes through the website server without redirecting to storage',async()=>{
@@ -60,4 +60,15 @@ it("uses a clearly visible new chapter heading before inherited chapter metadata
   fixture.pages=[{page_number:100,text:encodeReferenceVisuals("Current Electricity\nOhm law",[],{chapter:"Moving Charges and Magnetism",match_text:"Current Electricity\nOhm law"})}];
   const books=await loadManualBookLinks({data:{klass:"12",subject:"Physics",chapter:"Moving Charges and Magnetism",topic:"Ohm"}});
   expect(books[0].pages).toEqual([]);
+});
+
+it('opens the supplied edition at its chapter start without scanning saved pages or chunks',async()=>{
+ fixture.bookName='PHYSICS MED EASY 2.0 FULL PDF BY TEAM KOHINOOR.pdf';fixture.queries=[];
+ try{
+  const books=await loadManualBookLinks({data:{klass:'12',subject:'Physics',chapter:'Magnetism and Matter',topic:'Bar Magnets'}});
+  const known=books.find(book=>book.name===fixture.bookName)!;
+  expect(known.pages).toEqual([{page:244,topic:false}]);
+  // The generic duplicate still uses its own index; the supplied edition adds no page queries.
+  expect(fixture.queries.filter(table=>table==='ncert_pages')).toHaveLength(1);
+ }finally{fixture.bookName='PHYSICS MED EASY.pdf';}
 });

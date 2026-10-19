@@ -5,6 +5,7 @@ import {splitReferenceContent} from '@/lib/reference-visuals';
 import {indexLocalBookPage} from '@/lib/local-book-index';
 import {parseBookContents,canonicalBookChapter} from '@/lib/book-chapter-priority';
 import {canImportMedEasy} from '@/lib/manual-image-import';
+import {medEasyChapterStart} from '@/lib/med-easy-contents';
 
 /** Fetch the PDF on the server so the browser stays on the website's origin. */
 export const openManualBookPdf=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({id:z.string().max(100),klass:z.string().max(30),subject:z.string().max(100)}).parse(raw)).handler(async({data})=>{
@@ -29,6 +30,8 @@ export const loadManualBookLinks=createServerFn({method:'POST'}).inputValidator(
  const terms=data.topic.toLowerCase().split(/\W+/).filter(term=>term.length>3&&!['chapter','points','notes','discussion'].includes(term));
  const selected=(books||[]).filter(book=>combinedReferenceSubject(book)&&screenshotBookMatches(book,data.klass,data.subject));
  const results=await Promise.all(selected.map(async book=>{
+   const contents=medEasyChapterStart(book.file_name,data.subject,data.chapter);
+   if(contents)return {id:book.id,name:book.file_name,url:`/api/med-easy-pdf?${new URLSearchParams({id:book.id,klass:data.klass,subject:data.subject})}`,printedRange:contents.printedRange,pages:[{page:contents.page,topic:false}]};
    const [{data:pages},{data:chunks}]=await Promise.all([
      db.from('ncert_pages').select('page_number,text').eq('book_id',book.id).limit(1000),
      db.from('ncert_chunks').select('content').eq('book_id',book.id).limit(1000),

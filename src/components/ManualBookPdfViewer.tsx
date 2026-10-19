@@ -1,4 +1,5 @@
 import {findManualChapterPage} from "@/lib/manual-chapter-navigation";
+import {medEasyChapterStart} from '@/lib/med-easy-contents';
 import {useEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import type {PDFDocumentProxy} from 'pdfjs-dist';
@@ -15,9 +16,11 @@ export function ManualBookPdfViewer({id,name,klass,subject,initialPage,chapter='
  const pdfUrl=manualPdfUrl(id,klass,subject);
  const ready=!!pdf&&!locating&&!unresolved&&!rendering&&renderedVersion===`${page}:${zoom}:${rotation}`;
  const canvas=useRef<HTMLCanvasElement>(null);
+ const scrollArea=useRef<HTMLDivElement>(null),scrollDirection=useRef(1),lastWheel=useRef(0);
+ const [scrollPages,setScrollPages]=useState(true);
  const devicePdf=useRef<PDFDocumentProxy|null>(null);
  useEffect(()=>setPageInput(String(page)),[page]);
- function showPage(next:number|((previous:number)=>number)){setUnresolved(false);setPage(next);}
+ function showPage(next:number|((previous:number)=>number)){scrollDirection.current=1;setUnresolved(false);setPage(next);}
  function go(){const number=Number(pageInput);if(!pdf||!Number.isInteger(number)||number<1||number>pdf.numPages){setError(`Enter a whole page number from 1 to ${pdf?.numPages||1}.`);return;}setError('');showPage(number);}
  function download(blob:Blob,filename:string){const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
  async function read(blob:Blob){const library=await loadPdfjs();return library.getDocument({data:new Uint8Array(await blob.arrayBuffer())}).promise;}
@@ -27,16 +30,17 @@ export function ManualBookPdfViewer({id,name,klass,subject,initialPage,chapter='
   const key=`${klass}:${subject}:${id}`;
   void (async()=>{
    const value=await cachedManualPdf(id,klass,subject);if(cancelled)return;
-   let target=(initialPage>1&&initialPage<=value.numPages?initialPage:null)||suggestedPages.find(number=>Number.isInteger(number)&&number>0&&number<=value.numPages)||null;
+   const contents=medEasyChapterStart(name,subject,chapter);
+   let target=(initialPage>1&&initialPage<=value.numPages?initialPage:null)||(contents&&contents.page<=value.numPages?contents.page:null)||suggestedPages.find(number=>Number.isInteger(number)&&number>0&&number<=value.numPages)||null;
    if(!target&&chapter){setLocating(true);target=await findManualChapterPage(value,subject,chapter,printedRange,controller.signal);}
    if(cancelled)return;
    setChapterPage(target);setUnresolved(!!chapter&&!target);setPage(target||1);setPdf(value);
   })().catch(reason=>{if(!cancelled&&reason?.name!=='AbortError'){files.delete(key);setError('The online PDF could not be opened. Select Retry or Open device PDF.');}}).finally(()=>{if(!cancelled){setLoading(false);setLocating(false);}});
   return()=>{cancelled=true;controller.abort();};
- },[id,klass,subject,initialPage,chapter,suggestedPages.join(','),printedRange?.start,printedRange?.end,attempt]);
+ },[id,name,klass,subject,initialPage,chapter,suggestedPages.join(','),printedRange?.start,printedRange?.end,attempt]);
  useEffect(()=>()=>{void devicePdf.current?.loadingTask.destroy();},[]);
  useEffect(()=>{if(!pdf||!canvas.current||locating||unresolved)return;let cancelled=false;let task:ReturnType<Awaited<ReturnType<PDFDocumentProxy['getPage']>>['render']>|undefined;setRendering(true);
-  void pdf.getPage(page).then(value=>{if(cancelled||!canvas.current)return;const viewport=value.getViewport({scale:1.5*zoom,rotation:(value.rotate+rotation)%360});const target=canvas.current;target.width=Math.ceil(viewport.width);target.height=Math.ceil(viewport.height);task=value.render({canvas:target,canvasContext:target.getContext('2d')!,viewport});return task.promise;}).then(()=>{if(!cancelled){setRenderedVersion(`${page}:${zoom}:${rotation}`);setError('');}}).catch(reason=>{if(!cancelled&&reason?.name!=='RenderingCancelledException')setError('This page could not be rendered. Try another page.');}).finally(()=>{if(!cancelled)setRendering(false);});return()=>{cancelled=true;task?.cancel();};
+  void pdf.getPage(page).then(value=>{if(cancelled||!canvas.current)return;const viewport=value.getViewport({scale:1.5*zoom,rotation:(value.rotate+rotation)%360});const target=canvas.current;target.width=Math.ceil(viewport.width);target.height=Math.ceil(viewport.height);task=value.render({canvas:target,canvasContext:target.getContext('2d')!,viewport});return task.promise;}).then(()=>{if(!cancelled){setRenderedVersion(`${page}:${zoom}:${rotation}`);setError('');const area=scrollArea.current;if(area)area.scrollTop=scrollDirection.current<0?area.scrollHeight:0;}}).catch(reason=>{if(!cancelled&&reason?.name!=='RenderingCancelledException')setError('This page could not be rendered. Try another page.');}).finally(()=>{if(!cancelled)setRendering(false);});return()=>{cancelled=true;task?.cancel();};
  },[pdf,page,zoom,rotation,locating,unresolved]);
  return createPortal(<div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-3" role="dialog" aria-modal="true" aria-label="View Med Easy PDF" onKeyDown={event=>{if(event.key==='Escape')onClose();if((event.target as HTMLElement).matches('input,select,textarea'))return;if(event.key==='ArrowLeft'&&pdf){event.preventDefault();showPage(value=>Math.max(1,value-1));}if(event.key==='ArrowRight'&&pdf){event.preventDefault();showPage(value=>Math.min(pdf.numPages,value+1));}}}>
   <div className="bg-white rounded-xl w-full max-w-5xl h-[92vh] flex flex-col text-sm shadow-xl">
@@ -49,6 +53,7 @@ export function ManualBookPdfViewer({id,name,klass,subject,initialPage,chapter='
     <button disabled={!pdf} onClick={go}>Go</button>
     <button title="Next page" aria-label="Next page" disabled={!pdf||page>=pdf.numPages} onClick={()=>showPage(value=>value+1)}><ChevronRight size={18}/></button>
     <button title="Last page" aria-label="Last page" disabled={!pdf||page>=pdf.numPages} onClick={()=>showPage(pdf!.numPages)}><ChevronsRight size={18}/></button>
+    <label className="flex items-center gap-1"><input type="checkbox" checked={scrollPages} onChange={event=>setScrollPages(event.target.checked)}/> Scroll between pages</label>
     <label>Zoom <select aria-label="PDF zoom" value={zoom} onChange={event=>setZoom(Number(event.target.value))}><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.5">150%</option><option value="2">200%</option></select></label>
     <button title="Fit page width" aria-label="Fit page width" disabled={!pdf} onClick={()=>setZoom(1)}><Maximize size={18}/></button>
     <button title="Rotate page clockwise" aria-label="Rotate page clockwise" disabled={!pdf} onClick={()=>setRotation(value=>(value+90)%360)}><RotateCw size={18}/></button>
@@ -57,7 +62,13 @@ export function ManualBookPdfViewer({id,name,klass,subject,initialPage,chapter='
     <button disabled={!ready} className="text-blue-700 font-medium flex gap-1 items-center" onClick={()=>canvas.current?.toBlob(blob=>{if(blob){onImport(new File([blob],`book-page-${page}.png`,{type:'image/png'}));onClose();}},'image/png')}><ImagePlus size={16}/> Use this page image</button>
     <label className="cursor-pointer underline">Open device PDF<input type="file" accept="application/pdf" className="hidden" onChange={async event=>{const file=event.target.files?.[0];if(!file)return;setLoading(true);setError('');try{const next=await read(file);void devicePdf.current?.loadingTask.destroy();devicePdf.current=next;setSourceFile(file);setPdf(next);setUnresolved(false);showPage(1);setRotation(0);}catch{setError('This device PDF could not be opened.');}finally{setLoading(false);}}}/></label>
    </div>
-   <div className="overflow-auto flex-1 bg-slate-100 p-3"><p className="mb-2">Take a screenshot here, then close this reader and paste it into the 2D panel. You can also import the whole page.</p>{loading&&<p role="status">{locating?'Finding the matching chapter using saved PDF bookmarks and page headings…':'Loading the requested PDF pages…'}</p>}{unresolved&&<div role="status"><p>This book has no verified page for this chapter yet. The reader has not substituted page 1 for the chapter.</p><button className="underline text-blue-700" onClick={()=>{setUnresolved(false);showPage(1);}}>Browse book contents</button></div>}{rendering&&!loading&&<p role="status">Drawing PDF page {page}…</p>}{error&&<div role="alert">{error} <button className="underline text-blue-700" onClick={()=>{retryManualPdf(id,klass,subject);setAttempt(value=>value+1);}}>Retry</button></div>}<canvas ref={canvas} className="mx-auto bg-white shadow max-w-none" style={{display:pdf&&!locating&&!unresolved?'block':'none',width:pdf?`${zoom*100}%`:undefined,maxWidth:zoom<=1?'100%':undefined}}/></div>
+   <div ref={scrollArea} role="region" aria-label="PDF page scroll area" tabIndex={0} className="overflow-auto overscroll-contain flex-1 bg-slate-100 p-3" onWheel={event=>{
+    if(!scrollPages||!ready||!pdf||event.ctrlKey||Math.abs(event.deltaX)>Math.abs(event.deltaY)||!event.deltaY)return;
+    const area=event.currentTarget,down=event.deltaY>0;
+    if(down?area.scrollTop+area.clientHeight<area.scrollHeight-2:area.scrollTop>2)return;
+    const next=page+(down?1:-1);if(next<1||next>pdf.numPages||Date.now()-lastWheel.current<650)return;
+    lastWheel.current=Date.now();showPage(next);scrollDirection.current=down?1:-1;
+   }}><p className="mb-2 text-slate-600">{scrollPages?'Scroll down at the bottom for the next page, or up at the top for the previous page.':''}</p><p className="mb-2">Take a screenshot here, then close this reader and paste it into the 2D panel. You can also import the whole page.</p>{loading&&<p role="status">{locating?'Finding the matching chapter using saved PDF bookmarks and page headings…':'Loading the requested PDF pages…'}</p>}{unresolved&&<div role="status"><p>This book has no verified page for this chapter yet. The reader has not substituted page 1 for the chapter.</p><button className="underline text-blue-700" onClick={()=>{setUnresolved(false);showPage(1);}}>Browse book contents</button></div>}{rendering&&!loading&&<p role="status">Drawing PDF page {page}…</p>}{error&&<div role="alert">{error} <button className="underline text-blue-700" onClick={()=>{retryManualPdf(id,klass,subject);setAttempt(value=>value+1);}}>Retry</button></div>}<canvas ref={canvas} className="mx-auto bg-white shadow max-w-none" style={{display:pdf&&!locating&&!unresolved?'block':'none',width:pdf?`${zoom*100}%`:undefined,maxWidth:zoom<=1?'100%':undefined}}/></div>
   </div>
  </div>,document.body);
 }
