@@ -1,3 +1,4 @@
+import {exactSlideVisualId} from "@/lib/exact-slide-visual";
 import {orderTopicSections} from "@/lib/topic-lecture-order";
 import {NotesContentCheck} from "@/components/NotesContentCheck";
 import {ncertNotesDisplaySlide} from "@/lib/ncert-display-cleanup";
@@ -1346,7 +1347,7 @@ function SlideCanvas({
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
               <div className="lesson-figure-panel relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 flex flex-col">
                 {isMathematics(subject) || imageUrl ? (
-                  <ManualVisualEditor sharedSlideId={visualSlot||(slide as Slide & {visualSlot?:string}).visualSlot} slideId={String(sourceIndex)} klass={klass} subject={subject} chapter={chapter} topic={slide.title} storageKey={JSON.stringify([klass,subject,chapter,slide.title,sourceIndex,slide.sections?.flatMap(section=>section.lines).slice(0,2)||slide.notes.slice(0,2)])} autoUrl={imageUrl||''} autoContent={isMathematics(subject)?<MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} />:undefined} alt={`${slide.title} — NCERT 2D infographic`} />
+                  <ManualVisualEditor displaySlideNumber={index+1} previousSharedSlideId={visualSlot||(slide as Slide & {visualSlot?:string}).visualSlot} sharedSlideId={exactSlideVisualId(slide,visualSlot||(slide as Slide & {visualSlot?:string}).visualSlot)} slideId={String(sourceIndex)} klass={klass} subject={subject} chapter={chapter} topic={slide.title} storageKey={JSON.stringify([klass,subject,chapter,slide.title,sourceIndex,slide.sections?.flatMap(section=>section.lines).slice(0,2)||slide.notes.slice(0,2)])} autoUrl={imageUrl||''} autoContent={isMathematics(subject)?<MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} />:undefined} alt={`${slide.title} — NCERT 2D infographic`} />
                 ) : imageLoading ? (
                   <div className="flex flex-col items-center gap-2 text-[10px] text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -1360,7 +1361,7 @@ function SlideCanvas({
                 )}
               </div>
 
-              {!slide.reference_visuals?.some(figure => figure.url) && <div className="px-3 py-2 rounded-md bg-card border border-border/50 text-[11px] leading-snug shrink-0">
+              {!slide.reference_visuals?.some(figure => figure.url) && <div className="lesson-diagram-description order-last mt-auto px-3 py-2 rounded-md bg-card border border-border/50 text-[11px] leading-snug shrink-0">
                 <p className="font-medium text-primary notebook-guide-heading">{illustrationCaption.startsWith('No suitable')?'Add a diagram':'Read the diagram'}</p>
                 <p>{illustrationCaption}</p>
                 {(slide.key_terms || []).filter(term=>typeof term==='object' && term.term.length<=35 && !/^(if|thus|chapter|constant [a-z]$)/i.test(term.term)).slice(0, 3).map((term, index) => <span key={index} className="inline-block mt-1 mr-2"><mark className="notebook-term-highlight">{term.term}</mark></span>)}

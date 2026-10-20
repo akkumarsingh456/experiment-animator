@@ -13,10 +13,12 @@ import {importDiagramUrl,type DiagramResult} from '@/lib/diagram-search.function
 import {DiagramImagePicker} from './DiagramImagePicker';
 import {ManualImageCropper} from './ManualImageCropper';
 
-export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoContent,alt,klass='',subject='',chapter='',topic='',slideId='',sharedSlideId}:{storageKey:string;autoUrl:string;autoContent?:ReactNode;alt:string;klass?:string;subject?:string;chapter?:string;topic?:string;slideId?:string;sharedSlideId?:string}){
+export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoContent,alt,klass='',subject='',chapter='',topic='',slideId='',sharedSlideId,previousSharedSlideId,displaySlideNumber}:{storageKey:string;autoUrl:string;autoContent?:ReactNode;alt:string;klass?:string;subject?:string;chapter?:string;topic?:string;slideId?:string;sharedSlideId?:string;previousSharedSlideId?:string;displaySlideNumber?:number}){
  const sharedScope={klass,subject,chapter,topic,slideId:sharedSlideId||slideId},sharedKey=sharedVisualKey(sharedScope);
  const shareAllowed=[klass,subject,chapter,topic,slideId].every(value=>value.trim());
  const storageKey=shareAllowed&&sharedSlideId?`topic-visual:${sharedKey}`:legacyStorageKey;
+ const exactPage=sharedSlideId?.startsWith('page:');
+ const [previousVisual,setPreviousVisual]=useState<ManualVisual|null>(null);
  const [visual,setVisual]=useState<ManualVisual|null>(()=>manualVisualCache.get(storageKey)||null);
  const [imageAspect,setImageAspect]=useState(1);
  const [toolsVisible,setToolsVisible]=useState(()=>!manualVisualCache.has(storageKey));
@@ -31,17 +33,25 @@ export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoCont
  const input=useRef<HTMLInputElement>(null),panel=useRef<HTMLDivElement>(null);
  const drag=useRef<{x:number;y:number;left:number;top:number}|null>(null);
  useEffect(()=>{
-  let cancelled=false,hadLocal=false;dirty.current=false;setPreserve(false);setToolsVisible(!manualVisualCache.has(storageKey));setOpen(false);setVisual(manualVisualCache.get(storageKey)||null);setSharedState(shareAllowed?'loading':'none');
+  let cancelled=false,hadLocal=false;dirty.current=false;setPreviousVisual(null);setPreserve(false);setToolsVisible(!manualVisualCache.has(storageKey));setOpen(false);setVisual(manualVisualCache.get(storageKey)||null);setSharedState(shareAllowed?'loading':'none');
   const applyShared=()=>{const record=sharedVisualRecords.get(sharedKey);if(record&&!dirty.current&&!hadLocal){setVisual(record.visual);setToolsVisible(false);manualVisualCache.set(storageKey,record.visual);setSharedState('saved');window.dispatchEvent(new Event('manual-visual-saved'));}};
   const changed=(event:Event)=>{if((event as CustomEvent).detail?.key===sharedKey)applyShared();};
   window.addEventListener('shared-topic-visual-saved',changed);
   void(async()=>{
    try{await loadManualVisuals();}catch{/* Sharing remains available without device storage. */}
    if(cancelled)return;
-   const local=manualVisualCache.get(storageKey)||manualVisualCache.get(legacyStorageKey);hadLocal=!!local;if(!dirty.current){setVisual(local||null);setToolsVisible(!local);}
+   const local=manualVisualCache.get(storageKey)||(!exactPage?manualVisualCache.get(legacyStorageKey):undefined);hadLocal=!!local;if(!dirty.current){setVisual(local||null);setToolsVisible(!local);}
    if(!shareAllowed)return;
    try{let record=await getSharedTopicVisual(sharedScope);
-    if(!record&&sharedSlideId&&sharedSlideId!==slideId){record=await getSharedTopicVisual({...sharedScope,slideId});if(record)sharedVisualRecords.set(sharedKey,record);}
+    if(!record&&exactPage){
+     let previous=manualVisualCache.get(legacyStorageKey)||null;
+     for(const oldId of [previousSharedSlideId,slideId].filter((id):id is string=>!!id)){
+      const oldScope={...sharedScope,slideId:oldId};
+      previous ||= manualVisualCache.get(`topic-visual:${sharedVisualKey(oldScope)}`)||(await getSharedTopicVisual(oldScope))?.visual||null;
+      if(previous)break;
+     }
+     if(!cancelled)setPreviousVisual(previous);
+    }else if(!record&&sharedSlideId&&sharedSlideId!==slideId){record=await getSharedTopicVisual({...sharedScope,slideId});if(record)sharedVisualRecords.set(sharedKey,record);}
     if(cancelled)return;setSharedState(record?'saved':'none');
     // Retain a pre-existing personal image. Offer an explicit way to use the shared version.
     if(!local&&!dirty.current)applyShared();
@@ -101,7 +111,8 @@ export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoCont
      </div>}
      {visual&&<button onClick={()=>setOpen(value=>!value)} className="flex items-center gap-1 ml-2"><Move size={15}/> Size / shape / position</button>}
      {sharedState==='saved'&&<button onClick={()=>{const saved=sharedVisualRecords.get(sharedKey);if(saved){dirty.current=true;setVisual(saved.visual);setOpen(true);}}} className="flex items-center gap-1 text-blue-700">Use preserved image</button>}
-     {visual&&<button onClick={()=>setOpen(value=>!value)} className="flex items-center gap-1 text-blue-700"><Save size={15}/> Preserve / save</button>}
+     {visual&&<button disabled={saving} onClick={()=>void save()} className="flex items-center gap-1 text-blue-700"><Save size={15}/> {saving?'Saving…':'Preserve / save'}</button>}
+     {previousVisual&&<button onClick={()=>{dirty.current=true;setVisual(previousVisual);setOpen(true);setToolsVisible(true);}} className="flex items-center gap-1 text-blue-700">Use earlier topic image on this slide</button>}
      {visual&&<button onClick={()=>setCropOpen(true)} className="flex items-center gap-1"><Crop size={15}/> Crop</button>}
      {open&&visual&&<div className="w-full grid grid-cols-2 gap-2 mt-1">
        <label>Size <input aria-label="Uploaded image size" type="range" min="10" max="100" value={visual.width} onChange={event=>change({width:Number(event.target.value),x:Math.min(visual.x,100-Number(event.target.value))})}/></label>
@@ -112,7 +123,7 @@ export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoCont
        <div className="col-span-2 rounded border border-blue-200 bg-blue-50 p-2">
          <p className="font-semibold">Preserve this topic image</p>
          <p className="mt-1">{sharedState==='saved'?'A shared image is saved for this slide. Saving for everyone replaces that shared version.':sharedState==='loading'?'Checking for a shared image…':sharedState==='error'?'Shared images could not be loaded. You can still edit and save on this device.':'Keep the cropped image and its layout after refresh, for everyone viewing this exact slide.'}</p>
-         <p className="mt-1 break-words">Class {klass} · {subject} · {chapter} · {topic} · Slide {Number(slideId)+1}</p>
+         <p className="mt-1 break-words">Class {klass} · {subject} · {chapter} · {topic} · Slide {displaySlideNumber??Number(slideId)+1}</p>
          <label className="mt-2 flex items-start gap-2"><input type="checkbox" disabled={!shareAllowed||saving} checked={preserve} onChange={event=>setPreserve(event.target.checked)}/><span>Yes, preserve for everyone. This image belongs to this chapter, topic and slide, and I can share it.</span></label>
          {!shareAllowed&&<p>Open a slide with complete chapter and topic details to share an image.</p>}
        </div>

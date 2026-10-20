@@ -52,10 +52,15 @@ describe('manual image import UI',()=>{
   const geometry=()=>{const style=image.parentElement!.style;return [style.left,style.top,style.width,style.height,style.borderRadius];};
   const before=geometry();
   expect(host.querySelector('.manual-image-controls')?.className).not.toContain('absolute');
-  await act(async()=>[...host.querySelectorAll('button')].find(button=>button.textContent?.includes('Save on this device'))!.click());
+  fixture.save.mockImplementationOnce(async(key,visual)=>{fixture.cache.set(key,visual);});
+  await act(async()=>[...host.querySelectorAll('button')].find(button=>button.textContent?.includes('Preserve / save'))!.click());
   expect(fixture.save).toHaveBeenCalledWith('paste-page',expect.objectContaining({url:'data:image/png;base64,PASTED',width:96,shape:'rectangle',x:2,y:2}));
   expect(geometry()).toEqual(before);
   expect((host.querySelector('.manual-image-stage') as HTMLElement).style.aspectRatio).toBe('3 / 1');
   await act(async()=>root.unmount());host.remove();
+  const returnHost=document.createElement('div');document.body.append(returnHost);const returnRoot=createRoot(returnHost);
+  await act(async()=>returnRoot.render(<ManualVisualEditor storageKey="paste-page" autoUrl="auto.png" alt="Diagram"/>));
+  expect(returnHost.querySelector('img[alt="Manually uploaded topic reference"]')?.getAttribute('src')).toContain('PASTED');
+  await act(async()=>returnRoot.unmount());returnHost.remove();fixture.cache.delete('paste-page');
  });
 });
