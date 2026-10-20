@@ -16,6 +16,7 @@ import {ManualImageCropper} from './ManualImageCropper';
 export function ManualVisualEditor({storageKey,autoUrl,autoContent,alt,klass='',subject='',chapter='',topic='',slideId=''}:{storageKey:string;autoUrl:string;autoContent?:ReactNode;alt:string;klass?:string;subject?:string;chapter?:string;topic?:string;slideId?:string}){
  const [visual,setVisual]=useState<ManualVisual|null>(()=>manualVisualCache.get(storageKey)||null);
  const [imageAspect,setImageAspect]=useState(1);
+ const [toolsVisible,setToolsVisible]=useState(()=>!manualVisualCache.has(storageKey));
  const [open,setOpen]=useState(false),[saving,setSaving]=useState(false);
  const [googleOpen,setGoogleOpen]=useState(false),[cropOpen,setCropOpen]=useState(false),[importing,setImporting]=useState(false);
  const [preserve,setPreserve]=useState(false),[sharedState,setSharedState]=useState<'loading'|'saved'|'none'|'error'>('loading');
@@ -29,14 +30,14 @@ export function ManualVisualEditor({storageKey,autoUrl,autoContent,alt,klass='',
  const input=useRef<HTMLInputElement>(null),panel=useRef<HTMLDivElement>(null);
  const drag=useRef<{x:number;y:number;left:number;top:number}|null>(null);
  useEffect(()=>{
-  let cancelled=false,hadLocal=false;dirty.current=false;setPreserve(false);setVisual(manualVisualCache.get(storageKey)||null);setSharedState(shareAllowed?'loading':'none');
-  const applyShared=()=>{const record=sharedVisualRecords.get(sharedKey);if(record&&!dirty.current&&!hadLocal){setVisual(record.visual);manualVisualCache.set(storageKey,record.visual);setSharedState('saved');window.dispatchEvent(new Event('manual-visual-saved'));}};
+  let cancelled=false,hadLocal=false;dirty.current=false;setPreserve(false);setToolsVisible(!manualVisualCache.has(storageKey));setOpen(false);setVisual(manualVisualCache.get(storageKey)||null);setSharedState(shareAllowed?'loading':'none');
+  const applyShared=()=>{const record=sharedVisualRecords.get(sharedKey);if(record&&!dirty.current&&!hadLocal){setVisual(record.visual);setToolsVisible(false);manualVisualCache.set(storageKey,record.visual);setSharedState('saved');window.dispatchEvent(new Event('manual-visual-saved'));}};
   const changed=(event:Event)=>{if((event as CustomEvent).detail?.key===sharedKey)applyShared();};
   window.addEventListener('shared-topic-visual-saved',changed);
   void(async()=>{
    try{await loadManualVisuals();}catch{/* Sharing remains available without device storage. */}
    if(cancelled)return;
-   const local=manualVisualCache.get(storageKey);hadLocal=!!local;if(!dirty.current)setVisual(local||null);
+   const local=manualVisualCache.get(storageKey);hadLocal=!!local;if(!dirty.current){setVisual(local||null);setToolsVisible(!local);}
    if(!shareAllowed)return;
    try{const record=await getSharedTopicVisual(sharedScope);if(cancelled)return;setSharedState(record?'saved':'none');
     // Retain a pre-existing personal image. Offer an explicit way to use the shared version.
@@ -49,7 +50,7 @@ export function ManualVisualEditor({storageKey,autoUrl,autoContent,alt,klass='',
  async function upload(file?:File,credit?:ImageCredit){
   if(!file)return;if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>12*1024*1024){toast.error('Choose a PNG, JPG or WebP image up to 12 MB.');return;}
   const key=storageKey;dirty.current=true;setPreserve(false);
-  try{const url=URL.createObjectURL(file);const image=new Image();try{image.src=url;await image.decode();if(currentKey.current!==key)return;const scale=Math.min(1,1600/Math.max(image.width,image.height));setVisual({url:imageWithCredit(image,Math.round(image.width*scale),Math.round(image.height*scale),credit),width:96,x:2,y:2,shape:'rectangle',showAuto:false,credit});setOpen(true);setBookOpen(false);setGoogleOpen(false);setCropOpen(false);panel.current?.focus();}finally{URL.revokeObjectURL(url);}}catch{toast.error('This image could not be opened.');}
+  try{const url=URL.createObjectURL(file);const image=new Image();try{image.src=url;await image.decode();if(currentKey.current!==key)return;const scale=Math.min(1,1600/Math.max(image.width,image.height));setVisual({url:imageWithCredit(image,Math.round(image.width*scale),Math.round(image.height*scale),credit),width:96,x:2,y:2,shape:'rectangle',showAuto:false,credit});setOpen(true);setToolsVisible(true);setBookOpen(false);setGoogleOpen(false);setCropOpen(false);panel.current?.focus();}finally{URL.revokeObjectURL(url);}}catch{toast.error('This image could not be opened.');}
  }
  async function importUrl(url:string,credit?:ImageCredit){const key=storageKey;const result=/^data:image\/(png|jpeg|webp);base64,/i.test(url)?{dataUrl:url,type:url.slice(5,url.indexOf(';'))}:await importDiagramUrl({data:{url}});if(currentKey.current!==key)return;const blob=await (await fetch(result.dataUrl)).blob();await upload(new File([blob],'topic-diagram.png',{type:result.type}),credit);}
  async function useDiagram(image:DiagramResult){setImporting(true);try{await importUrl(image.url,image);}catch(error){toast.error(error instanceof Error?error.message:'The image could not be imported. Try copying the image or a screenshot.');}finally{setImporting(false);}}
@@ -65,7 +66,7 @@ export function ManualVisualEditor({storageKey,autoUrl,autoContent,alt,klass='',
   try{
    if(share){await preserveTopicVisual(scope,chosen);if(currentKey.current===key)setSharedState('saved');}
    try{await saveManualVisual(key,chosen);}catch{if(!share)throw new Error('Image could not be saved. Device storage may be full.');}
-   if(currentKey.current===key){dirty.current=false;setOpen(false);setPreserve(false);}
+   if(currentKey.current===key){dirty.current=false;setOpen(false);setToolsVisible(false);setPreserve(false);}
    toast.success(share?'Image preserved for everyone on this exact chapter, topic and slide.':'Image and layout saved on this device.');
   }catch(error){toast.error(error instanceof Error?error.message:'The image could not be saved.');}finally{setSaving(false);}
  }
@@ -81,7 +82,8 @@ export function ManualVisualEditor({storageKey,autoUrl,autoContent,alt,klass='',
      <img src={visual.url} alt="Manually uploaded topic reference" draggable={false} onLoad={event=>{const image=event.currentTarget;if(image.naturalWidth&&image.naturalHeight)setImageAspect(image.naturalWidth/image.naturalHeight);}} className="w-full h-full object-contain object-top" style={visual.shape==='circle'?{height:'auto',aspectRatio:'1'}:undefined}/>
    </div>}
    </div>
-   <div className={`manual-image-controls ${manualOnly?'relative m-2':'absolute bottom-2 left-2 right-2'} flex flex-wrap gap-2 rounded-lg bg-white/95 p-3 border text-[13px] shadow`}>
+   {visual&&<button type="button" className={`manual-image-toggle absolute right-2 top-2 z-20 ${toolsVisible?'':'manual-image-toggle-pulse'}`} aria-label={toolsVisible?'Hide image options':'Show image options'} aria-expanded={toolsVisible} title={toolsVisible?'Hide image options':'Image options: import, search, crop and save'} onClick={()=>{setToolsVisible(value=>!value);setOpen(false);setBookOpen(false);}}><ImagePlus size={19}/></button>}
+   {toolsVisible&&<div className={`manual-image-controls ${manualOnly?'relative m-2':'absolute bottom-2 left-2 right-2'} flex flex-wrap gap-2 rounded-lg bg-white/95 p-3 border text-[13px] shadow`}>
      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event=>{void upload(event.target.files?.[0]);event.target.value='';}}/>
      <button onClick={()=>input.current?.click()} title="Import a picture from your device" className="flex items-center gap-1"><ImagePlus size={15}/> From device</button>
      {medEasyAllowed&&<button onClick={()=>void openBooks()} className="flex items-center gap-1"><BookOpen size={15}/> From Med Easy book</button>}
@@ -114,7 +116,7 @@ export function ManualVisualEditor({storageKey,autoUrl,autoContent,alt,klass='',
        <button disabled={saving} onClick={()=>void save()} className="flex items-center gap-1 text-blue-700"><Save size={15}/>{saving?'Saving…':preserve?'Save for everyone':'Save on this device'}</button>
        <button onClick={()=>{dirty.current=true;setPreserve(false);setVisual(null);void saveManualVisual(storageKey,null).then(()=>toast.success('Automatic diagram restored.')).catch(()=>toast.error('Could not remove the saved image.'));}} className="flex items-center gap-1"><RotateCcw size={15}/> Restore automatic</button>
      </div>}
-   </div>
+   </div>}
    {viewer&&medEasyAllowed&&<ManualBookPdfViewer id={viewer.id} name={viewer.name} klass={klass} subject={subject} chapter={chapter} suggestedPages={viewer.pages} printedRange={viewer.printedRange} initialPage={viewer.page} onClose={()=>{setViewer(null);panel.current?.focus();}} onImport={file=>void upload(file)}/>}
    {googleOpen&&<DiagramImagePicker query={topicDiagramQuery(klass,subject,chapter,topic)} onClose={()=>{setGoogleOpen(false);panel.current?.focus();}} onUse={useDiagram} onPaste={paste} onDrop={drop}/>}
    {cropOpen&&visual&&<ManualImageCropper url={visual.url} credit={visual.credit} onClose={()=>setCropOpen(false)} onApply={url=>{change({url});setCropOpen(false);setOpen(true);}}/>}

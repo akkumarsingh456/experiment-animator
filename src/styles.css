@@ -394,6 +394,13 @@
 .manual-visual-only .manual-image-stage { flex: 0 1 auto; min-height: 0; }
 .manual-visual-only .manual-image-controls { flex: 0 0 auto; }
 .manual-image-controls button:hover { background: #eaf3f8; }
+.manual-image-toggle { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid #b7d2e5; border-radius: 50%; background: #fff; color: #0875bb; box-shadow: 0 2px 6px #173d5020; }
+.manual-image-toggle:focus-visible { outline: 3px solid #38bdf8; outline-offset: 2px; }
+.manual-image-toggle-pulse { animation: image-options-pulse 2.8s ease-in-out infinite; }
+@keyframes image-options-pulse { 0%,100% { opacity: 1; } 50% { opacity: .65; } }
+@media (prefers-reduced-motion: reduce) { .manual-image-toggle-pulse { animation: none; } }
+.lesson-export-slide .manual-image-toggle, .lesson-export-notes .manual-image-toggle { display: none !important; }
+@media print { .manual-image-toggle { display: none !important; } }
 .manual-image-controls input[type=range] { display: block; width: 100%; }
 .lesson-export-slide .manual-image-controls, .lesson-export-notes .manual-image-controls { display: none !important; }
 @media print { .manual-image-controls { display: none !important; } }
