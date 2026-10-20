@@ -1,3 +1,4 @@
+import {secondaryScienceSectionEvidence,substantiveStudyLine} from '@/lib/secondary-study-evidence';
 import { sourceQuizItems } from "@/lib/source-quiz";
 import { appendSocialRevisionNotes } from "@/lib/social-revision-notes";
 import { socialChapterPart, socialTitle } from "@/lib/social-science-chapters";
@@ -1376,7 +1377,7 @@ export function validateFigurePlacement(slides: Slide[], context: string): { rep
 
 
 
-export function buildLocalSlides(topic: string, subtopics: string, context: string, subject = "", mode: "topic" | "chapter" = "topic"): Slide[] {
+export function buildLocalSlides(topic: string, subtopics: string, context: string, subject = "", mode: "topic" | "chapter" = "topic", klass = ""): Slide[] {
   const rawSentences = uniqueByNormalized(splitSentences(context));
   const lang = isLanguageSubject(subject);
   const sentences = filterJunkSentences(rawSentences,lang);
@@ -1450,10 +1451,13 @@ export function buildLocalSlides(topic: string, subtopics: string, context: stri
       start=i+1;
     }
   }
-  const concepts = selectedConcepts.length ? selectedConcepts : [cleanSyllabusLabel(topic)];
+  const secondaryScience=/^(?:9|10)$/.test(classNumber(klass))&&subject==="Science";
+  const chapterTopics=secondaryScience?chaptersFor(classNumber(klass),subject).find(chapter=>normalizeText(cleanSyllabusLabel(chapter.chapter))===normalizeText(cleanSyllabusLabel(topic)))?.subtopics:undefined;
+  const concepts = selectedConcepts.length ? selectedConcepts : chapterTopics?.length ? chapterTopics : [cleanSyllabusLabel(topic)];
   const conceptSlides: Slide[] = [];
   for (const name of concepts) {
-    const source = topicEvidence(name, sentences);
+    const sectionEvidence=/^(?:9|10)$/.test(classNumber(klass))&&subject==="Science"?secondaryScienceSectionEvidence(name,context):[];
+    const source = sectionEvidence.length?sectionEvidence:topicEvidence(name, sentences);
     if (!source.length) {
       // A missing topic is explicit; do not relabel an unrelated paragraph.
       conceptSlides.push({ title: name, kind: "content", bullets: [`Readable source text for ${name} is missing from the selected textbook. Re-ingest the matching chapter PDF from Upload, then regenerate this lesson.`], notes: [], key_terms: [], visual: "book", grounding: "", caption: "Source text needs attention for this topic." });
@@ -1532,7 +1536,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // Quiz items are rebuilt from source statements after cache lookup.
     const lessonKey = hashKey([
-      "lesson-v60-topic-specific-dimensions-and-source-review",
+      /^(?:9|10)$/.test(classNumber(data.klass)) ? "lesson-v61-secondary-study-notes" : "lesson-v60-topic-specific-dimensions-and-source-review",
       data.klass,
       data.subject,
       data.chapter,
@@ -1788,7 +1792,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // For English/Hindi/Sanskrit (or explicit chapter mode) we paginate the full
     // chapter text verbatim with break slides every 10 pages.
     const lessonMode = isLanguageSubject(data.subject) ? "chapter" : data.mode;
-    const slidesRaw = buildLocalSlides(data.topic, data.subtopics, context, data.subject, lessonMode);
+    const slidesRaw = buildLocalSlides(data.topic, data.subtopics, context, data.subject, lessonMode, data.klass);
     const contextNorm = normalizeText(context);
     const preSlides = slidesRaw.map((sl, i) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm, i) }));
 
@@ -1836,7 +1840,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     const verifiedSlides = notedSlides.map((sl, i) => {
       const { sections, check } = fixedChecks[i];
       const activity = sourceDiscussion(sl.title, sections, data.subject, data.klass);
-      const completeSections = sequenceChemistryNotes(withPhysicsDimensions(learningScaffold(sl.title, activity ? [...sections, activity] : sections), data.subject, sl.title), data.subject, data.chapter || sl.title);
+      const completeSections = sequenceChemistryNotes(withPhysicsDimensions(learningScaffold(sl.title, activity ? [...sections, activity] : sections, /^(?:9|10)$/.test(classNumber(data.klass))&&data.subject==="Science"), data.subject, sl.title), data.subject, data.chapter || sl.title);
       const prev = sl.verification as SlideVerification | undefined;
       return {
         ...sl,
@@ -1849,11 +1853,16 @@ export const generateLesson = createServerFn({ method: "POST" })
         },
       };
     });
+    const secondaryScience=/^(?:9|10)$/.test(classNumber(data.klass))&&data.subject==="Science";
+    if(secondaryScience&&!verifiedSlides.some(slide=>(slide.sections||[]).filter(section=>section.kind!=="diagram").flatMap(section=>section.lines).filter(substantiveStudyLine).length>=3)){
+      throw new Error(`The selected Class ${data.klass} Science chapter does not contain enough readable explanations for study notes. Add or reprocess the matching textbook chapter, then regenerate. Classroom activities alone will not be saved as complete notes.`);
+    }
+    const needsStudyReview=(slide:Slide)=>secondaryScience&&(!slide.kind||slide.kind==="content"||slide.kind==="chapter");
     const notes_report = {
       flagged_slide_indices: verifiedSlides
-        .map((sl, i) => (sl.verification?.notes_check?.pass === false ? i : -1))
+        .map((sl, i) => (sl.verification?.notes_check?.pass === false || needsStudyReview(sl)&&!sl.notes_quality?.ready ? i : -1))
         .filter((i) => i >= 0),
-      pass: verifiedSlides.every((sl) => sl.verification?.notes_check?.pass !== false),
+      pass: verifiedSlides.every((sl) => sl.verification?.notes_check?.pass !== false && (!needsStudyReview(sl)||sl.notes_quality?.ready)),
     };
     const slides = [...verifiedSlides, ...mcqSlides];
 

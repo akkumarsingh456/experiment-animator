@@ -1,3 +1,4 @@
+import {substantiveStudyLine} from './secondary-study-evidence';
 import { cleanSourceNoteLine } from "@/lib/source-note-quality";
 import type { NoteSection } from "@/lib/ncert-teacher-notes";
 import { latexLineValid } from "@/lib/notes-verification";
@@ -27,10 +28,18 @@ export function learningProfile(subject = "", klass = "") {
 export function sourceDiscussion(title: string, sections: NoteSection[], subject: string, klass: string): NoteSection | undefined {
   if (sections.some((s) => /activity|experiment|discussion/i.test(s.heading) || s.lines.some((l) => /^\*\*(?:NCERT )?(activity|experiment|discussion)/i.test(l)))) return;
   const evidence = sections.filter((s) => s.kind !== "diagram" && !/^Source (?:review|table)/.test(s.heading)).flatMap((s) => s.lines)
-    .find((l) => /[\p{L}]{3}/u.test(l) && !/^\*\*(learning|prerequisite|practice|exit|answer|derivation)/i.test(l));
+    .find((l) => substantiveStudyLine(l) && /[\p{L}]{3}/u.test(l) && !/^\*\*(learning|prerequisite|practice|exit|answer|derivation)/i.test(l));
   if (!evidence) return;
   const body = cleanSourceNoteLine(evidence).replace(/^\*\*[^*]+:\*\*\s*/, "");
   if (!body) return;
+  if(subject==="Science"&&/^(?:Class\s*)?(?:9|10)$/.test(klass)){
+    const facts=sections.filter(section=>section.kind!=="diagram").flatMap(section=>section.lines).filter(substantiveStudyLine);
+    if(facts.length<3)return;
+    return {heading:"Classroom discussion",kind:"bullets",lines:[
+      `**Activity:** Use the textbook explanation or labelled diagram for ${title}. Predict the source-described outcome, then compare your prediction with the explanation. Teacher-designed discussion; no additional experiment is implied.`,
+      "**Discussion:** Support your answer with a statement from these notes and its reason. Identify a condition or exception only if the source states one.",
+    ]};
+  }
   const { family } = learningProfile(subject, klass);
   const task = {
     language: "In pairs, locate the passage that supports this statement. One student explains a word, action or image; the other offers an interpretation and points to the words supporting it.",
@@ -53,10 +62,14 @@ export function sourceDiscussion(title: string, sections: NoteSection[], subject
 
 export type NotesQuality = { ready: boolean; issues: string[]; lines: number; derivations: number; activity: boolean };
 /** Add teaching prompts only; never invent missing definitions or derivations. */
-export function learningScaffold(title: string, sections: NoteSection[]): NoteSection[] {
+export function learningScaffold(title: string, sections: NoteSection[], studentRevision=false): NoteSection[] {
   const lines = sections.filter((s) => s.kind !== "diagram" && !/^Source (?:review|table)/.test(s.heading)).flatMap((s) => s.lines);
-  if (lines.length < 3) return sections;
+  if (lines.filter(substantiveStudyLine).length < 3) return sections;
   const has = (label: string) => lines.some((l) => new RegExp(`^\\*\\*${label}`, "i").test(l));
+  if(studentRevision){
+    if(has("summary|revision check|check your understanding|exit ticket"))return sections;
+    return [...sections,{heading:"Quick revision",kind:"bullets",lines:[`**Revision check:** Explain ${title} without looking, then check your key terms, important points and any equations against these notes.`]}];
+  }
   const prompts: string[] = [];
   if (!has("learning objective")) prompts.push(`**Learning objective:** Explain ${title} in your own words and support your explanation with evidence from these notes.`);
   if (!has("prerequisite")) prompts.push("**Prerequisite:** Before reading, recall a related idea from your earlier lessons; identify any unfamiliar words to clarify with the class.");
@@ -71,7 +84,7 @@ export function learningScaffold(title: string, sections: NoteSection[]): NoteSe
 export function reviewNotes(sections: NoteSection[] | undefined): NotesQuality {
   const lines = (sections || []).filter((s) => s.kind !== "diagram").flatMap((s) => s.lines);
   const issues: string[] = [];
-  const factual = lines.filter((l) => !/^\*\*(activity|discussion|learning objective|prerequisite|support practice|core practice|challenge practice|answers and explanations|exit ticket)/i.test(l));
+  const factual = lines.filter(substantiveStudyLine);
   if (factual.length < 3) issues.push("The source provides too little readable material for complete notes.");
   if (lines.some((l) => latexLineValid(l).invalid)) issues.push("A mathematical expression needs notation review.");
   const derivationHeads = lines.map((l, i) => /^\*\*derivation of/i.test(l) ? i : -1).filter((i) => i >= 0);

@@ -1,3 +1,4 @@
+import {secondaryScienceSectionEvidence,substantiveStudyLine} from './secondary-study-evidence';
 import { isContentsListing } from "@/lib/note-source-noise";
 import { topicEvidence } from "@/lib/topic-evidence";
 import { notesQualityPolicy } from "@/lib/notes-quality-policy";
@@ -554,7 +555,7 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
   );
   const targets = slides.map((s, i) => ({ s, i })).filter(({ s }) => (s.kind ?? "content") === "content" || s.kind === "chapter");
   const withLocal = slides.map((s) =>
-    ((s.kind ?? "content") === "content" || s.kind === "chapter") ? { ...s, sections: buildLocalSections({ ...s, grounding: selectSlideExcerpts(s, opts.context).join(" ") }) } : s,
+    ((s.kind ?? "content") === "content" || s.kind === "chapter") ? { ...s, sections: buildLocalSections({ ...s, grounding: (/^(?:Class\s*)?(?:9|10)$/.test(opts.klass)&&opts.subject==="Science"?secondaryScienceSectionEvidence(s.title,opts.context):[]).join(" ") || selectSlideExcerpts(s, opts.context).join(" ") }) } : s,
   );
   if (targets.length === 0) return withLocal;
 
@@ -579,7 +580,11 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
   for (const { batch, map } of results) {
     batch.forEach(({ i }, localIdx) => {
       const sections = map.get(localIdx);
-      if (sections?.length && sections[0].lines.length >= 3) {
+      const factualSize=(sections:NoteSection[]|undefined)=>(sections||[]).flatMap(section=>section.lines).filter(substantiveStudyLine).reduce((size,line)=>size+line.length,0);
+      const secondaryScience=/^(?:Class\s*)?(?:9|10)$/.test(opts.klass)&&opts.subject==="Science";
+      // A terse rewrite must not replace a full chapter section with three facts and many tasks.
+      const completeEnough=!secondaryScience||factualSize(sections)>=factualSize(withLocal[i].sections)*.75;
+      if (completeEnough && sections?.length && sections.flatMap(section=>section.lines).filter(substantiveStudyLine).length >= 3) {
         // A fluent rewrite must not erase a whole source-backed learning facet.
         // Only restore missing categories from this slide's own local evidence.
         const generated=sections.flatMap(section=>section.lines).join('\n');

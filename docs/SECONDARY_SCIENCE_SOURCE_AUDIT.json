@@ -1,0 +1,892 @@
+{
+  "scope": "Existing Class 9 (legacy) and Class 10 Science catalog; syllabus unchanged",
+  "method": "Numbered-section retrieval with lexical fallback against chapter-scoped source text. Presence of a match is not a scientific verification of every sentence. Live uploaded library and every generated lesson were not audited.",
+  "chapters": 25,
+  "topics": 123,
+  "matched_topics": 122,
+  "class9_source": "https://sathee.iitk.ac.in/sathee-railway-exams/student-corner/ncert-books/class-09/nb-science-09/",
+  "class10_source_template": "https://ncert.nic.in/textbook/pdf/jesc1NN.pdf",
+  "topics_detail": [
+    {
+      "grade": "9",
+      "chapter": "Chapter 1: Matter in Our Surroundings (Chemistry)",
+      "topic": "Physical nature of matter",
+      "section": 15,
+      "lexical": 2
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 1: Matter in Our Surroundings (Chemistry)",
+      "topic": "Characteristics of particles of matter",
+      "section": 19,
+      "lexical": 16
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 1: Matter in Our Surroundings (Chemistry)",
+      "topic": "States of matter (solid, liquid, gas)",
+      "section": 44,
+      "lexical": 45
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 1: Matter in Our Surroundings (Chemistry)",
+      "topic": "Change of state",
+      "section": 0,
+      "lexical": 9
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 1: Matter in Our Surroundings (Chemistry)",
+      "topic": "Evaporation",
+      "section": 25,
+      "lexical": 10
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 2: Is Matter Around Us Pure? (Chemistry)",
+      "topic": "What is a mixture?",
+      "section": 32,
+      "lexical": 46
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 2: Is Matter Around Us Pure? (Chemistry)",
+      "topic": "Types of mixtures",
+      "section": 25,
+      "lexical": 0
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 2: Is Matter Around Us Pure? (Chemistry)",
+      "topic": "Solutions",
+      "section": 0,
+      "lexical": 44
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 2: Is Matter Around Us Pure? (Chemistry)",
+      "topic": "Concentration of a solution",
+      "section": 17,
+      "lexical": 3
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 2: Is Matter Around Us Pure? (Chemistry)",
+      "topic": "Suspension",
+      "section": 0,
+      "lexical": 13
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 2: Is Matter Around Us Pure? (Chemistry)",
+      "topic": "Colloids",
+      "section": 0,
+      "lexical": 12
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 2: Is Matter Around Us Pure? (Chemistry)",
+      "topic": "Physical and chemical changes",
+      "section": 13,
+      "lexical": 10
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 2: Is Matter Around Us Pure? (Chemistry)",
+      "topic": "Pure substances (elements and compounds)",
+      "section": 55,
+      "lexical": 22
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 3: Atoms and Molecules (Chemistry)",
+      "topic": "Laws of chemical combination",
+      "section": 31,
+      "lexical": 4
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 3: Atoms and Molecules (Chemistry)",
+      "topic": "What is an atom?",
+      "section": 46,
+      "lexical": 45
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 3: Atoms and Molecules (Chemistry)",
+      "topic": "What is a molecule?",
+      "section": 23,
+      "lexical": 14
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 3: Atoms and Molecules (Chemistry)",
+      "topic": "Writing chemical formulae",
+      "section": 39,
+      "lexical": 6
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 3: Atoms and Molecules (Chemistry)",
+      "topic": "Molecular mass and mole concept",
+      "section": 32,
+      "lexical": 2
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 4: Structure of the Atom (Chemistry)",
+      "topic": "Charged particles in matter",
+      "section": 17,
+      "lexical": 6
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 4: Structure of the Atom (Chemistry)",
+      "topic": "Structure of an atom (Thomson, Rutherford and Bohr models)",
+      "section": 68,
+      "lexical": 21
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 4: Structure of the Atom (Chemistry)",
+      "topic": "Distribution of electrons in orbits",
+      "section": 0,
+      "lexical": 7
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 4: Structure of the Atom (Chemistry)",
+      "topic": "Valency",
+      "section": 21,
+      "lexical": 11
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 4: Structure of the Atom (Chemistry)",
+      "topic": "Atomic number and mass number",
+      "section": 15,
+      "lexical": 16
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 4: Structure of the Atom (Chemistry)",
+      "topic": "Isotopes and isobars",
+      "section": 45,
+      "lexical": 0
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 5: The Fundamental Unit of Life (Biology)",
+      "topic": "What are living organisms made of?",
+      "section": 48,
+      "lexical": 2
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 5: The Fundamental Unit of Life (Biology)",
+      "topic": "Plasma membrane",
+      "section": 0,
+      "lexical": 10
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 5: The Fundamental Unit of Life (Biology)",
+      "topic": "Cell wall",
+      "section": 18,
+      "lexical": 10
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 5: The Fundamental Unit of Life (Biology)",
+      "topic": "Nucleus",
+      "section": 31,
+      "lexical": 11
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 5: The Fundamental Unit of Life (Biology)",
+      "topic": "Cytoplasm",
+      "section": 11,
+      "lexical": 7
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 5: The Fundamental Unit of Life (Biology)",
+      "topic": "Cell organelles (ER, Golgi apparatus, lysosomes, mitochondria, plastids, vacuoles)",
+      "section": 8,
+      "lexical": 40
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 6: Tissues (Biology)",
+      "topic": "Plant tissues (meristematic and permanent)",
+      "section": 95,
+      "lexical": 23
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 6: Tissues (Biology)",
+      "topic": "Animal tissues (epithelial, connective, muscular, nervous)",
+      "section": 98,
+      "lexical": 27
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 7: Motion (Physics)",
+      "topic": "Description of motion",
+      "section": 41,
+      "lexical": 0
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 7: Motion (Physics)",
+      "topic": "Rate of change of velocity",
+      "section": 19,
+      "lexical": 14
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 7: Motion (Physics)",
+      "topic": "Graphical representation of motion",
+      "section": 39,
+      "lexical": 1
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 7: Motion (Physics)",
+      "topic": "Equations of kinematic motion",
+      "section": 22,
+      "lexical": 4
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 7: Motion (Physics)",
+      "topic": "Uniform circular motion",
+      "section": 25,
+      "lexical": 24
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 8: Force and Laws of Motion (Physics)",
+      "topic": "Balanced and unbalanced forces",
+      "section": 26,
+      "lexical": 22
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 8: Force and Laws of Motion (Physics)",
+      "topic": "First law of motion",
+      "section": 61,
+      "lexical": 8
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 8: Force and Laws of Motion (Physics)",
+      "topic": "Inertia and mass",
+      "section": 15,
+      "lexical": 5
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 8: Force and Laws of Motion (Physics)",
+      "topic": "Second law of motion",
+      "section": 76,
+      "lexical": 9
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 8: Force and Laws of Motion (Physics)",
+      "topic": "Third law of motion",
+      "section": 35,
+      "lexical": 5
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 8: Force and Laws of Motion (Physics)",
+      "topic": "Conservation of momentum",
+      "section": 0,
+      "lexical": 15
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 9: Gravitation (Physics)",
+      "topic": "Gravitation",
+      "section": 56,
+      "lexical": 8
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 9: Gravitation (Physics)",
+      "topic": "Universal law of gravitation",
+      "section": 22,
+      "lexical": 4
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 9: Gravitation (Physics)",
+      "topic": "Free fall",
+      "section": 45,
+      "lexical": 3
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 9: Gravitation (Physics)",
+      "topic": "Mass and weight",
+      "section": 0,
+      "lexical": 8
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 9: Gravitation (Physics)",
+      "topic": "Thrust and pressure",
+      "section": 73,
+      "lexical": 4
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 9: Gravitation (Physics)",
+      "topic": "Archimedes' principle",
+      "section": 16,
+      "lexical": 3
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 9: Gravitation (Physics)",
+      "topic": "Relative density",
+      "section": 0,
+      "lexical": 0
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 10: Work and Energy (Physics)",
+      "topic": "Work",
+      "section": 72,
+      "lexical": 85
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 10: Work and Energy (Physics)",
+      "topic": "Kinetic energy",
+      "section": 36,
+      "lexical": 28
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 10: Work and Energy (Physics)",
+      "topic": "Potential energy",
+      "section": 20,
+      "lexical": 31
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 10: Work and Energy (Physics)",
+      "topic": "Rate of doing work (power)",
+      "section": 36,
+      "lexical": 13
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 10: Work and Energy (Physics)",
+      "topic": "Transformation of energy",
+      "section": 0,
+      "lexical": 5
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 11: Sound (Physics)",
+      "topic": "Production of sound",
+      "section": 15,
+      "lexical": 1
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 11: Sound (Physics)",
+      "topic": "Propagation of sound",
+      "section": 131,
+      "lexical": 5
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 11: Sound (Physics)",
+      "topic": "Reflection of sound",
+      "section": 38,
+      "lexical": 11
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 11: Sound (Physics)",
+      "topic": "Range of hearing",
+      "section": 21,
+      "lexical": 2
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 11: Sound (Physics)",
+      "topic": "Applications of ultrasound",
+      "section": 26,
+      "lexical": 2
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 11: Sound (Physics)",
+      "topic": "Structure of human ear",
+      "section": 0,
+      "lexical": 2
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 12: Improvement in Food Resources (Biology)",
+      "topic": "Crop variety improvement",
+      "section": 26,
+      "lexical": 12
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 12: Improvement in Food Resources (Biology)",
+      "topic": "Crop production management",
+      "section": 7,
+      "lexical": 10
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 12: Improvement in Food Resources (Biology)",
+      "topic": "Protection management",
+      "section": 18,
+      "lexical": 1
+    },
+    {
+      "grade": "9",
+      "chapter": "Chapter 12: Improvement in Food Resources (Biology)",
+      "topic": "Animal husbandry (cattle, poultry, fish, bee-keeping)",
+      "section": 92,
+      "lexical": 11
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 1: Chemical Reactions and Equations (Chemistry)",
+      "topic": "Chemical equations",
+      "section": 0,
+      "lexical": 28
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 1: Chemical Reactions and Equations (Chemistry)",
+      "topic": "Types of reactions (combination, decomposition, displacement, double displacement)",
+      "section": 0,
+      "lexical": 28
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 1: Chemical Reactions and Equations (Chemistry)",
+      "topic": "Oxidation and reduction",
+      "section": 19,
+      "lexical": 2
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 1: Chemical Reactions and Equations (Chemistry)",
+      "topic": "Corrosion",
+      "section": 9,
+      "lexical": 6
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 1: Chemical Reactions and Equations (Chemistry)",
+      "topic": "Rancidity",
+      "section": 4,
+      "lexical": 0
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 2: Acids, Bases and Salts (Chemistry)",
+      "topic": "Chemical properties of acids and bases",
+      "section": 0,
+      "lexical": 36
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 2: Acids, Bases and Salts (Chemistry)",
+      "topic": "pH scale",
+      "section": 46,
+      "lexical": 4
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 2: Acids, Bases and Salts (Chemistry)",
+      "topic": "Preparation and uses of important salts (NaOH, bleaching powder, baking soda, washing soda, plaster of paris)",
+      "section": 81,
+      "lexical": 28
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "topic": "Physical and chemical properties",
+      "section": 42,
+      "lexical": 1
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "topic": "Reactivity series",
+      "section": 5,
+      "lexical": 5
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "topic": "Ionic compounds",
+      "section": 0,
+      "lexical": 8
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "topic": "Extraction of metals",
+      "section": 52,
+      "lexical": 5
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "topic": "Corrosion prevention",
+      "section": 36,
+      "lexical": 1
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 4: Carbon and its Compounds (Chemistry)",
+      "topic": "Covalent bonding",
+      "section": 0,
+      "lexical": 9
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 4: Carbon and its Compounds (Chemistry)",
+      "topic": "Versatile nature of carbon",
+      "section": 102,
+      "lexical": 8
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 4: Carbon and its Compounds (Chemistry)",
+      "topic": "Homologous series",
+      "section": 15,
+      "lexical": 9
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 4: Carbon and its Compounds (Chemistry)",
+      "topic": "Chemical properties",
+      "section": 48,
+      "lexical": 4
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 4: Carbon and its Compounds (Chemistry)",
+      "topic": "Ethanol and ethanoic acid",
+      "section": 0,
+      "lexical": 12
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 4: Carbon and its Compounds (Chemistry)",
+      "topic": "Soaps and detergents",
+      "section": 33,
+      "lexical": 2
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 5: Life Processes (Biology)",
+      "topic": "Nutrition",
+      "section": 130,
+      "lexical": 15
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 5: Life Processes (Biology)",
+      "topic": "Respiration",
+      "section": 25,
+      "lexical": 13
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 5: Life Processes (Biology)",
+      "topic": "Transportation (human circulatory system)",
+      "section": 0,
+      "lexical": 8
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 5: Life Processes (Biology)",
+      "topic": "Excretion (nephrons)",
+      "section": 43,
+      "lexical": 1
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 6: Control and Coordination (Biology)",
+      "topic": "Nervous system",
+      "section": 86,
+      "lexical": 9
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 6: Control and Coordination (Biology)",
+      "topic": "Reflex action",
+      "section": 0,
+      "lexical": 3
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 6: Control and Coordination (Biology)",
+      "topic": "Human brain",
+      "section": 33,
+      "lexical": 1
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 6: Control and Coordination (Biology)",
+      "topic": "Plant hormones and tropic movements",
+      "section": 0,
+      "lexical": 15
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 7: How do Organisms Reproduce? (Biology)",
+      "topic": "Asexual reproduction",
+      "section": 0,
+      "lexical": 3
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 7: How do Organisms Reproduce? (Biology)",
+      "topic": "Sexual reproduction",
+      "section": 178,
+      "lexical": 10
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 7: How do Organisms Reproduce? (Biology)",
+      "topic": "Human reproductive system",
+      "section": 0,
+      "lexical": 6
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 7: How do Organisms Reproduce? (Biology)",
+      "topic": "Reproductive health",
+      "section": 37,
+      "lexical": 1
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 8: Heredity and Evolution (Biology)",
+      "topic": "Mendel's laws of inheritance",
+      "section": 38,
+      "lexical": 5
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 8: Heredity and Evolution (Biology)",
+      "topic": "Sex determination",
+      "section": 19,
+      "lexical": 1
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 8: Heredity and Evolution (Biology)",
+      "topic": "Acquired and inherited traits",
+      "section": 0,
+      "lexical": 4
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 9: Light \u2013 Reflection and Refraction (Physics)",
+      "topic": "Reflection by spherical mirrors",
+      "section": 143,
+      "lexical": 45
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 9: Light \u2013 Reflection and Refraction (Physics)",
+      "topic": "Refraction through glass slabs",
+      "section": 27,
+      "lexical": 12
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 9: Light \u2013 Reflection and Refraction (Physics)",
+      "topic": "Lenses",
+      "section": 63,
+      "lexical": 24
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 9: Light \u2013 Reflection and Refraction (Physics)",
+      "topic": "Lens formula",
+      "section": 0,
+      "lexical": 3
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 9: Light \u2013 Reflection and Refraction (Physics)",
+      "topic": "Power of a lens",
+      "section": 26,
+      "lexical": 16
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 10: The Human Eye and the Colourful World (Physics)",
+      "topic": "Structure of human eye",
+      "section": 0,
+      "lexical": 9
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 10: The Human Eye and the Colourful World (Physics)",
+      "topic": "Defects of vision (myopia, hypermetropia)",
+      "section": 0,
+      "lexical": 6
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 10: The Human Eye and the Colourful World (Physics)",
+      "topic": "Prism refraction",
+      "section": 42,
+      "lexical": 4
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 10: The Human Eye and the Colourful World (Physics)",
+      "topic": "Dispersion",
+      "section": 0,
+      "lexical": 4
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 10: The Human Eye and the Colourful World (Physics)",
+      "topic": "Atmospheric scattering",
+      "section": 28,
+      "lexical": 13
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 11: Electricity (Physics)",
+      "topic": "Electric current",
+      "section": 0,
+      "lexical": 34
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 11: Electricity (Physics)",
+      "topic": "Ohm's law",
+      "section": 37,
+      "lexical": 16
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 11: Electricity (Physics)",
+      "topic": "Resistance",
+      "section": 0,
+      "lexical": 58
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 11: Electricity (Physics)",
+      "topic": "Series and parallel combinations",
+      "section": 35,
+      "lexical": 16
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 11: Electricity (Physics)",
+      "topic": "Heating effect",
+      "section": 52,
+      "lexical": 4
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 11: Electricity (Physics)",
+      "topic": "Electric power",
+      "section": 20,
+      "lexical": 5
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 12: Magnetic Effects of Electric Current (Physics)",
+      "topic": "Magnetic field lines",
+      "section": 0,
+      "lexical": 84
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 12: Magnetic Effects of Electric Current (Physics)",
+      "topic": "Magnetic force on current conductors",
+      "section": 0,
+      "lexical": 50
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 12: Magnetic Effects of Electric Current (Physics)",
+      "topic": "Electromagnetic induction",
+      "section": 0,
+      "lexical": 1
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 12: Magnetic Effects of Electric Current (Physics)",
+      "topic": "Domestic circuits",
+      "section": 40,
+      "lexical": 3
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 13: Our Environment (Biology)",
+      "topic": "Ecosystem dynamics",
+      "section": 0,
+      "lexical": 12
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 13: Our Environment (Biology)",
+      "topic": "Food chains and webs",
+      "section": 40,
+      "lexical": 13
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 13: Our Environment (Biology)",
+      "topic": "Biological magnification",
+      "section": 40,
+      "lexical": 1
+    },
+    {
+      "grade": "10",
+      "chapter": "Chapter 13: Our Environment (Biology)",
+      "topic": "Ozone layer depletion",
+      "section": 18,
+      "lexical": 6
+    }
+  ],
+  "sparse_or_missing_topics": [
+    {
+      "class": "9",
+      "topic": "Relative density",
+      "section_matches": 0,
+      "lexical_matches": 0
+    },
+    {
+      "class": "9",
+      "topic": "Structure of human ear",
+      "section_matches": 0,
+      "lexical_matches": 2
+    },
+    {
+      "class": "10",
+      "topic": "Electromagnetic induction",
+      "section_matches": 0,
+      "lexical_matches": 1
+    }
+  ]
+}
