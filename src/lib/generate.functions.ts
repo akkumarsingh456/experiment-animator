@@ -1,6 +1,5 @@
 import {isSeniorScienceStudy,seniorScienceEvidence,seniorStudyContent,seniorActivityConclusions} from '@/lib/senior-study-notes';
 import {secondaryScienceSectionEvidence,substantiveStudyLine} from '@/lib/secondary-study-evidence';
-import {adequateTopicEvidence} from '@/lib/topic-source-recovery';
 import { sourceQuizItems } from "@/lib/source-quiz";
 import { appendSocialRevisionNotes } from "@/lib/social-revision-notes";
 import { socialChapterPart, socialTitle } from "@/lib/social-science-chapters";
@@ -1542,7 +1541,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // Quiz items are rebuilt from source statements after cache lookup.
     const lessonKey = hashKey([
-      isLanguageSubject(data.subject)?"lesson-v60-topic-specific-dimensions-and-source-review":"lesson-v66-ncert-first-topic-recovery",
+      "lesson-v67-all-subject-source-recovery",
       data.klass,
       data.subject,
       data.chapter,
@@ -1836,9 +1835,9 @@ export const generateLesson = createServerFn({ method: "POST" })
     // lines that still fail — or that the NCERT / PW context does not support —
     // are quarantined. Verification re-runs after every repair.
     let recoveryEvidence='';
-    if(!isLanguageSubject(data.subject)&&lessonMode!=='chapter'){
+    {
       const {recoverSparseTopicNotes}=await import('@/lib/sparse-topic-recovery.server');
-      const recovered=await recoverSparseTopicNotes(notedSlides,{klass:String(data.klass),subject:data.subject,chapter:data.chapter||data.topic,sources:[context,...recoverySources]});
+      const recovered=await recoverSparseTopicNotes(notedSlides,{klass:String(data.klass),subject:data.subject,chapter:data.chapter||data.topic,sources:[context,...recoverySources],verbatim:isLanguageSubject(data.subject)||lessonMode==='chapter'});
       notedSlides=recovered.slides;
       recoveryEvidence=recovered.extraEvidence.join('\n\n');
     }
@@ -1873,8 +1872,9 @@ export const generateLesson = createServerFn({ method: "POST" })
       };
     });
     const secondaryScience=(/^(?:9|10)$/.test(classNumber(data.klass))&&data.subject==="Science")||isSeniorScienceStudy(data.klass,data.subject);
-    if(!isLanguageSubject(data.subject)&&lessonMode!=='chapter'){
-      const incomplete=verifiedSlides.filter(slide=>!slide.teacher_pdf&&['content','chapter'].includes(slide.kind||'content')&&!adequateTopicEvidence(slide.title,(slide.sections||[]).filter(section=>section.kind!=='diagram'&&!/activity|practice|revision|^Source (?:review|table)/i.test(section.heading)).flatMap(section=>section.lines)));
+    {
+      const {topicSourceComplete}=await import('@/lib/sparse-topic-recovery.server');
+      const incomplete=verifiedSlides.filter(slide=>!topicSourceComplete(slide,isLanguageSubject(data.subject)||lessonMode==='chapter'));
       if(incomplete.length)throw new Error(`Source recovery could not produce enough verified explanation for: ${incomplete.map(slide=>slide.title).join(', ')}. The incomplete lesson was not saved. Reprocess clearer matching NCERT chapter pages and retry.`);
     }
     if(secondaryScience&&!verifiedSlides.some(slide=>(slide.sections||[]).filter(section=>section.kind!=="diagram").flatMap(section=>section.lines).filter(substantiveStudyLine).length>=3)){

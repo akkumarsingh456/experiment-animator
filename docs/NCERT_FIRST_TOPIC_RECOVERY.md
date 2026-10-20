@@ -23,8 +23,7 @@
 - If recovery still fails, or final verification leaves a topic inadequate,
   return a specific source error and do not save a blank/incomplete lesson.
   A network failure is never permission to invent a scientifically plausible
-  replacement. Languages and full-chapter transcription retain their existing
-  workflow. Notes already saved/downloaded are not rewritten automatically.
+  replacement. All classes and subjects, including languages and full-chapter transcription, receive the source guard. Genuine short original passages are preserved without forcing science-note length requirements. Notes already saved/downloaded are not rewritten automatically.
 
 ## Reported preparation topic
 
@@ -44,3 +43,17 @@ cleanup, source failure without a blank saved lesson, and shared notes/export
 safeguards. Neither lexical grounding nor valid notation guarantees 100%
 factual accuracy. Publication and fresh generation are required to activate
 the new non-language v66 generation cache.
+
+## Universal coverage update (v67)
+
+The source guard now runs before and after verification for every configured
+subject and mode in Classes 9–12. Language and chapter-transcription pages are
+checked against their original chapter text rather than a three-statement
+science-note quota. Short poems and multilingual excerpts remain unchanged.
+Missing source passages still require recovery or a specific source error.
+
+The trusted website adapter remains deliberately limited to exact available
+NCERT mirror indexes. Universal checking does not imply that a matching external
+page exists for every subject or that every uploaded statement was fact-checked.
+The catalog regression traverses all configured chapters and subtopics; it is a
+coverage check of the guard, not a live content audit of every textbook.
