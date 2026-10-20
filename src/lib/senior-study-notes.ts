@@ -7,6 +7,9 @@ import {topicEvidence} from './topic-evidence';
 
 export const isSeniorScienceStudy=(klass:string,subject:string)=>/^(?:Class\s*)?(?:11|12)$/i.test(klass.trim())&&/^(?:Physics|Chemistry)$/i.test(subject.trim());
 const aliases:Record<string,string[]>={
+ 'Diamagnetic':['Diamagnetism'], 'Paramagnetic':['Paramagnetism'], 'Ferromagnetic':['Ferromagnetism'],
+ 'Diamagnetic, paramagnetic and ferromagnetic materials':['Diamagnetism','Paramagnetism','Ferromagnetism'],
+ 'Paramagnetic and ferromagnetic materials':['Paramagnetism','Ferromagnetism'],
  'Escape velocity':['Escape speed'], 'Satellites':['Earth satellites','Energy of an orbiting satellite'],
  'Universal law of gravitation':['Universal law of gravitation','The gravitational constant'],
  'Kinematic equations':['Kinematic equations for uniformly accelerated motion'],

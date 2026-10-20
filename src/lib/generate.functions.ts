@@ -1540,7 +1540,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // Quiz items are rebuilt from source statements after cache lookup.
     const lessonKey = hashKey([
-      isSeniorScienceStudy(data.klass,data.subject)?"lesson-v62-senior-source-notes-and-conclusions":/^(?:9|10)$/.test(classNumber(data.klass)) ? "lesson-v63-secondary-flat-heading-recovery" : "lesson-v60-topic-specific-dimensions-and-source-review",
+      isSeniorScienceStudy(data.klass,data.subject)?"lesson-v64-magnetic-material-section-recovery":/^(?:9|10)$/.test(classNumber(data.klass)) ? "lesson-v63-secondary-flat-heading-recovery" : "lesson-v60-topic-specific-dimensions-and-source-review",
       data.klass,
       data.subject,
       data.chapter,

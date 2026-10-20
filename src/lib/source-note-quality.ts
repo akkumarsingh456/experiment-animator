@@ -41,6 +41,10 @@ export function hasSourcePrintIntrusion(text: string): boolean {
 export function hasBrokenSourceMath(raw:string):boolean {
   const text=String(raw||'');
   if (hasSourcePrintIntrusion(text)) return true;
+  // NCERT magnetic-material comparison columns are sometimes flattened into
+  // one row. Never assign its inequalities to the slide's first material.
+  if ((text.match(/\b(?:diamagnetic|paramagnetic|ferromagnetic)\b/gi)||[]).length>=2
+    && (text.match(/[<>≤≥]|\\(?:leq|geq|ll|gg)\b/g)||[]).length>=4) return true;
   // Flattened textbook summary equations must not become one multiplied term,
   // and duplicated graph labels cannot stand in for a lost fraction.
   if (/\bat\s*2\s*2\s*a\s*s\s*=/i.test(text.replace(/[${}^\\]/g,''))
