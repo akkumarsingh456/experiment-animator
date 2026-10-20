@@ -12,6 +12,7 @@ import {canImportMedEasy,topicDiagramQuery,transferredImageUrls,imageWithCredit,
 import {importDiagramUrl,type DiagramResult} from '@/lib/diagram-search.functions';
 import {DiagramImagePicker} from './DiagramImagePicker';
 import {ManualImageCropper} from './ManualImageCropper';
+import {ImageVerticalPosition} from './ImageVerticalPosition';
 
 export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoContent,alt,klass='',subject='',chapter='',topic='',slideId='',sharedSlideId,previousSharedSlideId,displaySlideNumber}:{storageKey:string;autoUrl:string;autoContent?:ReactNode;alt:string;klass?:string;subject?:string;chapter?:string;topic?:string;slideId?:string;sharedSlideId?:string;previousSharedSlideId?:string;displaySlideNumber?:number}){
  const sharedScope={klass,subject,chapter,topic,slideId:sharedSlideId||slideId},sharedKey=sharedVisualKey(sharedScope);
@@ -95,6 +96,7 @@ export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoCont
      <img src={visual.url} alt="Manually uploaded topic reference" draggable={false} onLoad={event=>{const image=event.currentTarget;if(image.naturalWidth&&image.naturalHeight)setImageAspect(image.naturalWidth/image.naturalHeight);}} className="w-full h-full object-contain object-top" style={visual.shape==='circle'?{height:'auto',aspectRatio:'1'}:undefined}/>
    </div>}
    </div>
+   {visual&&<ImageVerticalPosition key={storageKey} scope={storageKey}/>}
    {visual&&<button type="button" className={`manual-image-toggle absolute right-2 top-2 z-20 ${toolsVisible?'':'manual-image-toggle-pulse'}`} aria-label={toolsVisible?'Hide image options':'Show image options'} aria-expanded={toolsVisible} title={toolsVisible?'Hide image options':'Image options: import, search, crop and save'} onClick={()=>{setToolsVisible(value=>!value);setOpen(false);setBookOpen(false);}}><ImagePlus size={19}/></button>}
    {toolsVisible&&<div className={`manual-image-controls ${manualOnly?'relative m-2':'absolute bottom-2 left-2 right-2'} flex flex-wrap gap-2 rounded-lg bg-white/95 p-3 border text-[13px] shadow`}>
      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event=>{void upload(event.target.files?.[0]);event.target.value='';}}/>
