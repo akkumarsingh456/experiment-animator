@@ -4,6 +4,7 @@ import {
   materializeLayout,
   sameLayoutContent,
   slideSpace,
+  briefTopicPages,
   type LayoutPage,
 } from "@/lib/slide-layout-check";
 const page = (line: string, sourceIndex = 1): LayoutPage =>
@@ -15,6 +16,12 @@ const page = (line: string, sourceIndex = 1): LayoutPage =>
 const measurements = (...fills: number[]) =>
   fills.map((fill, page) => ({ page, fill, overflow: false, exempt: false }));
 describe("free slide layout verification", () => {
+  it('reports a brief isolated topic instead of pretending spacing can restore notes',()=>{
+    const short=page('Newton built on Galileo’s ideas and laid the foundation of mechanics.');
+    expect(briefTopicPages([short])).toEqual([{page:1,title:short.title}]);
+    expect(compactLayoutGroups([short],measurements(.15))).toEqual([[0]]);
+    expect(briefTopicPages([page('**Formula:** $F=ma$')])).toEqual([]);
+  });
   it("packs sparse continuation pages and preserves duplicate entries exactly", () => {
     const pages = [page("a"), page("a"), page("b")];
     const raw = JSON.stringify(pages);

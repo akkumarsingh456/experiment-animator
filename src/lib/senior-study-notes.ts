@@ -7,6 +7,7 @@ import {topicEvidence} from './topic-evidence';
 
 export const isSeniorScienceStudy=(klass:string,subject:string)=>/^(?:Class\s*)?(?:11|12)$/i.test(klass.trim())&&/^(?:Physics|Chemistry)$/i.test(subject.trim());
 const aliases:Record<string,string[]>={
+ "Newton's laws":["Newton's first law of motion","Newton's second law of motion","Newton's third law of motion","Newton’s first law of motion","Newton’s second law of motion","Newton’s third law of motion"],
  'Diamagnetic':['Diamagnetism'], 'Paramagnetic':['Paramagnetism'], 'Ferromagnetic':['Ferromagnetism'],
  'Diamagnetic, paramagnetic and ferromagnetic materials':['Diamagnetism','Paramagnetism','Ferromagnetism'],
  'Paramagnetic and ferromagnetic materials':['Paramagnetism','Ferromagnetism'],

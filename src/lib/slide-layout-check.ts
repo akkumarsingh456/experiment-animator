@@ -2,6 +2,19 @@ import type { Slide } from "./generate.functions";
 export type LayoutPage = Slide & { sourceIndex: number };
 export type PageSpace = { page: number; fill: number; overflow: boolean; exempt: boolean };
 export const SPARSE_FILL = 0.35;
+/** Distinguish sparse pagination from a topic with very little explanation.
+ * This is a completeness hint, not a factual judgement or permission to pad. */
+export function briefTopicPages(pages:LayoutPage[]):Array<{page:number;title:string}>{
+ const seen=new Set<number>(),result:Array<{page:number;title:string}>=[];
+ pages.forEach((page,index)=>{
+  if(seen.has(page.sourceIndex)||protectedPage(page))return;
+  seen.add(page.sourceIndex);
+  const lines=[...new Set(pages.filter(item=>item.sourceIndex===page.sourceIndex).flatMap(item=>(item.sections||[]).filter(section=>section.kind!=='diagram'&&!/^Source (?:review|table)|practice|activity|revision|MLT|formula reference/i.test(section.heading)).flatMap(section=>section.lines)))];
+  const text=lines.join(' ');
+  if(lines.length<3&&text.length<260&&!/[=∝]|\\(?:frac|propto)\b/.test(text))result.push({page:index+1,title:page.title});
+ });
+ return result;
+}
 export function layoutKey(pages: LayoutPage[]): string {
   return JSON.stringify(
     pages.map((page) => [page.sourceIndex, page.title, page.kind, page.teacher_pdf, page.sections]),

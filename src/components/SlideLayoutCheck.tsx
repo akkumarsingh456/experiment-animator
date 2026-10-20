@@ -6,6 +6,7 @@ import {
   sameLayoutContent,
   slideSpace,
   SPARSE_FILL,
+  briefTopicPages,
   type LayoutPage,
   type PageSpace,
 } from "@/lib/slide-layout-check";
@@ -127,6 +128,7 @@ export function SlideLayoutCheck({
     };
   }, [index, key, baseKey, enabled, run]);
   const currentResults = resultKey === key ? results : [];
+  const briefTopics=briefTopicPages(pages);
   const sparse = currentResults.filter((item) => !item.exempt && item.fill < SPARSE_FILL).length,
     overflow = currentResults.filter((item) => item.overflow).length;
   return (
@@ -160,11 +162,18 @@ export function SlideLayoutCheck({
       </p>
       {phase === "done" && resultKey === key && (
         <p className="mt-1 text-sm text-muted-foreground">
-          {sparse || overflow
-            ? "Some pages need attention. Naturally short topics are retained when no safe same-topic merge is possible."
+          {briefTopics.length
+            ? "Some topics contain very little explanation. Check their chapter sources and regenerate; spacing checks cannot recover missing notes."
+            : sparse || overflow
+            ? "Some pages need attention. Short pages remain when no safe same-topic merge is possible."
             : "Layout verified. Every source entry is preserved."}
         </p>
       )}
+      {phase === "done" && resultKey === key && briefTopics.length>0 && <details className="mt-2 rounded border border-amber-200 bg-amber-50 p-3 text-sm" open>
+        <summary className="cursor-pointer font-semibold">Topics with little explanatory content ({briefTopics.length})</summary>
+        <ul className="mt-2 list-disc pl-5">{briefTopics.map(item=><li key={item.page}>Slide {item.page}: {item.title} — review source coverage.</li>)}</ul>
+        <p className="mt-2">This is a completeness warning, not proof that the notes are false. Existing content is preserved.</p>
+      </details>}
       <button
         type="button"
         className="mt-2 rounded border px-3 py-1 text-sm"

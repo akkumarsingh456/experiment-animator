@@ -11,6 +11,11 @@ const notes:NoteSection[]=[{heading:'Teacher Notes',kind:'bullets',lines:[
  '**Formula:** Kepler\'s third law relates orbital period and semi-major axis: $T^2 \\propto a^3$.',
 ]}];
 describe('Class 11–12 Physics and Chemistry study pattern',()=>{
+ it('recovers all three separately headed Newton law sections',()=>{
+  const context="4.3 Newton’s first law of motion\nThe first source section explains inertia and the role of net external force.\n4.4 Newton’s second law of motion\nThe second source section explains the rate of change of momentum.\n4.5 Newton’s third law of motion\nThe third source section explains the interaction between two bodies.\n4.6 Friction\nThis separate topic must not enter the law sections.";
+  const result=seniorScienceEvidence("Newton's Laws",context).join(' ');
+  expect(result).toContain('inertia');expect(result).toContain('momentum');expect(result).toContain('interaction');expect(result).not.toContain('separate topic');
+ });
  it('uses a concise topic activity with a source-supported conclusion',()=>{
   const activity=sourceDiscussion("Kepler's laws",notes,'Physics','11');
   expect(activity?.lines).toHaveLength(3);expect(activity?.lines.at(-1)).toMatch(/Activity conclusion/);
