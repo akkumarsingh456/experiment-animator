@@ -166,6 +166,21 @@
 .guided-topic footer { border-top: 1px solid #e1e6eb; margin-top: 30px; padding-top: 12px; font-size: 11px; color: #667584; }
 .guided-eyebrow { display: block; color: #337989; font-size: 12px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 12px; }
 .guided-planner { border-top: 4px solid #337989; }
+/* Teacher-guide presentation only; student notes and generation are untouched. */
+.guided-planner, .guided-teacher-topic { padding: 30px 34px; border-top: 4px solid #337989; font-size: 16px; line-height: 1.65; }
+.guided-planner > h2, .guided-teacher-topic > h2 { margin: 8px 0 14px; line-height: 1.3; padding-bottom: 14px; border-bottom: 1px solid #dbe6ec; }
+.guided-planner .guided-eyebrow, .guided-teacher-topic .guided-eyebrow { display:inline-block; font-size:11px; font-weight:750; letter-spacing:.09em; text-transform:uppercase; color:#246779; }
+.guided-planner > p, .guided-teacher-topic > p { margin: 10px 0 16px; }
+.guided-planner .guided-group, .guided-teacher-topic .guided-group { margin: 16px 0; padding: 16px 18px; border: 1px solid #dbe6ec; border-radius: 8px; background: #fcfdff; }
+.guided-planner .guided-group h3, .guided-teacher-topic .guided-group h3 { font-size:17px; line-height:1.35; color:#205f73; margin:0 0 12px; }
+.guided-planner .guided-group p:last-child, .guided-teacher-topic .guided-group p:last-child { margin-bottom:0; }
+.guided-planner li, .guided-teacher-topic li { margin-bottom:8px; padding-left:5px; }
+.guided-planner li::marker, .guided-teacher-topic li::marker { color:#246779; font-weight:750; }
+.guided-teacher-topic .teacher-source-anchor { background:#eff7fa; border-left:4px solid #337989; }
+.guided-teacher-topic strong { color:#193e50; }
+.guided-planner .guided-small, .guided-teacher-topic .guided-small { color:#526675; font-size:12px; line-height:1.55; }
+.lesson-export-notes .guided-topic.guided-planner, .lesson-export-notes .guided-topic.guided-teacher-topic { padding:24px 28px; font-size:16px; line-height:1.6; }
+@media(max-width:600px) { .guided-planner, .guided-teacher-topic { padding:22px 18px; } .guided-planner .guided-group, .guided-teacher-topic .guided-group { padding:14px; } }
 .guided-small { font-size: 13px; color: #506171; line-height: 1.6; }
 .guided-resource { border: 1px solid #dbe3ea; border-radius: 8px; padding: 20px; margin-top: 20px; break-inside: avoid; }
 .guided-resource h3 { font-size: 18px; font-weight: 750; margin: 8px 0; }
