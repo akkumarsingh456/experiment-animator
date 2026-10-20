@@ -20,29 +20,59 @@ export function drawCircuitStage(c: CanvasRenderingContext2D, activity: Experime
   }else{
     const closed=/close.*key|read.*voltage/i.test(desc)&&(!/then.*open/i.test(desc)||phase<4);
     text(scene===0?'Check ranges, zero and least count':scene===1?'Connect in series; measure across R':closed?'Close the key only briefly':'Open the key between readings',28,40,24);
-    wire([[95,300],[55,300],[55,125],[250,125]]);
-    wire([[355,125],[460,125]]);wire([[590,125],[735,125],[735,315],[660,315]]);
-    wire([[595,315],[165,315]]);
-    c.fillStyle='#fff3d8';c.strokeStyle='#b88a37';c.lineWidth=3;c.beginPath();c.roundRect(250,103,105,44,8);c.fill();c.stroke();text('R',293,132,24);text('Resistor',259,83);
-    wire([[250,125],[220,125],[220,230],[348,230]],'#c38a28');wire([[478,230],[510,230],[510,170],[355,170],[355,125]],'#c38a28');
-    const meter=(x:number,y:number,name:string,unit:string,colour:string)=>{
-      c.fillStyle='#fff';c.strokeStyle=colour;c.lineWidth=3;c.beginPath();c.roundRect(x,y,130,91,13);c.fill();c.stroke();
-      c.beginPath();c.arc(x+65,y+65,44,Math.PI*1.12,Math.PI*1.88);c.stroke();
-      for(let i=0;i<7;i++){const a=Math.PI*(1.12+i*.76/6);wire([[x+65+Math.cos(a)*39,y+65+Math.sin(a)*39],[x+65+Math.cos(a)*44,y+65+Math.sin(a)*44]],colour);}
-      // No fabricated numerical reading; a needle is shown only at rest.
-      if(!closed)wire([[x+65,y+65],[x+27,y+48]],'#20374a');else text('read',x+43,y+67,17);
-      text(unit,x+58,y+86,20);text(name,x+8,unit==='V'?y+118:y-12,20);
+    // Wires terminate at visible binding posts on the bench apparatus.
+    const terminal=(x:number,y:number,positive:boolean)=>{
+      c.fillStyle=positive?'#d64943':'#273846';c.strokeStyle='#fff';c.lineWidth=2;
+      c.beginPath();c.arc(x,y,8,0,Math.PI*2);c.fill();c.stroke();
+      c.fillStyle='#c6d2db';c.beginPath();c.arc(x,y,3,0,Math.PI*2);c.fill();
     };
-    meter(460,79,'Ammeter','A','#25889c');meter(348,185,'Voltmeter','V','#c38a28');
-    c.fillStyle='#dceaf2';c.strokeStyle='#526e80';c.lineWidth=2;c.beginPath();c.roundRect(95,277,70,72,10);c.fill();c.stroke();
-    text('+',103,300,22);text('−',142,300,22);text('Cells',103,333,18);
-    c.fillStyle='#e6eef4';c.beginPath();c.roundRect(575,294,105,42,9);c.fill();
-    wire(closed?[[595,315],[660,315]]:[[595,315],[650,282]],closed?'#208678':'#d18b32');
-    text(closed?'Key closed':'Key open',575,369,21);
-    text('+',236,216,18);text('−',483,216,18);text('+',444,125,18);
-    if(closed){for(let i=0;i<5;i++){const x=65+(phase*70+i*35)%175;c.fillStyle='#efb439';c.beginPath();c.arc(x,125,4,0,Math.PI*2);c.fill();}}
+    const body=(x:number,y:number,w:number,h:number,colour:string)=>{
+      c.fillStyle='#15354a18';c.beginPath();c.roundRect(x+5,y+7,w,h,12);c.fill();
+      const gradient=c.createLinearGradient(x,y,x,y+h);gradient.addColorStop(0,colour);gradient.addColorStop(1,'#263b4b');
+      c.fillStyle=gradient;c.beginPath();c.roundRect(x,y,w,h,12);c.fill();
+    };
+    // Warm bench surface makes the physical arrangement distinct from a circuit symbol.
+    c.fillStyle='#edf0ec';c.beginPath();c.roundRect(20,65,765,315,18);c.fill();
+    wire([[105,293],[55,293],[55,145],[235,145]],'#cf504b');
+    wire([[365,145],[430,145],[430,206],[482,206]],'#cf504b');
+    wire([[568,206],[740,206],[740,325],[680,325]],'#364d60');
+    wire([[590,325],[171,325],[171,293]],'#364d60');
+    wire([[235,145],[210,145],[210,305],[344,305]],'#db9d32');
+    wire([[430,145],[415,145],[415,220],[470,220],[470,305],[430,305]],'#db9d32');
+    body(226,105,148,71,'#a17b51');
+    c.strokeStyle='#e6c68d';c.lineWidth=7;
+    c.beginPath();for(let i=0;i<13;i++){const x=250+i*8;i?c.lineTo(x,132+(i%2)*21):c.moveTo(x,132);}c.stroke();
+    terminal(235,145,true);terminal(365,145,false);text('Resistance wire / resistor R',198,92,19);
+    const meter=(x:number,y:number,name:string,unit:string)=>{
+      body(x,y,154,132,'#597184');
+      c.fillStyle='#fffbed';c.beginPath();c.roundRect(x+10,y+10,134,86,8);c.fill();
+      c.strokeStyle='#52616b';c.lineWidth=2;c.beginPath();c.arc(x+77,y+78,51,Math.PI*1.12,Math.PI*1.88);c.stroke();
+      for(let i=0;i<9;i++){const angle=Math.PI*(1.12+i*.76/8);wire([[x+77+Math.cos(angle)*45,y+78+Math.sin(angle)*45],[x+77+Math.cos(angle)*51,y+78+Math.sin(angle)*51]],'#667681');}
+      const angle=Math.PI*(closed?1.4+.12*Math.min(1,phase/2):1.12);
+      wire([[x+77,y+78],[x+77+Math.cos(angle)*45,y+78+Math.sin(angle)*45]],'#bd4f40');
+      text(unit,x+70,y+91,22);
+      terminal(x+34,y+116,true);terminal(x+120,y+116,false);
+      text('+',x+15,y+122,17);text('−',x+130,y+122,17);
+      text(name,x+17,unit==='V'?y+160:y-12,20);
+    };
+    meter(448,90,'Ammeter','A');meter(310,189,'Voltmeter','V');
+    body(83,251,110,85,'#6c8190');
+    for(let i=0;i<2;i++){
+      const x=100+i*43;c.fillStyle='#c79856';c.beginPath();c.roundRect(x,264,28,49,5);c.fill();
+      c.fillStyle='#dbe2e6';c.fillRect(x+2,265,24,13);c.fillStyle='#677785';c.fillRect(x+9,260,10,5);
+    }
+    terminal(105,293,true);terminal(171,293,false);text('Low-voltage cells',64,363,19);
+    body(570,292,130,54,'#9c7959');terminal(590,325,false);terminal(680,325,false);
+    // Brass lever rotates down to bridge the two posts when the key is closed.
+    const closeProgress=closed?Math.min(1,phase*2):0;
+    wire([[590,325],[680,280+45*closeProgress]],'#ddb15f');
+    c.fillStyle='#273846';c.beginPath();c.arc(680,280+45*closeProgress,8,0,Math.PI*2);c.fill();
+    text(closed?'Key: closed briefly':'Key: open',560,371,19);
+    if(closed){
+      c.fillStyle='#1d7e6e';c.beginPath();c.arc(717,89,6,0,Math.PI*2);c.fill();text('Reading',635,96,18);
+    }
     text('A in series',65,400,21);text('V in parallel across R',310,400,21);
-    text('Illustrative apparatus · use actual meter readings',130,433,18);
+    text('Illustrative needle movement · record actual readings',130,433,18);
   }
   c.restore();
 }
