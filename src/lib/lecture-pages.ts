@@ -10,6 +10,7 @@ export const DEFAULT_LECTURE_ROWS = 32;
 function lineRows(line: string, heading: string): number {
   if (heading === "Source table — original extracted entries" && lanthanoidSourceRow(line)) return 8;
   const plain = line.replace(/\$\$?|\\[a-zA-Z]+/g, "x");
+  if (heading === "Source review — original extraction") return 2 + Math.ceil(plain.length / 58);
   if (heading === "MLT Dimensional Formula" && line.split(" | ").length === 3) {
     const [quantity, , memory] = line.split(" | ");
     return 5 + Math.ceil(quantity.length / 65) + Math.ceil(memory.length / 65);

@@ -1,3 +1,4 @@
+import { SourceReviewEntry } from "@/components/SourceReviewEntry";
 import {orderTopicGroups,topicOrderRank} from "@/lib/topic-lecture-order";
 import {ncertNotesDisplaySlide} from "@/lib/ncert-display-cleanup";
 import {polishChemistryPresentation} from "@/lib/chemistry-note-presentation";
@@ -32,7 +33,7 @@ function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }
   }, []);
   return <section className={`guided-group guided-${group.kind}`} data-note-category={group.heading}>
     <h3>{group.heading}</h3>
-    {(group.heading === "Source table — original extracted entries" || group.heading === "Source review — original extraction") ? <div className="source-table-entries">{presentation.map((line, i) => <div key={i}>{line.heading && <h4 className="note-label-heading">{line.heading}</h4>}{group.heading === "Source table — original extracted entries" ? <ChemistrySourceEntry text={line.text} /> : <div className="source-table-entry"><MathText subject={subject} text={line.text} /></div>}</div>)}</div> : group.heading === "MLT Dimensional Formula" ? <div className="dimension-cards">{group.lines.map((line, i) => {
+    {(group.heading === "Source table — original extracted entries" || group.heading === "Source review — original extraction") ? <div className="source-table-entries">{presentation.map((line, i) => <div key={i}>{line.heading && <h4 className="note-label-heading">{line.heading}</h4>}{group.heading === "Source table — original extracted entries" ? <ChemistrySourceEntry text={line.text} /> : <SourceReviewEntry subject={subject} text={line.text} />}</div>)}</div> : group.heading === "MLT Dimensional Formula" ? <div className="dimension-cards">{group.lines.map((line, i) => {
       const cells = line.split(" | ");
       return cells.length === 3 ? <div className="dimension-card" key={i}><strong>{cells[0]}</strong><div className="dimension-expression"><MathText subject={subject} text={cells[1]} /></div><p><b>Remember: </b>{cells[2]}</p></div> : <p key={i}><MathText subject={subject} text={line} /></p>;
     })}</div> : group.kind === "formula" ? <div className="guided-table-scroll"><table><thead><tr><th>Concept</th><th>Formula / relation</th><th>{group.heading === "Problem-solving formula reference" ? "Symbols, conditions & use" : "Unit / SI unit"}</th></tr></thead><tbody>

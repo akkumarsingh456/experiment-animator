@@ -1,3 +1,4 @@
+import { SourceReviewEntry } from "@/components/SourceReviewEntry";
 import {noteSpaceBalance} from "@/lib/slide-space-organizer";
 import { MathematicsProse } from "@/components/MathematicsProse";
 import { isMathematics } from "@/lib/mathematics-presentation";
@@ -68,7 +69,7 @@ function BlockView({ block, showHeading, subject, previousLine }: { block: NoteB
               {block.heading === "Problem-solving formula reference" ? (() => {
                 const [name, expression, use] = line.split(" | ");
                 return <div className="physics-reference-row"><strong>{name}</strong><div className="physics-reference-equation"><MathText subject={subject} text={expression || line} /></div><p><MathText subject={subject} text={use || ""} /></p></div>;
-              })() : block.heading === "Source table — original extracted entries" ? <ChemistrySourceEntry text={presentation[index].text} /> : block.heading === "Source review — original extraction" ? <div className="source-table-entry"><MathText subject={subject} text={presentation[index].text} /></div> : block.heading === "MLT Dimensional Formula" && line.split(" | ").length === 3 ? (() => {
+              })() : block.heading === "Source table — original extracted entries" ? <ChemistrySourceEntry text={presentation[index].text} /> : block.heading === "Source review — original extraction" ? <SourceReviewEntry subject={subject} text={presentation[index].text} /> : block.heading === "MLT Dimensional Formula" && line.split(" | ").length === 3 ? (() => {
                 const [quantity, expression, remember] = line.split(" | ");
                 return <div className="dimension-card" style={{textIndent: 0}}><strong>{quantity}</strong><div className="dimension-expression"><MathText subject={subject} text={expression} /></div><p><b>Remember: </b>{remember}</p></div>;
               })() : /^(?:\*\*)?(?:formula|equation|relation):/i.test(line) && readableSourceRelation(line) ? (() => {

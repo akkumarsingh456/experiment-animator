@@ -520,6 +520,8 @@
 /* Keep source-table transcription separate from teachable prose, never hide its entries. */
 .source-table-entries { display: grid; gap: 8px; min-width: 0; }
 .source-table-entry { text-indent: 0; margin: 5px 0; padding: 10px 14px; border: 1px solid #dfd8c8; border-left: 3px solid #b59954; border-radius: 6px; background: #fbf8f0; font-family: ui-monospace, Consolas, monospace; font-size: .88em; line-height: 1.65; overflow-wrap: anywhere; white-space: normal; }
+.source-review-entry { text-indent: 0; margin: .4em 0; padding: .65em .85em; border: 1px solid #d8e4ee; border-left: 4px solid #3578a3; border-radius: 8px; background: #f6faff; color: #172b40; font-family: inherit; font-size: 1.06em; line-height: 1.7; overflow-wrap: anywhere; white-space: pre-wrap; }
+.source-review-entry mark { background: #fff0b3; color: #172b40; font-weight: 650; border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .original-slide-display [data-note-content] ul { line-height: 1.65; }
 .original-slide-display [data-note-content] h4 { margin-bottom: .55em; }
 
