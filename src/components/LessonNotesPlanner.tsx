@@ -2,30 +2,36 @@ import { MathText } from "@/components/MathText";
 import { lessonResources } from "@/lib/lesson-resources";
 import type { GuidedGroup } from "@/lib/guided-notes";
 import { learningProfile } from "@/lib/learning-design";
+import {teacherTopicPlans,type TeacherTopicInput} from '@/lib/teacher-topic-plan';
 
-export function LessonNotesPlanner({ topics, subject, klass }: { topics: string[]; subject?: string; klass?: string }) {
+export function LessonNotesPlanner({ topics, subject, klass, chapter, sourceTopics }: { topics: string[]; subject?: string; klass?: string; chapter?:string; sourceTopics?:TeacherTopicInput[] }) {
   const resources = lessonResources(topics, subject);
   const profile = learningProfile(subject, klass);
+  const plans=teacherTopicPlans(sourceTopics||topics.map(title=>({title,groups:[]})),subject,klass);
   return <>
     <article className="guided-topic guided-planner">
       <span className="guided-eyebrow">Teacher planning page</span>
-      <h2>Teach for understanding</h2>
-      <p>Use the topic notes as the reading material. Adapt the sequence and pace to your class; the tasks below encourage explanation, application and evidence.</p>
-      <p><strong>Focus for {subject}:</strong> {profile.focus}. {profile.level}</p>
-      <section className="guided-group"><h3>Learning goals & success criteria</h3><ul>
-        <li>Explain the key ideas in your own words, using the vocabulary and source evidence in the notes.</li>
-        <li>Apply a relevant relationship or principle and state its assumptions; include units where needed.</li>
-        <li>Justify an answer with evidence from the textbook, a worked example or an observation.</li>
-      </ul><p><strong>Coverage:</strong> {topics.join(" · ")}</p></section>
-      <section className="guided-group"><h3>Suggested teaching sequence</h3><ol>
-        <li><strong>Activate:</strong> ask what students already know; identify one question they want the lesson to answer.</li>
-        <li><strong>Read & explain:</strong> read the concept notes, unpack vocabulary and annotate the diagram together.</li>
-        <li><strong>Model:</strong> work through a source example, explaining each decision and checking assumptions.</li>
-        <li><strong>Investigate:</strong> predict, observe and explain using a relevant simulation below, or a diagram in the notes.</li>
-        <li><strong>Practise & assess:</strong> use the topic tasks and the exit ticket; revisit the concept that caused confusion.</li>
-      </ol></section>
-      <p className="guided-small">Supports experiential learning, discussion and formative assessment encouraged by NEP 2020. These are suggested teaching activities, not an official curriculum certification.</p>
+      <h2>How to teach this chapter</h2>
+      <p><strong>Class {klass} · {subject}</strong>{chapter&&<> · <MathText subject={subject} text={chapter}/></>}</p>
+      <p>Teach the selected topics in the order below. Each plan uses the lesson’s own notes as its factual reference. Teaching prompts are suggestions, not quotations from NCERT.</p>
+      <section className="guided-group"><h3>Prepare before class</h3><ul>
+        <li>Read each source anchor below and locate its complete explanation in the topic notes.</li>
+        <li>Choose a readable source example or diagram; check symbols, conditions and any stated exceptions before presenting it.</li>
+        <li>Use the opening questions to identify prerequisites. Give more time to the first step students cannot explain.</li>
+      </ul><p><strong>Class-level approach:</strong> {profile.level}</p></section>
+      <section className="guided-group"><h3>Chapter teaching route</h3><ol>{plans.map((plan,index)=><li key={index}><MathText subject={subject} text={plan.title}/></li>)}</ol></section>
+      <p className="guided-small">Use the topic plans below to explain, model, question and assess. No laboratory procedure or measured result is invented by this planner.</p>
     </article>
+    {plans.map((plan,index)=><article className="guided-topic guided-teacher-topic" key={`teacher:${index}`}>
+      <span className="guided-eyebrow">Teacher notes · Topic {index+1}</span>
+      <h2><MathText subject={subject} text={plan.title}/></h2>
+      <p><strong>Learning target:</strong> <MathText subject={subject} text={plan.goal}/></p>
+      <section className="guided-group teacher-source-anchor"><h3>Source anchor for your explanation</h3>{plan.anchor?<p><MathText subject={subject} text={plan.anchor}/></p>:<p>No readable factual anchor is available for this topic. Resolve the source gap before teaching it as an established fact.</p>}<p className="guided-small">Use the complete topic notes for the full explanation and conditions.</p></section>
+      <section className="guided-group"><h3>How to teach — step by step</h3><p><strong>Open the discussion:</strong> <MathText subject={subject} text={plan.opener}/></p><ol>{plan.steps.map((step,i)=><li key={i}>{step}</li>)}</ol></section>
+      {plan.example&&<section className="guided-group"><h3>Example to model from these notes</h3><p><MathText subject={subject} text={plan.example}/></p><p>Explain the reasoning aloud, then ask students to reproduce one step without looking.</p></section>}
+      <section className="guided-group"><h3>Check understanding and respond</h3><p><strong>Ask:</strong> {plan.question}</p><p><strong>What to listen for:</strong> {plan.response}</p><p><strong>If the answer is unclear:</strong> return to the source anchor, identify the unsupported step and model it again. Then ask a different student to explain.</p></section>
+      <section className="guided-group"><h3>Support, independent practice and conclusion</h3><p>{plan.support}</p><p><strong>Independent task:</strong> explain the topic without copying, then underline the source evidence supporting each claim.</p><p><strong>Exit check:</strong> <MathText subject={subject} text={plan.exit}/></p><p><strong>Close the topic:</strong> summarise the source-backed explanation and record unresolved questions before moving to the next topic.</p></section>
+    </article>)}
     {!!resources.length && <article className="guided-topic guided-resources"><span className="guided-eyebrow">Predict · Observe · Explain</span><h2>Explore with a simulation</h2>
       <p>Open the official interactive model directly. Check its assumptions against the topic notes before drawing conclusions.</p>
       {resources.map((resource) => <section className="guided-resource" key={resource.id}>

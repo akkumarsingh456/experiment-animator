@@ -53,7 +53,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
   return <div className="guided-notes" aria-label="Complete guided lesson notes">
     <div className="guided-document-title"><span>Class {klass} · {subject}</span><h2>{title}</h2><p>Read · Investigate · Practise · Reflect</p></div>
     {includeCover && <article className="guided-topic guided-cover"><LessonCover title={slides.find(slide => slide.visual === "cover")?.title || title} objectives={slides.find(slide => slide.visual === "cover")?.bullets || content.map(slide => slide.title)} subject={subject} klass={klass} /></article>}
-    {!!content.length && <LessonNotesPlanner topics={content.map((slide) => slide.title)} subject={subject} klass={klass} />}
+    {!!content.length && <LessonNotesPlanner topics={content.filter(slide=>slide.visual!=='cover'&&slide.kind!=='break').map(slide=>slide.title)} sourceTopics={content.flatMap((slide,index)=>slide.visual==='cover'||slide.kind==='break'?[]:[{title:slide.title,groups:topicGroups[index]}])} chapter={title} subject={subject} klass={klass} />}
     {content.map((slide, index) => {
       if (slide.visual === "cover" && includeCover) return null;
       if (slide.kind === "break") return <article className="guided-topic" key={`break:${index}`}><h2>{slide.title}</h2><ul>{[...slide.bullets, ...slide.notes].map((line, i) => <li key={i}><MathText subject={subject} text={line} /></li>)}</ul></article>;
