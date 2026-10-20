@@ -1,3 +1,4 @@
+import { drawCircuitStage } from './experiment-circuit-visual';
 import type { ExperimentActivity } from './experiment-activities';
 
 export function experimentCues(activity: ExperimentActivity) {
@@ -55,17 +56,7 @@ export function drawExperiment(canvas: HTMLCanvasElement, activity: ExperimentAc
   // A small offset shadow gives apparatus depth without implying a photorealistic lab.
   c.fillStyle = '#e7eef2'; c.beginPath(); c.ellipse(427, 510, 295, 20, 0, 0, Math.PI * 2); c.fill();
   if (kind === 'circuit') {
-    const keyClosed=!result&&!setup&&/close.*key|read.*voltage|read.*current/i.test(description)&&(!/then.*open/i.test(description)||phase<4);
-    path([[170,390],[130,390],[130,245],[620,245],[620,450],[170,450],[170,410]]);
-    c.fillStyle='#fff'; c.fillRect(300,230,110,30); c.strokeRect(300,230,110,30); label('Resistor R',305,215);
-    circle(510,245,30,'#e5f6fa'); label('A',503,252); label('Ammeter in series',465,187);
-    path([[300,245],[300,340],[410,340],[410,245]]); circle(355,340,27,'#fff1d3'); label('V',348,347); label('Voltmeter across R',282,394);
-    path([[170,373],[170,422]]); path([[185,386],[185,410]]); label('Low-voltage cells',86,494);
-    c.fillStyle='#fff';c.fillRect(595,405,75,60);
-    path([[170,450],[620,450]]);
-    path(keyClosed ? [[620,405],[620,450]] : [[620,405],[650,425]]); label(keyClosed?'Key closed briefly':'Key open',526,492);
-    if (keyClosed) for(let i=0;i<8;i++){const x=145+((i*57+phase*100)%455);circle(x,245,4,'#e59725');} // direction is conventional current in this schematic
-    label('Illustrative circuit • meter readings come from the real experiment',85,548);
+    drawCircuitStage(c, activity, scene, phase);
   } else if (kind === 'chemistry') {
     const observeAt=activity.steps.findIndex(step=>/observ|measur|compar|result|record/i.test(step.title));
     const observing=result||(observeAt>=0&&scene>=observeAt);
