@@ -1050,6 +1050,9 @@ function subjectAliases(subject: string, klass?: string) {
 export function subjectMatches(actual: string, requested: string, klass?: string) {
   const a = normalizeText(actual);
   if (!a || !requested.trim()) return false;
+  // The shared word “science” must not make a Science textbook a source
+  // for Computer Science or Social Science when those books are absent.
+  if(a==='science'&&!['science','physics','chemistry','biology','vigyan','bhautiki','rasayan','jeev'].includes(normalizeText(requested)))return false;
   return subjectAliases(requested, klass).some((alias) => {
     if (alias === "science" && /computer|political|social/.test(a)) return false;
     return a === alias || (alias.length >= 4 && a.includes(alias)) || (a.length >= 4 && alias.includes(a));

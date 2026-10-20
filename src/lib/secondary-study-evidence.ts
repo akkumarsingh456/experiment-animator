@@ -60,7 +60,9 @@ export function secondaryScienceSectionEvidence(title:string,context:string,extr
  // Older PDF uploads store each page as one line. Recover only an explicit
  // numbered heading, bounded by the next section of equal/higher rank.
  const labels=[...extraAliases,title.replace(/\s*\([^)]*\)/g,''),...(Object.entries(aliases).find(([name])=>key(name)===key(title))?.[1]||[])];
- const escape=(value:string)=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+ // PDF headings and generated titles use several visually identical bond dashes.
+ // Match those spellings without altering the extracted source sentences.
+ const escape=(value:string)=>/[\-‐‑‒–—−]/.test(value)?'[-‐‑‒–—−]':/['’ʼ]/.test(value)?"['’ʼ]":value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
  const labelPattern=labels.sort((a,b)=>b.length-a.length).map(label=>label.trim().split(/\s+/).map(word=>[...word].map(escape).join('[ \\t]*')).join('\\s+')).join('|');
  const headingPattern=new RegExp(`(^|\\s)(\\d{1,2}\\.\\d{1,2}(?:\\.\\d{1,2})?)\\s+(${labelPattern})([?]?)(?=\\s|$)`,'gi');
  context=context.replace(headingPattern,(_all,before,id,heading,question)=>`\n${id} ${heading}${question}\n`);
@@ -79,7 +81,7 @@ export function secondaryScienceSectionEvidence(title:string,context:string,extr
  const sections:string[]=[];
  const boundaries=[...context.matchAll(/^[ \t]*(\d{1,2}\.\d{1,2}(?:\.\d{1,2})?)[ \t]+(?=[A-Z])/gm)].map(match=>({start:match.index!,depth:match[1].split('.').length}));
  headings.forEach((h,i)=>{
-  const identity=key(h.heading.replace(/^\d+(?:\.\d+)*\s*/,'').replace(/^\([a-z]\)\s*/i,''));
+  const identity=key(h.heading.replace(/^\d+(?:\.\d+)*\s*/,'').replace(/^\([a-z]\)\s*/i,'').replace(/\s*\[\d+(?:\s*[-–]\s*\d+)?\]\s*#?\s*$/,''));
   if(!variants.some(v=>identity===v||identity===`the${v}`))return;
   const boundary=boundaries.find(next=>next.start>h.start&&next.depth<=h.depth)?.start??context.length;
   sections.push(context.slice(h.body,boundary).split(/\n\s*(?:What you have learnt|EXERCISES|E X E R C I S E S)\b/i)[0]);

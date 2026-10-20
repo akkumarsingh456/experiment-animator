@@ -50,6 +50,8 @@ describe("Source correctness and meaningful quality checks", () => {
     expect(bookMatchesLesson({ class: "12", subject: "Chemistry" }, "12", "Physics")).toBe(false);
     expect(bookMatchesLesson({ class: "12", subject: "" }, "12", "Physics")).toBe(false);
     expect(bookMatchesLesson({ class: "9", subject: "Computer Science" }, "9", "Physics")).toBe(false);
+    expect(bookMatchesLesson({ class: "9", subject: "Science" }, "9", "Computer Science")).toBe(false);
+    expect(bookMatchesLesson({ class: "10", subject: "Science" }, "10", "Social Science")).toBe(false);
     expect(bookMatchesLesson({ class: "Class 9", subject: "Science" }, "9", "Physics")).toBe(true);
     expect(bookMatchesLesson({ class: "Class 10", subject: "Social Science" }, "10", "History")).toBe(true);
     expect(bookMatchesLesson({ class: "11", subject: "Political Science" }, "11", "Political Science")).toBe(true);

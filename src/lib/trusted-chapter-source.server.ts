@@ -2,6 +2,7 @@
  * snippets: only an exact chapter in the requested grade's NCERT mirror. */
 const ORIGIN='https://sathee.iitk.ac.in';
 const cache=new Map<string,Promise<{url:string;text:string}|null>>();
+const indexes=new Map<string,Promise<string>>();
 const identity=(text:string)=>text.replace(/^\s*(?:chapter|unit)\s*[-:]?\s*\d+\s*[-:]?\s*/i,'').replace(/\s*\((Physics|Chemistry|Biology)\)\s*$/i,'').toLowerCase().replace(/^the\s+/,'').replace(/[^a-z0-9]/g,'');
 const decode=(text:string)=>text.replace(/&#(x[0-9a-f]+|\d+);/gi,(_,n)=>String.fromCodePoint(Math.min(0x10ffff,n[0].toLowerCase()==='x'?parseInt(n.slice(1),16):Number(n)))).replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'");
 export function trustedChapterHtmlText(html:string){
@@ -11,9 +12,15 @@ export function trustedChapterHtmlText(html:string){
 }
 async function read(url:string){
  const target=new URL(url);if(target.origin!==ORIGIN||!target.pathname.includes('/ncert-books/'))return '';
- const response=await fetch(url,{signal:AbortSignal.timeout(7000),redirect:'error'});
- if(!response.ok||Number(response.headers.get('content-length'))>2_000_000)return '';
- const text=await response.text();return text.length<=2_000_000?text:'';
+ for(let attempt=0;attempt<2;attempt++){
+  try{
+   const response=await fetch(url,{signal:AbortSignal.timeout(7000),redirect:'error'});
+   if(!response.ok){if(response.status===429||response.status>=500)continue;return '';}
+   if(Number(response.headers.get('content-length'))>2_000_000)return '';
+   const text=await response.text();return text.length<=2_000_000?text:'';
+  }catch{if(attempt===1)return '';}
+ }
+ return '';
 }
 export function trustedChapterSource(klass:string,subject:string,chapter:string){
  const grade=klass.replace(/^Class\s*/i,'');
@@ -23,7 +30,8 @@ export function trustedChapterSource(klass:string,subject:string,chapter:string)
  if(!cache.has(key))cache.set(key,(async()=>{
   try{
    const g=grade.padStart(2,'0'),base=book==='science'?`${ORIGIN}/sathee-railway-exams/student-corner/ncert-books/class-${g}/nb-${book}-${g}/`:`${ORIGIN}/sathee-${book==='math'?'jee':'neet'}/ncert-books/${book==='math'?'jee':'neet'}-ncert-books/${book==='math'?'jee':'neet'}-nb-${book}-${g}/`;
-   const index=await read(base);let url='';
+   if(!indexes.has(base))indexes.set(base,read(base).then(value=>{if(!value)indexes.delete(base);return value;}));
+   const index=await indexes.get(base)!;let url='';
    for(const link of index.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)){
     const target=new URL(decode(link[1]),base),label=decode(link[2].replace(/<[^>]*>/g,' ')).trim();
     if(target.origin===ORIGIN&&target.pathname.startsWith(new URL(base).pathname)&&target.href!==base&&identity(label)===identity(chapter)){url=target.href;break;}

@@ -3,6 +3,18 @@ import {recoverTopicFromSources,adequateTopicEvidence} from '@/lib/topic-source-
 import {trustedChapterHtmlText,trustedChapterSource} from '@/lib/trusted-chapter-source.server';
 import {recoverSparseTopicNotes} from '@/lib/sparse-topic-recovery.server';
 import type {Slide} from '@/lib/generate.functions';
+const bondSource='6.3 Nature of C-X Bond\nA carbon-halogen bond is polar because the bonded atoms attract electrons unequally. The carbon end carries a partial positive charge while the halogen end carries a partial negative charge. The size of the halogen atom increases down the group. Bond length therefore increases from the carbon-fluorine bond to the carbon-iodine bond.\n6.4 Methods of Preparation\nAn unrelated preparation section must not enter these bond notes.';
+it.each(['-','‐','‑','‒','–','—','−'])('recovers the bond topic when the title uses the %s dash',dash=>{
+ const result=recoverTopicFromSources(`Nature of C${dash}X bond`,[bondSource]);
+ expect(result.complete).toBe(true);
+ expect(result.lines.join(' ')).toContain('partial positive charge');
+ expect(result.lines.join(' ')).not.toContain('unrelated preparation');
+});
+it('counts separate explanations in a saved single-line paragraph without lowering the minimum',()=>{
+ const result=recoverTopicFromSources('Polar covalent bond',['A polar covalent bond has an unequal sharing of electrons between its bonded atoms. The difference in attraction produces partial charges on the bonded atoms. The more electronegative atom attracts the shared electron pair more strongly. The bond has a positive end and a negative end, rather than equal charge distribution.']);
+ expect(result.complete).toBe(true);expect(result.lines.length).toBeGreaterThanOrEqual(3);
+ expect(adequateTopicEvidence('Polar covalent bond',['A polar covalent bond has an unequal sharing of electrons.'])).toBe(false);
+});
 const preparation='Potassium dichromate K2Cr2O7\nThis first source paragraph describes the preparation of potassium dichromate from a suitable chromium compound. The next source paragraph explains the separation stage and the preparation conditions for potassium dichromate.\nPotassium permanganate KMnO4\nThis source paragraph describes the preparation of potassium permanganate using a manganese compound. A further source paragraph explains the conversion stage and the conditions needed to obtain potassium permanganate.\n4.5 The lanthanoids\nUnrelated material stays outside the preparation topic.';
 it('recovers the reported formula-named topic from unnumbered named subsections',()=>{
  const result=recoverTopicFromSources('Preparation Of KMnO₄ And K₂Cr₂O₇',[preparation]);
@@ -26,6 +38,15 @@ it('uses only an exact chapter in the requested class mirror',async()=>{
  const url=base+'chem-12-unit-8-the-d-and-f-block-elements/';
  const fetcher=vi.spyOn(globalThis,'fetch').mockImplementation(async input=>new Response(String(input)===base?`<a href="${url}">Unit 8 The D And F Block Elements</a><a href="https://untrusted.test/">Other source</a>`:`<article id="content-section"><p>${'A source explanation of the selected chapter. '.repeat(20)}</p></article>`));
  try{const result=await trustedChapterSource('12','Chemistry','Chapter 4: The d- and f-Block Elements');expect(result?.url).toBe(url);expect(fetcher).toHaveBeenCalledTimes(2);}finally{fetcher.mockRestore();}
+});
+it('retries a temporary mirror failure instead of treating it as a missing source',async()=>{
+ const base='https://sathee.iitk.ac.in/sathee-neet/ncert-books/neet-ncert-books/neet-nb-phy-11/';
+ const url=base+'phy-11-chapter-7-gravitation/';let chapterCalls=0;
+ const spy=vi.spyOn(globalThis,'fetch').mockImplementation(async input=>{
+  if(String(input)===base)return new Response(`<a href="${url}">Chapter 7 Gravitation</a>`);
+  chapterCalls++;return chapterCalls===1?new Response('',{status:503}):new Response(`<article id="content-section">${'An authentic chapter source paragraph with readable supporting explanation. '.repeat(12)}</article>`);
+ });
+ try{const result=await trustedChapterSource('11','Physics','Chapter 7: Gravitation');expect(result?.url).toBe(url);expect(chapterCalls).toBe(2);}finally{spy.mockRestore();}
 });
 it('does not save a blank topic when no adequate source can be recovered',async()=>{
  const slide={title:'Missing topic',bullets:[],notes:[],key_terms:[],visual:'book',sections:[]} as Slide;
