@@ -2,7 +2,7 @@ import catalog from './ncert-manual-catalog.json';
 
 export type ManualLink = { klass: string; subject: string; title: string; url: string;
   entries: Array<{ page: number; label: string; terms: string }> };
-export type MatchedManual = ManualLink & { page: number; experiment: string; score: number };
+export type MatchedManual = ManualLink & { page: number; experiment: string; score: number; connection: string };
 const STOP = new Set('the and for from with that this into class chapter part introduction study practical experiment activities activity properties basic some theory principle manual using determine verify observation'.split(' '));
 function words(value: string) {
   return value.toLowerCase().replace(/\((?:physics|chemistry|biology)\)/g,'').replace(/isation\b/g,'ization').replace(/\bohm.s?\b/g,'ohm')
@@ -41,7 +41,11 @@ export function ncertManualsFor(klass: string, subject: string, chapter: string,
   const grade=klass.match(/(?:^|\D)(9|10|11|12)(?=\D|$)/)?.[1]||klass;
   const normalized=/botany|zoology|biology/i.test(subject)?'Biology':/math/i.test(subject)?'Mathematics':subject;
   const all=(catalog as ManualLink[]).filter(item=>item.klass===grade&&item.subject.toLowerCase()===normalized.toLowerCase());
-  const focus=topic&&topic!==chapter?topic:chapter;
+  // Chapter scope takes priority over broad words in a slide topic.
+  const focus=chapter||topic;
+  const currentElectricity=/current electricity|ohm/i.test(focus)&&/physics|science/i.test(normalized);
+  const currentEvidence=/resistance per unit length|resistivity|combination of resistances|metre bridge|potentiometer|internal resistance|primary cells|potential drop|electrical circuit|open circuit|household circuit|using a multimeter|convert.*galvanometer|resistance of a galvanometer/i;
+  const outsideCurrent=/transistor|diode|semiconductor|alternating current|inductor|impedance|sonometer|electromagnet|LCR|capacitor|phototransistor|logic gates/i;
   const direct=[...new Set(words(focus))], chapterTerms=[...new Set(words(chapter))];
   const aliases=related.filter(([pattern])=>pattern.test(focus)).flatMap(([,text])=>words(text));
   const frequencies=new Map<string,number>();
@@ -50,15 +54,18 @@ export function ncertManualsFor(klass: string, subject: string, chapter: string,
   const recommended: MatchedManual[]=all.map(item=>{
     const candidates=item.entries.length?item.entries:[{page:1,label:item.title,terms:item.title}];
     const ranked=candidates.map(entry=>{
-      const tokens=new Set(words(`${item.title} ${entry.terms}`));
+      // Match the individual experiment objective, never a shared PDF's title or body.
+      const evidence=entry.label;
+      const eligible=!currentElectricity||(currentEvidence.test(evidence)&&!outsideCurrent.test(evidence));
+      const tokens=new Set(words(evidence));
       const hits=direct.filter(term=>tokens.has(term));
       const extra=aliases.filter(term=>tokens.has(term));
       const chapterHits=chapterTerms.filter(term=>tokens.has(term));
       const score=hits.reduce((sum,term)=>sum+weight(term)*4,0)+extra.reduce((sum,term)=>sum+weight(term),0)+chapterHits.reduce((sum,term)=>sum+weight(term)*.5,0);
-      return {...entry,score,hits: hits.length+extra.length};
-    }).filter(entry=>entry.hits>0).sort((a,b)=>b.score-a.score);
+      return {...entry,score,hits: new Set([...hits,...extra]).size,eligible,matched:[...new Set([...hits,...extra])]};
+    }).filter(entry=>entry.eligible&&(currentElectricity||entry.hits>=2)).sort((a,b)=>b.score-a.score);
     const best=ranked[0];
-    return {...item,page:best?.page||1,experiment:best?.label||item.title,score:best?.score||0};
+    return {...item,page:best?.page||1,experiment:best?.label||item.title,score:best?.score||0,connection:currentElectricity?'Connects to this chapter through resistance, potential difference, current or DC circuit measurements.':`Connects to ${chapter||topic} through the experiment objective: ${best?.matched.join(', ')||''}.`};
   }).filter(item=>item.score>=4).sort((a,b)=>b.score-a.score).slice(0,4);
   return { grade, subject: normalized, all, recommended };
 }
