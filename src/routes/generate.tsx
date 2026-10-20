@@ -1221,6 +1221,7 @@ function SlideCanvas({
         <div className="relative grid h-full w-full grid-rows-[auto_1fr_auto] overflow-hidden bg-card print:h-auto">
           <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-border/60 bg-secondary/40 flex items-center justify-between text-[11px] text-muted-foreground">
             <span className="font-mono">Slide {index + 1} / {total}</span>
+            {!staticView && (
             <div className="flex items-center gap-2">
               {v && (
                 <Badge variant="outline" className={`rounded-full text-[10px] ${vTone}`}>
@@ -1258,6 +1259,7 @@ function SlideCanvas({
               </Badge>
 
             </div>
+            )}
           </div>
 
           <div className="lesson-slide-body grid grid-cols-1 md:grid-cols-[3fr_2fr] min-h-0 overflow-hidden" style={lang ? { gridTemplateColumns: "1fr" } : undefined}>
