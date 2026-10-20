@@ -243,7 +243,7 @@ function GeneratePage() {
           <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight ml-1">{search.topic || "Untitled"}</h1>
         </div>
 
-        {loading && <LessonPreparation startedAt={requestStartedAt} subject={search.subject} chapter={search.chapter} topic={search.topic} />}
+        {loading && <LessonPreparation startedAt={requestStartedAt} klass={String(search.klass||'')} subject={search.subject} chapter={search.chapter} topic={search.topic} />}
 
         {error && (
           <Card className="border-destructive/40 bg-destructive/5">
