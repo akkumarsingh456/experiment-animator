@@ -7,6 +7,7 @@ import {topicEvidence} from './topic-evidence';
 
 export const isSeniorScienceStudy=(klass:string,subject:string)=>/^(?:Class\s*)?(?:11|12)$/i.test(klass.trim())&&/^(?:Physics|Chemistry)$/i.test(subject.trim());
 const aliases:Record<string,string[]>={
+ 'Preparation of KMnO4 and K2Cr2O7':['Potassium dichromate','Potassium permanganate'],
  "Newton's laws":["Newton's first law of motion","Newton's second law of motion","Newton's third law of motion","Newton’s first law of motion","Newton’s second law of motion","Newton’s third law of motion"],
  'Diamagnetic':['Diamagnetism'], 'Paramagnetic':['Paramagnetism'], 'Ferromagnetic':['Ferromagnetism'],
  'Diamagnetic, paramagnetic and ferromagnetic materials':['Diamagnetism','Paramagnetism','Ferromagnetism'],
@@ -30,9 +31,10 @@ const aliases:Record<string,string[]>={
  'Inner transition elements (lanthanoids and actinoids)':['The inner transition elements','The lanthanoids','The actinoids'],
  'Nucleic acids (DNA/RNA)':['Nucleic acids'],
 };
-const identity=(text:string)=>text.toLowerCase().replace(/[^a-z0-9]/g,'');
+const identity=(text:string)=>text.replace(/[₀-₉]/g,char=>String(char.charCodeAt(0)-8320)).toLowerCase().replace(/[^a-z0-9]/g,'');
+export function seniorTopicHeadings(title:string){return Object.entries(aliases).find(([name])=>identity(name)===identity(title))?.[1]||[];}
 export function seniorScienceEvidence(title:string,context:string){
- const alternate=Object.entries(aliases).find(([name])=>identity(name)===identity(title))?.[1]||[];
+ const alternate=seniorTopicHeadings(title);
  return secondaryScienceSectionEvidence(title,decodeNcertProse(context,[title,...alternate]),alternate);
 }
 const tag=(line:string)=>line.match(/^\*\*([^*]+):\*\*/)?.[1]||'';

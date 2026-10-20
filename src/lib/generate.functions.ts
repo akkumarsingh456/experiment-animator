@@ -1,5 +1,6 @@
 import {isSeniorScienceStudy,seniorScienceEvidence,seniorStudyContent,seniorActivityConclusions} from '@/lib/senior-study-notes';
 import {secondaryScienceSectionEvidence,substantiveStudyLine} from '@/lib/secondary-study-evidence';
+import {adequateTopicEvidence} from '@/lib/topic-source-recovery';
 import { sourceQuizItems } from "@/lib/source-quiz";
 import { appendSocialRevisionNotes } from "@/lib/social-revision-notes";
 import { socialChapterPart, socialTitle } from "@/lib/social-science-chapters";
@@ -703,6 +704,7 @@ export type Mcq = {
 };
 
 export type Slide = {
+  source_recovery?: {attempts:number;kind:"uploaded-ncert"|"official-ncert-mirror";url?:string};
   teacher_pdf?: {path:string;page:number;file_name:string};
   teacher_revision?: {book_id:string;file_name:string;page?:number};
   context_illustration?: { url: string; provider: "Hugging Face"; description: string };
@@ -1540,7 +1542,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // Quiz items are rebuilt from source statements after cache lookup.
     const lessonKey = hashKey([
-      isSeniorScienceStudy(data.klass,data.subject)?"lesson-v65-newton-law-section-recovery":/^(?:9|10)$/.test(classNumber(data.klass)) ? "lesson-v63-secondary-flat-heading-recovery" : "lesson-v60-topic-specific-dimensions-and-source-review",
+      isLanguageSubject(data.subject)?"lesson-v60-topic-specific-dimensions-and-source-review":"lesson-v66-ncert-first-topic-recovery",
       data.klass,
       data.subject,
       data.chapter,
@@ -1736,6 +1738,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       pickedMap.set(`${chunk.book_id}:${chunk.chunk_index}`, splitReferenceContent(chunk.content).text);
     }
     const picked = [...pickedMap.values()].length > 0 ? [...pickedMap.values()] : selectedChunks.slice(0, 24).map((c) => splitReferenceContent(c.content).text);
+    const recoverySources:string[]=[];
     let context = picked.join("\n---\n").slice(0, 30000);
     if (data.chapter) {
       const sourcePages = await Promise.all([...primaryIds].map(async bookId => {
@@ -1773,6 +1776,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       }));
       // Duplicate uploads can have different whitespace/OCR layers. Choose one complete
       // matching textbook instead of concatenating the same chapter from several copies.
+      recoverySources.push(...sourcePages.map(pages=>pages.join("\n\n")).filter(Boolean));
       const chosen=sourcePages.map((pages,index)=>({pages,index,words:(pages.join(" ").match(/[A-Za-z]{3,}/g)||[]).length})).filter(row=>row.pages.length).sort((a,b)=>b.words-a.words)[0];
       const scoped = [...new Set(chosen?chosen.pages:sourcePages.flat())];
       if(chosen){const bookId=[...primaryIds][chosen.index];selectedBooks=bookScores.filter(book=>book.id===bookId);}
@@ -1819,7 +1823,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Memory trick sections. Any line not supported by the NCERT context is
     // dropped, and if the gateway is unavailable the deterministic local
     // sectioniser is used, so notes are always present and always NCERT-only.
-    const notedSlides = await attachTeacherNotes(contentSlides, {
+    let notedSlides:Slide[] = await attachTeacherNotes(contentSlides, {
       apiKey: process.env.GROQ_API_KEY,
       klass: String(data.klass || ""),
       subject: String(data.subject || ""),
@@ -1831,7 +1835,14 @@ export const generateLesson = createServerFn({ method: "POST" })
     // into a valid equivalent (deterministically, then by Groq) and only the
     // lines that still fail — or that the NCERT / PW context does not support —
     // are quarantined. Verification re-runs after every repair.
-    const groundNorm = normalizeForGrounding(`${context}\n${refContext}`);
+    let recoveryEvidence='';
+    if(!isLanguageSubject(data.subject)&&lessonMode!=='chapter'){
+      const {recoverSparseTopicNotes}=await import('@/lib/sparse-topic-recovery.server');
+      const recovered=await recoverSparseTopicNotes(notedSlides,{klass:String(data.klass),subject:data.subject,chapter:data.chapter||data.topic,sources:[context,...recoverySources]});
+      notedSlides=recovered.slides;
+      recoveryEvidence=recovered.extraEvidence.join('\n\n');
+    }
+    const groundNorm = normalizeForGrounding(`${context}\n${refContext}\n${recoveryEvidence}`);
     const fixedChecks = await autoFixAndVerifyNotes(
       notedSlides.map((sl) => (sl as any).sections as NoteSection[] | undefined),
       groundNorm,
@@ -1862,6 +1873,10 @@ export const generateLesson = createServerFn({ method: "POST" })
       };
     });
     const secondaryScience=(/^(?:9|10)$/.test(classNumber(data.klass))&&data.subject==="Science")||isSeniorScienceStudy(data.klass,data.subject);
+    if(!isLanguageSubject(data.subject)&&lessonMode!=='chapter'){
+      const incomplete=verifiedSlides.filter(slide=>!slide.teacher_pdf&&['content','chapter'].includes(slide.kind||'content')&&!adequateTopicEvidence(slide.title,(slide.sections||[]).filter(section=>section.kind!=='diagram'&&!/activity|practice|revision|^Source (?:review|table)/i.test(section.heading)).flatMap(section=>section.lines)));
+      if(incomplete.length)throw new Error(`Source recovery could not produce enough verified explanation for: ${incomplete.map(slide=>slide.title).join(', ')}. The incomplete lesson was not saved. Reprocess clearer matching NCERT chapter pages and retry.`);
+    }
     if(secondaryScience&&!verifiedSlides.some(slide=>(slide.sections||[]).filter(section=>section.kind!=="diagram").flatMap(section=>section.lines).filter(substantiveStudyLine).length>=3)){
       throw new Error(`The selected Class ${data.klass} ${data.subject} chapter does not contain enough readable explanations for study notes. Add or reprocess the matching textbook chapter, then regenerate. Classroom activities alone will not be saved as complete notes.`);
     }

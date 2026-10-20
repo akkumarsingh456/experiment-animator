@@ -70,6 +70,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
       return <article className="guided-topic" key={`${index}:${slide.title}`}>
         <div className="guided-student-line"><span>Name: ____________________</span><span>Date: ____________________</span></div>
         <h2><span className="guided-topic-number">{String(index + 1).padStart(2, "0")}</span>{slide.title}</h2>
+        {slide.source_recovery?.url&&<p className="text-sm">External NCERT mirror · IIT Kanpur SATHEE: <a href={slide.source_recovery.url} className="underline">{slide.source_recovery.url}</a></p>}
         {slide.notes_quality?.issues.length ? <p className="guided-quality-note">Source review: {slide.notes_quality.issues.join(" ")}</p> : null}
         {groups.slice(0, visualAt).map((group, i) => <NotesGroup subject={subject} group={group} key={`intro:${i}`} />)}
         <TopicVisualStructures input={{ ...slide, chapter: title, keyTerms: slide.key_terms }} subject={subject} />
