@@ -946,3 +946,26 @@ body:has(.presentation-overlay) .creator-credit { display:none; }
 .social-source-list small { display:block; margin-top:4px; font-size:14px; }
 .social-source-panel a,.social-source-panel button { display:inline-block; padding:8px 10px; margin:4px; border:1px solid #b6c7b0; border-radius:5px; background:#fffef8; color:#29493f; font-size:15px; text-decoration:underline; cursor:pointer; }
 .social-source-panel button:disabled { opacity:.6; cursor:wait; }
+/* Experiment resource panels: presentation only; matching and controls stay intact. */
+.experiment-procedure-empty,.experiment-video-empty{display:flex;align-items:flex-start;gap:18px;padding:28px;line-height:1.7}
+.experiment-procedure-empty{background:linear-gradient(120deg,#f6fbff,#fff 70%);border-color:#d7e5ed}
+.experiment-empty-icon{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border:1px solid #cbe3eb;border-radius:14px;background:#eaf7fa;color:#13748b}
+.experiment-eyebrow{margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#22728a}
+.experiment-procedure-empty h3{font-size:19px;line-height:1.4;color:#18364a}
+.experiment-procedure-empty p{max-width:850px}
+.experiment-video-browser{border-color:#d7e5ed;box-shadow:0 5px 20px #18364a06}
+.experiment-video-heading{background:#f5f9fc;border-bottom:1px solid #e0eaf1;color:#18364a;padding:24px 28px}
+.experiment-video-heading h3{font-size:21px;line-height:1.35}
+.experiment-sort{display:flex;align-items:center;gap:8px;color:#536579;font-size:12px;flex-wrap:wrap}
+.experiment-sort select{color:#18364a;border-color:#cbdce6;font-size:13px;max-width:100%;min-height:40px}
+.experiment-source-bar{background:#f4fbf8;border-color:#e1eee8;padding:14px 28px}
+.experiment-source-bar p{flex:1 1 400px;line-height:1.6;align-items:flex-start}
+.experiment-source-bar svg{flex-shrink:0;margin-top:2px}
+.experiment-source-bar label{line-height:1.6;cursor:pointer}
+.experiment-source-bar input{width:15px;height:15px;accent-color:#13748b}
+.experiment-video-empty p{max-width:780px;line-height:1.7}
+.experiment-resource-button{border:1px solid #c7dfe9;border-radius:9px;background:#fff;padding:10px 14px;color:#086b95;font-size:13px;font-weight:600;text-decoration:none;line-height:1.5;transition:background .15s,border-color .15s}
+.experiment-resource-button:hover{background:#eef8fc;border-color:#76b4cb}
+.experiment-resource-button:focus-visible{outline:3px solid #7dc9e8;outline-offset:3px}
+.experiment-resource-button svg{flex-shrink:0}
+@media(max-width:640px){.experiment-procedure-empty,.experiment-video-empty{padding:20px;gap:12px;flex-direction:column}.experiment-video-heading,.experiment-source-bar{padding:20px}.experiment-video-heading h3{font-size:19px}.experiment-sort{width:100%}.experiment-sort select{margin-left:0}.experiment-resource-button{font-size:12px}}
