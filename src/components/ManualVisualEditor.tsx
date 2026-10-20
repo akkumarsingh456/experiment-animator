@@ -15,6 +15,7 @@ import {ManualImageCropper} from './ManualImageCropper';
 
 export function ManualVisualEditor({storageKey,autoUrl,autoContent,alt,klass='',subject='',chapter='',topic='',slideId=''}:{storageKey:string;autoUrl:string;autoContent?:ReactNode;alt:string;klass?:string;subject?:string;chapter?:string;topic?:string;slideId?:string}){
  const [visual,setVisual]=useState<ManualVisual|null>(()=>manualVisualCache.get(storageKey)||null);
+ const [imageAspect,setImageAspect]=useState(1);
  const [open,setOpen]=useState(false),[saving,setSaving]=useState(false);
  const [googleOpen,setGoogleOpen]=useState(false),[cropOpen,setCropOpen]=useState(false),[importing,setImporting]=useState(false);
  const [preserve,setPreserve]=useState(false),[sharedState,setSharedState]=useState<'loading'|'saved'|'none'|'error'>('loading');
@@ -48,7 +49,7 @@ export function ManualVisualEditor({storageKey,autoUrl,autoContent,alt,klass='',
  async function upload(file?:File,credit?:ImageCredit){
   if(!file)return;if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>12*1024*1024){toast.error('Choose a PNG, JPG or WebP image up to 12 MB.');return;}
   const key=storageKey;dirty.current=true;setPreserve(false);
-  try{const url=URL.createObjectURL(file);const image=new Image();try{image.src=url;await image.decode();if(currentKey.current!==key)return;const scale=Math.min(1,1600/Math.max(image.width,image.height));setVisual({url:imageWithCredit(image,Math.round(image.width*scale),Math.round(image.height*scale),credit),width:85,x:7,y:8,shape:'rectangle',showAuto:false,credit});setOpen(true);setBookOpen(false);setGoogleOpen(false);setCropOpen(false);panel.current?.focus();}finally{URL.revokeObjectURL(url);}}catch{toast.error('This image could not be opened.');}
+  try{const url=URL.createObjectURL(file);const image=new Image();try{image.src=url;await image.decode();if(currentKey.current!==key)return;const scale=Math.min(1,1600/Math.max(image.width,image.height));setVisual({url:imageWithCredit(image,Math.round(image.width*scale),Math.round(image.height*scale),credit),width:96,x:2,y:2,shape:'rectangle',showAuto:false,credit});setOpen(true);setBookOpen(false);setGoogleOpen(false);setCropOpen(false);panel.current?.focus();}finally{URL.revokeObjectURL(url);}}catch{toast.error('This image could not be opened.');}
  }
  async function importUrl(url:string,credit?:ImageCredit){const key=storageKey;const result=/^data:image\/(png|jpeg|webp);base64,/i.test(url)?{dataUrl:url,type:url.slice(5,url.indexOf(';'))}:await importDiagramUrl({data:{url}});if(currentKey.current!==key)return;const blob=await (await fetch(result.dataUrl)).blob();await upload(new File([blob],'topic-diagram.png',{type:result.type}),credit);}
  async function useDiagram(image:DiagramResult){setImporting(true);try{await importUrl(image.url,image);}catch(error){toast.error(error instanceof Error?error.message:'The image could not be imported. Try copying the image or a screenshot.');}finally{setImporting(false);}}
@@ -69,15 +70,18 @@ export function ManualVisualEditor({storageKey,autoUrl,autoContent,alt,klass='',
   }catch(error){toast.error(error instanceof Error?error.message:'The image could not be saved.');}finally{setSaving(false);}
  }
  async function openBooks(){if(!medEasyAllowed)return;setBookOpen(value=>!value);if(bookOpen)return;setBookLoading(true);setBookError('');try{const requestedKey=currentKey.current;const result=await cachedManualBookLinks({klass,subject,chapter,topic});if(currentKey.current!==requestedKey)return;setBooks(result);if(result[0])void cachedManualPdf(result[0].id,klass,subject).catch(()=>{});}catch{setBookError('Book links are unavailable. You can still paste a screenshot or import from your device.');}finally{setBookLoading(false);}}
- return <div ref={panel} tabIndex={0} aria-label="Topic image editor: click here and paste a screenshot" className="manual-visual-editor relative w-full h-full min-h-0" onPaste={paste} onDragOver={event=>event.preventDefault()} onDrop={drop}>
+ const manualOnly=!!visual&&!visual.showAuto;
+ return <div ref={panel} tabIndex={0} aria-label="Topic image editor: click here and paste a screenshot" className={`manual-visual-editor relative w-full min-h-0 ${manualOnly?'manual-visual-only':'h-full'}`} onPaste={paste} onDragOver={event=>event.preventDefault()} onDrop={drop}>
+   <div className={manualOnly?'manual-image-stage relative w-full overflow-hidden':'absolute inset-0'} style={manualOnly?{aspectRatio:String(visual.shape==='circle'?1:imageAspect)}:undefined}>
    {(!visual||visual.showAuto)&&(autoContent||<img className="w-full h-full object-contain" src={autoUrl} alt={alt}/>)}
-   {visual&&<div className="absolute overflow-hidden" style={{left:`${visual.x}%`,top:`${visual.y}%`,width:`${visual.width}%`,maxHeight:'90%',borderRadius:visual.shape==='circle'?'50%':visual.shape==='rounded'?16:0,aspectRatio:visual.shape==='circle'?'1':undefined,cursor:open?'move':'default',touchAction:open?'none':undefined}}
+   {visual&&<div className="absolute overflow-hidden" style={{left:`${visual.x}%`,top:`${visual.y}%`,width:`${visual.width}%`,height:visual.shape==='circle'?undefined:`${Math.max(1,100-visual.y)}%`,borderRadius:visual.shape==='circle'?'50%':visual.shape==='rounded'?16:0,aspectRatio:visual.shape==='circle'?'1':undefined,cursor:open?'move':'default',touchAction:open?'none':undefined}}
      onPointerDown={event=>{if(!open)return;event.currentTarget.setPointerCapture(event.pointerId);drag.current={x:event.clientX,y:event.clientY,left:visual.x,top:visual.y};}}
-     onPointerMove={event=>{if(!drag.current||!panel.current)return;const bounds=panel.current.getBoundingClientRect();change({x:Math.max(0,Math.min(100-visual.width,drag.current.left+(event.clientX-drag.current.x)/bounds.width*100)),y:Math.max(0,Math.min(85,drag.current.top+(event.clientY-drag.current.y)/bounds.height*100))});}}
+     onPointerMove={event=>{if(!drag.current)return;const bounds=event.currentTarget.parentElement!.getBoundingClientRect();change({x:Math.max(0,Math.min(100-visual.width,drag.current.left+(event.clientX-drag.current.x)/bounds.width*100)),y:Math.max(0,Math.min(85,drag.current.top+(event.clientY-drag.current.y)/bounds.height*100))});}}
      onPointerUp={()=>{drag.current=null;}} onPointerCancel={()=>{drag.current=null;}}>
-     <img src={visual.url} alt="Manually uploaded topic reference" draggable={false} className="w-full h-full object-contain"/>
+     <img src={visual.url} alt="Manually uploaded topic reference" draggable={false} onLoad={event=>{const image=event.currentTarget;if(image.naturalWidth&&image.naturalHeight)setImageAspect(image.naturalWidth/image.naturalHeight);}} className="w-full h-full object-contain object-top" style={visual.shape==='circle'?{height:'auto',aspectRatio:'1'}:undefined}/>
    </div>}
-   <div className="manual-image-controls absolute bottom-2 left-2 right-2 flex flex-wrap gap-1 rounded-lg bg-white/95 p-2 border text-[11px] shadow">
+   </div>
+   <div className={`manual-image-controls ${manualOnly?'relative m-2':'absolute bottom-2 left-2 right-2'} flex flex-wrap gap-2 rounded-lg bg-white/95 p-3 border text-[13px] shadow`}>
      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event=>{void upload(event.target.files?.[0]);event.target.value='';}}/>
      <button onClick={()=>input.current?.click()} title="Import a picture from your device" className="flex items-center gap-1"><ImagePlus size={15}/> From device</button>
      {medEasyAllowed&&<button onClick={()=>void openBooks()} className="flex items-center gap-1"><BookOpen size={15}/> From Med Easy book</button>}
