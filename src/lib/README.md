@@ -141,6 +141,7 @@ lesson invokes it.
 | --- | --- |
 | [`experiment-activities.ts`](experiment-activities.ts) | Experiment activity records, matching, display selection, and video links. |
 | [`experiment-drawing.ts`](experiment-drawing.ts) | Experiment recognition and drawing. |
+| [`experiment-timeline.ts`](experiment-timeline.ts) | Complete experiment sections, reading-paced durations, and lossless caption paging. |
 | [`experiment-photographs.ts`](experiment-photographs.ts) | Loads apparatus photos and assembles photographic experiment views. |
 | [`experiment-photo-assets.json`](experiment-photo-assets.json) | Apparatus photo asset metadata. |
 | [`experiment-videos.ts`](experiment-videos.ts) | Selects relevant experiment videos. |

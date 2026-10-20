@@ -34,11 +34,13 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, x: number, y: number,
 }
 
 /** Locally drawn apparatus animation; labels/captions are included in video exports. */
-export function drawExperiment(canvas: HTMLCanvasElement, activity: ExperimentActivity, scene: number, phase: number) {
+export function drawExperiment(canvas: HTMLCanvasElement, activity: ExperimentActivity, scene: number, phase: number, pixelRatio=1) {
   const c = canvas.getContext('2d'); if (!c) return;
-  canvas.width = 1280; canvas.height = 720;
+  const width=Math.round(1280*pixelRatio),height=Math.round(720*pixelRatio);
+  if(canvas.width!==width)canvas.width=width;if(canvas.height!==height)canvas.height=height;
+  c.setTransform(pixelRatio,0,0,pixelRatio,0,0);
   const cues = experimentCues(activity), kind = experimentKind(activity);
-  const result = scene >= activity.steps.length, setup = scene === 0 || /key.*open|open.*key/i.test(activity.steps[scene]?.description||'');
+  const result = scene >= activity.steps.length, setup = scene === 0 || /with (?:the )?key open/i.test(activity.steps[scene]?.description||'');
   const title = result ? 'Observe & explain' : activity.steps[scene]?.title || 'Prepare';
   const description = result ? activity.observation : activity.steps[scene]?.description || activity.objective;
   c.fillStyle = '#eff6fb'; c.fillRect(0, 0, 1280, 720);
@@ -53,14 +55,16 @@ export function drawExperiment(canvas: HTMLCanvasElement, activity: ExperimentAc
   // A small offset shadow gives apparatus depth without implying a photorealistic lab.
   c.fillStyle = '#e7eef2'; c.beginPath(); c.ellipse(427, 510, 295, 20, 0, 0, Math.PI * 2); c.fill();
   if (kind === 'circuit') {
+    const keyClosed=!result&&!setup&&/close.*key|read.*voltage|read.*current/i.test(description)&&(!/then.*open/i.test(description)||phase<4);
     path([[170,390],[130,390],[130,245],[620,245],[620,450],[170,450],[170,410]]);
     c.fillStyle='#fff'; c.fillRect(300,230,110,30); c.strokeRect(300,230,110,30); label('Resistor R',305,215);
     circle(510,245,30,'#e5f6fa'); label('A',503,252); label('Ammeter in series',465,187);
     path([[300,245],[300,340],[410,340],[410,245]]); circle(355,340,27,'#fff1d3'); label('V',348,347); label('Voltmeter across R',282,394);
     path([[170,373],[170,422]]); path([[185,386],[185,410]]); label('Low-voltage cells',86,494);
-    c.clearRect(595,428,45,32); c.fillStyle='#fff'; c.fillRect(595,428,45,32);
-    path(setup ? [[595,450],[635,425]] : [[595,450],[635,450]]); label(setup?'Key open':'Key closed briefly',526,492);
-    if (!setup) for(let i=0;i<8;i++){const x=145+((i*57+phase*100)%455);circle(x,245,4,'#e59725');} // direction is conventional current in this schematic
+    c.fillStyle='#fff';c.fillRect(595,405,75,60);
+    path([[170,450],[620,450]]);
+    path(keyClosed ? [[620,405],[620,450]] : [[620,405],[650,425]]); label(keyClosed?'Key closed briefly':'Key open',526,492);
+    if (keyClosed) for(let i=0;i<8;i++){const x=145+((i*57+phase*100)%455);circle(x,245,4,'#e59725');} // direction is conventional current in this schematic
     label('Illustrative circuit • meter readings come from the real experiment',85,548);
   } else if (kind === 'chemistry') {
     const observeAt=activity.steps.findIndex(step=>/observ|measur|compar|result|record/i.test(step.title));
@@ -112,10 +116,25 @@ export function drawExperiment(canvas: HTMLCanvasElement, activity: ExperimentAc
     c.font='16px sans-serif';c.fillStyle='#325466';
     wrap(c,observing&&cues.colour?`Expected ${cues.colourName} response · reported by the source`:'Illustrated apparatus · liquid shading is not a measured result',100,560,680,22,1);
   } else if (kind === 'leaf') {
-    c.beginPath();c.ellipse(400,345,185,97,-.35,0,Math.PI*2);c.fillStyle=result?'#20234e':'#65a877';c.fill();c.stroke();
-    c.save();c.translate(400,345);c.rotate(-.35);c.fillStyle=result?'#c5b280':'#29333a';c.fillRect(-40,-95,80,190);c.restore();
-    path([[220,410],[590,280]]);label(result?'Blue-black: starch detected':'Part of leaf exposed to light',440,220);
-    label(result?'Covered area: starch not detected':'Opaque cover on both sides',140,490); label('Compare after iodine treatment • not to scale',145,540);
+    const bleaching=activity.steps.findIndex(step=>/chlorophyll|alcohol.*bath/i.test(step.description));
+    const iodine=activity.steps.findIndex(step=>/treat.*iodine|add.*iodine|iodine solution/i.test(step.description));
+    if(!result&&bleaching>=0&&scene===bleaching){
+      c.fillStyle='#d9edf4';c.fillRect(190,325,430,170);c.strokeRect(190,280,430,215);
+      c.fillStyle='#f0f5dc';c.beginPath();c.roundRect(330,220,135,225,25);c.fill();c.stroke();
+      c.beginPath();c.ellipse(397,350,42,70,-.3,0,Math.PI*2);c.fillStyle=phase<3?'#65a877':'#c5b280';c.fill();c.stroke();
+      label('Alcohol in tube',450,245);label('Hot-water bath',240,530);
+      label('Teacher demonstration · never heat alcohol over a flame',80,190);
+      for(let i=0;i<3;i++)path([[245+i*130,330],[260+i*130,326+Math.sin(phase+i)*3],[275+i*130,330]]);
+    }else{
+      const treated=result||(iodine>=0&&(scene>iodine||(scene===iodine&&phase>=2)));
+      const prepared=iodine>=0&&scene>=iodine;
+      if(prepared||result){c.beginPath();c.ellipse(400,365,255,145,0,0,Math.PI*2);c.fillStyle='#f1f7fa';c.fill();c.stroke();}
+      c.beginPath();c.ellipse(400,345,185,97,-.35,0,Math.PI*2);c.fillStyle=treated?'#20234e':prepared?'#c5b280':'#65a877';c.fill();c.stroke();
+      c.save();c.translate(400,345);c.rotate(-.35);c.fillStyle=prepared||result?'#c5b280':'#29333a';c.fillRect(-40,-95,80,190);c.restore();
+      path([[220,410],[590,280]]);label(treated?'Blue-black: starch detected':prepared?'Rinsed leaf · add iodine':'Part of leaf exposed to light',400,205);
+      label(treated?'Previously covered area: no starch-positive colour':prepared?'Cover removed before testing':'Opaque cover on both sides',100,530);
+      if(prepared&&!result){c.fillStyle='#936433';c.beginPath();c.ellipse(395,225+(phase%1)*75,5,8,0,0,Math.PI*2);c.fill();label('Iodine',480,255);}
+    }
   } else if (kind === 'microscope') {
     path([[220,460],[410,460],[360,410],[360,270],[310,230],[340,200]]);path([[245,365],[410,365]]);
     c.strokeRect(310,220,55,80);c.fillStyle='#e0edf4';c.fillRect(260,345,130,12);label('Slide / specimen',190,510);label('Microscope',210,185);

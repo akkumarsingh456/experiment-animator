@@ -28,6 +28,7 @@
 | Document | Scope |
 | --- | --- |
 | [Topic lecture sequence](TOPIC_LECTURE_SEQUENCE.md) | Arrangement of existing topic material. |
+| [Experiment animation](EXPERIMENT_ANIMATION.md) | Full HD experiment sections, captions, drawing, and video-export scope. |
 | [Slide space organiser](SLIDE_SPACE_ORGANIZER.md) | Layout balancing and pagination. |
 | [Med Easy reader fix](MED_EASY_READER_FIX.md) | Reader navigation and loading work recorded in that update. |
 | [Library access setup](LIBRARY_ACCESS_SETUP.md) | Public reading and restricted source-management setup. |
