@@ -1,3 +1,4 @@
+import {decodeNcertProse} from './ncert-prose-decoding';
 import { splitReferenceContent } from "@/lib/reference-visuals";
 import { isContentsListing } from "@/lib/note-source-noise";
 const key = (value: string) => value.toLowerCase().replace(/^chapter\s*\d+\s*[:.\-]?\s*/i, "").replace(/\s*\((?:physics|chemistry|biology|history|geography|political science|economics)\)\s*$/i, "").replace(/^the\s+/, "").replace(/[^\p{L}\p{N}]/gu, "").replace(/^chemicalthermodynamics$/, "thermodynamics").replace(/^systemsofparticles/, "systemofparticles");
@@ -10,7 +11,7 @@ export function scopeTextbookPages(pages: Array<{ page_number: number; text: str
   let current = "";
   const result: string[] = [];
   for (const page of [...pages].sort((a,b) => a.page_number-b.page_number)) {
-    const text = splitReferenceContent(page.text).text.replace(/^\[SOURCE_OCR_PAGE\]\s*/, "");
+    const text = decodeNcertProse(splitReferenceContent(page.text).text.replace(/^\[SOURCE_OCR_PAGE\]\s*/, ""),[chapter,...chapterNames]);
     if (!text.trim() || isContentsListing(text) || /^\s*(?:contents|table of contents)\b/i.test(text)) continue;
     const header = key(text.slice(0, 600));
     const hits = names.map(name => ({ name, at: header.indexOf(name) })).filter(hit => hit.at >= 0).sort((a,b) => a.at-b.at || b.name.length-a.name.length);

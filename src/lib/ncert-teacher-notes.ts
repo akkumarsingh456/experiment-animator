@@ -1,3 +1,4 @@
+import {isSeniorScienceStudy,seniorScienceEvidence} from './senior-study-notes';
 import {secondaryScienceSectionEvidence,substantiveStudyLine} from './secondary-study-evidence';
 import { isContentsListing } from "@/lib/note-source-noise";
 import { topicEvidence } from "@/lib/topic-evidence";
@@ -417,7 +418,7 @@ export async function groqTeacherNotes(opts: {
     ...notesQualityPolicy(opts.subject,opts.chapter).map(rule=>`QUALITY RULE: ${rule}`),
     "Do not impose physics sections on other subjects. Include derivations or mathematical proofs only where supported; definitions and empirical laws have explanations, not fabricated proofs. For language lessons retain important source wording and explain it in the language of the passage.",
     "Teach in this order: objective and prerequisite → concept explanation → vocabulary → worked source example/proof/derivation → one interactive task → practice with feedback → recap and exit ticket.",
-    "For every topic give ONE classroom activity adapted from the supplied NCERT example, observation, case or passage: title, source idea, materials, pair/group roles, numbered steps, discussion questions, student output and teacher check. Identify adaptations as teacher-designed; do not invent an NCERT activity number or experimental observations. If apparatus, quantities or lab safety procedure are absent, use a paper/diagram or text discussion instead of proposing a lab procedure.",
+    isSeniorScienceStudy(opts.klass,opts.subject)?"For Class 11–12 Physics and Chemistry, prioritise detailed source explanations, definitions, important points, equations with conditions, and complete source derivations. Omit generic pair-work packets. Retain a source activity only when it directly belongs to this slide topic; state what is learned using the explicit source result, and distinguish that expected conclusion from an actual measurement. Never invent a practical, reagents, readings or outcomes. A short source-analysis task is added separately if appropriate.":"For every topic give ONE classroom activity adapted from the supplied NCERT example, observation, case or passage: title, source idea, materials, pair/group roles, numbered steps, discussion questions, student output and teacher check. Identify adaptations as teacher-designed; do not invent an NCERT activity number or experimental observations. If apparatus, quantities or lab safety procedure are absent, use a paper/diagram or text discussion instead of proposing a lab procedure.",
     "Before returning JSON, review each explanation for scope, completeness and readable notation; check units, equation transitions, sequence and answer alignment. No equation references or OCR fragments may masquerade as formulas. Do not pad sparse sources with repeated generic tasks.",
     "",
     PW_EXTRACTION_RULES,
@@ -465,9 +466,9 @@ export async function groqTeacherNotes(opts: {
     "- After each formula give a VARIABLE BREAKDOWN line for every symbol, with its meaning and SI unit in square brackets (for example, $v$ [final velocity; $\\mathrm{m\\,s^{-1}}$]); never invent a unit that the source does not provide.",
     "- Where the textbook derives a relation or proves a theorem, include its starting assumptions, each justified intermediate step and the final result. Retain the entire sequence even if it spans several slides.",
     "- Derive only relations actually derived in the supplied source. A definition or empirical law need not have a derivation. Never manufacture derivation steps to fill a template.",
-    "- CLASSROOM PACKET: add 2-3 measurable learning objectives (explain, compare, interpret, apply), the prerequisite ideas, a concise summary, and supported misconceptions in 'Misconception → Correction → Reason' form.",
-    "- DIFFERENTIATION: Support Practice is one scaffolded recall/interpretation task with a sentence starter; Core Practice is one explain/apply task; Challenge Practice is one evidence-based transfer or comparison task within NCERT scope. These are tasks, not claims that students have different ability levels.",
-    "- Add a short Exit Ticket that checks an objective. Put sample answers or success criteria for ALL practice and exit-ticket tasks under Answers and Explanations, using matching task labels. Do not invent marks, board exam predictions, numerical data or official NEP/NCERT certification.",
+    isSeniorScienceStudy(opts.klass,opts.subject)?"- Keep the material useful as independent student revision notes. Source explanations and important points must dominate the content; activities are brief supporting material.":"- CLASSROOM PACKET: add 2-3 measurable learning objectives (explain, compare, interpret, apply), the prerequisite ideas, a concise summary, and supported misconceptions in 'Misconception → Correction → Reason' form.",
+    isSeniorScienceStudy(opts.klass,opts.subject)?"- Do not repeat generic support/core/challenge practice for every topic. Use a source-specific self-check only when it helps understand the concept.":"- DIFFERENTIATION: Support Practice is one scaffolded recall/interpretation task with a sentence starter; Core Practice is one explain/apply task; Challenge Practice is one evidence-based transfer or comparison task within NCERT scope. These are tasks, not claims that students have different ability levels.",
+    isSeniorScienceStudy(opts.klass,opts.subject)?"- Finish any retained source activity with an explicitly source-supported learning conclusion and the stated conditions or limitations; if the source does not establish a result, say so.":"- Add a short Exit Ticket that checks an objective. Put sample answers or success criteria for ALL practice and exit-ticket tasks under Answers and Explanations, using matching task labels. Do not invent marks, board exam predictions, numerical data or official NEP/NCERT certification.",
     "- Use a predict–observe–explain activity where supported, and ask students to justify conclusions using textbook evidence. Do not generate website URLs: simulation links are supplied separately from a verified registry.",
     "- Never output bracket soup like '(((())))', repeated '=' runs, unbalanced braces or stray page digits.",
     "",
@@ -555,7 +556,7 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
   );
   const targets = slides.map((s, i) => ({ s, i })).filter(({ s }) => (s.kind ?? "content") === "content" || s.kind === "chapter");
   const withLocal = slides.map((s) =>
-    ((s.kind ?? "content") === "content" || s.kind === "chapter") ? { ...s, sections: buildLocalSections({ ...s, grounding: (/^(?:Class\s*)?(?:9|10)$/.test(opts.klass)&&opts.subject==="Science"?secondaryScienceSectionEvidence(s.title,opts.context):[]).join(" ") || selectSlideExcerpts(s, opts.context).join(" ") }) } : s,
+    ((s.kind ?? "content") === "content" || s.kind === "chapter") ? { ...s, sections: buildLocalSections({ ...s, grounding: (isSeniorScienceStudy(opts.klass,opts.subject)?seniorScienceEvidence(s.title,opts.context):/^(?:Class\s*)?(?:9|10)$/.test(opts.klass)&&opts.subject==="Science"?secondaryScienceSectionEvidence(s.title,opts.context):[]).join(" ") || selectSlideExcerpts(s, opts.context).join(" ") }) } : s,
   );
   if (targets.length === 0) return withLocal;
 
@@ -581,7 +582,7 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
     batch.forEach(({ i }, localIdx) => {
       const sections = map.get(localIdx);
       const factualSize=(sections:NoteSection[]|undefined)=>(sections||[]).flatMap(section=>section.lines).filter(substantiveStudyLine).reduce((size,line)=>size+line.length,0);
-      const secondaryScience=/^(?:Class\s*)?(?:9|10)$/.test(opts.klass)&&opts.subject==="Science";
+      const secondaryScience=(/^(?:Class\s*)?(?:9|10)$/.test(opts.klass)&&opts.subject==="Science")||isSeniorScienceStudy(opts.klass,opts.subject);
       // A terse rewrite must not replace a full chapter section with three facts and many tasks.
       const completeEnough=!secondaryScience||factualSize(sections)>=factualSize(withLocal[i].sections)*.75;
       if (completeEnough && sections?.length && sections.flatMap(section=>section.lines).filter(substantiveStudyLine).length >= 3) {

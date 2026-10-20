@@ -1,3 +1,4 @@
+import {isSeniorScienceStudy,seniorScienceEvidence,seniorStudyContent,seniorActivityConclusions} from '@/lib/senior-study-notes';
 import {secondaryScienceSectionEvidence,substantiveStudyLine} from '@/lib/secondary-study-evidence';
 import { sourceQuizItems } from "@/lib/source-quiz";
 import { appendSocialRevisionNotes } from "@/lib/social-revision-notes";
@@ -21,7 +22,7 @@ import { cleanSourceNoteLine, isSourceTask, validStudyTerm, readableSourceRelati
 import { isDefinitionStatement } from "@/lib/note-labels";
 import { extractExperimentActivities } from "@/lib/experiment-activities";
 import { languageVolumeMatches, scopeTextbookPages, scopeSocialChapterPages, scopeEnglishChapterPages, referenceFormulaEvidence } from "@/lib/lesson-source-scope";
-import { chaptersFor } from "@/lib/ncert-syllabus";
+import { chaptersFor, subtopicsFor } from "@/lib/ncert-syllabus";
 import { REF_BOOK_PATTERN, combinedReferenceMatches } from "@/lib/reference-books";
 import { sourceDiscussion, reviewNotes, learningScaffold } from "@/lib/learning-design";
 import { verifyNoteSections, normalizeForGrounding, autoFixAndVerifyNotes, type NotesCheck } from "@/lib/notes-verification";
@@ -1452,11 +1453,14 @@ export function buildLocalSlides(topic: string, subtopics: string, context: stri
     }
   }
   const secondaryScience=/^(?:9|10)$/.test(classNumber(klass))&&subject==="Science";
-  const chapterTopics=secondaryScience?chaptersFor(classNumber(klass),subject).find(chapter=>normalizeText(cleanSyllabusLabel(chapter.chapter))===normalizeText(cleanSyllabusLabel(topic)))?.subtopics:undefined;
-  const concepts = selectedConcepts.length ? selectedConcepts : chapterTopics?.length ? chapterTopics : [cleanSyllabusLabel(topic)];
+  const seniorScience=isSeniorScienceStudy(klass,subject);
+  const chapterTopics=secondaryScience||seniorScience?chaptersFor(classNumber(klass),subject).find(chapter=>normalizeText(cleanSyllabusLabel(chapter.chapter))===normalizeText(cleanSyllabusLabel(topic)))?.subtopics:undefined;
+  const seniorChapter=seniorScience?chaptersFor(classNumber(klass),subject).find(chapter=>normalizeText(cleanSyllabusLabel(chapter.chapter))===normalizeText(cleanSyllabusLabel(topic))):undefined;
+  const defaults=seniorChapter?subtopicsFor(classNumber(klass),subject,seniorChapter.chapter):chapterTopics;
+  const concepts = selectedConcepts.length ? selectedConcepts : defaults?.length ? defaults : [cleanSyllabusLabel(topic)];
   const conceptSlides: Slide[] = [];
   for (const name of concepts) {
-    const sectionEvidence=/^(?:9|10)$/.test(classNumber(klass))&&subject==="Science"?secondaryScienceSectionEvidence(name,context):[];
+    const sectionEvidence=seniorScience?seniorScienceEvidence(name,context):secondaryScience?secondaryScienceSectionEvidence(name,context):[];
     const source = sectionEvidence.length?sectionEvidence:topicEvidence(name, sentences);
     if (!source.length) {
       // A missing topic is explicit; do not relabel an unrelated paragraph.
@@ -1536,7 +1540,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // Quiz items are rebuilt from source statements after cache lookup.
     const lessonKey = hashKey([
-      /^(?:9|10)$/.test(classNumber(data.klass)) ? "lesson-v61-secondary-study-notes" : "lesson-v60-topic-specific-dimensions-and-source-review",
+      isSeniorScienceStudy(data.klass,data.subject)?"lesson-v62-senior-source-notes-and-conclusions":/^(?:9|10)$/.test(classNumber(data.klass)) ? "lesson-v61-secondary-study-notes" : "lesson-v60-topic-specific-dimensions-and-source-review",
       data.klass,
       data.subject,
       data.chapter,
@@ -1838,14 +1842,18 @@ export const generateLesson = createServerFn({ method: "POST" })
       },
     );
     const verifiedSlides = notedSlides.map((sl, i) => {
-      const { sections, check } = fixedChecks[i];
+      const { sections:checkedSections, check } = fixedChecks[i];
+      const seniorScience=isSeniorScienceStudy(data.klass,data.subject);
+      const sections=seniorScience?seniorStudyContent(sl.title,checkedSections):checkedSections;
       const activity = sourceDiscussion(sl.title, sections, data.subject, data.klass);
-      const completeSections = sequenceChemistryNotes(withPhysicsDimensions(learningScaffold(sl.title, activity ? [...sections, activity] : sections, /^(?:9|10)$/.test(classNumber(data.klass))&&data.subject==="Science"), data.subject, sl.title), data.subject, data.chapter || sl.title);
+      const activitySections=activity ? [...sections, activity] : sections;
+      const concludedSections=seniorScience?seniorActivityConclusions(sl.title,activitySections):activitySections;
+      const completeSections = sequenceChemistryNotes(withPhysicsDimensions(learningScaffold(sl.title, concludedSections, seniorScience||/^(?:9|10)$/.test(classNumber(data.klass))&&data.subject==="Science"), data.subject, sl.title), data.subject, data.chapter || sl.title);
       const prev = sl.verification as SlideVerification | undefined;
       return {
         ...sl,
         sections: completeSections,
-        notes_quality: reviewNotes(completeSections),
+        notes_quality: reviewNotes(completeSections,!seniorScience),
         verification: {
           ...(prev as SlideVerification),
           notes_check: check,
@@ -1853,9 +1861,9 @@ export const generateLesson = createServerFn({ method: "POST" })
         },
       };
     });
-    const secondaryScience=/^(?:9|10)$/.test(classNumber(data.klass))&&data.subject==="Science";
+    const secondaryScience=(/^(?:9|10)$/.test(classNumber(data.klass))&&data.subject==="Science")||isSeniorScienceStudy(data.klass,data.subject);
     if(secondaryScience&&!verifiedSlides.some(slide=>(slide.sections||[]).filter(section=>section.kind!=="diagram").flatMap(section=>section.lines).filter(substantiveStudyLine).length>=3)){
-      throw new Error(`The selected Class ${data.klass} Science chapter does not contain enough readable explanations for study notes. Add or reprocess the matching textbook chapter, then regenerate. Classroom activities alone will not be saved as complete notes.`);
+      throw new Error(`The selected Class ${data.klass} ${data.subject} chapter does not contain enough readable explanations for study notes. Add or reprocess the matching textbook chapter, then regenerate. Classroom activities alone will not be saved as complete notes.`);
     }
     const needsStudyReview=(slide:Slide)=>secondaryScience&&(!slide.kind||slide.kind==="content"||slide.kind==="chapter");
     const notes_report = {

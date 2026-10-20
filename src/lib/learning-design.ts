@@ -1,3 +1,4 @@
+import {isSeniorScienceStudy,seniorStudyActivity} from './senior-study-notes';
 import {substantiveStudyLine} from './secondary-study-evidence';
 import { cleanSourceNoteLine } from "@/lib/source-note-quality";
 import type { NoteSection } from "@/lib/ncert-teacher-notes";
@@ -26,6 +27,7 @@ export function learningProfile(subject = "", klass = "") {
 
 /** One discussion task anchored in an actual note, never a fabricated NCERT experiment. */
 export function sourceDiscussion(title: string, sections: NoteSection[], subject: string, klass: string): NoteSection | undefined {
+  if(isSeniorScienceStudy(klass,subject))return seniorStudyActivity(title,sections);
   if (sections.some((s) => /activity|experiment|discussion/i.test(s.heading) || s.lines.some((l) => /^\*\*(?:NCERT )?(activity|experiment|discussion)/i.test(l)))) return;
   const evidence = sections.filter((s) => s.kind !== "diagram" && !/^Source (?:review|table)/.test(s.heading)).flatMap((s) => s.lines)
     .find((l) => substantiveStudyLine(l) && /[\p{L}]{3}/u.test(l) && !/^\*\*(learning|prerequisite|practice|exit|answer|derivation)/i.test(l));
@@ -81,7 +83,7 @@ export function learningScaffold(title: string, sections: NoteSection[], student
   return prompts.length ? [...sections, { heading: "Learning and practice", kind: "bullets", lines: prompts }] : sections;
 }
 /** Structural checks are not a claim that lexical overlap proves factual correctness. */
-export function reviewNotes(sections: NoteSection[] | undefined): NotesQuality {
+export function reviewNotes(sections: NoteSection[] | undefined, requireActivity=true): NotesQuality {
   const lines = (sections || []).filter((s) => s.kind !== "diagram").flatMap((s) => s.lines);
   const issues: string[] = [];
   const factual = lines.filter(substantiveStudyLine);
@@ -92,6 +94,6 @@ export function reviewNotes(sections: NoteSection[] | undefined): NotesQuality {
   if (!derivationHeads.length && lines.some((l) => /^\*\*derivation step/i.test(l))) issues.push("The extracted derivation needs a stated starting relation and a complete sequence.");
   if (lines.some((l) => /\b(?:Current Electricity|Reprint|Rationalised)\s+\d{2,3}\b|\b(?:TheSI|dveEm)\b/.test(l))) issues.push("A textbook extraction fragment needs source review.");
   const activity = lines.some((l) => /^\*\*(?:NCERT )?(?:activity|experiment|discussion)/i.test(l));
-  if (!activity) issues.push("No source-based classroom task is available.");
+  if (requireActivity&&!activity) issues.push("No source-based classroom task is available.");
   return { ready: !issues.length, issues, lines: lines.length, derivations: derivationHeads.length, activity };
 }

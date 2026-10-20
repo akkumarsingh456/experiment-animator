@@ -1,0 +1,463 @@
+{
+  "scope": "Existing Class 11\ufffd12 Physics and Chemistry catalog, including subtopicsFor supplements",
+  "method": "Section and lexical source-match counts, not proof of factual completeness or a live uploaded-library audit.",
+  "catalog_chapters": 47,
+  "downloaded_sources": 46,
+  "checked_topics": 562,
+  "unmatched_topics": 17,
+  "chapters": [
+    {
+      "class": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 1: Units and Measurement",
+      "source": "https://ncert.nic.in/textbook/pdf/keph101.pdf",
+      "topics_checked": 12,
+      "topics_with_matches": 11,
+      "missing_topics": [
+        "Propagation of errors"
+      ]
+    },
+    {
+      "class": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 2: Motion in a Straight Line",
+      "source": "https://ncert.nic.in/textbook/pdf/keph102.pdf",
+      "topics_checked": 11,
+      "topics_with_matches": 11,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 3: Motion in a Plane",
+      "source": "https://ncert.nic.in/textbook/pdf/keph103.pdf",
+      "topics_checked": 11,
+      "topics_with_matches": 11,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 4: Laws of Motion",
+      "source": "https://ncert.nic.in/textbook/pdf/keph104.pdf",
+      "topics_checked": 0,
+      "topics_with_matches": 0,
+      "missing_topics": [],
+      "source_error": "<urlopen error [WinError 10054] An existing connection was forcibly closed by the remote host>"
+    },
+    {
+      "class": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 5: Work, Energy and Power",
+      "source": "https://ncert.nic.in/textbook/pdf/keph105.pdf",
+      "topics_checked": 10,
+      "topics_with_matches": 10,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 6: System of Particles and Rotational Motion",
+      "source": "https://ncert.nic.in/textbook/pdf/keph106.pdf",
+      "topics_checked": 13,
+      "topics_with_matches": 13,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 7: Gravitation",
+      "source": "https://ncert.nic.in/textbook/pdf/keph107.pdf",
+      "topics_checked": 13,
+      "topics_with_matches": 13,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 8: Mechanical Properties of Solids",
+      "source": "https://ncert.nic.in/textbook/pdf/keph201.pdf",
+      "topics_checked": 12,
+      "topics_with_matches": 12,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 9: Mechanical Properties of Fluids",
+      "source": "https://ncert.nic.in/textbook/pdf/keph202.pdf",
+      "topics_checked": 13,
+      "topics_with_matches": 12,
+      "missing_topics": [
+        "Buoyancy"
+      ]
+    },
+    {
+      "class": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 10: Thermal Properties of Matter",
+      "source": "https://ncert.nic.in/textbook/pdf/keph203.pdf",
+      "topics_checked": 11,
+      "topics_with_matches": 11,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 11: Thermodynamics",
+      "source": "https://ncert.nic.in/textbook/pdf/keph204.pdf",
+      "topics_checked": 13,
+      "topics_with_matches": 13,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 12: Kinetic Theory",
+      "source": "https://ncert.nic.in/textbook/pdf/keph205.pdf",
+      "topics_checked": 11,
+      "topics_with_matches": 11,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 13: Oscillations",
+      "source": "https://ncert.nic.in/textbook/pdf/keph206.pdf",
+      "topics_checked": 11,
+      "topics_with_matches": 11,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 14: Waves",
+      "source": "https://ncert.nic.in/textbook/pdf/keph207.pdf",
+      "topics_checked": 13,
+      "topics_with_matches": 11,
+      "missing_topics": [
+        "Doppler effect",
+        "Beats and Doppler effect formulae"
+      ]
+    },
+    {
+      "class": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 1: Electric Charges and Fields",
+      "source": "https://ncert.nic.in/textbook/pdf/leph101.pdf",
+      "topics_checked": 12,
+      "topics_with_matches": 12,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 2: Electrostatic Potential and Capacitance",
+      "source": "https://ncert.nic.in/textbook/pdf/leph102.pdf",
+      "topics_checked": 12,
+      "topics_with_matches": 11,
+      "missing_topics": [
+        "Van de Graaff generator"
+      ]
+    },
+    {
+      "class": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 3: Current Electricity",
+      "source": "https://ncert.nic.in/textbook/pdf/leph103.pdf",
+      "topics_checked": 13,
+      "topics_with_matches": 12,
+      "missing_topics": [
+        "Potentiometer"
+      ]
+    },
+    {
+      "class": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 4: Moving Charges and Magnetism",
+      "source": "https://ncert.nic.in/textbook/pdf/leph104.pdf",
+      "topics_checked": 12,
+      "topics_with_matches": 12,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 5: Magnetism and Matter",
+      "source": "https://ncert.nic.in/textbook/pdf/leph105.pdf",
+      "topics_checked": 10,
+      "topics_with_matches": 9,
+      "missing_topics": [
+        "Hysteresis loop"
+      ]
+    },
+    {
+      "class": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 6: Electromagnetic Induction",
+      "source": "https://ncert.nic.in/textbook/pdf/leph106.pdf",
+      "topics_checked": 12,
+      "topics_with_matches": 12,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 7: Alternating Current",
+      "source": "https://ncert.nic.in/textbook/pdf/leph107.pdf",
+      "topics_checked": 13,
+      "topics_with_matches": 13,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 8: Electromagnetic Waves",
+      "source": "https://ncert.nic.in/textbook/pdf/leph108.pdf",
+      "topics_checked": 8,
+      "topics_with_matches": 7,
+      "missing_topics": [
+        "Transverse nature and energy density"
+      ]
+    },
+    {
+      "class": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 9: Ray Optics and Optical Instruments",
+      "source": "https://ncert.nic.in/textbook/pdf/leph201.pdf",
+      "topics_checked": 14,
+      "topics_with_matches": 14,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 10: Wave Optics",
+      "source": "https://ncert.nic.in/textbook/pdf/leph202.pdf",
+      "topics_checked": 12,
+      "topics_with_matches": 10,
+      "missing_topics": [
+        "Fringe width derivation",
+        "Malus' law"
+      ]
+    },
+    {
+      "class": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 11: Dual Nature of Radiation and Matter",
+      "source": "https://ncert.nic.in/textbook/pdf/leph203.pdf",
+      "topics_checked": 11,
+      "topics_with_matches": 11,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 12: Atoms",
+      "source": "https://ncert.nic.in/textbook/pdf/leph204.pdf",
+      "topics_checked": 10,
+      "topics_with_matches": 10,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 13: Nuclei",
+      "source": "https://ncert.nic.in/textbook/pdf/leph205.pdf",
+      "topics_checked": 13,
+      "topics_with_matches": 12,
+      "missing_topics": [
+        "Alpha, beta and gamma decay"
+      ]
+    },
+    {
+      "class": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 14: Semiconductor Electronics",
+      "source": "https://ncert.nic.in/textbook/pdf/leph206.pdf",
+      "topics_checked": 13,
+      "topics_with_matches": 10,
+      "missing_topics": [
+        "Logic gates",
+        "OR, AND, NOT, NAND and NOR gates",
+        "Truth tables"
+      ]
+    },
+    {
+      "class": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 1: Some Basic Concepts of Chemistry",
+      "source": "https://ncert.nic.in/textbook/pdf/kech101.pdf",
+      "topics_checked": 11,
+      "topics_with_matches": 11,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 2: Structure of Atom",
+      "source": "https://ncert.nic.in/textbook/pdf/kech102.pdf",
+      "topics_checked": 12,
+      "topics_with_matches": 12,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 3: Classification of Elements and Periodicity in Properties",
+      "source": "https://ncert.nic.in/textbook/pdf/kech103.pdf",
+      "topics_checked": 10,
+      "topics_with_matches": 10,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 4: Chemical Bonding and Molecular Structure",
+      "source": "https://ncert.nic.in/textbook/pdf/kech104.pdf",
+      "topics_checked": 13,
+      "topics_with_matches": 13,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 5: Chemical Thermodynamics",
+      "source": "https://ncert.nic.in/textbook/pdf/kech105.pdf",
+      "topics_checked": 13,
+      "topics_with_matches": 12,
+      "missing_topics": [
+        "Entropy and second law"
+      ]
+    },
+    {
+      "class": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 6: Equilibrium",
+      "source": "https://ncert.nic.in/textbook/pdf/kech106.pdf",
+      "topics_checked": 14,
+      "topics_with_matches": 14,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 7: Redox Reactions",
+      "source": "https://ncert.nic.in/textbook/pdf/kech201.pdf",
+      "topics_checked": 10,
+      "topics_with_matches": 10,
+      "missing_topics": []
+    },
+    {
+      "class": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 8: Organic Chemistry \u2013 Some Basic Principles and Techniques",
+      "source": "https://ncert.nic.in/textbook/pdf/kech202.pdf",
+      "topics_checked": 12,
+      "topics_with_matches": 10,
+      "missing_topics": [
+        "Isomerism",
+        "Free radicals, carbocations and carbanions"
+      ]
+    },
+    {
+      "class": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 9: Hydrocarbons",
+      "source": "https://ncert.nic.in/textbook/pdf/kech203.pdf",
+      "topics_checked": 14,
+      "topics_with_matches": 14,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 1: Solutions",
+      "source": "https://ncert.nic.in/textbook/pdf/lech101.pdf",
+      "topics_checked": 14,
+      "topics_with_matches": 14,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 2: Electrochemistry",
+      "source": "https://ncert.nic.in/textbook/pdf/lech102.pdf",
+      "topics_checked": 15,
+      "topics_with_matches": 15,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 3: Chemical Kinetics",
+      "source": "https://ncert.nic.in/textbook/pdf/lech103.pdf",
+      "topics_checked": 14,
+      "topics_with_matches": 14,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 4: The d- and f-Block Elements",
+      "source": "https://ncert.nic.in/textbook/pdf/lech104.pdf",
+      "topics_checked": 11,
+      "topics_with_matches": 11,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 5: Coordination Compounds",
+      "source": "https://ncert.nic.in/textbook/pdf/lech105.pdf",
+      "topics_checked": 14,
+      "topics_with_matches": 14,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 6: Haloalkanes and Haloarenes",
+      "source": "https://ncert.nic.in/textbook/pdf/lech201.pdf",
+      "topics_checked": 13,
+      "topics_with_matches": 13,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 7: Alcohols, Phenols and Ethers",
+      "source": "https://ncert.nic.in/textbook/pdf/lech202.pdf",
+      "topics_checked": 13,
+      "topics_with_matches": 13,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 8: Aldehydes, Ketones and Carboxylic Acids",
+      "source": "https://ncert.nic.in/textbook/pdf/lech203.pdf",
+      "topics_checked": 12,
+      "topics_with_matches": 12,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 9: Amines",
+      "source": "https://ncert.nic.in/textbook/pdf/lech204.pdf",
+      "topics_checked": 13,
+      "topics_with_matches": 13,
+      "missing_topics": []
+    },
+    {
+      "class": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 10: Biomolecules",
+      "source": "https://ncert.nic.in/textbook/pdf/lech205.pdf",
+      "topics_checked": 15,
+      "topics_with_matches": 15,
+      "missing_topics": []
+    }
+  ]
+}

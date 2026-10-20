@@ -56,9 +56,9 @@ export function substantiveStudyLine(line:string){
 
 /** Read a matched numbered textbook section with all its subordinate paragraphs.
  * A lexical hit is not permission to borrow text from an unrelated heading. */
-export function secondaryScienceSectionEvidence(title:string,context:string):string[]{
+export function secondaryScienceSectionEvidence(title:string,context:string,extraAliases:string[]=[]):string[]{
  context=context.replace(/\bReprint(?:ed)?\s+20\d{2}(?:[-–]\d{2})?/g,'').split('\n').filter(line=>/EXERCISES|E X E R C I S E S/.test(line)||!/^\s*(?:Science|\d{1,3}|[A-Z][A-Z ,–-]{2,100})\s*$/.test(line)).join('\n');
- const variants=[title.replace(/\s*\([^)]*\)/g,''),...(Object.entries(aliases).find(([name])=>key(name)===key(title))?.[1]||[])].map(key).filter(v=>v.length>=4);
+ const variants=[...extraAliases,title.replace(/\s*\([^)]*\)/g,''),...(Object.entries(aliases).find(([name])=>key(name)===key(title))?.[1]||[])].map(key).filter(v=>v.length>=4);
  const headings:Array<{start:number;body:number;depth:number;heading:string}>=[];
  const pattern=/^[ \t]*(\d{1,2}\.\d{1,2}(?:\.\d{1,2})?)[ \t]*(?:\r?\n[ \t]*)?([^\n\r]{3,140})(?=\r?$)/gm;
  for(const match of context.matchAll(pattern)){
