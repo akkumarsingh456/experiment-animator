@@ -21,7 +21,7 @@ import { loadLessonBookPictures } from "@/lib/lesson-book-pictures.functions";
 import { mergeLessonBookPictures } from "@/lib/lesson-book-pictures";
 import { mergeMedEasySupplements } from "@/lib/med-easy-supplements";
 import { lessonIllustrationCaption } from "@/lib/napkin-infographic";
-import { FormulaVisualCards } from "@/components/FormulaVisualCards";
+
 import {ManualVisualEditor} from '@/components/ManualVisualEditor';
 import {loadManualVisuals} from '@/lib/manual-visuals';
 import { BookReferenceFigures } from "@/components/BookReferenceFigures";
@@ -590,13 +590,14 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
 
   // Retain Lovable's notes-and-illustration layout independently of guided worksheets.
   const baseOriginalPages = useMemo(() => withPhysicalChemistryRevision(slides, String(search.klass||""), search.subject||"", search.chapter||title).flatMap((originalSlide, sourceIndex) => {
+    const visualSlot=`topic-slide:${slides.slice(0,sourceIndex).filter(item=>item.title.trim().toLowerCase()===originalSlide.title.trim().toLowerCase()).length}`;
     const slide=ncertNotesDisplaySlide(polishChemistryPresentation(readableIndexPresentation(originalSlide), search.subject||""),search.subject);
     if (!hasMeaningfulSlide(slide)) return [];
     if (slide.kind === "break" || slide.kind === "mcq") return [{ ...slide, sourceIndex }];
     const sections = slide.sections?.filter((section) => section.kind !== "diagram" && section.lines.some(line=>line.trim()));
     const fallback = slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...slide.bullets, ...slide.notes];
     const sourceSections = sections?.length ? sections : [{ heading: "Teacher Notes", kind: "bullets", lines: fallback }];
-    const notePages = paginateLectureSections(orderTopicSections(withPhysicsDimensions(sourceSections as NonNullable<Slide["sections"]>, search.subject || "", slide.title, true)), DEFAULT_LECTURE_ROWS, lectureRowWeights[sourceIndex]).map((page) => ({ ...slide, sections: page as Slide["sections"], sourceIndex,
+    const notePages = paginateLectureSections(orderTopicSections(withPhysicsDimensions(sourceSections as NonNullable<Slide["sections"]>, search.subject || "", slide.title, true)), DEFAULT_LECTURE_ROWS, lectureRowWeights[sourceIndex]).map((page) => ({ ...slide, sections: page as Slide["sections"], sourceIndex, visualSlot,
       title: slide.title }));
     return notePages;
   }), [slides, search.klass, search.subject, search.chapter, title, lectureRowWeights]);
@@ -760,6 +761,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                           >
               {editing ? <SlideCanvas
                 slide={slides[activeIdx]}
+                visualSlot={`topic-slide:${slides.slice(0,activeIdx).filter(item=>item.title.trim().toLowerCase()===slides[activeIdx].title.trim().toLowerCase()).length}`}
                 index={activeIdx}
                 total={slides.length}
                 editing={editing}
@@ -1158,10 +1160,11 @@ function BreakSlideBody({ slide, subject, klass }: { slide: Slide; subject?: str
 }
 
 function SlideCanvas({
-  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage, klass, subject, chapter, staticView, onNotesOverflow,
+  slide, index, total, editing, onChange, imageUrl, imageLoading, onRegenImage, klass, subject, chapter, staticView, onNotesOverflow, visualSlot,
 }: {
   slide: Slide; index: number; total: number; editing: boolean; onChange: (p: Partial<Slide>) => void;
   imageUrl?: string; imageLoading?: boolean; onRegenImage?: () => void; klass?: string; subject?: string; chapter?: string; staticView?: boolean;
+  visualSlot?: string;
   onNotesOverflow?: (sourceIndex: number, ratio: number, lines: string[]) => void;
 }) {
   if (!slide) return null;
@@ -1343,7 +1346,7 @@ function SlideCanvas({
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
               <div className="lesson-figure-panel relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 flex flex-col">
                 {isMathematics(subject) || imageUrl ? (
-                  <ManualVisualEditor slideId={String(sourceIndex)} klass={klass} subject={subject} chapter={chapter} topic={slide.title} storageKey={JSON.stringify([klass,subject,chapter,slide.title,sourceIndex,slide.sections?.flatMap(section=>section.lines).slice(0,2)||slide.notes.slice(0,2)])} autoUrl={imageUrl||''} autoContent={isMathematics(subject)?<MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} />:undefined} alt={`${slide.title} — NCERT 2D infographic`} />
+                  <ManualVisualEditor sharedSlideId={visualSlot||(slide as Slide & {visualSlot?:string}).visualSlot} slideId={String(sourceIndex)} klass={klass} subject={subject} chapter={chapter} topic={slide.title} storageKey={JSON.stringify([klass,subject,chapter,slide.title,sourceIndex,slide.sections?.flatMap(section=>section.lines).slice(0,2)||slide.notes.slice(0,2)])} autoUrl={imageUrl||''} autoContent={isMathematics(subject)?<MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} />:undefined} alt={`${slide.title} — NCERT 2D infographic`} />
                 ) : imageLoading ? (
                   <div className="flex flex-col items-center gap-2 text-[10px] text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -1356,7 +1359,7 @@ function SlideCanvas({
                   </button>
                 )}
               </div>
-              {!slide.reference_visuals?.some(figure => figure.url) && <FormulaVisualCards subject={subject} slide={slide} limit={slide.context_illustration ? 1 : 2} />}
+
               {!slide.reference_visuals?.some(figure => figure.url) && <div className="px-3 py-2 rounded-md bg-card border border-border/50 text-[11px] leading-snug shrink-0">
                 <p className="font-medium text-primary notebook-guide-heading">{illustrationCaption.startsWith('No suitable')?'Add a diagram':'Read the diagram'}</p>
                 <p>{illustrationCaption}</p>

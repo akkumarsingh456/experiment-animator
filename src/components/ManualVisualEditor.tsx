@@ -13,15 +13,16 @@ import {importDiagramUrl,type DiagramResult} from '@/lib/diagram-search.function
 import {DiagramImagePicker} from './DiagramImagePicker';
 import {ManualImageCropper} from './ManualImageCropper';
 
-export function ManualVisualEditor({storageKey,autoUrl,autoContent,alt,klass='',subject='',chapter='',topic='',slideId=''}:{storageKey:string;autoUrl:string;autoContent?:ReactNode;alt:string;klass?:string;subject?:string;chapter?:string;topic?:string;slideId?:string}){
+export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoContent,alt,klass='',subject='',chapter='',topic='',slideId='',sharedSlideId}:{storageKey:string;autoUrl:string;autoContent?:ReactNode;alt:string;klass?:string;subject?:string;chapter?:string;topic?:string;slideId?:string;sharedSlideId?:string}){
+ const sharedScope={klass,subject,chapter,topic,slideId:sharedSlideId||slideId},sharedKey=sharedVisualKey(sharedScope);
+ const shareAllowed=[klass,subject,chapter,topic,slideId].every(value=>value.trim());
+ const storageKey=shareAllowed&&sharedSlideId?`topic-visual:${sharedKey}`:legacyStorageKey;
  const [visual,setVisual]=useState<ManualVisual|null>(()=>manualVisualCache.get(storageKey)||null);
  const [imageAspect,setImageAspect]=useState(1);
  const [toolsVisible,setToolsVisible]=useState(()=>!manualVisualCache.has(storageKey));
  const [open,setOpen]=useState(false),[saving,setSaving]=useState(false);
  const [googleOpen,setGoogleOpen]=useState(false),[cropOpen,setCropOpen]=useState(false),[importing,setImporting]=useState(false);
  const [preserve,setPreserve]=useState(false),[sharedState,setSharedState]=useState<'loading'|'saved'|'none'|'error'>('loading');
- const sharedScope={klass,subject,chapter,topic,slideId},sharedKey=sharedVisualKey(sharedScope);
- const shareAllowed=[klass,subject,chapter,topic,slideId].every(value=>value.trim());
  const dirty=useRef(false);
  const medEasyAllowed=canImportMedEasy(klass,subject),currentKey=useRef(storageKey);currentKey.current=storageKey;
  const [bookOpen,setBookOpen]=useState(false),[bookLoading,setBookLoading]=useState(false),[bookError,setBookError]=useState('');
@@ -37,9 +38,11 @@ export function ManualVisualEditor({storageKey,autoUrl,autoContent,alt,klass='',
   void(async()=>{
    try{await loadManualVisuals();}catch{/* Sharing remains available without device storage. */}
    if(cancelled)return;
-   const local=manualVisualCache.get(storageKey);hadLocal=!!local;if(!dirty.current){setVisual(local||null);setToolsVisible(!local);}
+   const local=manualVisualCache.get(storageKey)||manualVisualCache.get(legacyStorageKey);hadLocal=!!local;if(!dirty.current){setVisual(local||null);setToolsVisible(!local);}
    if(!shareAllowed)return;
-   try{const record=await getSharedTopicVisual(sharedScope);if(cancelled)return;setSharedState(record?'saved':'none');
+   try{let record=await getSharedTopicVisual(sharedScope);
+    if(!record&&sharedSlideId&&sharedSlideId!==slideId){record=await getSharedTopicVisual({...sharedScope,slideId});if(record)sharedVisualRecords.set(sharedKey,record);}
+    if(cancelled)return;setSharedState(record?'saved':'none');
     // Retain a pre-existing personal image. Offer an explicit way to use the shared version.
     if(!local&&!dirty.current)applyShared();
    }catch{if(!cancelled)setSharedState('error');}

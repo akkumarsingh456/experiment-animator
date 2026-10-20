@@ -38,5 +38,10 @@ export const saveSharedTopicVisual=createServerFn({method:'POST'}).inputValidato
   const record={scope:data.scope,visual:data.visual,savedAt:new Date().toISOString()};
   const {error}=await db.storage.from(BUCKET).upload(await objectPath(data.scope),new Blob([JSON.stringify(record)],{type:'application/json'}),{contentType:'application/json',upsert:true,cacheControl:'0'});
   if(error)throw new Error('The image was not saved for everyone. Please try again.');
+  // Do not report success for a write that cannot be read back after refresh.
+  const confirmed=await db.storage.from(BUCKET).download(await objectPath(data.scope));
+  if(confirmed.error||!confirmed.data)throw new Error('The shared image could not be confirmed in storage. Your image is still open; please try saving again.');
+  const stored=JSON.parse(await confirmed.data.text());
+  if(stored.savedAt!==record.savedAt||stored.visual?.url!==record.visual.url)throw new Error('The shared image could not be confirmed. Please try saving again.');
   return record;
 });

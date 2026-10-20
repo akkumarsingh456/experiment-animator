@@ -2,6 +2,7 @@ import {afterEach,describe,it,expect,vi} from 'vitest';
 import React,{act} from 'react';
 import {createRoot} from 'react-dom/client';
 import {ManualVisualEditor} from '@/components/ManualVisualEditor';
+import {sharedVisualKey} from '@/lib/shared-topic-visual';
 const fixture=vi.hoisted(()=>({save:vi.fn(async()=>{}),cache:new Map(),books:vi.fn(async()=>[{id:'p',name:'Physics Med Easy.pdf',url:'https://example.test/book.pdf?token=1',pages:[{page:40,topic:true}]}])}));
 vi.mock('@/lib/manual-visuals',()=>({manualVisualCache:fixture.cache,loadManualVisuals:async()=>{},saveManualVisual:fixture.save}));
 vi.mock('@/lib/manual-book-links.functions',()=>({loadManualBookLinks:fixture.books}));
@@ -9,6 +10,21 @@ vi.mock('@/lib/manual-pdf-cache',()=>({cachedManualPdf:async()=>({}),manualPdfUr
 vi.mock('sonner',()=>({toast:{success:vi.fn(),error:vi.fn()}}));
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();fixture.save.mockClear();});
 describe('manual image import UI',()=>{
+ it('restores a saved image when array positions and note-derived keys change',async()=>{
+  const scope={klass:'12',subject:'Physics',chapter:'Induction',topic:'Faraday',slideId:'topic-slide:0'};
+  const key=`topic-visual:${sharedVisualKey(scope)}`;
+  const visual={url:'data:image/png;base64,RESTORED',width:96,x:2,y:2,shape:'rectangle',showAuto:false};
+  fixture.cache.set(key,visual);
+  const host=document.createElement('div');document.body.append(host);let root=createRoot(host);
+  const render=(storageKey:string,slideId:string)=><ManualVisualEditor {...scope} storageKey={storageKey} slideId={slideId} sharedSlideId="topic-slide:0" autoUrl="auto.png" alt="Diagram"/>;
+  await act(async()=>root.render(render('old-note-key','4')));
+  expect(host.querySelector('img[alt="Manually uploaded topic reference"]')?.getAttribute('src')).toContain('RESTORED');
+  await act(async()=>root.unmount());root=createRoot(host);
+  await act(async()=>root.render(render('new-note-key','7')));
+  expect(host.querySelector('img[alt="Manually uploaded topic reference"]')?.getAttribute('src')).toContain('RESTORED');
+  expect(host.querySelector('[aria-label="Show image options"]')).not.toBeNull();
+  await act(async()=>root.unmount());host.remove();fixture.cache.delete(key);
+ });
  it('offers separate sources and a PDF page link',async()=>{
   const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
   await act(async()=>root.render(<ManualVisualEditor storageKey="page" autoUrl="data:image/png;base64,AA==" alt="Diagram" klass="Class 12" subject="Physics" chapter="Fields" topic="Flux"/>));
