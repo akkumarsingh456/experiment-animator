@@ -4,9 +4,9 @@ import { drawExperiment } from './experiment-drawing';
 import {experimentCaptionAt,type ExperimentScene} from './experiment-timeline';
 
 const labels: Record<string,string> = { ammeter:'Analog ammeter', voltmeter:'Analog panel voltmeter', resistor:'Laboratory resistor', 'resistance-box':'Resistance box', 'test-tubes':'Test tubes and rack', beaker:'Glass beaker', microscope:'Optical microscope', 'onion-cells':'Onion epidermis · microscope photograph', 'bar-magnet':'Bar magnet', battery:'Dry cells', lens:'Convex lens · real inverted image' };
-const matches: Record<string,RegExp> = { ammeter:/ammeter/i, voltmeter:/voltmeter/i, resistor:/\bresistor\b/i, 'resistance-box':/resistance box/i, 'test-tubes':/test[ -]?tubes?/i, beaker:/beaker/i, microscope:/microscope/i, 'onion-cells':/onion/i, 'bar-magnet':/magnet/i, battery:/battery|batteries|dry cells?|low.voltage cells/i, lens:/convex lens|convex lenses/i };
+const matches: Record<string,RegExp> = { ammeter:/ammeter/i, voltmeter:/voltmeter/i, resistor:/\bresistor\b/i, 'resistance-box':/resistance box/i, 'test-tubes':/test[ -]?tubes?/i, beaker:/beaker/i, microscope:/microscope/i, 'onion-cells':/onion/i, 'bar-magnet':/bar[ -]?magnet/i, battery:/battery|batteries|dry cells?|low.voltage cells/i, lens:/convex lens|convex lenses/i };
 export function apparatusPhotos(activity: ExperimentActivity) {
-  const apparatus = `${activity.name} ${activity.apparatus.join(' ')}`;
+  const apparatus = activity.apparatus.join(' ');
   return assets.filter(photo=>matches[photo.id]?.test(apparatus)||(photo.id==='battery'&&/ammeter|voltmeter/i.test(apparatus)&&/\bcells?\b/i.test(apparatus))).map(photo=>({...photo,label:labels[photo.id]}));
 }
 export type ApparatusPhoto = ReturnType<typeof apparatusPhotos>[number];

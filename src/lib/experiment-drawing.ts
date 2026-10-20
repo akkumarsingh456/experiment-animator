@@ -1,3 +1,4 @@
+import { drawBenchStage } from './experiment-bench-visual';
 import { drawCircuitStage } from './experiment-circuit-visual';
 import type { ExperimentActivity } from './experiment-activities';
 
@@ -18,7 +19,7 @@ export function experimentKind(activity: ExperimentActivity) {
   if (/ohm/i.test(text) && /resistor|resistance/i.test(text)) return 'circuit';
   if (/microscope|onion peel|cover slip/i.test(text)) return 'microscope';
   if (/test tube|beaker|reagent|litmus|solution|precipitate/i.test(text)) return 'chemistry';
-  if (/coil/i.test(text) && /magnet/i.test(text)) return 'magnet';
+  if (/coil/i.test(text) && /bar[ -]?magnet/i.test(text)) return 'magnet';
   if (/lens|mirror|prism/i.test(text)) return 'optics';
   if (/pendulum|bob/i.test(text)) return 'pendulum';
   return 'apparatus';
@@ -78,6 +79,8 @@ export function drawExperiment(canvas: HTMLCanvasElement, activity: ExperimentAc
     // Reference and sample are shown as the same sample before / after, not an
     // additional control tube unless the source procedure actually specifies one.
     c.fillStyle='#dae4e9';c.fillRect(95,470,650,14);
+    // A rack supports the illustrated tubes; the two views represent before/after.
+    c.fillStyle='#a37d54';c.fillRect(145,405,450,16);c.fillRect(150,421,15,49);c.fillRect(575,421,15,49);
     tube(175,225,preparing?0:85,'#b8dbe9');
     label('Starting sample',137,526);
     const fill=preparing?0:transfer?85*progress:85;
@@ -109,7 +112,20 @@ export function drawExperiment(canvas: HTMLCanvasElement, activity: ExperimentAc
   } else if (kind === 'leaf') {
     const bleaching=activity.steps.findIndex(step=>/chlorophyll|alcohol.*bath/i.test(step.description));
     const iodine=activity.steps.findIndex(step=>/treat.*iodine|add.*iodine|iodine solution/i.test(step.description));
-    if(!result&&bleaching>=0&&scene===bleaching){
+    if(!result&&scene<bleaching&&bleaching>=0){
+      // Show the intact plant during covering and light exposure, before testing a detached leaf.
+      const pot=c.createLinearGradient(280,0,470,0);pot.addColorStop(0,'#9d573b');pot.addColorStop(.5,'#c8825b');pot.addColorStop(1,'#9c563b');
+      c.fillStyle=pot;c.beginPath();c.moveTo(280,400);c.lineTo(470,400);c.lineTo(445,520);c.lineTo(305,520);c.closePath();c.fill();
+      c.fillStyle='#644530';c.beginPath();c.ellipse(375,400,95,16,0,0,Math.PI*2);c.fill();
+      c.strokeStyle='#4c8564';c.lineWidth=7;path([[375,400],[375,230]]);
+      for(const [x,y,angle] of [[310,300,-.4],[435,270,.4],[320,218,-.4]]){
+        c.save();c.translate(x,y);c.rotate(angle);c.fillStyle='#579968';c.beginPath();c.ellipse(0,0,67,30,0,0,Math.PI*2);c.fill();c.stroke();c.strokeStyle='#b1c98b';c.lineWidth=2;path([[-55,0],[55,0]]);c.restore();
+      }
+      c.save();c.translate(435,270);c.rotate(.4);c.fillStyle='#303b44';c.fillRect(-17,-30,34,60);c.restore();
+      label('Opaque paper on both sides',455,360);label('De-starched potted plant',100,165);
+      label('Retain covered and exposed regions for comparison',135,558);
+      if(scene>0){c.fillStyle='#f3c96a';c.beginPath();c.arc(665,215,32,0,Math.PI*2);c.fill();label('Sunlight',620,285);}
+    }else if(!result&&bleaching>=0&&scene===bleaching){
       c.fillStyle='#d9edf4';c.fillRect(190,325,430,170);c.strokeRect(190,280,430,215);
       c.fillStyle='#f0f5dc';c.beginPath();c.roundRect(330,220,135,225,25);c.fill();c.stroke();
       c.beginPath();c.ellipse(397,350,42,70,-.3,0,Math.PI*2);c.fillStyle=phase<3?'#65a877':'#c5b280';c.fill();c.stroke();
@@ -126,33 +142,12 @@ export function drawExperiment(canvas: HTMLCanvasElement, activity: ExperimentAc
       label(treated?'Previously covered area: no starch-positive colour':prepared?'Cover removed before testing':'Opaque cover on both sides',100,530);
       if(prepared&&!result){c.fillStyle='#936433';c.beginPath();c.ellipse(395,225+(phase%1)*75,5,8,0,0,Math.PI*2);c.fill();label('Iodine',480,255);}
     }
-  } else if (kind === 'microscope') {
-    path([[220,460],[410,460],[360,410],[360,270],[310,230],[340,200]]);path([[245,365],[410,365]]);
-    c.strokeRect(310,220,55,80);c.fillStyle='#e0edf4';c.fillRect(260,345,130,12);label('Slide / specimen',190,510);label('Microscope',210,185);
-    circle(600,340,115,'#f5edf8');
-    if(/onion|plant cell/i.test(`${activity.name} ${activity.apparatus.join(' ')} ${description}`)) {
-      for(let row=0;row<3;row++)for(let col=0;col<3;col++){const x=530+col*48,y=280+row*43;c.strokeRect(x,y,43,38);circle(x+24,y+19,5,'#8c68a1');}
-      label('Illustrative plant-cell view',492,510);
-    } else label('Observe prepared specimen',490,510);
-  } else if (kind === 'magnet') {
-    const offset=setup?0:Math.sin(phase)*40;c.fillStyle='#df7777';c.fillRect(160+offset,300,85,65);c.fillStyle='#6e9ecb';c.fillRect(245+offset,300,85,65);label('N',190+offset,340);label('S',275+offset,340);
-    for(let i=0;i<6;i++){c.beginPath();c.ellipse(440+i*18,335,17,70,0,0,Math.PI*2);c.stroke();}label('Coil',460,445);label('Magnet',195,445);label('Watch the relative motion described in the step',160,530);
-  } else if (kind === 'optics') {
-    const opticalText=`${activity.name} ${activity.apparatus.join(' ')}`;
-    path([[150,360],[680,360]]);
-    if(/prism/i.test(opticalText))path([[420,240],[350,440],[490,440],[420,240]]);
-    else if(/mirror/i.test(opticalText)){c.beginPath();c.arc(280,350,150,-.8,.8);c.stroke();}
-    else {c.beginPath();c.ellipse(420,360,20,120,0,0,Math.PI*2);c.stroke();}
-    label(/prism/i.test(opticalText)?'Prism':/mirror/i.test(opticalText)?'Mirror':'Lens',375,205); label('Align apparatus as specified in the procedure',150,525);
-    path([[200,360],[200,270]]);label('Object',172,400);path([[650,230],[650,470]]);label('Screen',620,510);
-    // No invented focal length/image position or unsupported ray construction.
-  } else if (kind === 'pendulum') {
-    const a=setup?0:Math.sin(phase)*.35,x=410+Math.sin(a)*190,y=240+Math.cos(a)*190;
-    path([[270,220],[550,220]]);path([[410,220],[x,y]]);circle(x,y,25,'#dfad51');label('Fixed support',340,185);label('Bob',x+35,y);label('Schematic motion • follow the source timing instructions',110,535);
+  } else if (['microscope','magnet','optics','pendulum'].includes(kind)) {
+    drawBenchStage(c,kind,activity,scene,phase);
   } else {
     const tools=activity.apparatus.length?activity.apparatus:['Matched textbook diagram'];
     tools.slice(0,8).forEach((tool,i)=>{const x=65+(i%3)*245,y=205+Math.floor(i/3)*105;c.fillStyle='#e9f3f6';c.beginPath();c.roundRect(x,y,220,80,12);c.fill();label(`${i+1}. ${tool}`,x+12,y+43);});
-    label('Follow the source-specific setup; no unsupported model is substituted',62,548);
+    label('A source-specific animated setup is not available for this apparatus.',62,548);
   }
   c.fillStyle='#10374f';c.font='bold 24px sans-serif';wrap(c,title,865,170,375,30,2);
   c.font='21px sans-serif';c.fillStyle='#294959';wrap(c,description,865,248,365,30,8);
