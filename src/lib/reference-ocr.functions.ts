@@ -17,10 +17,11 @@ export const saveExtractedReferencePage = createServerFn({ method: "POST" }).mid
   });
 
 export const readScannedPage = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
-  .inputValidator((raw: unknown) => z.object({ image: z.string().max(8_000_000).regex(/^data:image\/jpeg;base64,/), page: z.number().int().positive(), book_id: z.string().uuid().optional(), source_path: z.string().max(500).regex(/^[a-zA-Z0-9_./-]+\.pdf$/i).refine(path => !path.includes(".."), "Invalid source path").optional(), aspect: z.number().positive().max(5).optional(), chapter_hint: z.string().max(200).optional(), source_file_name: z.string().max(500).optional() }).parse(raw))
+  .inputValidator((raw: unknown) => z.object({ image: z.string().max(8_000_000).regex(/^data:image\/jpeg;base64,/), page: z.number().int().positive(), book_id: z.string().uuid().optional(), source_path: z.string().max(500).regex(/^[a-zA-Z0-9_./-]+\.pdf$/i).refine(path => !path.includes(".."), "Invalid source path").optional(), aspect: z.number().positive().max(5).optional(), chapter_hint: z.string().max(200).optional(), source_file_name: z.string().max(500).optional(), text_only: z.boolean().optional() }).parse(raw))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let sourcePath = data.source_path;
+    let retainedVisuals:ReferenceVisual[]=[];
     let medEasy = !!combinedReferenceSubject({ file_name: data.source_file_name });
     if (data.book_id) {
       const { data: book, error } = await supabaseAdmin.from("ncert_books").select("storage_path,file_name,chapter").eq("id", data.book_id).single();
@@ -31,7 +32,11 @@ export const readScannedPage = createServerFn({ method: "POST" }).middleware([re
       // Reuse that checkpoint instead of running the page reader again.
       const { data: saved, error: savedError } = await supabaseAdmin.from("ncert_pages").select("text").eq("book_id", data.book_id).eq("page_number", data.page).maybeSingle();
       if (savedError) throw new Error(savedError.message);
-      if (saved?.text.startsWith("[SOURCE_OCR_PAGE]\n") && splitReferenceContent(saved.text).context?.visuals_checked) return saved.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "");
+      if (saved?.text.startsWith("[SOURCE_OCR_PAGE]\n")) {
+        const parsed=splitReferenceContent(saved.text);
+        if(data.text_only)retainedVisuals=parsed.visuals;
+        if(parsed.context?.visuals_checked&&(!data.text_only||(parsed.context.reader!=="local"&&parsed.text.length>150)))return saved.text.replace(/^\[SOURCE_OCR_PAGE\]\n/, "");
+      }
     }
     const { readBookImageJSON } = await import("@/lib/book-image-gateway");
     const out = await readBookImageJSON<{ text: string; chapter: string; visuals: Array<{ title: string; kind: "reaction" | "structure" | "diagram"; description: string; x: number; y: number; width: number; height: number }> }>({
@@ -57,7 +62,7 @@ export const readScannedPage = createServerFn({ method: "POST" }).middleware([re
       const { error } = await supabaseAdmin.storage.from("ncert-pdfs").upload(visuals[0].storage_path, bytes, { contentType: "image/jpeg", upsert: true });
       if (error) throw new Error(error.message);
     }
-    const pageContent = encodeReferenceVisuals(out.text, visuals, { chapter: (out.chapter || "").slice(0, 200), visuals_checked: true });
+    const pageContent = encodeReferenceVisuals(out.text, data.text_only?retainedVisuals:visuals, { chapter: (out.chapter || "").slice(0, 200), visuals_checked: true });
     if (data.book_id) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { error: chunkError } = await supabaseAdmin.from("ncert_chunks").upsert({ book_id: data.book_id, chunk_index: data.page - 1, content: pageContent }, { onConflict: "book_id,chunk_index" });

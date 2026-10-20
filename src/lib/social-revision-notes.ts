@@ -66,13 +66,15 @@ export async function appendSocialRevisionNotes(result:GenerationResult,db:Supab
    const label=page.page>0?`PDF page ${page.page}`:`Saved text segment ${-page.page}`;
    const sections:NonNullable<Slide["sections"]>=[{heading:"Teacher revision source",kind:"text",lines:[`${attribution}. ${book.file_name} · ${label}. This supplement is separate from the NCERT textbook notes.`]}];
    if(!good.some(line=>line.length>=35 && /[a-z]{3}/i.test(line)))continue;
-   if(good.length)sections.push({heading:"Teacher revision notes",kind:"bullets",lines:good});
+   if(good.length)sections.push({heading:"Teacher Notes",kind:"bullets",lines:good});
    if(review.length)sections.push({heading:"Source review — original extraction",kind:"text",lines:review});
    additions.push({title:`${socialTitle(chapter)} — teacher revision`,kind:"content",visual:"book",bullets:[],notes:[],key_terms:[],sections,grounding:parsed.text,caption:`Teacher revision · ${book.file_name} · ${label}`,teacher_revision:{book_id:book.id,file_name:book.file_name,page:page.page>0?page.page:undefined},reference_visuals:parsed.visuals.filter(v=>v.storage_path===`${book.storage_path}.page-${v.page}.jpg`).map(v=>({...v,book_id:book.id,book:book.file_name,chapter}))});
   }
  }
  const core=result.slides.filter(slide=>!slide.teacher_revision).map(slide=>socialNotesPresentationSlide(slide,subject));
- // The uploaded chapter notes and their unchanged diagrams lead the lesson.
- // NCERT explanations and questions remain available after the supplied material.
- return {...result,slides:[...additions,...core]};
+ // Keep the chapter lesson first and the complete supplied supplement before assessment.
+ const assessment=core.findIndex(slide=>slide.kind==='mcq');
+ const at=assessment<0?core.length:assessment;
+ const text=additions.filter(slide=>!slide.teacher_pdf),originals=additions.filter(slide=>slide.teacher_pdf);
+ return {...result,slides:[...core.slice(0,at),...text,...originals,...core.slice(at)]};
 }

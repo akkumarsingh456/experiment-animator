@@ -208,7 +208,8 @@ function GeneratePage() {
     const deadline = new Promise<never>((_, reject) => {
       timeout = setTimeout(() => reject(new Error("This request took too long. Please retry; any completed lesson is saved and will be reused.")), LESSON_REQUEST_TIMEOUT_MS);
     });
-    Promise.race([run({ data: search }).then(r => prepareTeacherPdfPages(r as GenerationResult)), deadline])
+    Promise.race([run({ data: search }), deadline])
+      .then(r => prepareTeacherPdfPages(r as GenerationResult))
       .then((prepared) => { if (requestIdRef.current === requestId) setResult(prepared); })
       .catch((e) => { if (requestIdRef.current === requestId) setError(e?.message ?? String(e)); })
       .finally(() => { clearTimeout(timeout); if (requestIdRef.current === requestId) setLoading(false); });
