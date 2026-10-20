@@ -13,9 +13,20 @@ export function scopeTextbookPages(pages: Array<{ page_number: number; text: str
   for (const page of [...pages].sort((a,b) => a.page_number-b.page_number)) {
     const text = decodeNcertProse(splitReferenceContent(page.text).text.replace(/^\[SOURCE_OCR_PAGE\]\s*/, ""),[chapter,...chapterNames]);
     if (!text.trim() || isContentsListing(text) || /^\s*(?:contents|table of contents)\b/i.test(text)) continue;
-    const header = key(text.slice(0, 600));
-    const hits = names.map(name => ({ name, at: header.indexOf(name) })).filter(hit => hit.at >= 0).sort((a,b) => a.at-b.at || b.name.length-a.name.length);
+    const header = key(text.slice(0, 600).replace(/^\s*(?:chapter\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen))\s*/i,'').replace(/^\s*\d+\s*/,''));
+    // "motion" in a Force paragraph and "atoms" in a Chemistry paragraph
+    // are mentions, not chapter transitions. Require an opening title or a
+    // complete running-title line; prefer the longest matching opening title.
+    const titleLines=text.split(/\r?\n/).filter(line=>line.length<150).map(line=>key(line.replace(/^\s*\d+\s*|\s*\d+\s*$/g,'')));
+    // Legacy NCERT display fonts extract as "T T T HE HE HE ..." at the
+    // bottom of opening pages. Decode heading identity only, not source prose.
+    const headingLayer=text.replace(/\b([A-Z]+)(?:\s+\1\b)+/g,'$1').replace(/\bC\s+hapter\b/g,'');
+    const displayTitles=[...headingLayer.matchAll(/\b[A-Z](?:[A-Z \t–-]{2,})[A-Z]\b/g)].map(match=>key(match[0]));
+    const explicitOpening=/^\s*chapter\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b/i.test(text);
+    const capitalOpening=key(text.trim().match(/^[A-Z][A-Z -]{2,}/)?.[0]||'');
+    const hits = names.map(name => ({ name, at: header.startsWith(name)&&(name.length>10||explicitOpening||capitalOpening.startsWith(name))?0:titleLines.includes(name)||displayTitles.some(title=>title===name||title===`the${name}`)?1:-1 })).filter(hit => hit.at >= 0).sort((a,b) => a.at-b.at || b.name.length-a.name.length);
     if (hits.length) current = hits[0].name;
+    else if (/\bC\s+hapter\b/.test(text)||/^\s*CHAPTER\s+(?:\d+|[A-Z]+)\b/.test(text)) current='';
     if (current === wanted) result.push(text);
   }
   return result;

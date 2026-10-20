@@ -41,6 +41,10 @@ export function hasSourcePrintIntrusion(text: string): boolean {
 export function hasBrokenSourceMath(raw:string):boolean {
   const text=String(raw||'');
   if (hasSourcePrintIntrusion(text)) return true;
+  // Flattened textbook summary equations must not become one multiplied term,
+  // and duplicated graph labels cannot stand in for a lost fraction.
+  if (/\bat\s*2\s*2\s*a\s*s\s*=/i.test(text.replace(/[${}^\\]/g,''))
+    || /\b(?:BDBD|ADOC)\b/.test(text) && /[=]|change in velocity/i.test(text)) return true;
   if (/[=∝]/.test(text) && /\b[abcxyz]{8,}\b/i.test(text.replace(/\$[^$]*\$/g," "))) return true;
   if (/[\uFFFD\u25A1\u25AF\u0000\uE000-\uF8FF]/u.test(text)) return true;
   const mathematical=/[=∝]|\*\*(?:formula|equation|relation)|\bEq\./i.test(text);

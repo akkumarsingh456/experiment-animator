@@ -10,15 +10,15 @@ const titles = Array.from(new Set([
   ...Object.values(NCERT_SYLLABUS).flatMap(subjects => Object.values(subjects).flatMap(chapters =>
     chapters.map(chapter => chapter.chapter.replace(/^Chapter\s+\d+\s*:\s*/i, "")))),
 ])).filter(title => /^[A-Za-z]/.test(title)).sort((a, b) => b.length - a.length);
-const title = `(?:${titles.map(escape).join("|")})`;
-const edition = String.raw`20\d{2}\s*[-–]\s*\d{2}`;
+const title = `(?:${[...new Set(titles.flatMap(value=>[value,value.replace(/\s*\((?:Physics|Chemistry|Biology)\)\s*$/i,'')]))].sort((a,b)=>b.length-a.length).map(value=>escape(value).replace(/[A-Za-z]/g,'$&[ \\t]*')).join("|")})`;
+const edition = String.raw`20\d{2}\s*[-–]\s*(?:20)?\d{2}`;
 // Require an edition, a page number and a recognised running title together.
 // Isolated dates, scientific values, references and bare numbers are never removed.
 const headers = [
-  new RegExp(String.raw`\b${edition}\s+\d{1,3}\s+${title}(?![A-Za-z0-9])`, "g"),
-  new RegExp(String.raw`\b${edition}\s+${title}\s+\d{1,3}\b`, "g"),
-  new RegExp(String.raw`\b\d{1,3}\s+${title}\s+${edition}\b`, "g"),
-  new RegExp(String.raw`\b${title}\s+\d{1,3}\s+${edition}\b`, "g"),
+  new RegExp(String.raw`\b${edition}\s+\d{1,3}\s+${title}(?![A-Za-z0-9])`, "gi"),
+  new RegExp(String.raw`\b${edition}\s+${title}\s+\d{1,3}\b`, "gi"),
+  new RegExp(String.raw`\b\d{1,3}\s+${title}\s+${edition}\b`, "gi"),
+  new RegExp(String.raw`\b${title}\s+\d{1,3}\s+${edition}\b`, "gi"),
 ];
 
 /** View only: remove confirmed print furniture and accidental adjacent function

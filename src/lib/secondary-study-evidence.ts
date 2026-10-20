@@ -16,7 +16,7 @@ const aliases:Record<string,string[]>={
  'Atomic number and mass number':['Atomic number','Mass number'],
  'Isotopes and isobars':['Isotopes','Isobars'],
  'Description of motion':['Describing motion'],
- 'Equations of kinematic motion':['Equations of motion'],
+ 'Equations of kinematic motion':['Equations of motion','Equations of Motion by Graphical Method'],
  'Rate of doing work (power)':['Rate of doing work'],
  'Protection management':['Crop protection management'],
  'Types of reactions (combination, decomposition, displacement, double displacement)':['Types of chemical reactions'],
@@ -57,6 +57,17 @@ export function substantiveStudyLine(line:string){
 /** Read a matched numbered textbook section with all its subordinate paragraphs.
  * A lexical hit is not permission to borrow text from an unrelated heading. */
 export function secondaryScienceSectionEvidence(title:string,context:string,extraAliases:string[]=[]):string[]{
+ // Older PDF uploads store each page as one line. Recover only an explicit
+ // numbered heading, bounded by the next section of equal/higher rank.
+ const labels=[...extraAliases,title.replace(/\s*\([^)]*\)/g,''),...(Object.entries(aliases).find(([name])=>key(name)===key(title))?.[1]||[])];
+ const escape=(value:string)=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+ const labelPattern=labels.sort((a,b)=>b.length-a.length).map(label=>label.trim().split(/\s+/).map(word=>[...word].map(escape).join('[ \\t]*')).join('\\s+')).join('|');
+ const headingPattern=new RegExp(`(^|\\s)(\\d{1,2}\\.\\d{1,2}(?:\\.\\d{1,2})?)\\s+(${labelPattern})([?]?)(?=\\s|$)`,'gi');
+ context=context.replace(headingPattern,(_all,before,id,heading,question)=>`\n${id} ${heading}${question}\n`);
+ // Preserve subordinate subsections inside the parent; expose their boundaries
+ // without mistaking references such as "Eq. (8.8)" for section headings.
+ context=context.replace(/([^\n])\s+(\d{1,2}\.\d{1,2}(?:\.\d{1,2})?)(?=\s+[A-Z][A-Za-z -]{3,})/g,'$1\n$2');
+ context=context.replace(/(^|\n)([ \t]*\d{1,2}\.\d{1,2}(?:\.\d{1,2})?)[ \t]+([A-Z][A-Z \t–—()'-]{3,}?)[ \t]+(?=[A-Z][a-z])/g,'$1$2 $3\n');
  context=context.replace(/\bReprint(?:ed)?\s+20\d{2}(?:[-–]\d{2})?/g,'').split('\n').filter(line=>/EXERCISES|E X E R C I S E S/.test(line)||!/^\s*(?:Science|\d{1,3}|[A-Z][A-Z ,–-]{2,100})\s*$/.test(line)).join('\n');
  const variants=[...extraAliases,title.replace(/\s*\([^)]*\)/g,''),...(Object.entries(aliases).find(([name])=>key(name)===key(title))?.[1]||[])].map(key).filter(v=>v.length>=4);
  const headings:Array<{start:number;body:number;depth:number;heading:string}>=[];
@@ -66,10 +77,11 @@ export function secondaryScienceSectionEvidence(title:string,context:string,extr
   headings.push({start:match.index!,body:match.index!+match[0].length,depth:match[1].split('.').length,heading});
  }
  const sections:string[]=[];
+ const boundaries=[...context.matchAll(/^[ \t]*(\d{1,2}\.\d{1,2}(?:\.\d{1,2})?)[ \t]+(?=[A-Z])/gm)].map(match=>({start:match.index!,depth:match[1].split('.').length}));
  headings.forEach((h,i)=>{
   const identity=key(h.heading.replace(/^\d+(?:\.\d+)*\s*/,'').replace(/^\([a-z]\)\s*/i,''));
   if(!variants.some(v=>identity===v||identity===`the${v}`))return;
-  const boundary=headings.slice(i+1).find(next=>next.depth<=h.depth)?.start??context.length;
+  const boundary=boundaries.find(next=>next.start>h.start&&next.depth<=h.depth)?.start??context.length;
   sections.push(context.slice(h.body,boundary).split(/\n\s*(?:What you have learnt|EXERCISES|E X E R C I S E S)\b/i)[0]);
  });
  const result:string[]=[],seen=new Set<string>();

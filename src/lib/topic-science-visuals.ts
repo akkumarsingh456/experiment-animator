@@ -36,6 +36,12 @@ export function topicScienceDrawing(input: ConceptMapInput, subject=''): TopicDr
   if(discipline)return topicScienceDrawing(input,discipline);
  }
  if(/^(physics|science)$/i.test(subject)){
+  // Named kinematics topics take precedence over incidental force vocabulary
+  // in extracted notes. These are labelled schematic graphs, not measurements.
+  if(/description of motion|describing motion|rate of change of velocity|graphical representation of motion|equations of (?:kinematic )?motion/i.test(input.title)){
+   if(/description|describing/i.test(input.title))return {id:'motion-position',caption:'Schematic positions on a straight line. Displacement is final position minus initial position; distance counts the complete path.',drawing:line(110,290,650,290,ink,true)+circle(210,290,12)+circle(525,290,12)+t(210,345,'Initial position',22)+t(525,345,'Final position',22)+line(225,210,510,210,orange,true)+t(375,175,'Displacement',26)+t(590,400,'Positive direction →',22)};
+   return {id:'motion-velocity-time',caption:'Illustrative velocity–time graph for positive constant acceleration. Slope gives acceleration; signed area under the line gives displacement. No measured data are shown.',drawing:axes('Time t','Velocity v')+`<path d="M135 325L590 150" fill="none" stroke="${orange}" stroke-width="5"/>`+`<path d="M135 325L590 150V415H135Z" fill="${teal}" opacity=".12"/>`+t(110,330,'u',23)+t(615,155,'v',23)+line(590,150,590,325,teal)+line(135,325,590,325,teal)+t(610,250,'Δv',23)+t(375,355,'Δt',23)+t(380,495,'Slope = Δv / Δt',24)};
+  }
   const atomic=atomicTopicDrawing(input.title);
   if(atomic)return atomic;
  }

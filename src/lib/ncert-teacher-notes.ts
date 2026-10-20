@@ -1,4 +1,5 @@
 import {isSeniorScienceStudy,seniorScienceEvidence} from './senior-study-notes';
+import { secondaryMotionFormulas } from './secondary-motion-formulas';
 import {secondaryScienceSectionEvidence,substantiveStudyLine} from './secondary-study-evidence';
 import { isContentsListing } from "@/lib/note-source-noise";
 import { topicEvidence } from "@/lib/topic-evidence";
@@ -685,7 +686,8 @@ export async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: s
       slide.grounding || "", slide.chapter_text || "", ...(slide.bullets || []), ...(slide.notes || []), ...existing,
       formulaReferenceContextForTopic(opts.refContext, slide.title),
     ];
-    const additions = [...sourceFormulaBlocks(slide.title,opts.subject,evidence,existing), ...sourceFormulaExplanations(slide.title,opts.subject,evidence,existing)];
+    const schoolMotion=secondaryMotionFormulas(slide.title,evidence.join(' '),opts.klass,opts.subject,opts.chapter);
+    const additions = schoolMotion.length ? schoolMotion.filter(line=>!existing.includes(line)) : [...sourceFormulaBlocks(slide.title,opts.subject,evidence,existing), ...sourceFormulaExplanations(slide.title,opts.subject,evidence,existing)];
     if (!additions.length) return slide;
     const first = slide.sections?.[0] || { heading: NOTE_HEADING, kind: "bullets" as const, lines: [] };
     return { ...slide, sections: [{ ...first, lines: [...first.lines, ...additions] }, ...(slide.sections?.slice(1) || [])] };

@@ -1,0 +1,404 @@
+{
+  "scope": "Read-only review of accessible saved Class 9 Science sources using the website current 12-chapter catalog. Section/keyword matches are retrieval evidence, not factual certification of every generated statement.",
+  "chaptersChecked": 12,
+  "topicsChecked": 65,
+  "chapters": [
+    {
+      "chapter": "Chapter 1: Matter in Our Surroundings (Chemistry)",
+      "sourceFound": true,
+      "topics": [
+        {
+          "topic": "Physical nature of matter",
+          "section": 28,
+          "lexical": 0
+        },
+        {
+          "topic": "Characteristics of particles of matter",
+          "section": 0,
+          "lexical": 12
+        },
+        {
+          "topic": "States of matter (solid, liquid, gas)",
+          "section": 51,
+          "lexical": 0
+        },
+        {
+          "topic": "Change of state",
+          "section": 0,
+          "lexical": 10
+        },
+        {
+          "topic": "Evaporation",
+          "section": 60,
+          "lexical": 0
+        }
+      ]
+    },
+    {
+      "chapter": "Chapter 2: Is Matter Around Us Pure? (Chemistry)",
+      "sourceFound": true,
+      "topics": [
+        {
+          "topic": "What is a mixture?",
+          "section": 33,
+          "lexical": 0
+        },
+        {
+          "topic": "Types of mixtures",
+          "section": 26,
+          "lexical": 0
+        },
+        {
+          "topic": "Solutions",
+          "section": 0,
+          "lexical": 52
+        },
+        {
+          "topic": "Concentration of a solution",
+          "section": 17,
+          "lexical": 0
+        },
+        {
+          "topic": "Suspension",
+          "section": 0,
+          "lexical": 13
+        },
+        {
+          "topic": "Colloids",
+          "section": 0,
+          "lexical": 11
+        },
+        {
+          "topic": "Physical and chemical changes",
+          "section": 15,
+          "lexical": 0
+        },
+        {
+          "topic": "Pure substances (elements and compounds)",
+          "section": 86,
+          "lexical": 0
+        }
+      ]
+    },
+    {
+      "chapter": "Chapter 3: Atoms and Molecules (Chemistry)",
+      "sourceFound": true,
+      "topics": [
+        {
+          "topic": "Laws of chemical combination",
+          "section": 41,
+          "lexical": 0
+        },
+        {
+          "topic": "What is an atom?",
+          "section": 45,
+          "lexical": 0
+        },
+        {
+          "topic": "What is a molecule?",
+          "section": 35,
+          "lexical": 0
+        },
+        {
+          "topic": "Writing chemical formulae",
+          "section": 25,
+          "lexical": 0
+        },
+        {
+          "topic": "Molecular mass and mole concept",
+          "section": 48,
+          "lexical": 0
+        }
+      ]
+    },
+    {
+      "chapter": "Chapter 4: Structure of the Atom (Chemistry)",
+      "sourceFound": true,
+      "topics": [
+        {
+          "topic": "Charged particles in matter",
+          "section": 18,
+          "lexical": 0
+        },
+        {
+          "topic": "Structure of an atom (Thomson, Rutherford and Bohr models)",
+          "section": 65,
+          "lexical": 0
+        },
+        {
+          "topic": "Distribution of electrons in orbits",
+          "section": 16,
+          "lexical": 0
+        },
+        {
+          "topic": "Valency",
+          "section": 22,
+          "lexical": 0
+        },
+        {
+          "topic": "Atomic number and mass number",
+          "section": 16,
+          "lexical": 0
+        },
+        {
+          "topic": "Isotopes and isobars",
+          "section": 66,
+          "lexical": 0
+        }
+      ]
+    },
+    {
+      "chapter": "Chapter 5: The Fundamental Unit of Life (Biology)",
+      "sourceFound": true,
+      "topics": [
+        {
+          "topic": "What are living organisms made of?",
+          "section": 51,
+          "lexical": 0
+        },
+        {
+          "topic": "Plasma membrane",
+          "section": 32,
+          "lexical": 0
+        },
+        {
+          "topic": "Cell wall",
+          "section": 18,
+          "lexical": 0
+        },
+        {
+          "topic": "Nucleus",
+          "section": 32,
+          "lexical": 0
+        },
+        {
+          "topic": "Cytoplasm",
+          "section": 18,
+          "lexical": 0
+        },
+        {
+          "topic": "Cell organelles (ER, Golgi apparatus, lysosomes, mitochondria, plastids, vacuoles)",
+          "section": 112,
+          "lexical": 0
+        }
+      ]
+    },
+    {
+      "chapter": "Chapter 6: Tissues (Biology)",
+      "sourceFound": true,
+      "topics": [
+        {
+          "topic": "Plant tissues (meristematic and permanent)",
+          "section": 100,
+          "lexical": 0
+        },
+        {
+          "topic": "Animal tissues (epithelial, connective, muscular, nervous)",
+          "section": 44,
+          "lexical": 0
+        }
+      ]
+    },
+    {
+      "chapter": "Chapter 7: Motion (Physics)",
+      "sourceFound": true,
+      "topics": [
+        {
+          "topic": "Description of motion",
+          "section": 46,
+          "lexical": 0
+        },
+        {
+          "topic": "Rate of change of velocity",
+          "section": 11,
+          "lexical": 0
+        },
+        {
+          "topic": "Graphical representation of motion",
+          "section": 52,
+          "lexical": 0
+        },
+        {
+          "topic": "Equations of kinematic motion",
+          "section": 15,
+          "lexical": 0
+        },
+        {
+          "topic": "Uniform circular motion",
+          "section": 47,
+          "lexical": 0
+        }
+      ]
+    },
+    {
+      "chapter": "Chapter 8: Force and Laws of Motion (Physics)",
+      "sourceFound": true,
+      "topics": [
+        {
+          "topic": "Balanced and unbalanced forces",
+          "section": 10,
+          "lexical": 0
+        },
+        {
+          "topic": "First law of motion",
+          "section": 67,
+          "lexical": 0
+        },
+        {
+          "topic": "Inertia and mass",
+          "section": 54,
+          "lexical": 0
+        },
+        {
+          "topic": "Second law of motion",
+          "section": 8,
+          "lexical": 0
+        },
+        {
+          "topic": "Third law of motion",
+          "section": 30,
+          "lexical": 0
+        },
+        {
+          "topic": "Conservation of momentum",
+          "section": 32,
+          "lexical": 0
+        }
+      ]
+    },
+    {
+      "chapter": "Chapter 9: Gravitation (Physics)",
+      "sourceFound": true,
+      "topics": [
+        {
+          "topic": "Gravitation",
+          "section": 91,
+          "lexical": 0
+        },
+        {
+          "topic": "Universal law of gravitation",
+          "section": 74,
+          "lexical": 0
+        },
+        {
+          "topic": "Free fall",
+          "section": 12,
+          "lexical": 0
+        },
+        {
+          "topic": "Mass and weight",
+          "section": 0,
+          "lexical": 8
+        },
+        {
+          "topic": "Thrust and pressure",
+          "section": 25,
+          "lexical": 0
+        },
+        {
+          "topic": "Archimedes' principle",
+          "section": 0,
+          "lexical": 2
+        },
+        {
+          "topic": "Relative density",
+          "section": 42,
+          "lexical": 0
+        }
+      ]
+    },
+    {
+      "chapter": "Chapter 10: Work and Energy (Physics)",
+      "sourceFound": true,
+      "topics": [
+        {
+          "topic": "Work",
+          "section": 47,
+          "lexical": 0
+        },
+        {
+          "topic": "Kinetic energy",
+          "section": 25,
+          "lexical": 0
+        },
+        {
+          "topic": "Potential energy",
+          "section": 31,
+          "lexical": 0
+        },
+        {
+          "topic": "Rate of doing work (power)",
+          "section": 15,
+          "lexical": 0
+        },
+        {
+          "topic": "Transformation of energy",
+          "section": 0,
+          "lexical": 5
+        }
+      ]
+    },
+    {
+      "chapter": "Chapter 11: Sound (Physics)",
+      "sourceFound": true,
+      "topics": [
+        {
+          "topic": "Production of sound",
+          "section": 12,
+          "lexical": 0
+        },
+        {
+          "topic": "Propagation of sound",
+          "section": 140,
+          "lexical": 0
+        },
+        {
+          "topic": "Reflection of sound",
+          "section": 26,
+          "lexical": 0
+        },
+        {
+          "topic": "Range of hearing",
+          "section": 21,
+          "lexical": 0
+        },
+        {
+          "topic": "Applications of ultrasound",
+          "section": 38,
+          "lexical": 0
+        },
+        {
+          "topic": "Structure of human ear",
+          "section": 55,
+          "lexical": 0
+        }
+      ]
+    },
+    {
+      "chapter": "Chapter 12: Improvement in Food Resources (Biology)",
+      "sourceFound": true,
+      "topics": [
+        {
+          "topic": "Crop variety improvement",
+          "section": 32,
+          "lexical": 0
+        },
+        {
+          "topic": "Crop production management",
+          "section": 95,
+          "lexical": 0
+        },
+        {
+          "topic": "Protection management",
+          "section": 10,
+          "lexical": 0
+        },
+        {
+          "topic": "Animal husbandry (cattle, poultry, fish, bee-keeping)",
+          "section": 10,
+          "lexical": 0
+        }
+      ]
+    }
+  ]
+}
