@@ -8,6 +8,10 @@ export function sourceExtractionIssue(raw:string):string|null {
  const labels=(text.match(/\b(?:atomic (?:weight|mass|number)|density|melting point|boiling point|formula of (?:oxide|chloride)|electronic configuration|ionic radius|ionisation energy|ionization energy|population|literacy rate|life expectancy|per capita income|resistivity|conductivity|temperature|pressure)\b/gi)||[]).length;
  const values=(text.match(/\b\d+(?:\.\d+)?\b/g)||[]).length;
  const prose=/\b(?:is|are|was|were|increases?|decreases?|because|therefore|whereas|compared|respectively)\b/i.test(text);
+ if(!structured&&values>=6&&(/\bFormula(?:s)?\b/i.test(text)&&/\bof (?:hydride|oxide)\b/i.test(text)||/\bmetallic radius\b/i.test(text)&&/\bionic radius\b/i.test(text)))
+  return 'Several chemical formulas or radius-table entries were merged by PDF extraction. Subscripts alone cannot restore the missing rows and column headings; compare the original textbook table.';
+ if(/(?:^|\s)-\s*\d{2}\s+\d{1,3}\s+[A-Z][A-Z ]{25,}/.test(text))
+  return 'A running textbook page heading interrupts this sentence. The original extraction is retained for comparison.';
  if(!structured&&text.length>100&&labels>=3&&values>=6&&!prose)
   return 'The PDF merged table headings and values into one paragraph. The original table is needed to recover its rows and columns accurately.';
  if(/\b(?:predicted|found)\b/i.test(text)&&

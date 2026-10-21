@@ -46,7 +46,12 @@ export function chemicalSpeciesLatex(raw: string): string | null {
 }
 /** Recover only explicit atom-count spacing; never reconstruct table columns. */
 function spacedChemistry(text: string): string {
-  return text
+  // Explicit, recognisable compound spellings only. Never join arbitrary
+  // element/number columns (for example Li 152 or Be 111) into formulas.
+  const compounds=['As2O5','SeO3','In2O3','SnO2','Sb2O3','Sb2O5','TeO3','PbO2','Bi2O3','B2H6','CH4','NH3','H2O','CaH2','AlH3','SiH4','PH3','H2S','GeH4','AsH3','H2Se','SnH4','SbH3','H2Te','Li2O','B2O3','CO2','N2O3','N2O5','Na2O','Al2O3','SiO2','P4O6','P4O10','SO3','Cl2O7','K2O','Ga2O3','GeO2'];
+  const patterns=compounds.sort((a,b)=>b.length-a.length).map(formula=>(formula.match(/[A-Z][a-z]?|\d+/g)||[]).join('\\s*'));
+  const explicit=new RegExp(`(?<![A-Za-z0-9])(?:${patterns.join('|')})(?![A-Za-z0-9])`,'g');
+  return text.replace(explicit,token=>`$\\ce{${token.replace(/\s/g,'')}}$`)
     .replace(/\(\s*H\s*3\s*C\s*\)\s*2\s*CH\s*[-–]\s*CH\s*2\b/g,
       () => String.raw`$\ce{(H3C)2CH-CH2}$`)
     .replace(/\b(CH|NH|OH)\s+([234])\b/g, (_, group, count) =>
