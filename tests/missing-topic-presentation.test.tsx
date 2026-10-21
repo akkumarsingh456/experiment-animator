@@ -1,10 +1,11 @@
 import { it, expect, vi, afterEach } from "vitest";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
+const search = vi.hoisted(() => vi.fn(async () => [] as any[]));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
 vi.mock("@/lib/topic-notes.functions", () => ({
   readMissingTopicNotes: async () => null,
-  searchMissingTopic: async () => [],
+  searchMissingTopic: search,
   saveMissingTopicNotes: async () => {
     throw new Error("Not used");
   },
@@ -120,5 +121,50 @@ it("keeps the popup inside the browser fullscreen element", async () => {
   );
   await act(async () => host.querySelector<HTMLButtonElement>("button")!.click());
   expect(host.querySelector('[role="dialog"]')).toBeTruthy();
+  await act(async () => root.unmount());
+});
+
+it("automatically displays readable text previews and imports the selected result", async () => {
+  search.mockResolvedValueOnce([
+    {
+      url: "https://ncert.nic.in/chapter.pdf",
+      title: "Matching source",
+      complete: true,
+      lines: [
+        "Primary valencies are normally ionisable.",
+        "Secondary valencies are non ionisable.",
+      ],
+    },
+  ]);
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  await act(async () =>
+    root.render(
+      <MissingTopicNotes
+        slide={slide}
+        klass="12"
+        subject="Chemistry"
+        chapter="Chapter 5: Coordination Compounds"
+        onSaved={() => {}}
+      />,
+    ),
+  );
+  await act(async () => host.querySelector<HTMLButtonElement>("button")!.click());
+  const popup = document.querySelector('[role="dialog"]')!;
+  expect(popup.querySelector('[aria-label="Source notes preview"]')?.textContent).toContain(
+    "Primary valencies",
+  );
+  expect(search).toHaveBeenCalledWith({
+    data: expect.objectContaining({ klass: "12", topic: slide.title }),
+  });
+  await act(async () =>
+    Array.from(popup.querySelectorAll("button"))
+      .find((button) => button.textContent === "Import these notes")!
+      .click(),
+  );
+  expect(popup.querySelector("textarea")?.value).toContain(
+    "Primary valencies are normally ionisable.\nSecondary valencies",
+  );
   await act(async () => root.unmount());
 });

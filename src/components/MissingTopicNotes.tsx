@@ -1,3 +1,4 @@
+import { MathText } from "@/components/MathText";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -37,7 +38,9 @@ export function MissingTopicNotes({
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState(""),
     [official, setOfficial] = useState(false),
-    [results, setResults] = useState<Array<{ url: string; title: string; lines: string[] }>>([]);
+    [results, setResults] = useState<
+      Array<{ url: string; title: string; lines: string[]; complete?: boolean }>
+    >([]);
   const search = useServerFn(searchMissingTopic),
     read = useServerFn(readMissingTopicNotes),
     save = useServerFn(saveMissingTopicNotes);
@@ -90,6 +93,7 @@ export function MissingTopicNotes({
       setBusy(false);
     }
   }
+  function changePopup(value:boolean){setOpen(value);if(value)void find();}
   async function preserve() {
     setBusy(true);
     setNotice("");
@@ -137,11 +141,14 @@ export function MissingTopicNotes({
       <Button
         className={compact ? "h-8 text-sm" : "mt-3"}
         variant="outline"
-        onClick={() => setOpen(true)}
+        onClick={() => changePopup(true)}
       >
         Teacher notes / Google search
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={changePopup}
+      >
         <DialogPrimitive.Portal
           container={
             typeof document !== "undefined"
@@ -185,12 +192,12 @@ export function MissingTopicNotes({
                     </a>
                   </Button>
                   <Button disabled={busy} onClick={() => find()}>
-                    Find official text
+                    Search notes here
                   </Button>
                 </div>
                 <p className="mt-2 text-sm text-slate-600">
-                  Google results open in a separate tab. Extract text from a matching NCERT, SATHEE,
-                  CBSE or CIET page below.
+                  Matching official-source notes appear below as text. Google search opens
+                  separately; its result snippets are not used as lesson notes.
                 </p>
                 <label className="mt-3 block text-sm" htmlFor="topic-source">
                   Official page URL
@@ -213,9 +220,20 @@ export function MissingTopicNotes({
                   Extract matching topic text
                 </Button>
               </div>
-              {results.length > 0 && (
+              {(open || results.length > 0) && (
                 <div>
-                  <h3 className="font-semibold">2. Preview and import</h3>
+                  <h3 className="font-semibold">2. Read source notes and import</h3>
+                  {busy && (
+                    <p role="status" className="my-3 text-sm">
+                      Searching matching official pages and extracting topic text…
+                    </p>
+                  )}
+                  {!busy && !results.length && (
+                    <p className="my-3 text-sm">
+                      No readable matching source was returned. Try Search notes here again, or add
+                      an official source link.
+                    </p>
+                  )}
                   {results.map((item) => (
                     <article key={item.url} className="my-3 rounded-lg border p-3">
                       <a
@@ -228,9 +246,20 @@ export function MissingTopicNotes({
                       </a>
                       {item.lines.length ? (
                         <>
-                          <ol className="my-3 list-decimal space-y-2 pl-5">
+                          {item.complete === false && (
+                            <p className="mt-2 text-sm text-amber-800">
+                              Partial source passage. Review and complete it as teacher notes before
+                              saving.
+                            </p>
+                          )}
+                          <ol
+                            className="my-3 max-h-80 select-text list-decimal space-y-2 overflow-y-auto pl-5"
+                            aria-label="Source notes preview"
+                          >
                             {item.lines.map((line, index) => (
-                              <li key={index}>{line}</li>
+                              <li key={index}>
+                                <MathText text={line} subject={subject} />
+                              </li>
                             ))}
                           </ol>
                           <Button
@@ -238,13 +267,13 @@ export function MissingTopicNotes({
                             onClick={() => {
                               setText(item.lines.join("\n"));
                               setUrl(item.url);
-                              setOfficial(true);
+                              setOfficial(item.complete !== false);
                               try {
                                 localStorage.setItem(draftKey, item.lines.join("\n"));
                               } catch {}
                             }}
                           >
-                            Import this text
+                            Import these notes
                           </Button>
                         </>
                       ) : (

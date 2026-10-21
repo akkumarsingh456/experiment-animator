@@ -1,3 +1,4 @@
+import { trustedChapterSource } from "./trusted-chapter-source.server";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
@@ -33,6 +34,16 @@ async function matchingSource(scope: z.infer<typeof topicNotesScope>, url: strin
   if (binding) return readAttentionSource(binding);
   const sources = await readAttentionSources(scope);
   const match = sources.find((source) => normal(source.url) === normal(url));
+  if (!match) {
+    const mirror = await trustedChapterSource(scope.klass, scope.subject, scope.chapter);
+    if (mirror && normal(mirror.url) === normal(url))
+      return {
+        ...mirror,
+        title: scope.chapter,
+        sourceClass: scope.klass,
+        provider: "IIT Kanpur SATHEE NCERT mirror",
+      };
+  }
   if (!match)
     throw new Error(
       "This link is not a checked source for the selected class and chapter. Use Find official text, or write teacher notes for review.",
@@ -48,16 +59,33 @@ export const searchMissingTopic = createServerFn({ method: "POST" })
     const sources = data.url
       ? await Promise.all([matchingSource(scope, data.url)])
       : await readAttentionSources(scope);
-    return sources
-      .filter((source) => !!source)
-      .map((source) => {
-        const recovered = recoverTopicFromSources(scope.topic, [source!.text]);
-        return {
-          url: source!.url,
-          title: source!.title,
-          lines: recovered.complete ? recovered.lines : [],
-        };
-      });
+    const preview = (source: NonNullable<(typeof sources)[number]>) => {
+      const recovered = recoverTopicFromSources(scope.topic, [source.text]);
+      return {
+        url: source.url,
+        title: source.title,
+        lines: recovered.lines,
+        complete: recovered.complete,
+      };
+    };
+    const previews = sources.flatMap((source) => (source ? [preview(source)] : []));
+    // Only this user-opened picker retries a second official chapter reader.
+    // The existing generation and extraction pathway stays unchanged.
+    if (!data.url && !previews.some((item) => item.complete)) {
+      const mirror = await trustedChapterSource(scope.klass, scope.subject, scope.chapter);
+      if (mirror && !previews.some((item) => item.url === mirror.url))
+        previews.push(
+          preview({
+            ...mirror,
+            title: scope.chapter,
+            sourceClass: scope.klass,
+            provider: "IIT Kanpur SATHEE NCERT mirror",
+          }),
+        );
+    }
+    return previews.sort(
+      (a, b) => Number(b.complete) - Number(a.complete) || b.lines.length - a.lines.length,
+    );
   });
 export const readMissingTopicNotes = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => topicNotesScope.parse(input))

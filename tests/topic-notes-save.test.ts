@@ -5,7 +5,9 @@ const mocks = vi.hoisted(() => ({
   source: vi.fn(),
   bindings: vi.fn(),
   sources: vi.fn(),
+  mirror: vi.fn(),
 }));
+vi.mock("@/lib/trusted-chapter-source.server", () => ({ trustedChapterSource: mocks.mirror }));
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => {
     let validate = (data: unknown) => data;
@@ -42,6 +44,7 @@ beforeEach(() => {
   mocks.admin.mockResolvedValue({ admin: true });
   mocks.bindings.mockReturnValue([]);
   mocks.sources.mockResolvedValue([]);
+  mocks.mirror.mockResolvedValue(null);
 });
 it("does not let an unverified visitor change future shared notes", async () => {
   mocks.admin.mockRejectedValue(new Error("Administrator sign-in required"));
@@ -86,6 +89,41 @@ it("rejects arbitrary URLs before making a remote request", async () => {
   expect(mocks.source).not.toHaveBeenCalled();
 });
 
-it('uses the same saved scope for matching typographic title variants',()=>{
- expect(topicNotesKey(scope)).toBe(topicNotesKey({...scope,chapter:'Coordination Compounds',topic:"Werner's theory"}));
+it("uses the same saved scope for matching typographic title variants", () => {
+  expect(topicNotesKey(scope)).toBe(
+    topicNotesKey({ ...scope, chapter: "Coordination Compounds", topic: "Werner's theory" }),
+  );
+});
+
+it("shows partial readable source text rather than hiding it", async () => {
+  mocks.sources.mockResolvedValue([
+    {
+      url: "https://ncert.nic.in/chapter.pdf",
+      title: scope.chapter,
+      sourceClass: "12",
+      provider: "NCERT",
+      text: "Werner's theory states that coordination compounds show primary and secondary valencies.",
+    },
+  ]);
+  const result = await searchMissingTopic({ data: scope });
+  expect(result[0].lines.join(" ")).toContain("valencies");
+  expect(result[0].complete).toBe(false);
+});
+it("tries the matching chapter mirror when the initial readable source has no complete notes", async () => {
+  mocks.sources.mockResolvedValue([
+    {
+      url: "https://ncert.nic.in/chapter.pdf",
+      title: scope.chapter,
+      sourceClass: "12",
+      provider: "NCERT",
+      text: "No matching topic passage here.",
+    },
+  ]);
+  mocks.mirror.mockResolvedValue({
+    url: "https://sathee.iitk.ac.in/ncert-books/chapter/",
+    text: "Werner's theory states that coordination compounds show primary and secondary valencies. The primary valencies are normally ionisable and are satisfied by negative ions. The secondary valencies are non ionisable and are satisfied by neutral molecules or negative ions. The ions bound by secondary linkages have characteristic spatial arrangements.",
+  });
+  const result = await searchMissingTopic({ data: scope });
+  expect(result[0].complete).toBe(true);
+  expect(result[0].lines.join(" ")).toContain("primary valencies");
 });
