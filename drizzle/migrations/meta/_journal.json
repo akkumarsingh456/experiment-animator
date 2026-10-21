@@ -29,6 +29,13 @@
       "when": 1792181569134,
       "tag": "0003_private_book_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792181569135,
+      "tag": "0004_repair_private_book_requests",
+      "breakpoints": true
     }
   ]
 }

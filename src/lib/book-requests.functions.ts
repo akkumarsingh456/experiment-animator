@@ -3,6 +3,7 @@ import {requestBookTitle,requestMessageWithTitle} from "@/lib/book-request-conte
 import {z} from "zod";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {requireLibraryAdmin} from "@/lib/library-auth";
+import {bookRequestError} from './book-request-errors';
 
 export type BookRequest = {id:string; book_title:string|null; requester_name:string; verified_email:string; message:string; status:"new"|"reviewed"; created_at:string};
 
@@ -15,12 +16,12 @@ export const submitBookRequest = createServerFn({method:"POST"})
   const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
   const db=supabaseAdmin as SupabaseClient;
   const {count,error:countError}=await db.from("book_requests").select("id",{count:"exact",head:true}).eq("user_id",identity.id).gte("created_at",new Date(Date.now()-86400000).toISOString());
-  if(countError)throw new Error("Book requests are currently unavailable. Please use the email draft option or try again later.");
+  if(countError)throw new Error(bookRequestError(countError,'submit'));
   if((count||0)>=10)throw new Error("You have reached the daily request limit. Please try again tomorrow.");
   const message=data.bookTitle?requestMessageWithTitle(data.bookTitle,data.message):data.message;
   if(message.length>5000)throw new Error("Please shorten your message to leave room for the book title.");
   const {data:saved,error}=await db.from("book_requests").insert({user_id:identity.id,requester_name:data.name,verified_email:identity.email,message}).select("id,created_at").single();
-  if(error||!saved)throw new Error("Your request could not be saved. Please try again later.");
+  if(error||!saved)throw new Error(bookRequestError(error,'submit'));
   return {saved:true,id:String(saved.id),createdAt:String(saved.created_at)};
  });
 
@@ -30,7 +31,7 @@ export const listBookRequests = createServerFn({method:"POST"}).middleware([requ
   const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
   const db=supabaseAdmin as SupabaseClient;
   const {data:requests,count,error}=await db.from("book_requests").select("id,requester_name,verified_email,message,status,created_at",{count:"exact"}).order("created_at",{ascending:false}).order("id").range(data.page*25,data.page*25+24);
-  if(error)throw new Error("Requests could not be loaded. Check that the book requests database migration has been applied, then retry.");
+  if(error)throw new Error(bookRequestError(error,'list'));
   return {requests:(requests||[]).map(request=>({...request,book_title:requestBookTitle(request.message)})) as BookRequest[],total:count||0};
  });
 
@@ -40,6 +41,6 @@ export const reviewBookRequest = createServerFn({method:"POST"}).middleware([req
   const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
   const db=supabaseAdmin as SupabaseClient;
   const {data:updated,error}=await db.from("book_requests").update({status:data.status}).eq("id",data.id).select("id").maybeSingle();
-  if(error||!updated)throw new Error("The request could not be updated. Please retry.");
+  if(error||!updated)throw new Error(bookRequestError(error,'review'));
   return {saved:true};
  });
