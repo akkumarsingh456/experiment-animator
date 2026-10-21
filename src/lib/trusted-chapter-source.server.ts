@@ -6,7 +6,7 @@ const indexes=new Map<string,Promise<string>>();
 const identity=(text:string)=>text.replace(/^\s*(?:chapter|unit)\s*[-:]?\s*\d+\s*[-:]?\s*/i,'').replace(/\s*\((Physics|Chemistry|Biology)\)\s*$/i,'').toLowerCase().replace(/^the\s+/,'').replace(/[^a-z0-9]/g,'');
 const decode=(text:string)=>text.replace(/&#(x[0-9a-f]+|\d+);/gi,(_,n)=>String.fromCodePoint(Math.min(0x10ffff,n[0].toLowerCase()==='x'?parseInt(n.slice(1),16):Number(n)))).replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'");
 export function trustedChapterHtmlText(html:string){
- const start=html.search(/<(?:div|article)\b[^>]*(?:class=["'][^"']*\btd-content\b|id=["']content-section["'])/i);
+ const start=html.search(/<(?:div|article)\b[^>]*(?:class\s*=\s*(?:["'][^"']*\b(?:td-content|content-wrapper)\b|(?:td-content|content-wrapper)\b)|id\s*=\s*["']?content-section\b)/i);
  if(start<0)return '';
  return decode(html.slice(start).split(/<\/article>/i)[0].replace(/<(?:script|style|nav|aside|footer)\b[^>]*>[\s\S]*?<\/(?:script|style|nav|aside|footer)>/gi,' ').replace(/<annotation\b[^>]*encoding=["']application\/x-tex["'][^>]*>([\s\S]*?)<\/annotation>/gi,' $$$1$ ').replace(/<\/?(?:p|div|h[1-6]|li|br|section|article|tr)\b[^>]*>/gi,'\n').replace(/<[^>]*>/g,' ')).replace(/[ \t]+/g,' ').replace(/\n\s*\n/g,'\n').trim();
 }
@@ -32,8 +32,8 @@ export function trustedChapterSource(klass:string,subject:string,chapter:string)
    const g=grade.padStart(2,'0'),base=book==='science'?`${ORIGIN}/sathee-railway-exams/student-corner/ncert-books/class-${g}/nb-${book}-${g}/`:`${ORIGIN}/sathee-${book==='math'?'jee':'neet'}/ncert-books/${book==='math'?'jee':'neet'}-ncert-books/${book==='math'?'jee':'neet'}-nb-${book}-${g}/`;
    if(!indexes.has(base))indexes.set(base,read(base).then(value=>{if(!value)indexes.delete(base);return value;}));
    const index=await indexes.get(base)!;let url='';
-   for(const link of index.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)){
-    const target=new URL(decode(link[1]),base),label=decode(link[2].replace(/<[^>]*>/g,' ')).trim();
+   for(const link of index.matchAll(/<a\b[^>]*href\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a>/gi)){
+    const target=new URL(decode(link[1]||link[2]||link[3]),base),label=decode(link[4].replace(/<[^>]*>/g,' ')).trim();
     if(target.origin===ORIGIN&&target.pathname.startsWith(new URL(base).pathname)&&target.href!==base&&identity(label)===identity(chapter)){url=target.href;break;}
    }
    if(!url)return null;

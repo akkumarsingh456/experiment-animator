@@ -1541,7 +1541,7 @@ function fallbackVideo(topic: string, activities: Activity[]): { title: string; 
 /** Main lesson generation function — local NCERT-excerpt builder, no paid AI calls. */
 async function completeAttentionFallback(data:z.infer<typeof Input>,lessonKey:string):Promise<GenerationResult|null>{
   const {attentionLessonSelection}=await import('./attention-selection');
-  const requested=attentionLessonSelection(data);if(!requested)return null;
+  const requested=attentionLessonSelection(data,true);if(!requested)return null;
   const {recoverAttentionTopic,attentionFailureMessage}=await import('./attention-topic-notes.server');
   const slides:Slide[]=[],evidence:string[]=[];
   const recovered:Array<Awaited<ReturnType<typeof recoverAttentionTopic>>>=[];
@@ -1591,11 +1591,11 @@ export const generateLesson = createServerFn({ method: "POST" })
           // Rebuild cached quizzes with the current source-quality rules.
           const cached = hit.result as GenerationResult;
           let contentOnly = (cached.slides || []).filter((sl) => sl.kind !== "mcq" && !sl.teacher_revision);
-          const {isAttentionTopic}=await import('./attention-topic-scope');
+          const {canonicalOfficialRecoveryTopic}=await import('./official-recovery-scope');
           const {topicSourceComplete,recoverSparseTopicNotes}=await import('./sparse-topic-recovery.server');
           const damagedIndices=new Set(contentOnly.flatMap((slide,index)=>!isLanguageSubject(data.subject)&&!slide.teacher_pdf&&slide.sections?.some(section=>section.kind!=='diagram'&&section.lines.some(line=>sourceExtractionIssue(line)))?[index]:[]));
           contentOnly=contentOnly.map((slide,index)=>damagedIndices.has(index)?{...slide,sections:quarantineExtractionSections(slide.sections)}:slide);
-          const repairIndices=contentOnly.flatMap((slide,index)=>(damagedIndices.has(index)||isAttentionTopic({klass:data.klass,subject:data.subject,chapter:data.chapter||data.topic,topic:slide.title}))&&!topicSourceComplete(slide)?[index]:[]);
+          const repairIndices=contentOnly.flatMap((slide,index)=>(damagedIndices.has(index)||canonicalOfficialRecoveryTopic({klass:data.klass,subject:data.subject,chapter:data.chapter||data.topic,topic:slide.title}))&&!topicSourceComplete(slide)?[index]:[]);
           if(repairIndices.length){
             const repaired=await recoverSparseTopicNotes(repairIndices.map(index=>contentOnly[index]),{klass:data.klass,subject:data.subject,chapter:data.chapter||data.topic,sources:contentOnly.map(slide=>slide.grounding||slide.chapter_text||'')});
             contentOnly=contentOnly.map((slide,index)=>{const at=repairIndices.indexOf(index);return at<0?slide:repaired.slides[at];});

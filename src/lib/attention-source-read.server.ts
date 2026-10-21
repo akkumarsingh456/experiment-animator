@@ -1,5 +1,7 @@
 import registry from './attention-source-registry.json';
-import {canonicalAttentionTopic,type AttentionScope} from './attention-topic-scope';
+import type {AttentionScope} from './attention-topic-scope';
+import {canonicalOfficialRecoveryTopic} from './official-recovery-scope';
+import {trustedChapterSource} from './trusted-chapter-source.server';
 
 export type AttentionSource={url:string;title:string;sourceClass:string;provider:string};
 export type ReadAttentionSource=AttentionSource&{text:string};
@@ -22,7 +24,11 @@ async function download(url:string){
  let target=url;
  for(let redirect=0;redirect<3;redirect++){
   if(!approvedAttentionUrl(target))return null;
-  const response=await fetch(target,{signal:AbortSignal.timeout(20000),redirect:'manual'});
+  let response:Response|undefined;
+  for(let attempt=0;attempt<3;attempt++){
+   try{response=await fetch(target,{signal:AbortSignal.timeout(20000),redirect:'manual'});if(response.status!==429&&response.status<500)break;await response.body?.cancel();response=undefined;}catch{response=undefined;}
+  }
+  if(!response)return null;
   if(response.status>=300&&response.status<400){const location=response.headers.get('location');if(!location)return null;target=new URL(location,target).href;continue;}
   if(!response.ok||!response.body)return null;
   const max=25_000_000;if(Number(response.headers.get('content-length'))>max)return null;
@@ -34,7 +40,7 @@ async function download(url:string){
  return null;
 }
 export function attentionSourceBindings(input:AttentionScope):AttentionSource[]{
- const canonical=canonicalAttentionTopic(input);if(!canonical)return [];
+ const canonical=canonicalOfficialRecoveryTopic(input);if(!canonical)return [];
  return registry.find(row=>row.klass===canonical.klass&&row.subject===canonical.subject&&row.chapter===canonical.chapter)?.sources.filter(source=>approvedAttentionUrl(source.url)&&(source.sourceClass==='general'||Number(source.sourceClass)<=Number(canonical.klass)))||[];
 }
 export function readAttentionSource(source:AttentionSource){
@@ -55,7 +61,10 @@ export function readAttentionSource(source:AttentionSource){
  return pending.get(source.url)!;
 }
 export async function readAttentionSources(input:AttentionScope){
- if(!canonicalAttentionTopic(input))return [];
+ const canonical=canonicalOfficialRecoveryTopic(input);if(!canonical)return [];
  const results=await Promise.all(attentionSourceBindings(input).map(readAttentionSource));
- return results.filter((value):value is ReadAttentionSource=>!!value);
+ const readable=results.filter((value):value is ReadAttentionSource=>!!value);
+ if(readable.length)return readable;
+ const mirror=await trustedChapterSource(canonical.klass,canonical.subject,canonical.chapter);
+ return mirror?[{...mirror,title:canonical.chapter,sourceClass:canonical.klass,provider:'IIT Kanpur SATHEE NCERT mirror'}]:[];
 }

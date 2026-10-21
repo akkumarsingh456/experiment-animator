@@ -1,9 +1,10 @@
 import {canonicalAttentionTopic,attentionChapterTopics,type AttentionScope} from './attention-topic-scope';
 import {subtopicsFor} from './ncert-syllabus';
+import {canonicalOfficialRecoveryTopic} from './official-recovery-scope';
 
 /** A source-less lesson may use online material only when every requested
  * topic is explicitly authorised. Never omit or substitute other topics. */
-export function attentionLessonSelection(input:{klass:string;subject:string;chapter?:string;topic:string;subtopics?:string;mode?:string}):AttentionScope[]|null{
+export function attentionLessonSelection(input:{klass:string;subject:string;chapter?:string;topic:string;subtopics?:string;mode?:string},failedCatalogRecovery=false):AttentionScope[]|null{
  if(input.mode==='chapter')return null;
  const suppliedChapter=input.chapter||input.topic;
  const chapterScope=attentionChapterTopics({klass:input.klass,subject:input.subject,chapter:suppliedChapter});
@@ -21,9 +22,10 @@ export function attentionLessonSelection(input:{klass:string;subject:string;chap
  while(remaining){const title=catalog.find(title=>remaining.slice(0,title.length).toLowerCase()===title.toLowerCase()&&/^\s*(?:[,;\n]|$)/.test(remaining.slice(title.length)));if(!title)break;if(!exact.includes(title))exact.push(title);remaining=remaining.slice(title.length).replace(/^[\s,;]+/,'');}
  const chosen=exact.length&&!remaining?exact:selected;
  const scope={klass,subject:input.subject,chapter};
- const single=canonicalAttentionTopic({...scope,topic:input.topic});
+ const canonical=failedCatalogRecovery?canonicalOfficialRecoveryTopic:canonicalAttentionTopic;
+ const single=canonical({...scope,topic:input.topic});
  const titles=chosen.length?chosen:single?[single.topic]:subtopicsFor(klass,input.subject,chapter);
  if(!titles.length)return null;
- const result=titles.map(topic=>canonicalAttentionTopic({...scope,topic}));
+ const result=titles.map(topic=>canonical({...scope,topic}));
  return result.every((row):row is NonNullable<typeof row>=>!!row)?result:null;
 }

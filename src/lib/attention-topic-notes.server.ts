@@ -1,4 +1,4 @@
-import {canonicalAttentionTopic,type AttentionScope} from './attention-topic-scope';
+import type {AttentionScope} from './attention-topic-scope';
 import {readAttentionSources,attentionSourceBindings,type ReadAttentionSource} from './attention-source-read.server';
 import {recoverTopicFromSources,adequateTopicEvidence} from './topic-source-recovery';
 import {buildLocalSections,type NoteSection} from './ncert-teacher-notes';
@@ -8,6 +8,8 @@ import {notesQualityPolicy} from './notes-quality-policy';
 import {learningProfile} from './learning-design';
 import type {Slide} from './generate.functions';
 import {createHash} from 'crypto';
+import {canonicalOfficialRecoveryTopic} from './official-recovery-scope';
+import {verifiedNcertRecovery} from './verified-ncert-recovery';
 
 type EvidenceNote={heading:string;text:string;evidence:Array<{source:number;quote:string}>};
 type Draft={topic_present:boolean;notes:EvidenceNote[]};
@@ -62,7 +64,16 @@ export function supportedAttentionDraft(draft:Draft,sources:ReadAttentionSource[
  return {sections,grounding:evidence.join('\n\n'),sources:[...used].map(i=>({url:sources[i].url,title:sources[i].title,sourceClass:sources[i].sourceClass})),method:'source-grounded-explanation' as const};
 }
 async function writeAttentionTopic(input:AttentionScope):Promise<AttentionNotes|null>{
- const canonical=canonicalAttentionTopic(input);if(!canonical)return null;
+ const canonical=canonicalOfficialRecoveryTopic(input);if(!canonical)return null;
+ const snapshot=verifiedNcertRecovery(canonical.klass,canonical.subject,canonical.chapter,canonical.topic);
+ if(snapshot){
+  const recovered=recoverTopicFromSources(canonical.topic,[snapshot.text]);
+  if(recovered.complete){
+   const grounding=recovered.lines.join('\n');
+   const sections=buildLocalSections({title:canonical.topic,kind:'content',visual:'book',bullets:[],notes:[],key_terms:[],grounding} as Slide);
+   if(adequateTopicEvidence(canonical.topic,sections.flatMap(section=>section.lines)))return {sections,grounding,sources:[{url:snapshot.url,title:canonical.chapter,sourceClass:canonical.klass}],method:'source-extraction'};
+  }
+ }
  const saved=await persistedAttention(canonical);if(saved)return saved;
  const sources=await readAttentionSources(canonical);if(!sources.length)return null;
  // Keep source-backed deterministic notes available without requiring AI.
@@ -96,19 +107,25 @@ async function writeAttentionTopic(input:AttentionScope):Promise<AttentionNotes|
  ].join('\n');
  const schema={type:'object',additionalProperties:false,required:['topic_present','notes'],properties:{topic_present:{type:'boolean'},notes:{type:'array',maxItems:12,items:{type:'object',additionalProperties:false,required:['heading','text','evidence'],properties:{heading:{type:'string',enum:['Explanation','Important points','Key terms','Formula','Worked example','Summary']},text:{type:'string'},evidence:{type:'array',items:{type:'object',additionalProperties:false,required:['source','quote'],properties:{source:{type:'integer'},quote:{type:'string'}}}}}}}}};
  let draft=await gatewayJSON<Draft>({schemaName:'targeted_official_topic_notes',prompt,reasoningEffort:'medium',schema});
+ let notes=draft?supportedAttentionDraft(draft,sources,canonical.topic):null;
+ // Valid JSON is not necessarily supported notes. Retry failed evidence checks,
+ // then try the other existing provider rather than stopping on a bad draft.
+ if(!notes&&draft&&hasGatewayKey()){
+  draft=await gatewayJSON<Draft>({schemaName:'targeted_official_topic_notes_retry',prompt:prompt+'\nThe previous draft did not pass source checks. Use complete exact source quotations, correct source indices and at least three distinct source-supported explanations. Do not invent material to meet the minimum.',reasoningEffort:'medium',schema});
+  notes=draft?supportedAttentionDraft(draft,sources,canonical.topic):null;
+ }
  // Reuse the same configured providers as the existing teacher-note writer.
- if(!draft&&process.env.GROQ_API_KEY){
+ if(!notes&&process.env.GROQ_API_KEY){
   try{
    const response=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',signal:AbortSignal.timeout(45000),headers:{'Content-Type':'application/json',Authorization:`Bearer ${process.env.GROQ_API_KEY}`},body:JSON.stringify({model:'openai/gpt-oss-120b',messages:[{role:'user',content:prompt+'\nReturn a JSON object matching this schema: '+JSON.stringify(schema)}],response_format:{type:'json_object'}})});
-   if(response.ok){const body=await response.json() as {choices?:Array<{message?:{content?:string}}>};const content=body.choices?.[0]?.message?.content;if(content)draft=JSON.parse(content.replace(/^```(?:json)?\s*|\s*```$/g,'')) as Draft;}
+   if(response.ok){const body=await response.json() as {choices?:Array<{message?:{content?:string}}>};const content=body.choices?.[0]?.message?.content;if(content){draft=JSON.parse(content.replace(/^```(?:json)?\s*|\s*```$/g,'')) as Draft;notes=supportedAttentionDraft(draft,sources,canonical.topic);}}
   }catch{/* No unverified text is returned when the provider is unavailable. */}
  }
- const notes=draft?supportedAttentionDraft(draft,sources,canonical.topic):null;
  if(notes)await persistedAttention(canonical,notes);
  return notes;
 }
 export function recoverAttentionTopic(input:AttentionScope){
- const canonical=canonicalAttentionTopic(input);if(!canonical)return Promise.resolve(null);
+ const canonical=canonicalOfficialRecoveryTopic(input);if(!canonical)return Promise.resolve(null);
  const key=JSON.stringify(canonical);
  if(!pending.has(key))pending.set(key,writeAttentionTopic(canonical).then(result=>{if(!result)pending.delete(key);return result;}).catch(()=>{pending.delete(key);return null;}));
  while(pending.size>128)pending.delete(pending.keys().next().value!);

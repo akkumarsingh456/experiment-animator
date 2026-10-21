@@ -1,5 +1,11 @@
 # Online supplements for the flagged topics only
 
+> Updated permission: the user's subsequent request explicitly authorises
+> official-source recovery for other configured topics when NCERT recovery
+> fails. `official-recovery-scope.ts` implements that separate failed-topic gate.
+> The historical 401-topic list and successful-generation selection path are
+> unchanged. See `audits/2026-10-21-official-recovery-fix.md` for current behaviour.
+
 ## Permission boundary
 
 The 401 selections marked **Still needs attention** in the user's filtered

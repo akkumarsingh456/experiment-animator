@@ -4,8 +4,8 @@ import type {Slide} from './generate.functions';
 import {trustedChapterSource} from './trusted-chapter-source.server';
 import {sourceUnavailable} from './secondary-study-evidence';
 import {recoverAttentionTopic,attentionFailureMessage} from './attention-topic-notes.server';
-import {isAttentionTopic} from './attention-topic-scope';
 import {verifiedNcertRecovery} from './verified-ncert-recovery';
+import {canonicalOfficialRecoveryTopic} from './official-recovery-scope';
 
 export function topicSourceComplete(slide:Slide,verbatim=false){
  if(slide.teacher_pdf||!['content','chapter'].includes(slide.kind||'content'))return true;
@@ -27,11 +27,11 @@ export async function recoverSparseTopicNotes(slides:Slide[],options:{klass:stri
    const trusted=await trustedChapterSource(options.klass,options.subject,options.chapter);
    if(trusted){const remote=recoverTopicFromSources(slide.title,[trusted.text]);if(remote.complete){recovery=remote;sourceUrl=trusted.url;}}
   }
-  // Online supplementation is restricted to the frozen report allowlist and
-  // is tried only after the existing NCERT recovery has failed.
+  // Official supplementation is tried only after existing NCERT recovery
+  // fails, for the exact configured class, subject, chapter and topic.
   const attention=!recovery.complete&&!options.verbatim?await recoverAttentionTopic({...options,topic:slide.title}):null;
   if(!recovery.complete&&!attention){
-   if(!options.verbatim&&isAttentionTopic({...options,topic:slide.title}))throw new Error(attentionFailureMessage(slide.title));
+   if(!options.verbatim&&canonicalOfficialRecoveryTopic({...options,topic:slide.title}))throw new Error(attentionFailureMessage(slide.title));
    throw new Error(`Study notes for “${slide.title}” remain incomplete after three NCERT recovery strategies and an authoritative chapter-source check. The lesson was not saved with an empty topic. Add clearer matching Class ${options.klass} ${options.subject} chapter pages and retry.`);
   }
   if(attention)sourceUrl=attention.sources[0]?.url||'';
