@@ -175,18 +175,71 @@ it("automatically displays readable text previews and imports the selected resul
   await act(async () => root.unmount());
 });
 
-it('previews AI important points without replacing the teacher draft until import',async()=>{
- const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
- await act(async()=>root.render(<MissingTopicNotes slide={slide} klass="12" subject="Chemistry" chapter="Chapter 5: Coordination Compounds" onSaved={()=>{}}/>));
- await act(async()=>host.querySelector<HTMLButtonElement>('button')!.click());
- const popup=document.querySelector('[role="dialog"]')!;
- const original=popup.querySelector('textarea')!.value;
- expect(popup.querySelector('[aria-label="AI supplement for missing topic"]')?.textContent).not.toContain('AI draft important point for review.');
- await act(async()=>Array.from(popup.querySelectorAll('button')).find(button=>button.textContent==='Draft AI important points')!.click());
- expect(popup.querySelector('textarea')!.value).toBe(original);
- const supplement=popup.querySelector('[aria-label="AI supplement for missing topic"]')!;
- expect(supplement.textContent).toContain('AI draft important point for review.');
- await act(async()=>Array.from(supplement.querySelectorAll('button')).find(button=>button.textContent==='Import these notes')!.click());
- expect(popup.querySelector('textarea')!.value).toBe('AI draft important point for review.');
- await act(async()=>root.unmount());host.remove();
+it("previews AI important points without replacing the teacher draft until import", async () => {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  await act(async () =>
+    root.render(
+      <MissingTopicNotes
+        slide={slide}
+        klass="12"
+        subject="Chemistry"
+        chapter="Chapter 5: Coordination Compounds"
+        onSaved={() => {}}
+      />,
+    ),
+  );
+  await act(async () => host.querySelector<HTMLButtonElement>("button")!.click());
+  const popup = document.querySelector('[role="dialog"]')!;
+  const original = popup.querySelector("textarea")!.value;
+  expect(
+    popup.querySelector('[aria-label="AI supplement for missing topic"]')?.textContent,
+  ).not.toContain("AI draft important point for review.");
+  await act(async () =>
+    Array.from(popup.querySelectorAll("button"))
+      .find((button) => button.textContent === "Draft AI important points")!
+      .click(),
+  );
+  expect(popup.querySelector("textarea")!.value).toBe(original);
+  const supplement = popup.querySelector('[aria-label="AI supplement for missing topic"]')!;
+  expect(supplement.textContent).toContain("AI draft important point for review.");
+  await act(async () =>
+    Array.from(supplement.querySelectorAll("button"))
+      .find((button) => button.textContent === "Import these notes")!
+      .click(),
+  );
+  expect(popup.querySelector("textarea")!.value).toBe("AI draft important point for review.");
+  await act(async () => root.unmount());
+  host.remove();
+});
+
+it("offers Add blank slide only when the recovery host provides that action", async () => {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host),
+    add = vi.fn();
+  await act(async () =>
+    root.render(
+      <MissingTopicNotes
+        slide={slide}
+        klass="12"
+        subject="Chemistry"
+        chapter="Chapter 5: Coordination Compounds"
+        onSaved={() => {}}
+        onAddBlankSlide={add}
+      />,
+    ),
+  );
+  await act(async () => host.querySelector<HTMLButtonElement>("button")!.click());
+  const popup = document.querySelector('[role="dialog"]')!;
+  await act(async () =>
+    Array.from(popup.querySelectorAll("button"))
+      .find((button) => button.textContent === "Add blank slide")!
+      .click(),
+  );
+  expect(add).toHaveBeenCalledOnce();
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  await act(async () => root.unmount());
+  host.remove();
 });

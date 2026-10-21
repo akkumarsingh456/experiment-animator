@@ -16,6 +16,7 @@ import type { Slide } from "@/lib/generate.functions";
 
 type Props = {
   compact?: boolean;
+  onAddBlankSlide?: () => void;
   slide: Slide;
   klass: string;
   subject: string;
@@ -24,6 +25,7 @@ type Props = {
 };
 export function MissingTopicNotes({
   compact = false,
+  onAddBlankSlide,
   slide,
   klass,
   subject,
@@ -308,6 +310,20 @@ export function MissingTopicNotes({
                   <Button variant="outline" disabled={busy} onClick={draftImportantPoints}>
                     Draft AI important points
                   </Button>
+                  {onAddBlankSlide && (
+                    <Button
+                      className="ml-2"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => {
+                        onAddBlankSlide();
+                        setOpen(false);
+                      }}
+                    >
+                      Add blank slide
+                    </Button>
+                  )}
+
                   {!!aiPoints.length && (
                     <TopicTextPreview
                       lines={aiPoints}

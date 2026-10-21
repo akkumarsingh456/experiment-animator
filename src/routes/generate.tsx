@@ -1,3 +1,4 @@
+import {addBlankTeacherSlide} from "@/lib/blank-teacher-slide";
 import {MissingTopicNotes} from '@/components/MissingTopicNotes';
 import {exactSlideVisualId} from "@/lib/exact-slide-visual";
 import {orderTopicSections} from "@/lib/topic-lecture-order";
@@ -304,9 +305,15 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     return [makeCoverSlide(), ...withPhysicsFormulaReference(repaired, search.klass, search.subject, search.chapter || title).map(slide => mathematicsPresentationSlide(slide, result.source_books[0]?.subject || search.subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(slide.sections, search.subject || "", search.chapter || slide.title)}))];
   };
   const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
+  const blankSlideToShow=useRef<string|null>(null);
+  function addRecoverySlide(topicTitle:string){
+    const added=addBlankTeacherSlide(slides,topicTitle);if(added.index<0)return;
+    blankSlideToShow.current=added.slides[added.index].title;
+    setSlides(added.slides);setActiveIdx(added.index);setLessonView('slides');setEditing(true);setPresenting(false);
+  }
   function renderTopicRecovery(topicTitle:string){
     const slide=slides.find(item=>item.topic_recovery&&item.title.trim()===topicTitle.trim());
-    return slide?<MissingTopicNotes compact key={slide.title} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onSaved={updated=>setSlides(current=>current.map(item=>item.title===slide.title&&item.topic_recovery?{...item,sections:updated.sections,topic_recovery:updated.topic_recovery}:item))}/>:null;
+    return slide?<MissingTopicNotes onAddBlankSlide={()=>addRecoverySlide(slide.title)} compact key={slide.title} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onSaved={updated=>setSlides(current=>current.map(item=>item.title===slide.title&&item.topic_recovery?{...item,sections:updated.sections,topic_recovery:updated.topic_recovery}:item))}/>:null;
   }
 
   useEffect(()=>{const refresh=()=>setSlides(current=>[...current]);window.addEventListener('manual-visual-saved',refresh);void loadManualVisuals().catch(()=>{});return()=>window.removeEventListener('manual-visual-saved',refresh);},[]);
@@ -615,6 +622,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const layoutGroups=useMemo(()=>layoutPlan?.key===baselineLayoutKey?layoutPlan.groups:baseOriginalPages.map((_,index)=>[index]),[baselineLayoutKey,layoutPlan]);
   const originalPages=useMemo(()=>materializeLayout(baseOriginalPages,layoutGroups),[baseOriginalPages,layoutGroups]);
   const displayLayoutKey=useMemo(()=>layoutKey(originalPages),[originalPages]);
+  useEffect(()=>{if(!blankSlideToShow.current)return;const page=originalPages.findIndex(slide=>slide.title===blankSlideToShow.current);if(page>=0){setOriginalPage(page);blankSlideToShow.current=null;}},[originalPages]);
+
   useEffect(()=>setOriginalPage(current=>Math.min(current,Math.max(0,originalPages.length-1))),[originalPages.length]);
   const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, section: "NCERT notes & illustration",
     content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} onNotesOverflow={continueOverflowingNotes} staticView />,
@@ -781,7 +790,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               /> : <GuidedNotesPresentation renderTopicRecovery={renderTopicRecovery} inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={originalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("slides")} />}
             </div>
 
-            {((lessonView==="notes"&&guidedDisplay==="page")||editing)&&slides.filter(slide=>slide.topic_recovery).map(slide=><MissingTopicNotes key={slide.title} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onSaved={updated=>setSlides(current=>current.map(item=>item.title===slide.title&&item.topic_recovery?{...item,sections:updated.sections,topic_recovery:updated.topic_recovery}:item))}/>)}
+            {((lessonView==="notes"&&guidedDisplay==="page")||editing)&&slides.filter(slide=>slide.topic_recovery).map(slide=><MissingTopicNotes onAddBlankSlide={()=>addRecoverySlide(slide.title)} key={slide.title} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onSaved={updated=>setSlides(current=>current.map(item=>item.title===slide.title&&item.topic_recovery?{...item,sections:updated.sections,topic_recovery:updated.topic_recovery}:item))}/>)}
             <details className="lesson-presentation-checks mt-4 rounded-xl border border-border/60 bg-card/60 print:hidden">
               <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-medium">
                 <span>Lesson checks <span className="ml-2 text-xs font-normal text-muted-foreground">Sources, visuals and figure references</span></span>
