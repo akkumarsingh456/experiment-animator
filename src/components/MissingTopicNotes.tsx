@@ -1,4 +1,4 @@
-import { MathText } from "@/components/MathText";
+import { TopicTextPreview } from "@/components/TopicTextPreview";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -93,7 +93,10 @@ export function MissingTopicNotes({
       setBusy(false);
     }
   }
-  function changePopup(value:boolean){setOpen(value);if(value)void find();}
+  function changePopup(value: boolean) {
+    setOpen(value);
+    if (value) void find();
+  }
   async function preserve() {
     setBusy(true);
     setNotice("");
@@ -145,10 +148,7 @@ export function MissingTopicNotes({
       >
         Teacher notes / Google search
       </Button>
-      <Dialog
-        open={open}
-        onOpenChange={changePopup}
-      >
+      <Dialog open={open} onOpenChange={changePopup}>
         <DialogPrimitive.Portal
           container={
             typeof document !== "undefined"
@@ -252,29 +252,20 @@ export function MissingTopicNotes({
                               saving.
                             </p>
                           )}
-                          <ol
-                            className="my-3 max-h-80 select-text list-decimal space-y-2 overflow-y-auto pl-5"
-                            aria-label="Source notes preview"
-                          >
-                            {item.lines.map((line, index) => (
-                              <li key={index}>
-                                <MathText text={line} subject={subject} />
-                              </li>
-                            ))}
-                          </ol>
-                          <Button
+                          <TopicTextPreview
+                            key={JSON.stringify(item.lines)}
+                            lines={item.lines}
+                            subject={subject}
                             disabled={busy}
-                            onClick={() => {
-                              setText(item.lines.join("\n"));
+                            onImport={(passages, wholePassage) => {
+                              setText(passages.join("\n"));
                               setUrl(item.url);
-                              setOfficial(item.complete !== false);
+                              setOfficial(item.complete !== false && wholePassage);
                               try {
-                                localStorage.setItem(draftKey, item.lines.join("\n"));
+                                localStorage.setItem(draftKey, passages.join("\n"));
                               } catch {}
                             }}
-                          >
-                            Import these notes
-                          </Button>
+                          />
                         </>
                       ) : (
                         <p className="mt-2 text-sm">
