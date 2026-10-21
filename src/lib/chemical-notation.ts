@@ -15,11 +15,19 @@ const species = new RegExp(
   String.raw`(?<![A-Za-z0-9_\\])\d*(?:${atom}|${round}|${square})+(?:\^\d*[+−-](?!>)|[+−-](?!>))?(?![A-Za-z0-9_])`,
   "g",
 );
+const subscriptDigits='₀₁₂₃₄₅₆₇₈₉',superscriptDigits='⁰¹²³⁴⁵⁶⁷⁸⁹';
+const explicitCompounds=[
+ 'H2SO4','H2SO3','HNO3','HNO2','H3PO4','H2CO3','H2O2','Na2CO3','NaHCO3','Na2SO4','Na2SO3','NaNO3','KNO3','K2SO4','KMnO4','K2Cr2O7','K2CrO4','MnO2','Cr2O3','Fe2O3','Fe3O4','FeSO4','CuSO4','CuSO4.5H2O','CaCO3','CaCl2','Ca(OH)2','CaSO4','MgCl2','Mg(OH)2','Al2(SO4)3','NH4Cl','(NH4)2SO4','AgNO3','Pb(NO3)2','BaCl2','C6H12O6','C12H22O11','CH3COOH','CH3CH2OH','C2H5OH','C2H6','C2H4','C2H2','C6H6','C6H5OH','C6H5NH2','CH3CHO','CH3COCH3','CH3COOC2H5',
+ 'As2O5','SeO3','In2O3','SnO2','Sb2O3','Sb2O5','TeO3','PbO2','Bi2O3','B2H6','CH4','NH3','H2O','CaH2','AlH3','SiH4','PH3','H2S','GeH4','AsH3','H2Se','SnH4','SbH3','H2Te','Li2O','B2O3','CO2','N2O3','N2O5','Na2O','Al2O3','SiO2','P4O6','P4O10','SO3','Cl2O7','K2O','Ga2O3','GeO2',
+];
+const spacedCompoundPattern=new RegExp(`(?<![A-Za-z0-9])(?:${explicitCompounds.sort((a,b)=>b.length-a.length).map(formula=>(formula.match(/[A-Z][a-z]?|\d+|[().]/g)||[]).map(token=>token.replace(/[().]/g,'\\$&')).join('\\s*')).join('|')})(?![A-Za-z0-9])`,'g');
 
 /** Render a recognised written formula only. Never infer a lost charge, isotope,
  * atom count, reagent or reaction. Uncertain OCR and existing LaTeX stay intact.
  */
 export function chemicalSpeciesLatex(raw: string): string | null {
+  raw=raw.replace(/[₀-₉]/g,char=>String(subscriptDigits.indexOf(char)))
+    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]*[⁺⁻]$/u,charge=>'^'+charge.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g,char=>String(superscriptDigits.indexOf(char))).replace('⁺','+').replace('⁻','-'));
   if (!/[\d+−-]/.test(raw) || !/^[A-Za-z0-9()[\]^+−-]+$/.test(raw)) return null;
   if (/^\d+[A-Z][a-z]?$/.test(raw)) return null;
   if (/^[A-Z][a-z]?\d+$/.test(raw) && !/^(?:H2|N2|O2|O3|F2|Cl2|Br2|I2|P4|S8|C60|C70)$/.test(raw))
@@ -48,10 +56,12 @@ export function chemicalSpeciesLatex(raw: string): string | null {
 function spacedChemistry(text: string): string {
   // Explicit, recognisable compound spellings only. Never join arbitrary
   // element/number columns (for example Li 152 or Be 111) into formulas.
-  const compounds=['As2O5','SeO3','In2O3','SnO2','Sb2O3','Sb2O5','TeO3','PbO2','Bi2O3','B2H6','CH4','NH3','H2O','CaH2','AlH3','SiH4','PH3','H2S','GeH4','AsH3','H2Se','SnH4','SbH3','H2Te','Li2O','B2O3','CO2','N2O3','N2O5','Na2O','Al2O3','SiO2','P4O6','P4O10','SO3','Cl2O7','K2O','Ga2O3','GeO2'];
-  const patterns=compounds.sort((a,b)=>b.length-a.length).map(formula=>(formula.match(/[A-Z][a-z]?|\d+/g)||[]).join('\\s*'));
-  const explicit=new RegExp(`(?<![A-Za-z0-9])(?:${patterns.join('|')})(?![A-Za-z0-9])`,'g');
-  return text.replace(explicit,token=>`$\\ce{${token.replace(/\s/g,'')}}$`)
+  return text.replace(spacedCompoundPattern,(token,offset:number,whole:string)=>{
+    if(!/\s/.test(token))return token;
+    // A following charge belongs to the complete species; never separate it.
+    if(/^[\^+−-]/.test(whole.slice(offset+token.length)))return token;
+    return `$\\ce{${token.replace(/\s/g,'')}}$`;
+  })
     .replace(/\(\s*H\s*3\s*C\s*\)\s*2\s*CH\s*[-–]\s*CH\s*2\b/g,
       () => String.raw`$\ce{(H3C)2CH-CH2}$`)
     .replace(/\b(CH|NH|OH)\s+([234])\b/g, (_, group, count) =>
@@ -60,8 +70,12 @@ function spacedChemistry(text: string): string {
       `$\\mathrm{${unit}}\\,\\mathrm{mol}^{-1}$`);
 }
 function plainChemistry(text: string): string {
+  text=text.replace(/(?<![A-Za-z0-9])(?:[A-Z][a-z]?[₀-₉0-9]*)+(?:[⁰¹²³⁴⁵⁶⁷⁸⁹]*[⁺⁻])?(?![A-Za-z0-9])/gu,token=>{
+    if(!/[₀-₉⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]/u.test(token))return token;
+    const notation=chemicalSpeciesLatex(token);return notation?`$${notation}$`:token;
+  });
   // Orbital occupancies and hybridisation labels have independent meanings.
-  const orbital = spacedChemistry(text)
+  const orbital = splitMath(text).map(part=>part.type==='text'?spacedChemistry(part.value):`$${part.value}$`).join('')
     .replace(/\b([1-7])\s*([spdf])\s*(\d{1,2})\b/g, (original, shell, letter, count) => {
       const cap: Record<string, number> = { s: 2, p: 6, d: 10, f: 14 };
       return Number(count) <= cap[letter] ? `$${shell}${letter}^{${count}}$` : original;

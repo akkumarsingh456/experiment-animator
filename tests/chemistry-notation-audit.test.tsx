@@ -1,5 +1,4 @@
 import { chaptersFor } from "@/lib/ncert-syllabus";
-import { isPhysicalChemistryChapter } from "@/lib/physical-chemistry-revision";
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MathText } from "@/components/MathText";
@@ -19,6 +18,29 @@ const slide = (heading: string, lines: string[]): Slide => ({
   sections: [{ heading, kind: "bullets", lines }],
 });
 describe("Organic and Inorganic Chemistry presentation audit", () => {
+  it.each(['H₂SO₄','SO₄²⁻','NH₄⁺','Fe³⁺','Cl⁻','O²⁻','Ca²⁺','Na₂CO₃'])('renders explicit Unicode counts and charges in %s',source=>{
+    const result=chemicalTextNotation(source);
+    expect(result).toContain('\\ce{');
+    expect(chemicalTextNotation(result)).toBe(result);
+    const html=renderToStaticMarkup(<MathText subject="Chemistry" text={source}/>);
+    expect(html).toContain('katex');expect(html).not.toContain('katex-error');
+  });
+  it.each(['H 2 SO 4','Na 2 CO 3','NaHCO 3','Ca (OH) 2','Al 2 (SO 4) 3','K 2 Cr 2 O 7','C 6 H 12 O 6','CH 3 COOH'])('formats explicit school-level compound spacing in %s',source=>{
+    const displayed=chemicalTextNotation(source);
+    expect(displayed).toContain('\\ce{'+source.replace(/\s/g,'')+'}');
+    expect(chemicalTextNotation(displayed)).toBe(displayed);
+    expect(renderToStaticMarkup(<MathText subject="Science" text={source}/>)).not.toContain('katex-error');
+  });
+  it('preserves element symbol capitalisation, atomic data and authored isotope positions',()=>{
+    for(const text of ['Na Mg Al Cl Fe Co Ni Cu Zn','As a result, In this case.','Li 152 Be 111','14 6 C',String.raw`$^{14}_{6}\mathrm{C}$`])expect(chemicalTextNotation(text)).toBe(text);
+    expect(chemicalTextNotation('NH4+')).toContain('\\ce{NH4+}');
+    expect(chemicalTextNotation('CH4+')).toContain('\\ce{CH4+}');
+  });
+  it('preserves all 118 element symbols without converting prose into chemical notation',()=>{
+    const symbols='H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og'.split(' ');
+    expect(symbols).toHaveLength(118);
+    for(const symbol of symbols)expect(chemicalTextNotation(symbol)).toBe(symbol);
+  });
   it.each([
     ["Fe3+", "Fe^{3+}"],
     ["NH4+", "NH_{4}^{+}"],
@@ -154,14 +176,14 @@ describe("Organic and Inorganic Chemistry presentation audit", () => {
       expect(html).not.toContain("katex-error");
     }
   });
-  const chapters = ["11", "12"].flatMap((klass) =>
-    chaptersFor(klass, "Chemistry")
-      .filter((item) => !isPhysicalChemistryChapter(klass, "Chemistry", item.chapter))
-      .map((item) => ({ klass, chapter: item.chapter })),
+  const chapters = ["9", "10", "11", "12"].flatMap((klass) =>
+    chaptersFor(klass, Number(klass)<11?"Science":"Chemistry")
+      .filter((item) => Number(klass)>=11||/\(Chemistry\)/.test(item.chapter))
+      .map((item) => ({ klass, chapter: item.chapter,subject:Number(klass)<11?'Science':'Chemistry' })),
   );
   it.each(chapters)(
     "$klass $chapter retains original notes and supports chemistry notation",
-    ({ klass, chapter }) => {
+    ({ klass, chapter, subject }) => {
       const original = slide("Teacher Notes", [
         "**Key point:** Existing explanation stays unchanged.",
         "**Key point:** Existing explanation stays unchanged.",
@@ -170,7 +192,7 @@ describe("Organic and Inorganic Chemistry presentation audit", () => {
       const before = JSON.stringify(original);
       const shown = polishChemistryPresentation(original, "Chemistry");
       const html = renderToStaticMarkup(
-        <GuidedLessonNotes slides={[shown]} title={chapter} klass={klass} subject="Chemistry" />,
+        <GuidedLessonNotes slides={[shown]} title={chapter} klass={klass} subject={subject} />,
       );
       expect(html).not.toContain("katex-error");
       expect(html).toContain("Existing explanation stays unchanged.");
