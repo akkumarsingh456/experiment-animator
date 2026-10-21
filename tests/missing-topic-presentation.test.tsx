@@ -2,6 +2,12 @@ import { it, expect, vi, afterEach } from "vitest";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 const search = vi.hoisted(() => vi.fn(async () => [] as any[]));
+vi.mock("@/lib/missing-topic-ai.functions", () => ({
+  draftMissingTopicPoints: async () => ({
+    lines: ["AI draft important point for review."],
+    sources: [],
+  }),
+}));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
 vi.mock("@/lib/topic-notes.functions", () => ({
   readMissingTopicNotes: async () => null,
@@ -167,4 +173,20 @@ it("automatically displays readable text previews and imports the selected resul
     "Primary valencies are normally ionisable.\nSecondary valencies",
   );
   await act(async () => root.unmount());
+});
+
+it('previews AI important points without replacing the teacher draft until import',async()=>{
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
+ await act(async()=>root.render(<MissingTopicNotes slide={slide} klass="12" subject="Chemistry" chapter="Chapter 5: Coordination Compounds" onSaved={()=>{}}/>));
+ await act(async()=>host.querySelector<HTMLButtonElement>('button')!.click());
+ const popup=document.querySelector('[role="dialog"]')!;
+ const original=popup.querySelector('textarea')!.value;
+ expect(popup.querySelector('[aria-label="AI supplement for missing topic"]')?.textContent).not.toContain('AI draft important point for review.');
+ await act(async()=>Array.from(popup.querySelectorAll('button')).find(button=>button.textContent==='Draft AI important points')!.click());
+ expect(popup.querySelector('textarea')!.value).toBe(original);
+ const supplement=popup.querySelector('[aria-label="AI supplement for missing topic"]')!;
+ expect(supplement.textContent).toContain('AI draft important point for review.');
+ await act(async()=>Array.from(supplement.querySelectorAll('button')).find(button=>button.textContent==='Import these notes')!.click());
+ expect(popup.querySelector('textarea')!.value).toBe('AI draft important point for review.');
+ await act(async()=>root.unmount());host.remove();
 });

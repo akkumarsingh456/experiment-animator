@@ -1,3 +1,4 @@
+import { draftMissingTopicPoints } from "@/lib/missing-topic-ai.functions";
 import { TopicTextPreview } from "@/components/TopicTextPreview";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useState } from "react";
@@ -41,6 +42,8 @@ export function MissingTopicNotes({
     [results, setResults] = useState<
       Array<{ url: string; title: string; lines: string[]; complete?: boolean }>
     >([]);
+  const [aiPoints, setAiPoints] = useState<string[]>([]);
+  const draftAI = useServerFn(draftMissingTopicPoints);
   const search = useServerFn(searchMissingTopic),
     read = useServerFn(readMissingTopicNotes),
     save = useServerFn(saveMissingTopicNotes);
@@ -89,6 +92,21 @@ export function MissingTopicNotes({
         );
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Search failed. Please retry.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function draftImportantPoints() {
+    setBusy(true);
+    setNotice("Drafting a few important points for this topic…");
+    try {
+      const draft = await draftAI({ data: { ...scope, recoveryOnly: true } });
+      setAiPoints(draft.lines);
+      setNotice("AI supplementary draft ready. Review the points before importing and saving.");
+    } catch (error) {
+      setNotice(
+        error instanceof Error ? error.message : "AI drafting failed. Your notes are unchanged.",
+      );
     } finally {
       setBusy(false);
     }
@@ -275,6 +293,36 @@ export function MissingTopicNotes({
                     </article>
                   ))}
                 </div>
+              )}
+              {slide.topic_recovery && (
+                <section
+                  className="rounded-lg border p-4"
+                  aria-label="AI supplement for missing topic"
+                >
+                  <h3 className="font-semibold">AI supplementary important points</h3>
+                  <p className="my-2 text-sm text-slate-600">
+                    For this incomplete topic only. Draft a few class-level explanations in original
+                    wording, supported by matching official evidence. These are teacher notes for
+                    review, not end-to-end NCERT extraction.
+                  </p>
+                  <Button variant="outline" disabled={busy} onClick={draftImportantPoints}>
+                    Draft AI important points
+                  </Button>
+                  {!!aiPoints.length && (
+                    <TopicTextPreview
+                      lines={aiPoints}
+                      subject={subject}
+                      disabled={busy}
+                      onImport={(passages) => {
+                        edit(passages.join("\n"));
+                        setUrl("");
+                        setNotice(
+                          "AI points imported as teacher notes. Review them, then use the existing save button.",
+                        );
+                      }}
+                    />
+                  )}
+                </section>
               )}
               <div>
                 <h3 className="font-semibold">3. Organise and save topic notes</h3>
