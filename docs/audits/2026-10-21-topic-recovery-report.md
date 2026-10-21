@@ -1,6 +1,6 @@
 # Classes 9–12: affected topic recovery report
 
-Read-only controlled source-recovery audit, using the same uploaded source snapshot and same exact official mirror chapter text for before/after. Includes catalog titles and a typographic en-dash title variant where applicable. Each successful recovery is rebuilt through buildLocalSections and checked by topicSourceComplete. Language selections use scoped source readability with the existing verbatim minimum. A failure means recovery could not safely populate a sparse topic; it does not prove that every ordinary AI generation for this topic fails. Before counts are reproduced audit failures, not historical website error logs. No full live AI generation, browser rendering, or factual certification is claimed. No uploaded content or saved lessons were modified.
+Read-only controlled source-recovery audit, using the same uploaded source snapshot and same exact official mirror chapter text for before/after. Includes catalog titles and a typographic en-dash title variant where applicable. Each successful recovery is rebuilt through buildLocalSections and checked by topicSourceComplete. A failure means recovery could not safely populate a sparse topic; it does not prove that every ordinary AI generation for this topic fails. Before counts are reproduced audit failures, not historical website error logs. No full live AI generation, browser rendering, or factual certification is claimed. No uploaded content or saved lessons were modified.
 
 ## What was corrected
 
@@ -10,15 +10,21 @@ Read-only controlled source-recovery audit, using the same uploaded source snaps
 - Transient official-mirror failures had no retry.
 - Plain Science metadata could be considered for Computer Science or Social Science.
 
+## Included subjects
+
+Classes 9–10: Social Science, Science, Mathematics and Computer Science.
+
+Classes 11–12: Physics, Chemistry, Mathematics and Computer Science.
+
 ## Audit totals
 
-Checked **294 chapter entries**, **2015 topic/chapter selections**, **210 uploaded textbooks**. Source read errors: 0.
+Checked **189 chapter entries**, **1792 topic/chapter selections**, **72 uploaded textbooks**. Source read errors: 0.
 
 Only affected selections appear below; working selections are excluded.
 
 | Class | Before: chapters / topics | Corrected: chapters / topics | Remaining: chapters / topics |
 |---|---:|---:|---:|
-| 9 | 35 / 112 | 15 / 20 | 27 / 92 |
+| 9 | 34 / 98 | 15 / 20 | 26 / 78 |
 | 10 | 45 / 183 | 16 / 21 | 36 / 162 |
 | 11 | 36 / 120 | 21 / 33 | 27 / 87 |
 | 12 | 31 / 99 | 18 / 25 | 17 / 74 |
@@ -234,25 +240,6 @@ Only affected selections appear below; working selections are excluded.
 - **Still needs attention — Digital footprint**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
 - **Still needs attention — Netiquette**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
 - **Still needs attention — Reporting cybercrime**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
-
-### Sanskrit
-
-#### शेमुषी भाग 1 (पाठ 1–12)
-
-- **Still needs attention — भारतीवसन्तगीतिः**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
-- **Still needs attention — स्वर्णकाकः**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
-- **Still needs attention — गोदोहनम्**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
-- **Still needs attention — सुभाषितरत्नानि**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
-- **Still needs attention — भ्रान्तो बालः**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
-- **Still needs attention — सिकतासेतुः**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
-- **Still needs attention — जटायोः शौर्यम्**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
-- **Still needs attention — पर्यावरणम्**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
-- **Still needs attention — वाक्प्रसादः / सूक्तिमौक्तिकम्**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
-- **Still needs attention — व्याकरण: सन्धि**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
-- **Still needs attention — व्याकरण: समास**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
-- **Still needs attention — व्याकरण: कारक**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
-- **Still needs attention — व्याकरण: प्रत्यय एवं उपसर्ग**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
-- **Still needs attention — शब्दरूप एवं धातुरूप**. No readable matching chapter was located in the scoped uploaded sources. Upload the matching NCERT chapter, or correct its class/subject/chapter indexing.
 
 ## Class 10
 

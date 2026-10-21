@@ -16,7 +16,7 @@
     "Transient official-mirror failures had no retry.",
     "Plain Science metadata could be considered for Computer Science or Social Science."
   ],
-  "date": "2026-10-20T23:13:04.527Z",
+  "date": "2026-10-21T10:43:29.594Z",
   "sourceSnapshotAt": "2026-10-20T22:58:54.556Z",
   "scope": {
     "classes": [
@@ -25,34 +25,60 @@
       "11",
       "12"
     ],
-    "chapters": 294,
-    "selections": 2015,
-    "eligibleUploadedTextbooks": 210,
+    "subjectsByClass": {
+      "9": [
+        "Social Science",
+        "Science",
+        "Mathematics",
+        "Computer Science"
+      ],
+      "10": [
+        "Social Science",
+        "Science",
+        "Mathematics",
+        "Computer Science"
+      ],
+      "11": [
+        "Physics",
+        "Chemistry",
+        "Mathematics",
+        "Computer Science"
+      ],
+      "12": [
+        "Physics",
+        "Chemistry",
+        "Mathematics",
+        "Computer Science"
+      ]
+    },
+    "chapters": 189,
+    "selections": 1792,
+    "eligibleUploadedTextbooks": 72,
     "sourceReadErrors": 0
   },
-  "method": "Read-only controlled source-recovery audit, using the same uploaded source snapshot and same exact official mirror chapter text for before/after. Includes catalog titles and a typographic en-dash title variant where applicable. Each successful recovery is rebuilt through buildLocalSections and checked by topicSourceComplete. Language selections use scoped source readability with the existing verbatim minimum. A failure means recovery could not safely populate a sparse topic; it does not prove that every ordinary AI generation for this topic fails. Before counts are reproduced audit failures, not historical website error logs. No full live AI generation, browser rendering, or factual certification is claimed. No uploaded content or saved lessons were modified.",
+  "method": "Read-only controlled source-recovery audit, using the same uploaded source snapshot and same exact official mirror chapter text for before/after. Includes catalog titles and a typographic en-dash title variant where applicable. Each successful recovery is rebuilt through buildLocalSections and checked by topicSourceComplete. A failure means recovery could not safely populate a sparse topic; it does not prove that every ordinary AI generation for this topic fails. Before counts are reproduced audit failures, not historical website error logs. No full live AI generation, browser rendering, or factual certification is claimed. No uploaded content or saved lessons were modified.",
   "summary": [
     {
       "class": "9",
-      "checkedChapters": 82,
-      "checkedTopics": 450,
+      "checkedChapters": 48,
+      "checkedTopics": 388,
       "before": {
-        "chapters": 35,
-        "topics": 112
+        "chapters": 34,
+        "topics": 98
       },
       "corrected": {
         "chapters": 15,
         "topics": 20
       },
       "remaining": {
-        "chapters": 27,
-        "topics": 92
+        "chapters": 26,
+        "topics": 78
       }
     },
     {
       "class": "10",
-      "checkedChapters": 84,
-      "checkedTopics": 480,
+      "checkedChapters": 53,
+      "checkedTopics": 419,
       "before": {
         "chapters": 45,
         "topics": 183
@@ -68,8 +94,8 @@
     },
     {
       "class": "11",
-      "checkedChapters": 63,
-      "checkedTopics": 540,
+      "checkedChapters": 45,
+      "checkedTopics": 488,
       "before": {
         "chapters": 36,
         "topics": 120
@@ -85,8 +111,8 @@
     },
     {
       "class": "12",
-      "checkedChapters": 65,
-      "checkedTopics": 545,
+      "checkedChapters": 43,
+      "checkedTopics": 497,
       "before": {
         "chapters": 31,
         "topics": 99
@@ -1562,216 +1588,6 @@
       "subject": "Computer Science",
       "chapter": "Chapter 4: Cyber Safety and Security",
       "topic": "Reporting cybercrime",
-      "status": "Still needs attention",
-      "before": "Failed",
-      "after": "Failed",
-      "matchingSourceFound": false,
-      "sourceCount": 0,
-      "mirrorChecked": false,
-      "mirrorUrl": null,
-      "reason": "No readable matching chapter was located in the scoped uploaded sources.",
-      "action": "Upload the matching NCERT chapter, or correct its class/subject/chapter indexing."
-    },
-    {
-      "class": "9",
-      "subject": "Sanskrit",
-      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
-      "topic": "भारतीवसन्तगीतिः",
-      "status": "Still needs attention",
-      "before": "Failed",
-      "after": "Failed",
-      "matchingSourceFound": false,
-      "sourceCount": 0,
-      "mirrorChecked": false,
-      "mirrorUrl": null,
-      "reason": "No readable matching chapter was located in the scoped uploaded sources.",
-      "action": "Upload the matching NCERT chapter, or correct its class/subject/chapter indexing."
-    },
-    {
-      "class": "9",
-      "subject": "Sanskrit",
-      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
-      "topic": "स्वर्णकाकः",
-      "status": "Still needs attention",
-      "before": "Failed",
-      "after": "Failed",
-      "matchingSourceFound": false,
-      "sourceCount": 0,
-      "mirrorChecked": false,
-      "mirrorUrl": null,
-      "reason": "No readable matching chapter was located in the scoped uploaded sources.",
-      "action": "Upload the matching NCERT chapter, or correct its class/subject/chapter indexing."
-    },
-    {
-      "class": "9",
-      "subject": "Sanskrit",
-      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
-      "topic": "गोदोहनम्",
-      "status": "Still needs attention",
-      "before": "Failed",
-      "after": "Failed",
-      "matchingSourceFound": false,
-      "sourceCount": 0,
-      "mirrorChecked": false,
-      "mirrorUrl": null,
-      "reason": "No readable matching chapter was located in the scoped uploaded sources.",
-      "action": "Upload the matching NCERT chapter, or correct its class/subject/chapter indexing."
-    },
-    {
-      "class": "9",
-      "subject": "Sanskrit",
-      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
-      "topic": "सुभाषितरत्नानि",
-      "status": "Still needs attention",
-      "before": "Failed",
-      "after": "Failed",
-      "matchingSourceFound": false,
-      "sourceCount": 0,
-      "mirrorChecked": false,
-      "mirrorUrl": null,
-      "reason": "No readable matching chapter was located in the scoped uploaded sources.",
-      "action": "Upload the matching NCERT chapter, or correct its class/subject/chapter indexing."
-    },
-    {
-      "class": "9",
-      "subject": "Sanskrit",
-      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
-      "topic": "भ्रान्तो बालः",
-      "status": "Still needs attention",
-      "before": "Failed",
-      "after": "Failed",
-      "matchingSourceFound": false,
-      "sourceCount": 0,
-      "mirrorChecked": false,
-      "mirrorUrl": null,
-      "reason": "No readable matching chapter was located in the scoped uploaded sources.",
-      "action": "Upload the matching NCERT chapter, or correct its class/subject/chapter indexing."
-    },
-    {
-      "class": "9",
-      "subject": "Sanskrit",
-      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
-      "topic": "सिकतासेतुः",
-      "status": "Still needs attention",
-      "before": "Failed",
-      "after": "Failed",
-      "matchingSourceFound": false,
-      "sourceCount": 0,
-      "mirrorChecked": false,
-      "mirrorUrl": null,
-      "reason": "No readable matching chapter was located in the scoped uploaded sources.",
-      "action": "Upload the matching NCERT chapter, or correct its class/subject/chapter indexing."
-    },
-    {
-      "class": "9",
-      "subject": "Sanskrit",
-      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
-      "topic": "जटायोः शौर्यम्",
-      "status": "Still needs attention",
-      "before": "Failed",
-      "after": "Failed",
-      "matchingSourceFound": false,
-      "sourceCount": 0,
-      "mirrorChecked": false,
-      "mirrorUrl": null,
-      "reason": "No readable matching chapter was located in the scoped uploaded sources.",
-      "action": "Upload the matching NCERT chapter, or correct its class/subject/chapter indexing."
-    },
-    {
-      "class": "9",
-      "subject": "Sanskrit",
-      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
-      "topic": "पर्यावरणम्",
-      "status": "Still needs attention",
-      "before": "Failed",
-      "after": "Failed",
-      "matchingSourceFound": false,
-      "sourceCount": 0,
-      "mirrorChecked": false,
-      "mirrorUrl": null,
-      "reason": "No readable matching chapter was located in the scoped uploaded sources.",
-      "action": "Upload the matching NCERT chapter, or correct its class/subject/chapter indexing."
-    },
-    {
-      "class": "9",
-      "subject": "Sanskrit",
-      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
-      "topic": "वाक्प्रसादः / सूक्तिमौक्तिकम्",
-      "status": "Still needs attention",
-      "before": "Failed",
-      "after": "Failed",
-      "matchingSourceFound": false,
-      "sourceCount": 0,
-      "mirrorChecked": false,
-      "mirrorUrl": null,
-      "reason": "No readable matching chapter was located in the scoped uploaded sources.",
-      "action": "Upload the matching NCERT chapter, or correct its class/subject/chapter indexing."
-    },
-    {
-      "class": "9",
-      "subject": "Sanskrit",
-      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
-      "topic": "व्याकरण: सन्धि",
-      "status": "Still needs attention",
-      "before": "Failed",
-      "after": "Failed",
-      "matchingSourceFound": false,
-      "sourceCount": 0,
-      "mirrorChecked": false,
-      "mirrorUrl": null,
-      "reason": "No readable matching chapter was located in the scoped uploaded sources.",
-      "action": "Upload the matching NCERT chapter, or correct its class/subject/chapter indexing."
-    },
-    {
-      "class": "9",
-      "subject": "Sanskrit",
-      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
-      "topic": "व्याकरण: समास",
-      "status": "Still needs attention",
-      "before": "Failed",
-      "after": "Failed",
-      "matchingSourceFound": false,
-      "sourceCount": 0,
-      "mirrorChecked": false,
-      "mirrorUrl": null,
-      "reason": "No readable matching chapter was located in the scoped uploaded sources.",
-      "action": "Upload the matching NCERT chapter, or correct its class/subject/chapter indexing."
-    },
-    {
-      "class": "9",
-      "subject": "Sanskrit",
-      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
-      "topic": "व्याकरण: कारक",
-      "status": "Still needs attention",
-      "before": "Failed",
-      "after": "Failed",
-      "matchingSourceFound": false,
-      "sourceCount": 0,
-      "mirrorChecked": false,
-      "mirrorUrl": null,
-      "reason": "No readable matching chapter was located in the scoped uploaded sources.",
-      "action": "Upload the matching NCERT chapter, or correct its class/subject/chapter indexing."
-    },
-    {
-      "class": "9",
-      "subject": "Sanskrit",
-      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
-      "topic": "व्याकरण: प्रत्यय एवं उपसर्ग",
-      "status": "Still needs attention",
-      "before": "Failed",
-      "after": "Failed",
-      "matchingSourceFound": false,
-      "sourceCount": 0,
-      "mirrorChecked": false,
-      "mirrorUrl": null,
-      "reason": "No readable matching chapter was located in the scoped uploaded sources.",
-      "action": "Upload the matching NCERT chapter, or correct its class/subject/chapter indexing."
-    },
-    {
-      "class": "9",
-      "subject": "Sanskrit",
-      "chapter": "शेमुषी भाग 1 (पाठ 1–12)",
-      "topic": "शब्दरूप एवं धातुरूप",
       "status": "Still needs attention",
       "before": "Failed",
       "after": "Failed",
