@@ -1104,13 +1104,13 @@ function McqSlideBody({ slide, staticView = false }: { slide: Slide; staticView?
   if (!mcq) return null;
   return (
     <div className="p-6 flex flex-col gap-3 min-h-0 overflow-hidden">
-      <p className="font-display text-2xl sm:text-3xl font-semibold leading-snug"><MathText text={mcq.question} /></p>
+      <p className="font-display text-3xl sm:text-4xl font-semibold leading-snug"><MathText text={mcq.question} /></p>
       <ol className="grid sm:grid-cols-2 gap-2">
         {mcq.options.map((o) => {
           const isCorrect = reveal && o.key === mcq.answer;
           return (
             <li key={o.key}
-              className={`rounded-md border p-4 text-lg sm:text-xl leading-relaxed flex gap-3 ${isCorrect ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-border/60 bg-card"}`}
+              className={`rounded-md border p-4 text-xl sm:text-2xl leading-relaxed flex gap-3 ${isCorrect ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-border/60 bg-card"}`}
             >
               <span className="font-mono font-bold">{o.key}.</span>
               <span><MathText text={o.text} /></span>
@@ -1129,7 +1129,7 @@ function McqSlideBody({ slide, staticView = false }: { slide: Slide; staticView?
         )}
       </div>
       {reveal && mcq.explanation && (
-        <p className="text-lg sm:text-xl leading-relaxed text-foreground border-l-2 border-primary/40 pl-4"><MathText text={mcq.explanation} /></p>
+        <p className="text-xl sm:text-2xl leading-relaxed text-foreground border-l-2 border-primary/40 pl-4"><MathText text={mcq.explanation} /></p>
       )}
     </div>
   );
