@@ -51,6 +51,7 @@ export function GuidedNotesPresentation({
   const [localIndex, setLocalIndex] = useState(0);
   const [showOutline, setShowOutline] = useState(false);
   const [scale, setScale] = useState(0.5);
+  const wheelNavigation = useRef({ total: 0, lastEvent: 0, lastTurn: -Infinity });
   const pageCount = presentationSlides?.length ?? pages.length;
   const index = Math.min(pageIndex ?? localIndex, Math.max(0, pageCount - 1));
   const goTo = useCallback(
@@ -139,6 +140,37 @@ export function GuidedNotesPresentation({
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, [inline, index, pageCount, onClose, goTo]);
+
+  useEffect(() => {
+    const area = stage.current;
+    if (!area) return;
+    const wheel = (event: WheelEvent) => {
+      if (pageCount < 2 || event.defaultPrevented || event.ctrlKey || event.metaKey ||
+        event.shiftKey || !event.deltaY || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+      if (inline && document.querySelector('[role="dialog"][aria-label="Lesson presentation"]')) return;
+      const target = event.target instanceof Element ? event.target : null;
+      const control = target?.closest('input, textarea, select, button, a, [contenteditable], [role="dialog"], [role="slider"], [role="listbox"], iframe');
+      if (control && area.contains(control)) return;
+      // Keep scrolling available to editors and other nested scroll regions.
+      for (let node = target; node && node !== area; node = node.parentElement) {
+        if (node instanceof HTMLElement && node.scrollHeight > node.clientHeight + 1 &&
+          /auto|scroll/.test(getComputedStyle(node).overflowY)) return;
+      }
+      event.preventDefault();
+      const now = performance.now(), state = wheelNavigation.current;
+      if (now - state.lastEvent > 180 || Math.sign(event.deltaY) !== Math.sign(state.total)) state.total = 0;
+      state.lastEvent = now;
+      if (now - state.lastTurn < 450) { state.total = 0; return; }
+      state.total += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? area.clientHeight : 1);
+      if (Math.abs(state.total) < 40) return;
+      const direction = Math.sign(state.total);
+      state.total = 0;
+      state.lastTurn = now;
+      goTo(index + direction);
+    };
+    area.addEventListener('wheel', wheel, { passive: false });
+    return () => area.removeEventListener('wheel', wheel);
+  }, [inline, index, pageCount, goTo]);
 
   useEffect(() => {
     if (inline) return;
