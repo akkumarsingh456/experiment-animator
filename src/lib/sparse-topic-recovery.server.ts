@@ -5,6 +5,7 @@ import {trustedChapterSource} from './trusted-chapter-source.server';
 import {sourceUnavailable} from './secondary-study-evidence';
 import {recoverAttentionTopic,attentionFailureMessage} from './attention-topic-notes.server';
 import {isAttentionTopic} from './attention-topic-scope';
+import {verifiedNcertRecovery} from './verified-ncert-recovery';
 
 export function topicSourceComplete(slide:Slide,verbatim=false){
  if(slide.teacher_pdf||!['content','chapter'].includes(slide.kind||'content'))return true;
@@ -18,6 +19,10 @@ export async function recoverSparseTopicNotes(slides:Slide[],options:{klass:stri
  for(const slide of slides){
   if(topicSourceComplete(slide,options.verbatim)){output.push(slide);continue;}
   let recovery=recoverTopicFromSources(slide.title,options.sources),sourceUrl='';
+  if(!recovery.complete){
+   const snapshot=verifiedNcertRecovery(options.klass,options.subject,options.chapter,slide.title);
+   if(snapshot){const recovered=recoverTopicFromSources(slide.title,[snapshot.text]);if(recovered.complete){recovery=recovered;sourceUrl=snapshot.url;}}
+  }
   if(!recovery.complete){
    const trusted=await trustedChapterSource(options.klass,options.subject,options.chapter);
    if(trusted){const remote=recoverTopicFromSources(slide.title,[trusted.text]);if(remote.complete){recovery=remote;sourceUrl=trusted.url;}}

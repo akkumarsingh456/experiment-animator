@@ -3,6 +3,34 @@ import {recoverTopicFromSources,adequateTopicEvidence} from '@/lib/topic-source-
 import {trustedChapterHtmlText,trustedChapterSource} from '@/lib/trusted-chapter-source.server';
 import {recoverSparseTopicNotes} from '@/lib/sparse-topic-recovery.server';
 import type {Slide} from '@/lib/generate.functions';
+import {verifiedNcertRecovery} from '@/lib/verified-ncert-recovery';
+import {topicSourceComplete} from '@/lib/sparse-topic-recovery.server';
+import {autoFixAndVerifyNotes,normalizeForGrounding} from '@/lib/notes-verification';
+import {seniorStudyContent,seniorActivityConclusions} from '@/lib/senior-study-notes';
+import {learningScaffold,sourceDiscussion} from '@/lib/learning-design';
+import {sequenceChemistryNotes} from '@/lib/chemistry-note-sequence';
+it.each(['Nature of C-X bond','Nature of C–X bond'])('repairs the reported %s generation failure without network access',async title=>{
+ const spy=vi.spyOn(globalThis,'fetch').mockRejectedValue(new Error('Source unavailable'));
+ try{
+  const slide={title,kind:'content',bullets:[],notes:[],key_terms:[],visual:'book',sections:[]} as Slide;
+  const result=await recoverSparseTopicNotes([slide],{klass:'12',subject:'Chemistry',chapter:'Chapter 6: Haloalkanes and Haloarenes',sources:[]});
+  expect(topicSourceComplete(result.slides[0])).toBe(true);
+  expect(result.slides[0].source_recovery?.kind).toBe('official-ncert-mirror');
+  expect(result.extraEvidence.join(' ')).toContain('partial positive charge');
+  expect(result.extraEvidence.join(' ')).not.toContain('prepared from alcohols');
+  // Exercise the same verification and teaching-note stages used after recovery.
+  const [verified]=await autoFixAndVerifyNotes([result.slides[0].sections],normalizeForGrounding(result.extraEvidence.join('\n')),{subject:'Chemistry',chapter:'Haloalkanes and Haloarenes'});
+  const study=seniorStudyContent(title,verified.sections);
+  const discussion=sourceDiscussion(title,study,'Chemistry','12');
+  const finalSections=sequenceChemistryNotes(learningScaffold(title,seniorActivityConclusions(title,discussion?[...study,discussion]:study),true),'Chemistry','Haloalkanes and Haloarenes');
+  expect(verified.check.pass).toBe(true);
+  expect(topicSourceComplete({...result.slides[0],sections:finalSections})).toBe(true);
+  expect(spy).not.toHaveBeenCalled();
+ }finally{spy.mockRestore();}
+});
+it('never uses the reviewed bond passage for another class, chapter, subject or topic',()=>{
+ for(const args of [['11','Chemistry','Haloalkanes and Haloarenes','Nature of C-X bond'],['12','Physics','Haloalkanes and Haloarenes','Nature of C-X bond'],['12','Chemistry','Alcohols','Nature of C-X bond'],['12','Chemistry','Haloalkanes and Haloarenes','Methods of preparation']])expect(verifiedNcertRecovery(...args as [string,string,string,string])).toBeNull();
+});
 const bondSource='6.3 Nature of C-X Bond\nA carbon-halogen bond is polar because the bonded atoms attract electrons unequally. The carbon end carries a partial positive charge while the halogen end carries a partial negative charge. The size of the halogen atom increases down the group. Bond length therefore increases from the carbon-fluorine bond to the carbon-iodine bond.\n6.4 Methods of Preparation\nAn unrelated preparation section must not enter these bond notes.';
 it.each(['-','‐','‑','‒','–','—','−'])('recovers the bond topic when the title uses the %s dash',dash=>{
  const result=recoverTopicFromSources(`Nature of C${dash}X bond`,[bondSource]);
