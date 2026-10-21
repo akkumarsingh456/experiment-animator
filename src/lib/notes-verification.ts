@@ -14,6 +14,7 @@
 
 import { splitMath, normalizeLatex, isValidLatex } from "@/lib/latex-notation";
 import type { NoteSection } from "@/lib/ncert-teacher-notes";
+import {sourceExtractionIssue,quarantineExtractionSections} from './source-extraction-review';
 
 export type NotesCheck = {
   /** Math spans inspected across all note lines. */
@@ -91,10 +92,15 @@ export function verifyNoteSections(
   let kept = 0;
   let grounded = 0;
 
-  const cleaned = (sections ?? []).map((sec) => {
+  const cleaned = (quarantineExtractionSections(sections) ?? []).map((sec) => {
     const lines = (sec.lines ?? []).filter((raw) => {
       const line = String(raw || "");
       if (!line.trim()) return false;
+      // Preserved originals are review material, not verified factual notes.
+      // Keep them available without allowing copied PDF damage to pass simply
+      // because the same damaged tokens also appear in the source context.
+      if (/^Source (?:review|table)/i.test(sec.heading)) return true;
+      if(sourceExtractionIssue(line))return false;
       const { spans, invalid } = latexLineValid(line);
       math_spans += spans;
       math_invalid += invalid;

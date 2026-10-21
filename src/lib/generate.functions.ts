@@ -19,6 +19,7 @@ import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
 import { topicEvidence } from "@/lib/topic-evidence";
 import { cleanSourceNoteLine, isSourceTask, validStudyTerm, readableSourceRelation } from "@/lib/source-note-quality";
+import {sourceExtractionIssue,quarantineExtractionSections} from './source-extraction-review';
 import { isDefinitionStatement } from "@/lib/note-labels";
 import { extractExperimentActivities } from "@/lib/experiment-activities";
 import { languageVolumeMatches, scopeTextbookPages, scopeSocialChapterPages, scopeEnglishChapterPages, referenceFormulaEvidence } from "@/lib/lesson-source-scope";
@@ -1592,7 +1593,9 @@ export const generateLesson = createServerFn({ method: "POST" })
           let contentOnly = (cached.slides || []).filter((sl) => sl.kind !== "mcq" && !sl.teacher_revision);
           const {isAttentionTopic}=await import('./attention-topic-scope');
           const {topicSourceComplete,recoverSparseTopicNotes}=await import('./sparse-topic-recovery.server');
-          const repairIndices=contentOnly.flatMap((slide,index)=>isAttentionTopic({klass:data.klass,subject:data.subject,chapter:data.chapter||data.topic,topic:slide.title})&&!topicSourceComplete(slide)?[index]:[]);
+          const damagedIndices=new Set(contentOnly.flatMap((slide,index)=>!isLanguageSubject(data.subject)&&!slide.teacher_pdf&&slide.sections?.some(section=>section.kind!=='diagram'&&section.lines.some(line=>sourceExtractionIssue(line)))?[index]:[]));
+          contentOnly=contentOnly.map((slide,index)=>damagedIndices.has(index)?{...slide,sections:quarantineExtractionSections(slide.sections)}:slide);
+          const repairIndices=contentOnly.flatMap((slide,index)=>(damagedIndices.has(index)||isAttentionTopic({klass:data.klass,subject:data.subject,chapter:data.chapter||data.topic,topic:slide.title}))&&!topicSourceComplete(slide)?[index]:[]);
           if(repairIndices.length){
             const repaired=await recoverSparseTopicNotes(repairIndices.map(index=>contentOnly[index]),{klass:data.klass,subject:data.subject,chapter:data.chapter||data.topic,sources:contentOnly.map(slide=>slide.grounding||slide.chapter_text||'')});
             contentOnly=contentOnly.map((slide,index)=>{const at=repairIndices.indexOf(index);return at<0?slide:repaired.slides[at];});
@@ -1877,6 +1880,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     let recoveryEvidence='';
     {
       const {recoverSparseTopicNotes}=await import('@/lib/sparse-topic-recovery.server');
+      if(!isLanguageSubject(data.subject)&&lessonMode!=='chapter')notedSlides=notedSlides.map(slide=>({...slide,sections:quarantineExtractionSections(slide.sections)}));
       const recovered=await recoverSparseTopicNotes(notedSlides,{klass:String(data.klass),subject:data.subject,chapter:data.chapter||data.topic,sources:[context,...recoverySources],verbatim:isLanguageSubject(data.subject)||lessonMode==='chapter'});
       notedSlides=recovered.slides;
       recoveryEvidence=recovered.extraEvidence.join('\n\n');

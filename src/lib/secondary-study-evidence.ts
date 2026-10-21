@@ -1,4 +1,5 @@
 import {cleanSourceNoteLine,isSourceTask} from './source-note-quality';
+import {sourceExtractionIssue} from './source-extraction-review';
 import {isContentsListing} from './note-source-noise';
 
 const key=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]/g,'').replace(/properties/g,'property');
@@ -49,7 +50,7 @@ const aliases:Record<string,string[]>={
 export function sourceUnavailable(line:string){return /readable source text.*(?:missing|unavailable|not (?:available|found))|source text needs attention|source provides too little|re.ingest.*(?:chapter|pdf)|no (?:readable|matching) (?:chapter|source|textbook)/i.test(line);}
 export function substantiveStudyLine(line:string){
  const body=line.replace(/^\*\*[^*]+:\*\*\s*/,'').replace(/^n\s+/,'');
- return body.length>25&&!sourceUnavailable(body)&&!isSourceTask(body)
+ return body.length>25&&!sourceUnavailable(body)&&!sourceExtractionIssue(body)&&!isSourceTask(body)
   &&!/^\*\*(?:activity|discussion|experiment|learning objective|prerequisite|support practice|core practice|challenge practice|answers? and explanations?|exit ticket)/i.test(line)
   &&! /^(?:take|place|put|ask|discuss|clean|note|try|hold|dry|repeat|record|collect|draw|observe|test|burn|heat|add|pour|clamp|attach|connect|insert|keep|use a|give reasons|let us|for performing activities|caution|compare your|in pairs|submit a claim|teacher checks|before reading|explain .*in your own words)\b/i.test(body);
 }
