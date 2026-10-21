@@ -1,3 +1,4 @@
+import {MissingTopicNotes} from '@/components/MissingTopicNotes';
 import {exactSlideVisualId} from "@/lib/exact-slide-visual";
 import {orderTopicSections} from "@/lib/topic-lecture-order";
 import {NotesContentCheck} from "@/components/NotesContentCheck";
@@ -775,6 +776,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
               /> : <GuidedNotesPresentation inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={originalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("slides")} />}
             </div>
 
+            {slides.filter(slide=>slide.topic_recovery).map(slide=><MissingTopicNotes key={slide.title} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onSaved={updated=>setSlides(current=>current.map(item=>item.title===slide.title&&item.topic_recovery?{...item,sections:updated.sections,topic_recovery:updated.topic_recovery}:item))}/>)}
             <details className="lesson-presentation-checks mt-4 rounded-xl border border-border/60 bg-card/60 print:hidden">
               <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-medium">
                 <span>Lesson checks <span className="ml-2 text-xs font-normal text-muted-foreground">Sources, visuals and figure references</span></span>

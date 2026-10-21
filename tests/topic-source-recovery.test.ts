@@ -78,7 +78,8 @@ it('retries a temporary mirror failure instead of treating it as a missing sourc
 });
 it('does not save a blank topic when no adequate source can be recovered',async()=>{
  const slide={title:'Missing topic',bullets:[],notes:[],key_terms:[],visual:'book',sections:[]} as Slide;
- await expect(recoverSparseTopicNotes([slide],{klass:'11',subject:'Computer Science',chapter:'Missing chapter',sources:[]})).rejects.toThrow('lesson was not saved');
+ const result=await recoverSparseTopicNotes([slide],{klass:'11',subject:'Computer Science',chapter:'Missing chapter',sources:[]});
+ expect(result.slides[0].topic_recovery?.status).toBe('missing');expect(result.slides[0].sections).toEqual([]);
 });
 it('repairs a sparse source slide while retaining its existing useful fact',async()=>{
  const slide={title:'Preparation of KMnO4 and K2Cr2O7',bullets:['An existing source-supported preparation point remains available.'],notes:[],key_terms:[],visual:'book',sections:[{heading:'Applications',kind:'bullets',lines:['An existing source-supported preparation point remains available.']}]} as Slide;

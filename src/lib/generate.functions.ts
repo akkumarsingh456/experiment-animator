@@ -704,6 +704,7 @@ export type Mcq = {
 };
 
 export type Slide = {
+  topic_recovery?: {status:"missing"|"teacher"|"official"; sourceUrl?:string};
   source_recovery?: {attempts:number;kind:"uploaded-ncert"|"official-ncert-mirror"|"official-online-supplement";url?:string;sources?:Array<{url:string;title:string;sourceClass:string}>};
   teacher_pdf?: {path:string;page:number;file_name:string};
   teacher_revision?: {book_id:string;file_name:string;page?:number};
@@ -1542,18 +1543,18 @@ function fallbackVideo(topic: string, activities: Activity[]): { title: string; 
 async function completeAttentionFallback(data:z.infer<typeof Input>,lessonKey:string):Promise<GenerationResult|null>{
   const {attentionLessonSelection}=await import('./attention-selection');
   const requested=attentionLessonSelection(data,true);if(!requested)return null;
-  const {recoverAttentionTopic,attentionFailureMessage}=await import('./attention-topic-notes.server');
+  const {recoverAttentionTopic}=await import('./attention-topic-notes.server');
   const slides:Slide[]=[],evidence:string[]=[];
   const recovered:Array<Awaited<ReturnType<typeof recoverAttentionTopic>>>=[];
   for(let start=0;start<requested.length;start+=3)recovered.push(...await Promise.all(requested.slice(start,start+3).map(recoverAttentionTopic)));
   for(let index=0;index<requested.length;index++){
-    const scope=requested[index],notes=recovered[index];if(!notes)throw new Error(attentionFailureMessage(scope.topic));
+    const scope=requested[index],notes=recovered[index];if(!notes){const {loadTopicNotes}=await import('./topic-notes-store.server');const saved=await loadTopicNotes(scope);slides.push({title:scope.topic,kind:'content',visual:'book',bullets:[],notes:[],key_terms:[],sections:saved?.sections||[],topic_recovery:{status:saved?.mode||'missing',sourceUrl:saved?.sourceUrl},caption:'Teacher notes for this topic'});continue;}
     evidence.push(notes.grounding);
     const sections=sequenceChemistryNotes(withPhysicsDimensions(learningScaffold(scope.topic,notes.sections,isSeniorScienceStudy(scope.klass,scope.subject)||/^(9|10)$/.test(scope.klass)&&scope.subject==='Science'),scope.subject,scope.topic),scope.subject,scope.chapter);
     slides.push({title:scope.topic,kind:'content',visual:'book',bullets:[],notes:[],key_terms:[],sections,grounding:notes.grounding,caption:'Class-aligned supplementary notes',source_recovery:{attempts:3,kind:'official-online-supplement',url:notes.sources[0]?.url,sources:notes.sources},notes_quality:reviewNotes(sections,false)});
   }
   const {topicSourceComplete}=await import('./sparse-topic-recovery.server');
-  if(slides.some(slide=>!topicSourceComplete(slide)))return null;
+  if(slides.some(slide=>!slide.topic_recovery&&!topicSourceComplete(slide)))return null;
   const context=evidence.join('\n\n'),mcqs=buildMcqsFromContext(data.topic,splitSentences(context),data.subject,10);
   const base:GenerationResult={source_basis:'official-online-supplement',source_books:[],context_chars:context.length,slides:[...slides,...mcqs.map((mcq,index)=>makeMcqSlide(mcq,index,mcqs.length,data.topic))],activities:[],activity_matches:[],video:fallbackVideo(data.topic,[])};
   const db=await supa();
@@ -1595,7 +1596,7 @@ export const generateLesson = createServerFn({ method: "POST" })
           const {topicSourceComplete,recoverSparseTopicNotes}=await import('./sparse-topic-recovery.server');
           const damagedIndices=new Set(contentOnly.flatMap((slide,index)=>!isLanguageSubject(data.subject)&&!slide.teacher_pdf&&slide.sections?.some(section=>section.kind!=='diagram'&&section.lines.some(line=>sourceExtractionIssue(line)))?[index]:[]));
           contentOnly=contentOnly.map((slide,index)=>damagedIndices.has(index)?{...slide,sections:quarantineExtractionSections(slide.sections)}:slide);
-          const repairIndices=contentOnly.flatMap((slide,index)=>(damagedIndices.has(index)||canonicalOfficialRecoveryTopic({klass:data.klass,subject:data.subject,chapter:data.chapter||data.topic,topic:slide.title}))&&!topicSourceComplete(slide)?[index]:[]);
+          const repairIndices=contentOnly.flatMap((slide,index)=>(!!slide.topic_recovery||damagedIndices.has(index)||canonicalOfficialRecoveryTopic({klass:data.klass,subject:data.subject,chapter:data.chapter||data.topic,topic:slide.title}))&&(!!slide.topic_recovery||!topicSourceComplete(slide))?[index]:[]);
           if(repairIndices.length){
             const repaired=await recoverSparseTopicNotes(repairIndices.map(index=>contentOnly[index]),{klass:data.klass,subject:data.subject,chapter:data.chapter||data.topic,sources:contentOnly.map(slide=>slide.grounding||slide.chapter_text||'')});
             contentOnly=contentOnly.map((slide,index)=>{const at=repairIndices.indexOf(index);return at<0?slide:repaired.slides[at];});
@@ -1603,6 +1604,7 @@ export const generateLesson = createServerFn({ method: "POST" })
           }
           const seedSentences: string[] = [];
           for (const sl of contentOnly) {
+            if(sl.topic_recovery)continue;
             if (sl.chapter_text) seedSentences.push(...splitSentences(sl.chapter_text));
             if (sl.grounding) seedSentences.push(...splitSentences(sl.grounding));
             if (sl.bullets) seedSentences.push(...sl.bullets);
@@ -1887,7 +1889,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     }
     const groundNorm = normalizeForGrounding(`${context}\n${refContext}\n${recoveryEvidence}`);
     const fixedChecks = await autoFixAndVerifyNotes(
-      notedSlides.map((sl) => (sl as any).sections as NoteSection[] | undefined),
+      notedSlides.map((sl) => sl.topic_recovery?undefined:(sl as any).sections as NoteSection[] | undefined),
       groundNorm,
       {
         apiKey: process.env.GROQ_API_KEY,
@@ -1895,7 +1897,8 @@ export const generateLesson = createServerFn({ method: "POST" })
         chapter: String(data.chapter || data.topic || ""),
       },
     );
-    const verifiedSlides = notedSlides.map((sl, i) => {
+    let verifiedSlides:Slide[] = notedSlides.map((sl, i) => {
+      if(sl.topic_recovery)return sl;
       const { sections:checkedSections, check } = fixedChecks[i];
       const seniorScience=isSeniorScienceStudy(data.klass,data.subject);
       const sections=seniorScience?seniorStudyContent(sl.title,checkedSections):checkedSections;
@@ -1918,10 +1921,17 @@ export const generateLesson = createServerFn({ method: "POST" })
     const secondaryScience=(/^(?:9|10)$/.test(classNumber(data.klass))&&data.subject==="Science")||isSeniorScienceStudy(data.klass,data.subject);
     {
       const {topicSourceComplete}=await import('@/lib/sparse-topic-recovery.server');
-      const incomplete=verifiedSlides.filter(slide=>!topicSourceComplete(slide,isLanguageSubject(data.subject)||lessonMode==='chapter'));
-      if(incomplete.length)throw new Error(`Source recovery could not produce enough verified explanation for: ${incomplete.map(slide=>slide.title).join(', ')}. The incomplete lesson was not saved. Reprocess clearer matching NCERT chapter pages and retry.`);
+      const incomplete=verifiedSlides.filter(slide=>!slide.topic_recovery&&!topicSourceComplete(slide,isLanguageSubject(data.subject)||lessonMode==='chapter'));
+      if(incomplete.length){
+        const {loadTopicNotes}=await import('./topic-notes-store.server');
+        verifiedSlides=await Promise.all(verifiedSlides.map(async slide=>{
+          if(!incomplete.includes(slide))return slide;
+          const saved=await loadTopicNotes({klass:data.klass,subject:data.subject,chapter:data.chapter||data.topic,topic:slide.title});
+          return saved?{...slide,sections:saved.sections,topic_recovery:{status:saved.mode,sourceUrl:saved.sourceUrl}}:{...slide,topic_recovery:{status:'missing' as const},caption:'Teacher notes needed for this topic'};
+        }));
+      }
     }
-    if(secondaryScience&&!verifiedSlides.some(slide=>(slide.sections||[]).filter(section=>section.kind!=="diagram").flatMap(section=>section.lines).filter(substantiveStudyLine).length>=3)){
+    if(secondaryScience&&!verifiedSlides.some(slide=>slide.topic_recovery)&&!verifiedSlides.some(slide=>(slide.sections||[]).filter(section=>section.kind!=="diagram").flatMap(section=>section.lines).filter(substantiveStudyLine).length>=3)){
       throw new Error(`The selected Class ${data.klass} ${data.subject} chapter does not contain enough readable explanations for study notes. Add or reprocess the matching textbook chapter, then regenerate. Classroom activities alone will not be saved as complete notes.`);
     }
     const needsStudyReview=(slide:Slide)=>secondaryScience&&(!slide.kind||slide.kind==="content"||slide.kind==="chapter");

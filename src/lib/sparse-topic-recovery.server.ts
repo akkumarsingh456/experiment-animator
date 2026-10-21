@@ -1,11 +1,11 @@
+import {loadTopicNotes} from './topic-notes-store.server';
 import {adequateTopicEvidence,recoverTopicFromSources} from './topic-source-recovery';
 import {buildLocalSections} from './ncert-teacher-notes';
 import type {Slide} from './generate.functions';
 import {trustedChapterSource} from './trusted-chapter-source.server';
 import {sourceUnavailable} from './secondary-study-evidence';
-import {recoverAttentionTopic,attentionFailureMessage} from './attention-topic-notes.server';
+import {recoverAttentionTopic} from './attention-topic-notes.server';
 import {verifiedNcertRecovery} from './verified-ncert-recovery';
-import {canonicalOfficialRecoveryTopic} from './official-recovery-scope';
 import {isDependentSourceDefinition} from './source-explanation-context';
 const orphanDefinition=(slide:Slide)=>(slide.sections||[]).some(section=>!/^Source (?:review|table)/i.test(section.heading)&&section.lines.some(line=>isDependentSourceDefinition(line.replace(/^\*\*[^*]+:\*\*\s*/,''))));
 
@@ -20,6 +20,7 @@ export function topicSourceComplete(slide:Slide,verbatim=false){
 export async function recoverSparseTopicNotes(slides:Slide[],options:{klass:string;subject:string;chapter:string;sources:string[];verbatim?:boolean}){
  const output:Slide[]=[],extraEvidence:string[]=[];
  for(const slide of slides){
+  if(slide.topic_recovery){const saved=await loadTopicNotes({...options,topic:slide.title});output.push(saved?{...slide,sections:saved.sections,topic_recovery:{status:saved.mode,sourceUrl:saved.sourceUrl}}:slide);continue;}
   if(topicSourceComplete(slide,options.verbatim)){output.push(slide);continue;}
   // Old short mirror-recovery notes can retain the definition but lose its
   // explanation. Refresh that affected topic from the full chapter first.
@@ -36,8 +37,8 @@ export async function recoverSparseTopicNotes(slides:Slide[],options:{klass:stri
   // fails, for the exact configured class, subject, chapter and topic.
   const attention=!recovery.complete&&!options.verbatim?await recoverAttentionTopic({...options,topic:slide.title}):null;
   if(!recovery.complete&&!attention){
-   if(!options.verbatim&&canonicalOfficialRecoveryTopic({...options,topic:slide.title}))throw new Error(attentionFailureMessage(slide.title));
-   throw new Error(`Study notes for “${slide.title}” remain incomplete after three NCERT recovery strategies and an authoritative chapter-source check. The lesson was not saved with an empty topic. Add clearer matching Class ${options.klass} ${options.subject} chapter pages and retry.`);
+   const saved=await loadTopicNotes({...options,topic:slide.title});
+   output.push(saved?{...slide,sections:saved.sections,topic_recovery:{status:saved.mode,sourceUrl:saved.sourceUrl}}:{...slide,topic_recovery:{status:'missing'},caption:'Teacher notes needed for this topic'});continue;
   }
   if(attention)sourceUrl=attention.sources[0]?.url||'';
   const grounding=attention?.grounding||recovery.lines.join('\n');extraEvidence.push(grounding);
