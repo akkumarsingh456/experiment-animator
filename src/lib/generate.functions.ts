@@ -703,7 +703,7 @@ export type Mcq = {
 };
 
 export type Slide = {
-  source_recovery?: {attempts:number;kind:"uploaded-ncert"|"official-ncert-mirror";url?:string};
+  source_recovery?: {attempts:number;kind:"uploaded-ncert"|"official-ncert-mirror"|"official-online-supplement";url?:string;sources?:Array<{url:string;title:string;sourceClass:string}>};
   teacher_pdf?: {path:string;page:number;file_name:string};
   teacher_revision?: {book_id:string;file_name:string;page?:number};
   context_illustration?: { url: string; provider: "Hugging Face"; description: string };
@@ -973,7 +973,7 @@ export type ActivityMatch = {
 };
 
 export type GenerationResult = {
-  source_basis?: "uploaded-teacher-pdfs";
+  source_basis?: "uploaded-teacher-pdfs"|"official-online-supplement";
   source_books: Array<{ id: string; chapter: string; class: string; subject: string }>;
   context_chars: number;
   slides: Slide[];
@@ -1382,7 +1382,7 @@ export function validateFigurePlacement(slides: Slide[], context: string): { rep
 
 
 
-export function buildLocalSlides(topic: string, subtopics: string, context: string, subject = "", mode: "topic" | "chapter" = "topic", klass = ""): Slide[] {
+export function buildLocalSlides(topic: string, subtopics: string, context: string, subject = "", mode: "topic" | "chapter" = "topic", klass = "", exactConcepts?:string[]): Slide[] {
   const rawSentences = uniqueByNormalized(splitSentences(context));
   const lang = isLanguageSubject(subject);
   const sentences = filterJunkSentences(rawSentences,lang);
@@ -1461,7 +1461,7 @@ export function buildLocalSlides(topic: string, subtopics: string, context: stri
   const chapterTopics=secondaryScience||seniorScience?chaptersFor(classNumber(klass),subject).find(chapter=>normalizeText(cleanSyllabusLabel(chapter.chapter))===normalizeText(cleanSyllabusLabel(topic)))?.subtopics:undefined;
   const seniorChapter=seniorScience?chaptersFor(classNumber(klass),subject).find(chapter=>normalizeText(cleanSyllabusLabel(chapter.chapter))===normalizeText(cleanSyllabusLabel(topic))):undefined;
   const defaults=seniorChapter?subtopicsFor(classNumber(klass),subject,seniorChapter.chapter):chapterTopics;
-  const concepts = selectedConcepts.length ? selectedConcepts : defaults?.length ? defaults : [cleanSyllabusLabel(topic)];
+  const concepts = exactConcepts?.length?exactConcepts:selectedConcepts.length ? selectedConcepts : defaults?.length ? defaults : [cleanSyllabusLabel(topic)];
   const conceptSlides: Slide[] = [];
   for (const name of concepts) {
     const sectionEvidence=seniorScience?seniorScienceEvidence(name,context):secondaryScience?secondaryScienceSectionEvidence(name,context):[];
@@ -1538,6 +1538,29 @@ function fallbackVideo(topic: string, activities: Activity[]): { title: string; 
 }
 
 /** Main lesson generation function — local NCERT-excerpt builder, no paid AI calls. */
+async function completeAttentionFallback(data:z.infer<typeof Input>,lessonKey:string):Promise<GenerationResult|null>{
+  const {attentionLessonSelection}=await import('./attention-selection');
+  const requested=attentionLessonSelection(data);if(!requested)return null;
+  const {recoverAttentionTopic,attentionFailureMessage}=await import('./attention-topic-notes.server');
+  const slides:Slide[]=[],evidence:string[]=[];
+  const recovered:Array<Awaited<ReturnType<typeof recoverAttentionTopic>>>=[];
+  for(let start=0;start<requested.length;start+=3)recovered.push(...await Promise.all(requested.slice(start,start+3).map(recoverAttentionTopic)));
+  for(let index=0;index<requested.length;index++){
+    const scope=requested[index],notes=recovered[index];if(!notes)throw new Error(attentionFailureMessage(scope.topic));
+    evidence.push(notes.grounding);
+    const sections=sequenceChemistryNotes(withPhysicsDimensions(learningScaffold(scope.topic,notes.sections,isSeniorScienceStudy(scope.klass,scope.subject)||/^(9|10)$/.test(scope.klass)&&scope.subject==='Science'),scope.subject,scope.topic),scope.subject,scope.chapter);
+    slides.push({title:scope.topic,kind:'content',visual:'book',bullets:[],notes:[],key_terms:[],sections,grounding:notes.grounding,caption:'Class-aligned supplementary notes',source_recovery:{attempts:3,kind:'official-online-supplement',url:notes.sources[0]?.url,sources:notes.sources},notes_quality:reviewNotes(sections,false)});
+  }
+  const {topicSourceComplete}=await import('./sparse-topic-recovery.server');
+  if(slides.some(slide=>!topicSourceComplete(slide)))return null;
+  const context=evidence.join('\n\n'),mcqs=buildMcqsFromContext(data.topic,splitSentences(context),data.subject,10);
+  const base:GenerationResult={source_basis:'official-online-supplement',source_books:[],context_chars:context.length,slides:[...slides,...mcqs.map((mcq,index)=>makeMcqSlide(mcq,index,mcqs.length,data.topic))],activities:[],activity_matches:[],video:fallbackVideo(data.topic,[])};
+  const db=await supa();
+  const out=await appendSocialRevisionNotes(await appendUploadedReferenceNotes(base,db,data.klass,data.subject,data.chapter||data.topic),db,data.klass,data.subject,data.chapter||data.topic);
+  try{const cache=await cacheSupa();await(cache as any).from('lesson_cache').upsert({cache_key:lessonKey,klass:data.klass,subject:data.subject,chapter:data.chapter,topic:data.topic,subtopics:data.subtopics,result:out});}catch{/* The verified notes remain usable if cache storage is unavailable. */}
+  return out;
+}
+
 export const generateLesson = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }): Promise<GenerationResult> => {
@@ -1552,6 +1575,9 @@ export const generateLesson = createServerFn({ method: "POST" })
       data.subtopics,
       data.mode,
     ]);
+    let attentionTried=false;
+    const attentionFallback=async()=>{if(attentionTried)return null;attentionTried=true;return completeAttentionFallback(data,lessonKey);};
+    try{
     const cdb = await cacheSupa();
     if (!data.nocache) {
       try {
@@ -1563,7 +1589,15 @@ export const generateLesson = createServerFn({ method: "POST" })
         if (hit?.result) {
           // Rebuild cached quizzes with the current source-quality rules.
           const cached = hit.result as GenerationResult;
-          const contentOnly = (cached.slides || []).filter((sl) => sl.kind !== "mcq" && !sl.teacher_revision);
+          let contentOnly = (cached.slides || []).filter((sl) => sl.kind !== "mcq" && !sl.teacher_revision);
+          const {isAttentionTopic}=await import('./attention-topic-scope');
+          const {topicSourceComplete,recoverSparseTopicNotes}=await import('./sparse-topic-recovery.server');
+          const repairIndices=contentOnly.flatMap((slide,index)=>isAttentionTopic({klass:data.klass,subject:data.subject,chapter:data.chapter||data.topic,topic:slide.title})&&!topicSourceComplete(slide)?[index]:[]);
+          if(repairIndices.length){
+            const repaired=await recoverSparseTopicNotes(repairIndices.map(index=>contentOnly[index]),{klass:data.klass,subject:data.subject,chapter:data.chapter||data.topic,sources:contentOnly.map(slide=>slide.grounding||slide.chapter_text||'')});
+            contentOnly=contentOnly.map((slide,index)=>{const at=repairIndices.indexOf(index);return at<0?slide:repaired.slides[at];});
+            await(cdb as any).from('lesson_cache').update({result:{...cached,slides:[...contentOnly,...cached.slides.filter(slide=>slide.kind==='mcq')]}}).eq('cache_key',lessonKey);
+          }
           const seedSentences: string[] = [];
           for (const sl of contentOnly) {
             if (sl.chapter_text) seedSentences.push(...splitSentences(sl.chapter_text));
@@ -1584,6 +1618,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     const s = await supa();
     const uploadedSocialFallback=async()=>{
       if(data.subject!=="Social Science")return null;
+      const attention=await attentionFallback();if(attention)return attention;
       const supplied=await appendSocialRevisionNotes({source_basis:"uploaded-teacher-pdfs",source_books:[],context_chars:0,slides:[],activities:[],activity_matches:[],video:{title:data.chapter||data.topic,scenes:[]}},s,data.klass,data.subject,data.chapter||data.topic);
       return supplied.slides.some(slide=>slide.teacher_pdf)?supplied:null;
     };
@@ -1802,7 +1837,9 @@ export const generateLesson = createServerFn({ method: "POST" })
     // For English/Hindi/Sanskrit (or explicit chapter mode) we paginate the full
     // chapter text verbatim with break slides every 10 pages.
     const lessonMode = isLanguageSubject(data.subject) ? "chapter" : data.mode;
-    const slidesRaw = buildLocalSlides(data.topic, data.subtopics, context, data.subject, lessonMode, data.klass);
+    const {attentionLessonSelection}=await import('./attention-selection');
+    const exactAttentionSelection=attentionLessonSelection(data);
+    const slidesRaw = buildLocalSlides(data.topic, data.subtopics, context, data.subject, lessonMode, data.klass,exactAttentionSelection?.map(scope=>scope.topic));
     const contextNorm = normalizeText(context);
     const preSlides = slidesRaw.map((sl, i) => ({ ...sl, verification: validateSlideAgainstContext(sl, contextNorm, i) }));
 
@@ -1952,4 +1989,11 @@ export const generateLesson = createServerFn({ method: "POST" })
     }
 
     return out;
+    }catch(error){
+      const message=error instanceof Error?error.message:'';
+      if(/No matching Class .*NCERT textbook|Upload the Class .*NCERT textbook|Readable text for .*was not located|uploaded sources for .*do not contain readable chapter/i.test(message)){
+        const attention=await attentionFallback();if(attention)return attention;
+      }
+      throw error;
+    }
   });

@@ -1,0 +1,2411 @@
+{
+  "audit": "2026-10-21",
+  "topics": [
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: The French Revolution (History)",
+      "topic": "The outbreak of the revolution"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: The French Revolution (History)",
+      "topic": "The abolition of slavery"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Nazism and the Rise of Hitler (History)",
+      "topic": "The Nazi worldview"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Forest Society and Colonialism (History)",
+      "topic": "Changes in livelihoods"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: India – Size and Location (Geography)",
+      "topic": "Location and extent"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: India – Size and Location (Geography)",
+      "topic": "Standard meridian and time difference"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Climate (Geography)",
+      "topic": "Climatic controls"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Climate (Geography)",
+      "topic": "Distribution of rainfall"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Climate (Geography)",
+      "topic": "Monsoon as a unifying bond"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 6: Population (Geography)",
+      "topic": "Literacy, health and occupational structure"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Electoral Politics (Political Science)",
+      "topic": "Polling and counting"
+    },
+    {
+      "klass": "9",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: The Story of Village Palampur (Economics)",
+      "topic": "Organisation of production"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 1: Number Systems",
+      "topic": "Successive magnification of decimals"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 3: Coordinate Geometry",
+      "topic": "Axes and origin"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 3: Coordinate Geometry",
+      "topic": "Quadrants and sign conventions"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 5: Introduction to Euclid's Geometry",
+      "topic": "History of geometry"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 5: Introduction to Euclid's Geometry",
+      "topic": "Euclid's method"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 5: Introduction to Euclid's Geometry",
+      "topic": "Consistency of axioms"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 10: Heron's Formula",
+      "topic": "Semi-perimeter"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 10: Heron's Formula",
+      "topic": "Cost and fencing word problems"
+    },
+    {
+      "klass": "9",
+      "subject": "Mathematics",
+      "chapter": "Chapter 11: Surface Areas and Volumes",
+      "topic": "Volume word problems"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 2: Is Matter Around Us Pure? (Chemistry)",
+      "topic": "Separation by evaporation and centrifugation"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 3: Atoms and Molecules (Chemistry)",
+      "topic": "Ions and polyatomic ions"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 5: The Fundamental Unit of Life (Biology)",
+      "topic": "Diffusion, osmosis and plasmolysis"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 5: The Fundamental Unit of Life (Biology)",
+      "topic": "Lysosomes as suicidal bags"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 5: The Fundamental Unit of Life (Biology)",
+      "topic": "Mitochondria as powerhouses"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 7: Motion (Physics)",
+      "topic": "Scalars and vectors"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 8: Force and Laws of Motion (Physics)",
+      "topic": "Impulse and time of impact"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 8: Force and Laws of Motion (Physics)",
+      "topic": "Rocket propulsion"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 9: Gravitation (Physics)",
+      "topic": "Derivation of F = Gm₁m₂/r²"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 9: Gravitation (Physics)",
+      "topic": "Value of g and its variation"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 10: Work and Energy (Physics)",
+      "topic": "Scientific meaning of work"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 10: Work and Energy (Physics)",
+      "topic": "Derivation of Ek = ½mv²"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 11: Sound (Physics)",
+      "topic": "v = λν relation"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 11: Sound (Physics)",
+      "topic": "Sonar and its applications"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 12: Improvement in Food Resources (Biology)",
+      "topic": "Manure, compost and fertilisers"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 12: Improvement in Food Resources (Biology)",
+      "topic": "Mixed and intercropping"
+    },
+    {
+      "klass": "9",
+      "subject": "Science",
+      "chapter": "Chapter 12: Improvement in Food Resources (Biology)",
+      "topic": "Pests, weeds and pathogens"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer System Overview",
+      "topic": "Introduction to computers"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer System Overview",
+      "topic": "Hardware and software components"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer System Overview",
+      "topic": "Working of a computer"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer System Overview",
+      "topic": "Memory units"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer System Overview",
+      "topic": "Block diagram of a computer"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer System Overview",
+      "topic": "Input-process-output cycle"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer System Overview",
+      "topic": "Primary and secondary memory"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer System Overview",
+      "topic": "CPU, ALU and control unit"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer System Overview",
+      "topic": "Types of computers"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Data Representation and Basic Software",
+      "topic": "Binary number system"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Data Representation and Basic Software",
+      "topic": "System software"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Data Representation and Basic Software",
+      "topic": "Application software"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Data Representation and Basic Software",
+      "topic": "Operating systems"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Data Representation and Basic Software",
+      "topic": "Bit, byte, nibble and word"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Data Representation and Basic Software",
+      "topic": "Decimal to binary conversion"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Data Representation and Basic Software",
+      "topic": "ASCII and Unicode"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Data Representation and Basic Software",
+      "topic": "Utility software"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Data Representation and Basic Software",
+      "topic": "Functions of an operating system"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Data Representation and Basic Software",
+      "topic": "Open source vs proprietary software"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Office Productivity Tools (Word Processing, Spreadsheets, Presentations)",
+      "topic": "Creating documents"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Office Productivity Tools (Word Processing, Spreadsheets, Presentations)",
+      "topic": "Formatting text"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Office Productivity Tools (Word Processing, Spreadsheets, Presentations)",
+      "topic": "Tables"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Office Productivity Tools (Word Processing, Spreadsheets, Presentations)",
+      "topic": "Formulas in spreadsheets"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Office Productivity Tools (Word Processing, Spreadsheets, Presentations)",
+      "topic": "Slide creation and animations"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Office Productivity Tools (Word Processing, Spreadsheets, Presentations)",
+      "topic": "Mail merge"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Office Productivity Tools (Word Processing, Spreadsheets, Presentations)",
+      "topic": "Headers, footers and page layout"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Office Productivity Tools (Word Processing, Spreadsheets, Presentations)",
+      "topic": "Cell referencing (relative and absolute)"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Office Productivity Tools (Word Processing, Spreadsheets, Presentations)",
+      "topic": "Charts from spreadsheet data"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Office Productivity Tools (Word Processing, Spreadsheets, Presentations)",
+      "topic": "Sorting and filtering"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Office Productivity Tools (Word Processing, Spreadsheets, Presentations)",
+      "topic": "Slide transitions and master slides"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Cyber Safety and Security",
+      "topic": "Safe web browsing"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Cyber Safety and Security",
+      "topic": "Passwords"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Cyber Safety and Security",
+      "topic": "Protecting personal data"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Cyber Safety and Security",
+      "topic": "Cyberbullying"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Cyber Safety and Security",
+      "topic": "Safe communication practices"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Cyber Safety and Security",
+      "topic": "Identity theft and phishing"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Cyber Safety and Security",
+      "topic": "Malware, viruses and antivirus"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Cyber Safety and Security",
+      "topic": "Digital footprint"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Cyber Safety and Security",
+      "topic": "Netiquette"
+    },
+    {
+      "klass": "9",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Cyber Safety and Security",
+      "topic": "Reporting cybercrime"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: The Rise of Nationalism in Europe (History)",
+      "topic": "Liberalism and the age of revolutions"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: Resources and Development (Geography)",
+      "topic": "Types of resources"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: Resources and Development (Geography)",
+      "topic": "Resource planning"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: Resources and Development (Geography)",
+      "topic": "Land resources and land use"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: Resources and Development (Geography)",
+      "topic": "Land degradation"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: Resources and Development (Geography)",
+      "topic": "Soil types"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: Resources and Development (Geography)",
+      "topic": "Soil erosion and conservation"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 2: Forest and Wildlife Resources (Geography)",
+      "topic": "Biodiversity and depletion"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 2: Forest and Wildlife Resources (Geography)",
+      "topic": "Conservation of forests and wildlife"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 2: Forest and Wildlife Resources (Geography)",
+      "topic": "Types and distribution of forest resources"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 2: Forest and Wildlife Resources (Geography)",
+      "topic": "Community and conservation"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Water Resources (Geography)",
+      "topic": "Water scarcity"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Water Resources (Geography)",
+      "topic": "Multipurpose river projects"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Water Resources (Geography)",
+      "topic": "Rainwater harvesting"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Water Resources (Geography)",
+      "topic": "Conservation and management"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Agriculture (Geography)",
+      "topic": "Types of farming"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Agriculture (Geography)",
+      "topic": "Cropping patterns"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Agriculture (Geography)",
+      "topic": "Major crops"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Agriculture (Geography)",
+      "topic": "Technological and institutional reforms"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Agriculture (Geography)",
+      "topic": "Food security and globalisation"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 5: Minerals and Energy Resources (Geography)",
+      "topic": "Occurrence of minerals"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 5: Minerals and Energy Resources (Geography)",
+      "topic": "Ferrous and non-ferrous minerals"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 5: Minerals and Energy Resources (Geography)",
+      "topic": "Non-metallic minerals"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 5: Minerals and Energy Resources (Geography)",
+      "topic": "Conventional energy"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 5: Minerals and Energy Resources (Geography)",
+      "topic": "Non-conventional energy"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 5: Minerals and Energy Resources (Geography)",
+      "topic": "Conservation"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 6: Manufacturing Industries (Geography)",
+      "topic": "Importance of manufacturing"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 6: Manufacturing Industries (Geography)",
+      "topic": "Agro-based industries"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 6: Manufacturing Industries (Geography)",
+      "topic": "Mineral-based industries"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 6: Manufacturing Industries (Geography)",
+      "topic": "Industrial pollution"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 6: Manufacturing Industries (Geography)",
+      "topic": "Environmental control"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 7: Lifelines of National Economy (Geography)",
+      "topic": "Roadways and railways"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 7: Lifelines of National Economy (Geography)",
+      "topic": "Pipelines and waterways"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 7: Lifelines of National Economy (Geography)",
+      "topic": "Airways"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 7: Lifelines of National Economy (Geography)",
+      "topic": "Communication"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 7: Lifelines of National Economy (Geography)",
+      "topic": "International trade"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 7: Lifelines of National Economy (Geography)",
+      "topic": "Tourism as trade"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 2: Federalism (Political Science)",
+      "topic": "Features of federalism"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: Development (Economics)",
+      "topic": "National development"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 1: Development (Economics)",
+      "topic": "Sustainability"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Money and Credit (Economics)",
+      "topic": "Money as a medium of exchange"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Money and Credit (Economics)",
+      "topic": "Modern forms of money"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Money and Credit (Economics)",
+      "topic": "Loan activities of banks"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Money and Credit (Economics)",
+      "topic": "Terms of credit"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Money and Credit (Economics)",
+      "topic": "Formal and informal credit"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 3: Money and Credit (Economics)",
+      "topic": "Self-help groups"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Globalisation and the Indian Economy (Economics)",
+      "topic": "Production across countries"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Globalisation and the Indian Economy (Economics)",
+      "topic": "Foreign trade and integration of markets"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Globalisation and the Indian Economy (Economics)",
+      "topic": "Factors enabling globalisation"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Globalisation and the Indian Economy (Economics)",
+      "topic": "World Trade Organization"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Globalisation and the Indian Economy (Economics)",
+      "topic": "Impact of globalisation"
+    },
+    {
+      "klass": "10",
+      "subject": "Social Science",
+      "chapter": "Chapter 4: Globalisation and the Indian Economy (Economics)",
+      "topic": "Fair globalisation"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 4: Quadratic Equations",
+      "topic": "Solution by factorization"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 4: Quadratic Equations",
+      "topic": "Standard form ax²+bx+c = 0"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 5: Arithmetic Progressions",
+      "topic": "Derivation of aₙ = a+(n−1)d"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 5: Arithmetic Progressions",
+      "topic": "Derivation of Sₙ = n/2[2a+(n−1)d]"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 7: Coordinate Geometry",
+      "topic": "Collinearity of three points"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 8: Introduction to Trigonometry",
+      "topic": "sin²θ+cos²θ = 1"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 8: Introduction to Trigonometry",
+      "topic": "1+tan²θ = sec²θ and 1+cot²θ = cosec²θ"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 10: Circles",
+      "topic": "Circles touching internally and externally"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 12: Surface Areas and Volumes",
+      "topic": "Conversion of solids"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 12: Surface Areas and Volumes",
+      "topic": "Volume of a frustum"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 12: Surface Areas and Volumes",
+      "topic": "Melting and recasting problems"
+    },
+    {
+      "klass": "10",
+      "subject": "Mathematics",
+      "chapter": "Chapter 14: Probability",
+      "topic": "Problems on marbles and spinning wheels"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 1: Chemical Reactions and Equations (Chemistry)",
+      "topic": "Types of reactions (combination, decomposition, displacement, double displacement)"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 1: Chemical Reactions and Equations (Chemistry)",
+      "topic": "Oxidation and reduction"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 1: Chemical Reactions and Equations (Chemistry)",
+      "topic": "Corrosion"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 1: Chemical Reactions and Equations (Chemistry)",
+      "topic": "Rancidity"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 1: Chemical Reactions and Equations (Chemistry)",
+      "topic": "Writing and balancing equations"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 1: Chemical Reactions and Equations (Chemistry)",
+      "topic": "Precipitation reactions"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 1: Chemical Reactions and Equations (Chemistry)",
+      "topic": "Redox in terms of gain and loss of oxygen"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 1: Chemical Reactions and Equations (Chemistry)",
+      "topic": "Prevention of rancidity"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 2: Acids, Bases and Salts (Chemistry)",
+      "topic": "pH scale"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 2: Acids, Bases and Salts (Chemistry)",
+      "topic": "Preparation and uses of important salts (NaOH, bleaching powder, baking soda, washing soda, plaster of paris)"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 2: Acids, Bases and Salts (Chemistry)",
+      "topic": "Neutralisation reactions"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 2: Acids, Bases and Salts (Chemistry)",
+      "topic": "Importance of pH in daily life"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 2: Acids, Bases and Salts (Chemistry)",
+      "topic": "Water of crystallisation"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 2: Acids, Bases and Salts (Chemistry)",
+      "topic": "Chlor-alkali process"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "topic": "Physical and chemical properties"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "topic": "Corrosion prevention"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "topic": "Malleability, ductility and sonority"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "topic": "Amphoteric oxides"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "topic": "Thermite reaction"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "topic": "Formation of ionic bonds"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "topic": "Roasting and calcination"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "topic": "Electrolytic refining"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 3: Metals and Non-metals (Chemistry)",
+      "topic": "Galvanisation and alloying"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 4: Carbon and its Compounds (Chemistry)",
+      "topic": "Soaps and detergents"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 4: Carbon and its Compounds (Chemistry)",
+      "topic": "Allotropes of carbon"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 4: Carbon and its Compounds (Chemistry)",
+      "topic": "Addition and substitution reactions"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 4: Carbon and its Compounds (Chemistry)",
+      "topic": "Esterification and saponification"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 4: Carbon and its Compounds (Chemistry)",
+      "topic": "Micelle formation"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 5: Life Processes (Biology)",
+      "topic": "Transportation (human circulatory system)"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 5: Life Processes (Biology)",
+      "topic": "Excretion (nephrons)"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 5: Life Processes (Biology)",
+      "topic": "Autotrophic nutrition and photosynthesis"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 5: Life Processes (Biology)",
+      "topic": "Human digestive system"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 5: Life Processes (Biology)",
+      "topic": "Excretion in plants"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 6: Control and Coordination (Biology)",
+      "topic": "Reflex action"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 6: Control and Coordination (Biology)",
+      "topic": "Structure of a neuron"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 6: Control and Coordination (Biology)",
+      "topic": "Auxins, gibberellins and abscisic acid"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 7: How do Organisms Reproduce? (Biology)",
+      "topic": "Fission, fragmentation and regeneration"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 7: How do Organisms Reproduce? (Biology)",
+      "topic": "Pollination and fertilisation in plants"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 7: How do Organisms Reproduce? (Biology)",
+      "topic": "Menstruation"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 7: How do Organisms Reproduce? (Biology)",
+      "topic": "Contraceptive methods"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 7: How do Organisms Reproduce? (Biology)",
+      "topic": "Sexually transmitted diseases"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 8: Heredity and Evolution (Biology)",
+      "topic": "Monohybrid and dihybrid crosses"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 8: Heredity and Evolution (Biology)",
+      "topic": "Law of segregation and independent assortment"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 9: Light – Reflection and Refraction (Physics)",
+      "topic": "Lens formula"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 10: The Human Eye and the Colourful World (Physics)",
+      "topic": "Defects of vision (myopia, hypermetropia)"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 10: The Human Eye and the Colourful World (Physics)",
+      "topic": "Prism refraction"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 10: The Human Eye and the Colourful World (Physics)",
+      "topic": "Power of accommodation"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 10: The Human Eye and the Colourful World (Physics)",
+      "topic": "Tyndall effect and blue sky"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 11: Electricity (Physics)",
+      "topic": "Heating effect"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 11: Electricity (Physics)",
+      "topic": "Circuit diagrams and symbols"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 11: Electricity (Physics)",
+      "topic": "Resistivity of materials"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 12: Magnetic Effects of Electric Current (Physics)",
+      "topic": "Domestic circuits"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 13: Our Environment (Biology)",
+      "topic": "Biological magnification"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 13: Our Environment (Biology)",
+      "topic": "Producers, consumers and decomposers"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 13: Our Environment (Biology)",
+      "topic": "Effects of CFCs on ozone"
+    },
+    {
+      "klass": "10",
+      "subject": "Science",
+      "chapter": "Chapter 13: Our Environment (Biology)",
+      "topic": "Waste management and its methods"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Internet Basics and Web Services",
+      "topic": "World Wide Web"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Internet Basics and Web Services",
+      "topic": "Web browsers"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Internet Basics and Web Services",
+      "topic": "Web servers"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Internet Basics and Web Services",
+      "topic": "Communication protocols (TCP/IP, HTTP, FTP)"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Internet Basics and Web Services",
+      "topic": "Internet vs intranet"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Internet Basics and Web Services",
+      "topic": "URL and domain names"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Internet Basics and Web Services",
+      "topic": "Search engines"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Internet Basics and Web Services",
+      "topic": "Email, chat and VoIP"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Internet Basics and Web Services",
+      "topic": "Website hosting basics"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: HTML Fundamentals & Cascading Style Sheets (CSS)",
+      "topic": "Structure of HTML documents"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: HTML Fundamentals & Cascading Style Sheets (CSS)",
+      "topic": "Formatting tags"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: HTML Fundamentals & Cascading Style Sheets (CSS)",
+      "topic": "Lists"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: HTML Fundamentals & Cascading Style Sheets (CSS)",
+      "topic": "Tables"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: HTML Fundamentals & Cascading Style Sheets (CSS)",
+      "topic": "Links and images"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: HTML Fundamentals & Cascading Style Sheets (CSS)",
+      "topic": "Adding CSS styles"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: HTML Fundamentals & Cascading Style Sheets (CSS)",
+      "topic": "HTML, HEAD and BODY tags"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: HTML Fundamentals & Cascading Style Sheets (CSS)",
+      "topic": "Headings and paragraphs"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: HTML Fundamentals & Cascading Style Sheets (CSS)",
+      "topic": "Ordered, unordered and definition lists"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: HTML Fundamentals & Cascading Style Sheets (CSS)",
+      "topic": "Table attributes (rowspan, colspan)"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: HTML Fundamentals & Cascading Style Sheets (CSS)",
+      "topic": "Inline, internal and external CSS"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: HTML Fundamentals & Cascading Style Sheets (CSS)",
+      "topic": "Selectors, classes and IDs"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: HTML Fundamentals & Cascading Style Sheets (CSS)",
+      "topic": "Forms and input elements"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Cyber Ethics and Security",
+      "topic": "Intellectual property rights"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Cyber Ethics and Security",
+      "topic": "Plagiarism"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Cyber Ethics and Security",
+      "topic": "Digital property rights"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Cyber Ethics and Security",
+      "topic": "Software licenses"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Cyber Ethics and Security",
+      "topic": "Secure online transactions"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Cyber Ethics and Security",
+      "topic": "Copyright, patent and trademark"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Cyber Ethics and Security",
+      "topic": "Avoiding plagiarism and citation"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Cyber Ethics and Security",
+      "topic": "Free and open source software licenses"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Cyber Ethics and Security",
+      "topic": "Firewalls and encryption"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: Cyber Ethics and Security",
+      "topic": "Digital signatures and OTP safety"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Database Concepts (MySQL Basics)",
+      "topic": "Introduction to DBMS"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Database Concepts (MySQL Basics)",
+      "topic": "Tables, rows, columns"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Database Concepts (MySQL Basics)",
+      "topic": "Data types"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Database Concepts (MySQL Basics)",
+      "topic": "Basic SQL queries (SELECT, INSERT, UPDATE)"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Database Concepts (MySQL Basics)",
+      "topic": "Database, table, record and field"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Database Concepts (MySQL Basics)",
+      "topic": "Primary key and foreign key"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Database Concepts (MySQL Basics)",
+      "topic": "CREATE TABLE and DROP TABLE"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Database Concepts (MySQL Basics)",
+      "topic": "WHERE clause and operators"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Database Concepts (MySQL Basics)",
+      "topic": "ORDER BY"
+    },
+    {
+      "klass": "10",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Database Concepts (MySQL Basics)",
+      "topic": "DELETE and ALTER commands"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 1: Sets",
+      "topic": "De Morgan's laws"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 3: Trigonometric Functions",
+      "topic": "Transformation of products into sums"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 4: Complex Numbers and Quadratic Equations",
+      "topic": "Powers of i"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 4: Complex Numbers and Quadratic Equations",
+      "topic": "Addition, multiplication and division"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 5: Linear Inequalities",
+      "topic": "Feasible region"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 6: Permutations and Combinations",
+      "topic": "nPr formula and derivation"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 6: Permutations and Combinations",
+      "topic": "nCr formula and derivation"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 6: Permutations and Combinations",
+      "topic": "Relation between nPr and nCr"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 6: Permutations and Combinations",
+      "topic": "Division into groups"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 7: Binomial Theorem",
+      "topic": "General term"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 7: Binomial Theorem",
+      "topic": "General term Tr+1"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 8: Sequences and Series",
+      "topic": "Relation between AM and GM"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 11: Introduction to Three Dimensional Geometry",
+      "topic": "Internal and external division"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 12: Limits and Derivatives",
+      "topic": "Product and quotient rules"
+    },
+    {
+      "klass": "11",
+      "subject": "Mathematics",
+      "chapter": "Chapter 13: Statistics",
+      "topic": "Coefficient of variation"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 1: Units and Measurement",
+      "topic": "Accuracy and precision"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 1: Units and Measurement",
+      "topic": "Propagation of errors"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 1: Units and Measurement",
+      "topic": "Limitations of dimensional analysis"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 3: Motion in a Plane",
+      "topic": "Derivation of projectile trajectory"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 4: Laws of Motion",
+      "topic": "Aristotle's fallacy and inertia"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 4: Laws of Motion",
+      "topic": "Banking of roads"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 5: Work, Energy and Power",
+      "topic": "Instantaneous and average power"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 8: Mechanical Properties of Solids",
+      "topic": "Applications in beams and columns"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 9: Mechanical Properties of Fluids",
+      "topic": "Buoyancy"
+    },
+    {
+      "klass": "11",
+      "subject": "Physics",
+      "chapter": "Chapter 10: Thermal Properties of Matter",
+      "topic": "Anomalous expansion of water"
+    },
+    {
+      "klass": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 3: Classification of Elements and Periodicity in Properties",
+      "topic": "s-, p-, d- and f-block elements"
+    },
+    {
+      "klass": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 3: Classification of Elements and Periodicity in Properties",
+      "topic": "Diagonal relationship and anomalous properties"
+    },
+    {
+      "klass": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 5: Chemical Thermodynamics",
+      "topic": "Extensive and intensive properties"
+    },
+    {
+      "klass": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 6: Equilibrium",
+      "topic": "Ka, Kb and pKa"
+    },
+    {
+      "klass": "11",
+      "subject": "Chemistry",
+      "chapter": "Chapter 6: Equilibrium",
+      "topic": "pH calculations"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer Systems and Organization",
+      "topic": "CPU"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer Systems and Organization",
+      "topic": "Memory"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer Systems and Organization",
+      "topic": "Input/output devices"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer Systems and Organization",
+      "topic": "Software types"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer Systems and Organization",
+      "topic": "Von Neumann architecture"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer Systems and Organization",
+      "topic": "Registers and cache memory"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer Systems and Organization",
+      "topic": "Primary vs secondary storage"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer Systems and Organization",
+      "topic": "System and application software"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Computer Systems and Organization",
+      "topic": "Microprocessors and mobile systems"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Encoding Schemes and Number Systems",
+      "topic": "ASCII"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Encoding Schemes and Number Systems",
+      "topic": "ISCII"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Encoding Schemes and Number Systems",
+      "topic": "Unicode"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Encoding Schemes and Number Systems",
+      "topic": "Binary, octal, hexadecimal conversions"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Encoding Schemes and Number Systems",
+      "topic": "Number system conversions"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Encoding Schemes and Number Systems",
+      "topic": "Binary addition"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Encoding Schemes and Number Systems",
+      "topic": "1's and 2's complement"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Encoding Schemes and Number Systems",
+      "topic": "UTF-8 and UTF-32"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Encoding Schemes and Number Systems",
+      "topic": "Representation of characters and integers"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Control Statements",
+      "topic": "Conditional execution (if, elif, else)"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Control Statements",
+      "topic": "Iteration loops (for, while)"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Control Statements",
+      "topic": "Flow of control"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Control Statements",
+      "topic": "Nested if statements"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Control Statements",
+      "topic": "range() function"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Control Statements",
+      "topic": "break and continue"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Control Statements",
+      "topic": "Nested loops"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Control Statements",
+      "topic": "Pattern and series programs"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Functions",
+      "topic": "Built-in functions"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Functions",
+      "topic": "User-defined functions"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Functions",
+      "topic": "Scope of variables"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Functions",
+      "topic": "Defining and calling a function"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Functions",
+      "topic": "Parameters and arguments"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Functions",
+      "topic": "Default and keyword arguments"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Functions",
+      "topic": "return statement"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Functions",
+      "topic": "Modules: math and random"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Functions",
+      "topic": "Recursion basics"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Strings and Lists",
+      "topic": "String manipulation"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Strings and Lists",
+      "topic": "List operations"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Strings and Lists",
+      "topic": "Traversal"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Strings and Lists",
+      "topic": "Built-in methods"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Strings and Lists",
+      "topic": "String indexing and slicing"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Strings and Lists",
+      "topic": "String methods and immutability"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Strings and Lists",
+      "topic": "List slicing and nested lists"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Strings and Lists",
+      "topic": "Sorting and searching in lists"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Strings and Lists",
+      "topic": "List comprehension"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Strings and Lists",
+      "topic": "Programs on maximum, minimum and sum"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 7: Tuples and Dictionaries",
+      "topic": "Tuple immutability"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 7: Tuples and Dictionaries",
+      "topic": "Creating and unpacking tuples"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 8: Societal Impacts",
+      "topic": "Digital footprint"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 8: Societal Impacts",
+      "topic": "Cyber safety"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 8: Societal Impacts",
+      "topic": "Intellectual property"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 8: Societal Impacts",
+      "topic": "Open source philosophy"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 8: Societal Impacts",
+      "topic": "Net etiquette and communication etiquette"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 8: Societal Impacts",
+      "topic": "Data protection and privacy"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 8: Societal Impacts",
+      "topic": "Plagiarism, copyright and licensing"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 8: Societal Impacts",
+      "topic": "Cyber crime and cyber law (IT Act)"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 8: Societal Impacts",
+      "topic": "E-waste management"
+    },
+    {
+      "klass": "11",
+      "subject": "Computer Science",
+      "chapter": "Chapter 8: Societal Impacts",
+      "topic": "Technology and health concerns"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 2: Inverse Trigonometric Functions",
+      "topic": "Sum and difference formulae for tan⁻¹"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 2: Inverse Trigonometric Functions",
+      "topic": "Simplification of expressions"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 4: Determinants",
+      "topic": "Property-based simplification"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 4: Determinants",
+      "topic": "Adjoint and its properties"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 4: Determinants",
+      "topic": "Singular and non-singular matrices"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 5: Continuity and Differentiability",
+      "topic": "Logarithmic differentiation"
+    },
+    {
+      "klass": "12",
+      "subject": "Mathematics",
+      "chapter": "Chapter 9: Differential Equations",
+      "topic": "Integrating factor method"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 2: Electrostatic Potential and Capacitance",
+      "topic": "Van de Graaff generator"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 4: Moving Charges and Magnetism",
+      "topic": "Oersted's experiment"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 5: Magnetism and Matter",
+      "topic": "Hysteresis loop"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 11: Dual Nature of Radiation and Matter",
+      "topic": "Hertz and Lenard observations"
+    },
+    {
+      "klass": "12",
+      "subject": "Physics",
+      "chapter": "Chapter 14: Semiconductor Electronics",
+      "topic": "n-type and p-type doping"
+    },
+    {
+      "klass": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 5: Coordination Compounds",
+      "topic": "Denticity and chelation"
+    },
+    {
+      "klass": "12",
+      "subject": "Chemistry",
+      "chapter": "Chapter 9: Amines",
+      "topic": "Hinsberg test"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Python Revision Tour",
+      "topic": "Review of Python basics"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Python Revision Tour",
+      "topic": "Functions"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Python Revision Tour",
+      "topic": "Modules"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Python Revision Tour",
+      "topic": "Data structures"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Python Revision Tour",
+      "topic": "Operators, expressions and type conversion"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Python Revision Tour",
+      "topic": "Conditional and iterative statements"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Python Revision Tour",
+      "topic": "String, list, tuple and dictionary methods"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Python Revision Tour",
+      "topic": "Sorting and searching programs"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 1: Python Revision Tour",
+      "topic": "Exception handling basics"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Functions",
+      "topic": "Arguments"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Functions",
+      "topic": "Local and global scope"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Functions",
+      "topic": "Mutable and immutable argument passing"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Functions",
+      "topic": "Positional, default and keyword arguments"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Functions",
+      "topic": "Returning multiple values"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Functions",
+      "topic": "Functions using libraries"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Functions",
+      "topic": "Pass by reference behaviour"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 2: Functions",
+      "topic": "Recursive functions"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: File Handling",
+      "topic": "Text files"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: File Handling",
+      "topic": "Binary files"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: File Handling",
+      "topic": "CSV files"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: File Handling",
+      "topic": "Reading and writing modes"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: File Handling",
+      "topic": "open(), close() and with statement"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: File Handling",
+      "topic": "read(), readline() and readlines()"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: File Handling",
+      "topic": "write() and writelines()"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: File Handling",
+      "topic": "pickle: dump and load"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: File Handling",
+      "topic": "seek() and tell()"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 3: File Handling",
+      "topic": "csv reader and writer"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Data Structures (Stack & Queue)",
+      "topic": "Implementation of stack using lists"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Data Structures (Stack & Queue)",
+      "topic": "Implementation of queue using lists"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Data Structures (Stack & Queue)",
+      "topic": "LIFO and FIFO concepts"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Data Structures (Stack & Queue)",
+      "topic": "push and pop operations"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Data Structures (Stack & Queue)",
+      "topic": "Overflow and underflow conditions"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Data Structures (Stack & Queue)",
+      "topic": "Enqueue and dequeue operations"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 4: Data Structures (Stack & Queue)",
+      "topic": "Applications of stacks and queues"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Computer Networks",
+      "topic": "Network types (LAN, WAN)"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Computer Networks",
+      "topic": "Topologies"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Computer Networks",
+      "topic": "Networking devices"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Computer Networks",
+      "topic": "Protocols"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Computer Networks",
+      "topic": "Web structure"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Computer Networks",
+      "topic": "Evolution of networking"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Computer Networks",
+      "topic": "MAN and PAN"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Computer Networks",
+      "topic": "Bus, star, tree and mesh topologies"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Computer Networks",
+      "topic": "Hub, switch, router, repeater and gateway"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Computer Networks",
+      "topic": "HTTP, HTTPS, FTP, SMTP, POP3, TCP/IP"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Computer Networks",
+      "topic": "Website, webpage, web hosting and browsers"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 5: Computer Networks",
+      "topic": "Wired and wireless transmission media"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "topic": "DDL commands"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "topic": "DML commands"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "topic": "Constraints"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "topic": "Aggregate functions"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "topic": "Joins"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "topic": "Relational model: relation, tuple, attribute"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "topic": "Primary, candidate and foreign keys"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "topic": "CREATE, ALTER and DROP"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "topic": "INSERT, UPDATE, DELETE"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "topic": "SELECT with WHERE, BETWEEN, IN, LIKE"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "topic": "ORDER BY and GROUP BY with HAVING"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "topic": "COUNT, SUM, AVG, MIN, MAX"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "topic": "Cartesian product and equi-join"
+    },
+    {
+      "klass": "12",
+      "subject": "Computer Science",
+      "chapter": "Chapter 6: Database Management System (SQL)",
+      "topic": "Interface of Python with MySQL"
+    }
+  ]
+}

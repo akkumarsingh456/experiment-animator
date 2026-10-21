@@ -956,7 +956,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
       )}
 
       <p className="text-xs text-muted-foreground mt-10 print:hidden">
-        Source: {result.source_books.map((b) => `${b.subject} · Class ${b.class} · ${b.chapter}`).join(", ")} ({result.source_basis === "uploaded-teacher-pdfs" ? "Original uploaded teacher chapter PDFs; NCERT text unavailable" : `${result.context_chars.toLocaleString()} chars of NCERT text`})
+        Source: {result.source_books.map((b) => `${b.subject} · Class ${b.class} · ${b.chapter}`).join(", ")} ({result.source_basis === "official-online-supplement" ? "Official-source supplementary notes for the selected class, chapter and topics" : result.source_basis === "uploaded-teacher-pdfs" ? "Original uploaded teacher chapter PDFs; NCERT text unavailable" : `${result.context_chars.toLocaleString()} chars of NCERT text`})
       </p>
 
       {exportMode && <div ref={exportRef} className={`lesson-export-root lesson-export-${exportMode === "notes" ? "notes" : "slides"} ${exportMode === "slides" ? "original-slide-deck" : ""}`} data-presentation-style={exportMode === "slides" ? "lovable" : "guided"} aria-hidden="true">
@@ -1385,7 +1385,7 @@ function SlideCanvas({
           </div>
 
           <div className="px-4 sm:px-6 py-2 border-t border-border/60 bg-secondary/40 flex items-center justify-between text-[10px] text-muted-foreground">
-            <span className="truncate max-w-[70%] italic">{slide.source_recovery?.url?<a href={slide.source_recovery.url} target="_blank" rel="noreferrer" className="underline">External NCERT mirror · IIT Kanpur SATHEE · source</a>:slide.caption || `NCERT-grounded summary — ${slide.title}`}</span>
+            <span className="truncate max-w-[70%] italic">{slide.source_recovery?.url?<a href={slide.source_recovery.url} target="_blank" rel="noreferrer" className="underline">{slide.source_recovery.kind==='official-online-supplement'?'Supplementary notes · source':'External NCERT mirror · IIT Kanpur SATHEE · source'}</a>:slide.caption || `NCERT-grounded summary — ${slide.title}`}</span>
             <span className="font-mono shrink-0">EduPlan AI · A4</span>
           </div>
         </div>
