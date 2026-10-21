@@ -6,26 +6,31 @@ import {sourceUnavailable} from './secondary-study-evidence';
 import {recoverAttentionTopic,attentionFailureMessage} from './attention-topic-notes.server';
 import {verifiedNcertRecovery} from './verified-ncert-recovery';
 import {canonicalOfficialRecoveryTopic} from './official-recovery-scope';
+import {isDependentSourceDefinition} from './source-explanation-context';
+const orphanDefinition=(slide:Slide)=>(slide.sections||[]).some(section=>!/^Source (?:review|table)/i.test(section.heading)&&section.lines.some(line=>isDependentSourceDefinition(line.replace(/^\*\*[^*]+:\*\*\s*/,''))));
 
 export function topicSourceComplete(slide:Slide,verbatim=false){
  if(slide.teacher_pdf||!['content','chapter'].includes(slide.kind||'content'))return true;
  // A genuine short source passage or poem is not an incomplete explanatory
  // topic. Do not manufacture paragraphs to meet a science-note length target.
  if(verbatim){const text=slide.chapter_text?.trim()||'';return !sourceUnavailable(text)&&(text.match(/[\p{L}\p{M}]+/gu)||[]).length>=3;}
+ if(orphanDefinition(slide))return false;
  return adequateTopicEvidence(slide.title,(slide.sections||[]).filter(section=>section.kind!=='diagram'&&!/activity|practice|revision|^Source (?:review|table)/i.test(section.heading)).flatMap(section=>section.lines));
 }
 export async function recoverSparseTopicNotes(slides:Slide[],options:{klass:string;subject:string;chapter:string;sources:string[];verbatim?:boolean}){
  const output:Slide[]=[],extraEvidence:string[]=[];
  for(const slide of slides){
   if(topicSourceComplete(slide,options.verbatim)){output.push(slide);continue;}
-  let recovery=recoverTopicFromSources(slide.title,options.sources),sourceUrl='';
-  if(!recovery.complete){
-   const snapshot=verifiedNcertRecovery(options.klass,options.subject,options.chapter,slide.title);
-   if(snapshot){const recovered=recoverTopicFromSources(slide.title,[snapshot.text]);if(recovered.complete){recovery=recovered;sourceUrl=snapshot.url;}}
-  }
+  // Old short mirror-recovery notes can retain the definition but lose its
+  // explanation. Refresh that affected topic from the full chapter first.
+  let recovery=slide.source_recovery?.kind==='official-ncert-mirror'&&orphanDefinition(slide)?{complete:false,lines:[] as string[],attempts:3}:recoverTopicFromSources(slide.title,options.sources),sourceUrl='';
   if(!recovery.complete){
    const trusted=await trustedChapterSource(options.klass,options.subject,options.chapter);
    if(trusted){const remote=recoverTopicFromSources(slide.title,[trusted.text]);if(remote.complete){recovery=remote;sourceUrl=trusted.url;}}
+  }
+  if(!recovery.complete){
+   const snapshot=verifiedNcertRecovery(options.klass,options.subject,options.chapter,slide.title);
+   if(snapshot){const recovered=recoverTopicFromSources(slide.title,[snapshot.text]);if(recovered.complete){recovery=recovered;sourceUrl=snapshot.url;}}
   }
   // Official supplementation is tried only after existing NCERT recovery
   // fails, for the exact configured class, subject, chapter and topic.
@@ -40,7 +45,13 @@ export async function recoverSparseTopicNotes(slides:Slide[],options:{klass:stri
   const updated={...slide,bullets:slide.bullets.filter(line=>!sourceUnavailable(line)),notes:slide.notes.filter(line=>!sourceUnavailable(line)),grounding};
   const rebuilt=attention?.sections||buildLocalSections(updated);
   const known=new Set(rebuilt.flatMap(section=>section.lines));
-  const retained=(slide.sections||[]).map(section=>({...section,lines:section.lines.filter(line=>!sourceUnavailable(line)&&!known.has(line))})).filter(section=>section.lines.length);
+  const retained=(slide.sections||[]).map(section=>({...section,lines:section.lines.filter(line=>{
+   const body=line.replace(/^\*\*[^*]+:\*\*\s*/,'');
+   // The original dependent sentence is already retained inside its complete
+   // source explanation; do not append the orphan version a second time.
+   if(isDependentSourceDefinition(body)&&[...known].some(complete=>complete.endsWith(body)))return false;
+   return !sourceUnavailable(line)&&!known.has(line);
+  })})).filter(section=>section.lines.length);
   output.push({...updated,sections:[...rebuilt,...retained],source_recovery:{attempts:recovery.attempts,kind:attention?'official-online-supplement':sourceUrl?'official-ncert-mirror':'uploaded-ncert',url:sourceUrl||undefined,...(attention?{sources:attention.sources}:{})},caption:attention?'Class-aligned supplementary notes':sourceUrl?'NCERT mirror recovery · IIT Kanpur SATHEE':slide.caption});
  }
  return {slides:output,extraEvidence};

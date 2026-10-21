@@ -26,6 +26,7 @@ import { PW_EXTRACTION_RULES, normalizeNoteLine } from "@/lib/reference-note-nor
 import { referenceBooksPrompt } from "@/lib/reference-books";
 import { sourceFormulaBlocks } from "@/lib/source-derivations";
 import { isUnitStatement, isDefinitionStatement, sourceDetailLabel } from "@/lib/note-labels";
+import {joinSourceExplanations,isDependentSourceDefinition} from './source-explanation-context';
 import { sourceFormulaExplanations } from "@/lib/med-easy-supplements";
 
 
@@ -92,11 +93,11 @@ export function cleanNcertLine(raw: string): string {
 
 
 function sentences(text: string): string[] {
-  return String(text || "")
+  return joinSourceExplanations(String(text || "")
     .replace(/\s+/g, " ")
     .split(/(?<=[.?!।])\s+/)
     .map((s) => cleanNcertLine(s))
-    .filter((s) => s.length > 20 && /\p{L}/u.test(s));
+    .filter((s) => s.length > 20 && /\p{L}/u.test(s)));
 }
 
 /** Include more topic-specific chapter evidence for detailed guided notes. */
@@ -199,12 +200,15 @@ export function usefulTerm(term: string, meaning: string): boolean {
  * best points from both surfaces end up in one detailed set of notes.
  */
 export function buildLocalSections(slide: NoteSourceSlide): NoteSection[] {
-  const pool = dedupe([
+  const candidates = dedupe([
     ...(slide.bullets || []).flatMap(sentences),
     ...(slide.notes || []).flatMap(sentences),
     ...sentences(slide.chapter_text || ""),
     ...sentences(slide.grounding || ""),
   ]).filter(Boolean);
+  // Do not join across unrelated bullet/source boundaries. A bare dependent
+  // name is redundant only when its exact full source sentence is available.
+  const pool=candidates.filter(line=>!isDependentSourceDefinition(line)||!candidates.some(other=>other!==line&&other.endsWith(line)));
 
   const used = new Set<string>();
   const take = (pred: (s: string) => boolean, max: number) => {
@@ -477,6 +481,7 @@ export async function groqTeacherNotes(opts: {
     'Each section: { "heading": string, "kind": "text"|"bullets"|"formula"|"terms"|"tip", "lines": string[] }.',
     "Use kind 'formula' for equations and derivation steps, 'terms' for vocabulary, 'text' for connected explanations, and 'bullets' for units, conditions, limitations, applications and process steps. Graph descriptions are prose unless they contain a mathematical relation.",
     "The notes flow across printable pages. Cover all distinct source-supported ideas in depth rather than fitting a slide or a line quota. Use short explanatory paragraphs, focused bullets and numbered process/derivation steps. Preserve useful detail and examples; do not pad sparse sources, repeat definitions or include raw OCR headings and exercise lists.",
+    "Each explanation must be self-contained: keep a property description beside its name, and its reason/example beside the claim it supports. Do not leave 'this property is called...' without its source antecedent, or count an activity instruction as concept explanation. For a named series or comparison, retain the source's actual ordered entries or comparison criteria, not just its definition. Do not invent missing table values.",
 
     "NEVER include edition years (e.g. 2019-20), figure/table numbers, page numbers or 'Fig.' references.",
     "Do not repeat the same fact under two headings — every fact appears exactly once.",

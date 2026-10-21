@@ -1,4 +1,5 @@
 /** Layout only: keep source words and math verbatim, split prose at sentence boundaries. */
+import {isDependentSourceDefinition} from './source-explanation-context';
 export function prosePoints(line: string): string[] {
   if (line.length < 90) return [line];
   const label = line.match(/^(\s*\*\*[^*]+:\*\*\s*)([\s\S]*)$/);
@@ -18,6 +19,7 @@ export function prosePoints(line: string): string[] {
   for (const match of masked.matchAll(boundaries)) {
     const end = match.index! + match[0].trimEnd().length;
     const before = masked.slice(start, end);
+    if(isDependentSourceDefinition(masked.slice(match.index!+match[0].length)))continue;
     // Keep figure/equation references, initials and common abbreviations together.
     if (/(?:\b(?:Fig|Figs|Eq|Eqs|Dr|Mr|Mrs|Ms|Prof|No|e\.g|i\.e|etc)|\b[A-Z])\.$/i.test(before)) continue;
     points.push(before.trim());

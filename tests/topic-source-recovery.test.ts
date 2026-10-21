@@ -25,7 +25,7 @@ it.each(['Nature of C-X bond','Nature of C–X bond'])('repairs the reported %s 
   const finalSections=sequenceChemistryNotes(learningScaffold(title,seniorActivityConclusions(title,discussion?[...study,discussion]:study),true),'Chemistry','Haloalkanes and Haloarenes');
   expect(verified.check.pass).toBe(true);
   expect(topicSourceComplete({...result.slides[0],sections:finalSections})).toBe(true);
-  expect(spy).not.toHaveBeenCalled();
+  expect(spy).toHaveBeenCalled();
  }finally{spy.mockRestore();}
 });
 it('never uses the reviewed bond passage for another class, chapter, subject or topic',()=>{

@@ -1,12 +1,14 @@
 import {cleanSourceNoteLine,isSourceTask} from './source-note-quality';
 import {sourceExtractionIssue} from './source-extraction-review';
 import {isContentsListing} from './note-source-noise';
+import {sourceReactivitySeries,joinSourceExplanations} from './source-explanation-context';
 
 const key=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]/g,'').replace(/properties/g,'property');
 /** Heading aliases identify source sections; they contain no replacement textbook facts. */
 const aliases:Record<string,string[]>={
  'What are living organisms made of?':['What are living organisms made up of'],
  'Physical and chemical properties':['Physical properties','Chemical properties'],
+ 'Reactivity series':['The Reactivity Series','How do Metals react with Solutions of other Metal Salts?'],
  'Corrosion prevention':['Corrosion','Prevention of corrosion'],
  'Extraction of metals':['Extraction of metals','Enrichment of ores','Refining of metals'],
  'Pure substances (elements and compounds)':['What are the types of pure substances','Elements','Compounds'],
@@ -51,8 +53,9 @@ export function sourceUnavailable(line:string){return /readable source text.*(?:
 export function substantiveStudyLine(line:string){
  const body=line.replace(/^\*\*[^*]+:\*\*\s*/,'').replace(/^n\s+/,'');
  return body.length>25&&!sourceUnavailable(body)&&!sourceExtractionIssue(body)&&!isSourceTask(body)
+  &&! /^(?:After performing|For performing|We will learn|You (?:have learnt|have learned|will learn)|As shown in|The following (?:table|series)|This property is (?:called|known))\b/i.test(body)
   &&!/^\*\*(?:activity|discussion|experiment|learning objective|prerequisite|support practice|core practice|challenge practice|answers? and explanations?|exit ticket)/i.test(line)
-  &&! /^(?:take|place|put|ask|discuss|clean|note|try|hold|dry|repeat|record|collect|draw|observe|test|burn|heat|add|pour|clamp|attach|connect|insert|keep|use a|give reasons|let us|for performing activities|caution|compare your|in pairs|submit a claim|teacher checks|before reading|explain .*in your own words)\b/i.test(body);
+  &&! /^(?:take|place|put|ask|discuss|clean|note|try|hold|dry|repeat|record|collect|draw|observe|test|burn|heat|add|pour|clamp|attach|connect|insert|keep|fix|arrange|set up|let the|it would be better if students|for this,? collect|use a|give reasons|let us|for performing activities|caution|compare your|in pairs|submit a claim|teacher checks|before reading|explain .*in your own words)\b/i.test(body);
 }
 
 /** Read a matched numbered textbook section with all its subordinate paragraphs.
@@ -69,7 +72,12 @@ export function secondaryScienceSectionEvidence(title:string,context:string,extr
  context=context.replace(headingPattern,(_all,before,id,heading,question)=>`\n${id} ${heading}${question}\n`);
  // Preserve subordinate subsections inside the parent; expose their boundaries
  // without mistaking references such as "Eq. (8.8)" for section headings.
- context=context.replace(/([^\n])\s+(\d{1,2}\.\d{1,2}(?:\.\d{1,2})?)(?=\s+[A-Z][A-Za-z -]{3,})/g,'$1\n$2');
+ context=context.replace(/([^\n])\s+(\d{1,2}\.\d{1,2}(?:\.\d{1,2})?)(?=\s+[A-Z][A-Za-z -]{3,})/g,(match,before,id,offset:number,whole:string)=>{
+  // Table/Figure identifiers are not chapter-section boundaries. Treating
+  // Table 3.1 as section 3.1 truncated the explanation before its exceptions.
+  if(/\b(?:Table|Figure|Fig\.?|Equation|Eq\.?)$/i.test(whole.slice(Math.max(0,offset-20),offset+before.length)))return match;
+  return `${before}\n${id}`;
+ });
  context=context.replace(/(^|\n)([ \t]*\d{1,2}\.\d{1,2}(?:\.\d{1,2})?)[ \t]+([A-Z][A-Z \t–—()'-]{3,}?)[ \t]+(?=[A-Z][a-z])/g,'$1$2 $3\n');
  context=context.replace(/\bReprint(?:ed)?\s+20\d{2}(?:[-–]\d{2})?/g,'').split('\n').filter(line=>/EXERCISES|E X E R C I S E S/.test(line)||!/^\s*(?:Science|\d{1,3}|[A-Z][A-Z ,–-]{2,100})\s*$/.test(line)).join('\n');
  const variants=[...extraAliases,title.replace(/\s*\([^)]*\)/g,''),...(Object.entries(aliases).find(([name])=>key(name)===key(title))?.[1]||[])].map(key).filter(v=>v.length>=4);
@@ -90,7 +98,7 @@ export function secondaryScienceSectionEvidence(title:string,context:string,extr
  const result:string[]=[],seen=new Set<string>();
  for(const section of sections){
   const parts=section.replace(/^[ \t]*\d{1,2}\.\d{1,2}(?:\.\d{1,2})?[ \t]*[^\n\r]{3,140}$/gm,' ').replace(/(?:^|\n)[ \t]*n[ \t]*(?:\n|(?=[A-Z]))/g,' ').replace(/\bActivity\s+\d+(?:\.\d+)?[^\n]*\n(?:[ \t]*[n•▪][^\n]*\n)+/g,' ').replace(/\s+/g,' ').split(/(?<=[.!?])\s+/);
-  for(const raw of parts){const line=cleanSourceNoteLine(raw);if(!substantiveStudyLine(line)||isContentsListing(line)||/^(?:Activity|Questions?|Exercises?)\b/i.test(line))continue;const id=key(line);if(!seen.has(id)){seen.add(id);result.push(line);}}
+  for(const raw of joinSourceExplanations(parts)){const line=cleanSourceNoteLine(raw);if(!substantiveStudyLine(line)||isContentsListing(line)||/^(?:Activity|Questions?|Exercises?)\b/i.test(line))continue;const id=key(line);if(!seen.has(id)){seen.add(id);result.push(line);}}
  }
- return result;
+ return [...result,...sourceReactivitySeries(title,context)];
 }

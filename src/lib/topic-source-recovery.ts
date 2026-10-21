@@ -3,10 +3,12 @@ import {secondaryScienceSectionEvidence,substantiveStudyLine} from './secondary-
 import {topicEvidence} from './topic-evidence';
 import {cleanSourceNoteLine,hasBrokenSourceMath} from './source-note-quality';
 import {decodeNcertProse} from './ncert-prose-decoding';
+import {joinSourceExplanations} from './source-explanation-context';
 
 export function adequateTopicEvidence(title:string,lines:string[]){
  const facts=[...new Set(lines.filter(substantiveStudyLine))];
  if(facts.length<3||facts.join(' ').length<240)return false;
+ if(/^reactivity series$/i.test(title.trim())&&!facts.some(line=>/decreasing (?:order|reactivity)|reactivity decreases/i.test(line)&&/(?:\b[A-Z][a-z]?\s*>\s*){3}/.test(line)))return false;
  if(/preparation/i.test(title)&&/KMnO|permanganate/i.test(title)&&/Cr.*O|dichromate/i.test(title))return /permanganate|KMnO/i.test(facts.join(' '))&&/dichromate|Cr.{0,8}O/i.test(facts.join(' '));
  return true;
 }
@@ -43,7 +45,7 @@ export function recoverTopicFromSources(title:string,sources:string[]){
    for(const value of candidates){
     const original=cleanSourceNoteLine(value);
     if(substantiveStudyLine(original)&&!hasBrokenSourceMath(original)&&!legacyResults.includes(original))legacyResults.push(original);
-    for(const sentence of (value.length>2000?topicEvidence(title,value.split(/(?<=[.!?])\s+/)):value.split(/(?<=[.!?])\s+(?=[\p{Lu}"“])/u))){
+    for(const sentence of joinSourceExplanations(value.length>2000?topicEvidence(title,value.split(/(?<=[.!?])\s+/)):value.split(/(?<=[.!?])\s+(?=[\p{Lu}"“])/u))){
      const line=cleanSourceNoteLine(sentence);if(substantiveStudyLine(line)&&!hasBrokenSourceMath(line)&&!results.includes(line))results.push(line);
     }
    }

@@ -4,6 +4,7 @@ import { cleanSourceNoteLine, validStudyTerm, hasSourcePrintIntrusion, hasBroken
 import { matchesTopicScope } from './notes-quality-policy';
 import { verifiedSourceNotation } from './verified-source-notation';
 import { sourceExtractionIssue } from './source-extraction-review';
+import {contextualizeSourceDefinitions} from './source-explanation-context';
 
 /** Repair only the identifiable NCERT microscopic-resistivity extraction.
  * Other damaged relations are left to the source-grounded generation repair.
@@ -24,6 +25,7 @@ export function repairSourceMathLine(line: string): string {
 }
 
 export function repairSourceMathSlide(slide: Slide): Slide {
+  slide={...slide,sections:contextualizeSourceDefinitions(slide.sections,slide.grounding||slide.chapter_text||'')};
   slide = layoutChemistrySlide(slide);
   const notices=["These original entries contain damaged extraction or exercise options whose answer has not been established.","They are retained for comparison with the textbook, not presented as verified formulas or facts."];
   slide={...slide,sections:slide.sections?.map(section=>section.heading!=="Source review — original extraction"?section:{...section,lines:section.lines.map(line=>notices.some(notice=>line.includes(notice))?notices.reduce((value,notice)=>value.replace(notice,""),line).trim():line).filter(Boolean)}).filter(section=>section.lines.length)};

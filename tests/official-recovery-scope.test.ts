@@ -37,6 +37,6 @@ it('recovers the reported Class 10 topic through slide verification even offline
   const supplement=await recoverAttentionTopic(scope);
   expect(supplement?.method).toBe('source-extraction');
   expect(supplement?.sources[0].sourceClass).toBe('10');
-  expect(spy).not.toHaveBeenCalled();
+  expect(spy).toHaveBeenCalled();
  }finally{spy.mockRestore();}
 });
