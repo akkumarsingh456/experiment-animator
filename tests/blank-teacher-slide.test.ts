@@ -1,5 +1,5 @@
 import { it, expect } from "vitest";
-import { addBlankTeacherSlide } from "@/lib/blank-teacher-slide";
+import { addBlankTeacherSlide, deleteBlankTeacherSlide } from "@/lib/blank-teacher-slide";
 import { hasMeaningfulSlide } from "@/lib/slide-space-organizer";
 import { paginateLectureSections } from "@/lib/lecture-pages";
 import type { Slide } from "@/lib/generate.functions";
@@ -43,4 +43,24 @@ it("adds an empty ordinary content slide without copying source notes or saved i
 it("does not add slides for an unaffected topic", () => {
   const slides = [{ title: "Complete topic" } as Slide];
   expect(addBlankTeacherSlide(slides, "Complete topic").slides).toBe(slides);
+});
+
+it("deletes only marked newly added slides and never an ordinary slide with a similar title", () => {
+  const original = {
+    title: "Original topic",
+    topic_recovery: { status: "missing" },
+    bullets: [],
+    notes: [],
+    key_terms: [],
+    visual: "book",
+  } as Slide;
+  const first = addBlankTeacherSlide([original], original.title);
+  const id = first.slides[1].teacher_blank!.id;
+  expect(deleteBlankTeacherSlide(first.slides, "unknown")).toBe(first.slides);
+  const removed = deleteBlankTeacherSlide(first.slides, id);
+  expect(removed).toEqual([original]);
+  expect(removed[0]).toBe(original);
+  const replacement = addBlankTeacherSlide(removed, original.title);
+  expect(replacement.slides[1].teacher_blank!.id).not.toBe(id);
+  expect(replacement.slides[1].teacher_blank!.topic).toBe(original.title);
 });
