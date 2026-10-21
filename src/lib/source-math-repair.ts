@@ -3,6 +3,7 @@ import type { Slide } from "@/lib/generate.functions";
 import { cleanSourceNoteLine, validStudyTerm, hasSourcePrintIntrusion, hasBrokenSourceMath } from './source-note-quality';
 import { matchesTopicScope } from './notes-quality-policy';
 import { verifiedSourceNotation } from './verified-source-notation';
+import { sourceExtractionIssue } from './source-extraction-review';
 
 /** Repair only the identifiable NCERT microscopic-resistivity extraction.
  * Other damaged relations are left to the source-grounded generation repair.
@@ -36,7 +37,7 @@ export function repairSourceMathSlide(slide: Slide): Slide {
     const optionList = /^(key points|important points|teacher notes)$/i.test(section.heading) && section.lines.length >= 3
       && section.lines.some(line => /^\s*(?:\*\*[^*]+:\*\*\s*)?\(?[a-d]\)\s+/i.test(line));
     const kept = section.lines.filter(line => {
-      if (optionList || ((hasSourcePrintIntrusion(line) || hasBrokenSourceMath(line)) && repairSourceMathLine(line) === line)) { originals.push(line); return false; }
+      if (optionList || sourceExtractionIssue(line) || ((hasSourcePrintIntrusion(line) || hasBrokenSourceMath(line)) && repairSourceMathLine(line) === line)) { originals.push(line); return false; }
       return true;
     });
     return {...section, lines: kept};

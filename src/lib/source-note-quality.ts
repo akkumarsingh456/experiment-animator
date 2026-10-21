@@ -1,4 +1,5 @@
 import { mapOutsideMath, splitMath } from './latex-notation';
+import { sourceExtractionIssue } from './source-extraction-review';
 
 export function validStudyTerm(term:string,meaning:string):boolean {
   return term.trim().length>=3&&term.length<=48
@@ -81,6 +82,7 @@ export function stripRepeatedPrintHeaders(line: string): string {
 /** Never reconstruct an unreadable scientific equation from its page number. */
 export function cleanSourceNoteLine(raw:string):string {
   let line=stripRepeatedPrintHeaders(String(raw||'').trim());
+  if(sourceExtractionIssue(line))return '';
   if(!line||collapsedSourceTable(line)||hasSourcePrintIntrusion(line))return '';
   line=mapOutsideMath(line,text=>text.split(/("[^"\n]*"|“[^”\n]*”)/g).map((part,index)=>index%2?part:part
     .replace(/(?:\bIntext\s+Questions?\s*){2,}/gi,' ')
