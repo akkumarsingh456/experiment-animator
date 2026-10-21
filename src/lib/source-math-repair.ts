@@ -2,11 +2,14 @@ import { layoutChemistrySlide, SOURCE_TABLE_HEADING } from "@/lib/chemistry-note
 import type { Slide } from "@/lib/generate.functions";
 import { cleanSourceNoteLine, validStudyTerm, hasSourcePrintIntrusion, hasBrokenSourceMath } from './source-note-quality';
 import { matchesTopicScope } from './notes-quality-policy';
+import { verifiedSourceNotation } from './verified-source-notation';
 
 /** Repair only the identifiable NCERT microscopic-resistivity extraction.
  * Other damaged relations are left to the source-grounded generation repair.
  */
 export function repairSourceMathLine(line: string): string {
+  const verified=verifiedSourceNotation(line);
+  if(verified!==line)return verified;
   if (/\$/.test(line)) return line;
   if (
     /using\s+E\s*=\s*V\s*\/\s*l/i.test(line) &&
@@ -66,7 +69,7 @@ export function repairSourceMathSlide(slide: Slide): Slide {
     key_terms: (slide.key_terms||[]).filter(term=>validStudyTerm(term.term,term.meaning)),
     sections: slide.sections?.map((section) => ({
       ...section,
-      lines: (section.heading === SOURCE_TABLE_HEADING || section.heading === reviewHeading || section.heading === "MLT Dimensional Formula" || section.heading === "Problem-solving formula reference") ? section.lines : repairLines(section.lines),
+      lines: section.heading === reviewHeading ? section.lines.map(verifiedSourceNotation) : (section.heading === SOURCE_TABLE_HEADING || section.heading === "MLT Dimensional Formula" || section.heading === "Problem-solving formula reference") ? section.lines : repairLines(section.lines),
     })).filter(section=>section.lines.length),
   };
   const count=(item:Slide)=>(item.sections||[]).filter(section=>section.kind!=='diagram').reduce((n,section)=>n+section.lines.length,0)+item.notes.length+item.bullets.length;

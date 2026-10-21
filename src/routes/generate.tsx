@@ -1104,13 +1104,13 @@ function McqSlideBody({ slide, staticView = false }: { slide: Slide; staticView?
   if (!mcq) return null;
   return (
     <div className="p-6 flex flex-col gap-3 min-h-0 overflow-hidden">
-      <p className="font-display text-base sm:text-lg font-semibold leading-snug"><MathText text={mcq.question} /></p>
+      <p className="font-display text-2xl sm:text-3xl font-semibold leading-snug"><MathText text={mcq.question} /></p>
       <ol className="grid sm:grid-cols-2 gap-2">
         {mcq.options.map((o) => {
           const isCorrect = reveal && o.key === mcq.answer;
           return (
             <li key={o.key}
-              className={`rounded-md border p-2.5 text-sm flex gap-2 ${isCorrect ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-border/60 bg-card"}`}
+              className={`rounded-md border p-4 text-lg sm:text-xl leading-relaxed flex gap-3 ${isCorrect ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-border/60 bg-card"}`}
             >
               <span className="font-mono font-bold">{o.key}.</span>
               <span><MathText text={o.text} /></span>
@@ -1123,13 +1123,13 @@ function McqSlideBody({ slide, staticView = false }: { slide: Slide; staticView?
           {reveal ? "Hide answer" : "Show answer"}
         </Button>}
         {reveal && (
-          <Badge className="rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-500/30">
+          <Badge className="rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 text-base px-3 py-1">
             Correct: {mcq.answer}
           </Badge>
         )}
       </div>
       {reveal && mcq.explanation && (
-        <p className="text-xs text-muted-foreground italic border-l-2 border-primary/40 pl-2"><MathText text={mcq.explanation} /></p>
+        <p className="text-lg sm:text-xl leading-relaxed text-foreground border-l-2 border-primary/40 pl-4"><MathText text={mcq.explanation} /></p>
       )}
     </div>
   );
