@@ -11,3 +11,5 @@ Saved notes are loaded for the affected topic on refresh and regeneration. Compl
 No image editor, image save/share permission, crop, import, navigation, model choice, prompt or good-topic extraction setting was edited. The route applies only sections and recovery metadata after a save, preserving concurrent image updates.
 
 Validation: focused recovery and save checks cover continuation, exact scope, retained good topics/image metadata, administrator permissions, wrong-class/chapter source rejection and failed storage. Local checks do not establish that the currently published Lovable site has this change or that its database is writable.
+
+Presentation access fix: the affected topic now renders its recovery control inside the presentation shell, above the navigation footer. It is available in inline and full-screen slide views as well as guided presentations. The popup stays inside the native browser fullscreen element and deck navigation ignores its keyboard events. Controls remain absent from unaffected topics and exports.

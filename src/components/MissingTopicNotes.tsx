@@ -1,12 +1,7 @@
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,13 +13,21 @@ import {
 import type { Slide } from "@/lib/generate.functions";
 
 type Props = {
+  compact?: boolean;
   slide: Slide;
   klass: string;
   subject: string;
   chapter: string;
   onSaved: (slide: Slide) => void;
 };
-export function MissingTopicNotes({ slide, klass, subject, chapter, onSaved }: Props) {
+export function MissingTopicNotes({
+  compact = false,
+  slide,
+  klass,
+  subject,
+  chapter,
+  onSaved,
+}: Props) {
   const scope = { klass, subject, chapter, topic: slide.title };
   const draftKey = "missing-topic-draft:" + JSON.stringify([klass, subject, chapter, slide.title]);
   const [open, setOpen] = useState(false),
@@ -111,146 +114,176 @@ export function MissingTopicNotes({ slide, klass, subject, chapter, onSaved }: P
   }
   return (
     <section
-      className="my-4 rounded-xl border border-amber-200 bg-amber-50/70 p-4 print:hidden"
+      className={
+        compact
+          ? "mx-3 my-1 flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 print:hidden"
+          : "my-4 rounded-xl border border-amber-200 bg-amber-50/70 p-4 print:hidden"
+      }
       aria-label={`Recover notes for ${slide.title}`}
     >
-      <p className="font-semibold">{slide.title}</p>
-      <p className="mt-1 text-sm text-slate-600">
+      <p className="font-semibold">
+        {slide.title}
+        {compact && (
+          <span className="ml-2 text-sm font-normal">
+            {slide.topic_recovery?.status === "missing" ? "Needs notes" : "Supplementary notes"}
+          </span>
+        )}
+      </p>
+      <p className={compact ? "hidden" : "mt-1 text-sm text-slate-600"}>
         {slide.topic_recovery?.status === "missing"
           ? "This topic needs notes. The remaining chapter continues."
           : "Saved supplementary notes for this topic."}
       </p>
-      <Button className="mt-3" variant="outline" onClick={() => setOpen(true)}>
+      <Button
+        className={compact ? "h-8 text-sm" : "mt-3"}
+        variant="outline"
+        onClick={() => setOpen(true)}
+      >
         Teacher notes / Google search
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Complete this topic</DialogTitle>
-            <DialogDescription>
-              Class {klass} · {subject} · {chapter} · {slide.title}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-5">
-            <div>
-              <h3 className="font-semibold">1. Find matching text</h3>
-              <label className="mt-2 block text-sm" htmlFor="topic-search">
-                Class and topic search
-              </label>
-              <Input
-                id="topic-search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Button asChild variant="outline">
-                  <a
-                    href={`https://www.google.com/search?q=${encodeURIComponent(query)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Open Google results
-                  </a>
-                </Button>
-                <Button disabled={busy} onClick={() => find()}>
-                  Find official text
-                </Button>
-              </div>
-              <p className="mt-2 text-sm text-slate-600">
-                Google results open in a separate tab. Extract text from a matching NCERT, SATHEE,
-                CBSE or CIET page below.
-              </p>
-              <label className="mt-3 block text-sm" htmlFor="topic-source">
-                Official page URL
-              </label>
-              <Input
-                id="topic-source"
-                value={url}
-                onChange={(event) => {
-                  setUrl(event.target.value);
-                  setOfficial(false);
-                }}
-                placeholder="https://…"
-              />
-              <Button
-                className="mt-2"
-                variant="outline"
-                disabled={busy || !url}
-                onClick={() => find(true)}
-              >
-                Extract matching topic text
-              </Button>
-            </div>
-            {results.length > 0 && (
+        <DialogPrimitive.Portal
+          container={
+            typeof document !== "undefined"
+              ? (document.fullscreenElement as HTMLElement) || undefined
+              : undefined
+          }
+        >
+          <DialogPrimitive.Overlay className="fixed inset-0 z-[80] bg-black/70" />
+          <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-[81] grid max-h-[90dvh] w-[calc(100%_-_24px)] max-w-3xl -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl border bg-background p-6 shadow-lg">
+            <DialogPrimitive.Close
+              className="absolute right-3 top-3 rounded border px-2 py-1 text-sm"
+              aria-label="Close topic notes"
+            >
+              Close
+            </DialogPrimitive.Close>
+            <DialogHeader>
+              <DialogTitle>Complete this topic</DialogTitle>
+              <DialogDescription>
+                Class {klass} · {subject} · {chapter} · {slide.title}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-5">
               <div>
-                <h3 className="font-semibold">2. Preview and import</h3>
-                {results.map((item) => (
-                  <article key={item.url} className="my-3 rounded-lg border p-3">
+                <h3 className="font-semibold">1. Find matching text</h3>
+                <label className="mt-2 block text-sm" htmlFor="topic-search">
+                  Class and topic search
+                </label>
+                <Input
+                  id="topic-search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button asChild variant="outline">
                     <a
-                      className="text-blue-700 underline"
-                      href={item.url}
+                      href={`https://www.google.com/search?q=${encodeURIComponent(query)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {item.title}
+                      Open Google results
                     </a>
-                    {item.lines.length ? (
-                      <>
-                        <ol className="my-3 list-decimal space-y-2 pl-5">
-                          {item.lines.map((line, index) => (
-                            <li key={index}>{line}</li>
-                          ))}
-                        </ol>
-                        <Button
-                          disabled={busy}
-                          onClick={() => {
-                            setText(item.lines.join("\n"));
-                            setUrl(item.url);
-                            setOfficial(true);
-                            try {
-                              localStorage.setItem(draftKey, item.lines.join("\n"));
-                            } catch {}
-                          }}
-                        >
-                          Import this text
-                        </Button>
-                      </>
-                    ) : (
-                      <p className="mt-2 text-sm">
-                        A complete matching topic passage could not be extracted from this page.
-                      </p>
-                    )}
-                  </article>
-                ))}
+                  </Button>
+                  <Button disabled={busy} onClick={() => find()}>
+                    Find official text
+                  </Button>
+                </div>
+                <p className="mt-2 text-sm text-slate-600">
+                  Google results open in a separate tab. Extract text from a matching NCERT, SATHEE,
+                  CBSE or CIET page below.
+                </p>
+                <label className="mt-3 block text-sm" htmlFor="topic-source">
+                  Official page URL
+                </label>
+                <Input
+                  id="topic-source"
+                  value={url}
+                  onChange={(event) => {
+                    setUrl(event.target.value);
+                    setOfficial(false);
+                  }}
+                  placeholder="https://…"
+                />
+                <Button
+                  className="mt-2"
+                  variant="outline"
+                  disabled={busy || !url}
+                  onClick={() => find(true)}
+                >
+                  Extract matching topic text
+                </Button>
               </div>
-            )}
-            <div>
-              <h3 className="font-semibold">3. Organise and save topic notes</h3>
-              <label htmlFor="teacher-topic-text" className="my-2 block text-sm">
-                Write one complete point or teaching step per line.
-              </label>
-              <Textarea
-                id="teacher-topic-text"
-                rows={10}
-                value={text}
-                onChange={(event) => edit(event.target.value)}
-                placeholder="Write teacher notes for this topic here…"
-              />
-              <p className="my-2 text-sm text-slate-600">
-                Drafts stay on this device. An administrator can permanently save notes for future
-                lessons. Edited or written text is labelled Teacher notes.
-              </p>
-              <Button disabled={busy || text.trim().length < 10} onClick={preserve}>
-                {busy ? "Working…" : "Save topic notes permanently"}
-              </Button>
+              {results.length > 0 && (
+                <div>
+                  <h3 className="font-semibold">2. Preview and import</h3>
+                  {results.map((item) => (
+                    <article key={item.url} className="my-3 rounded-lg border p-3">
+                      <a
+                        className="text-blue-700 underline"
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {item.title}
+                      </a>
+                      {item.lines.length ? (
+                        <>
+                          <ol className="my-3 list-decimal space-y-2 pl-5">
+                            {item.lines.map((line, index) => (
+                              <li key={index}>{line}</li>
+                            ))}
+                          </ol>
+                          <Button
+                            disabled={busy}
+                            onClick={() => {
+                              setText(item.lines.join("\n"));
+                              setUrl(item.url);
+                              setOfficial(true);
+                              try {
+                                localStorage.setItem(draftKey, item.lines.join("\n"));
+                              } catch {}
+                            }}
+                          >
+                            Import this text
+                          </Button>
+                        </>
+                      ) : (
+                        <p className="mt-2 text-sm">
+                          A complete matching topic passage could not be extracted from this page.
+                        </p>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              )}
+              <div>
+                <h3 className="font-semibold">3. Organise and save topic notes</h3>
+                <label htmlFor="teacher-topic-text" className="my-2 block text-sm">
+                  Write one complete point or teaching step per line.
+                </label>
+                <Textarea
+                  id="teacher-topic-text"
+                  rows={10}
+                  value={text}
+                  onChange={(event) => edit(event.target.value)}
+                  placeholder="Write teacher notes for this topic here…"
+                />
+                <p className="my-2 text-sm text-slate-600">
+                  Drafts stay on this device. An administrator can permanently save notes for future
+                  lessons. Edited or written text is labelled Teacher notes.
+                </p>
+                <Button disabled={busy || text.trim().length < 10} onClick={preserve}>
+                  {busy ? "Working…" : "Save topic notes permanently"}
+                </Button>
+              </div>
+              {notice && (
+                <p role="status" className="rounded-lg bg-slate-100 p-3 text-sm">
+                  {notice}
+                </p>
+              )}
             </div>
-            {notice && (
-              <p role="status" className="rounded-lg bg-slate-100 p-3 text-sm">
-                {notice}
-              </p>
-            )}
-          </div>
-        </DialogContent>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
       </Dialog>
     </section>
   );

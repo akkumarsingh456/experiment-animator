@@ -25,6 +25,7 @@ type Props = {
   mode?: "notes" | "slides";
   pageIndex?: number;
   onPageChange?: (index: number) => void;
+  renderTopicRecovery?: (topicTitle: string) => ReactNode;
 };
 
 export function GuidedNotesPresentation({
@@ -41,6 +42,7 @@ export function GuidedNotesPresentation({
   mode = "notes",
   pageIndex,
   onPageChange,
+  renderTopicRecovery,
 }: Props) {
   const source = useRef<HTMLDivElement>(null),
     display = useRef<HTMLDivElement>(null),
@@ -120,6 +122,8 @@ export function GuidedNotesPresentation({
           document.querySelector('[role="dialog"][aria-label="Lesson presentation"]'))
       )
         return;
+      const nestedDialog=(event.target as HTMLElement)?.closest('[role="dialog"]');
+      if(nestedDialog&&nestedDialog!==shell.current)return;
       if ((event.target as HTMLElement)?.closest("input, textarea, select, [contenteditable=true]"))
         return;
       if (event.key === "Escape" && !inline) onClose();
@@ -180,6 +184,8 @@ export function GuidedNotesPresentation({
     shell.current?.focus();
     const trapFocus = (event: KeyboardEvent) => {
       if (event.key !== "Tab") return;
+      const nestedDialog=(event.target as HTMLElement)?.closest('[role="dialog"]');
+      if(nestedDialog&&nestedDialog!==shell.current)return;
       const buttons = Array.from(
         shell.current?.querySelectorAll<HTMLElement>(
           "button:not(:disabled), a[href], [tabindex='0']",
@@ -328,6 +334,7 @@ export function GuidedNotesPresentation({
           </div>
         </div>
       </div>
+      {renderTopicRecovery?.(pageTitle(index))}
       <footer className="presentation-footer">
         <div className="presentation-page-context">
           <strong>{sectionTitle || "Lesson overview"}</strong>
