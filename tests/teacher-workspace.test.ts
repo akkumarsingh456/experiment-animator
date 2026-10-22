@@ -2,7 +2,7 @@ import {beforeEach,expect,it,vi} from 'vitest';
 const mocks=vi.hoisted(()=>({identity:vi.fn(),getBucket:vi.fn(),createBucket:vi.fn(),from:vi.fn()}));
 vi.mock('@/lib/library-access.server',()=>({readLibraryIdentity:mocks.identity}));
 vi.mock('@/integrations/supabase/client.server',()=>({supabaseAdmin:{storage:{getBucket:mocks.getBucket,createBucket:mocks.createBucket,from:mocks.from}}}));
-import {savePrivateLesson,listPrivateLessons,loadPrivateLesson} from '@/lib/teacher-workspace-store.server';
+import {savePrivateLesson,listPrivateLessons,loadPrivateLesson,listPrivateTeachingPlans,savePrivateTeachingPlan} from '@/lib/teacher-workspace-store.server';
 import {workspaceSnapshotSchema,imageBelongsToWorkspace} from '@/lib/teacher-workspace';
 import {libraryReturnPath} from '@/lib/library-login';
 import {sharedVisualKey} from '@/lib/shared-topic-visual';
@@ -10,6 +10,30 @@ const first='11111111-1111-4111-8111-111111111111',second='22222222-2222-4222-82
 const scope={klass:'12',subject:'Chemistry',chapter:'Coordination Compounds',topic:"Werner's Theory",subtopics:'',mode:'topic' as const};
 const snapshot=()=>workspaceSnapshotSchema.parse({version:1,scope,lesson:{slides:[{title:scope.topic,visual:'book',kind:'content',bullets:['Original explanation'],notes:[],key_terms:[]}],source_books:[],context_chars:0,activities:[],activity_matches:[],video:{title:'Lesson',scenes:[]}},blanks:{version:1,blanks:[],deleted:null},bookmark:null,images:[]});
 let files:Map<string,string>,exists:boolean,failIndex:boolean,corrupt:boolean;
+const plan={status:'planned' as const,date:'2026-10-24',nextTopics:'Primary and secondary valency',notes:'Bring molecular models'};
+it('saves teaching plans separately and preserves them when the lecture is updated',async()=>{
+ const original=snapshot(),meta=await savePrivateLesson(original);
+ const saved=await savePrivateTeachingPlan(meta.id,plan,'','teacher@example.com');
+ expect(await listPrivateTeachingPlans()).toEqual([saved]);
+ await savePrivateLesson(original,meta.id);
+ expect(await listPrivateTeachingPlans()).toEqual([saved]);
+ expect((await loadPrivateLesson(meta.id)).snapshot).toEqual(original);
+ await expect(savePrivateTeachingPlan(meta.id,{...plan,notes:'Stale edit'},'','teacher@example.com')).rejects.toThrow('another device');
+ expect(await listPrivateTeachingPlans()).toEqual([saved]);
+ const changed=await savePrivateTeachingPlan(meta.id,{...plan,status:'taught'},saved.revision,'teacher@example.com');
+ expect(changed.plan.status).toBe('taught');
+});
+it('isolates teaching plans by verified teacher and rejects account changes',async()=>{
+ const meta=await savePrivateLesson(snapshot());
+ await savePrivateTeachingPlan(meta.id,plan,'','teacher@example.com');
+ await expect(savePrivateTeachingPlan(meta.id,plan,'','wrong@example.com')).rejects.toThrow('account changed');
+ mocks.identity.mockResolvedValue({id:second,email:'second@example.com',admin:false});
+ expect(await listPrivateTeachingPlans()).toEqual([]);
+ await expect(savePrivateTeachingPlan(meta.id,plan,'','second@example.com')).rejects.toThrow('not found');
+ mocks.identity.mockResolvedValue(null);
+ await expect(listPrivateTeachingPlans()).rejects.toThrow('Sign in');
+ await expect(savePrivateTeachingPlan(meta.id,plan,'','teacher@example.com')).rejects.toThrow('Sign in');
+});
 beforeEach(()=>{
  vi.clearAllMocks();files=new Map();exists=false;failIndex=false;corrupt=false;
  mocks.identity.mockResolvedValue({id:first,email:'teacher@example.com',admin:false,name:'Teacher'});

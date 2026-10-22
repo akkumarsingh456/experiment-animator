@@ -1,5 +1,6 @@
 import { workspaceMetaSchema, workspaceSnapshotSchema, type WorkspaceMeta, type WorkspaceSnapshot } from './teacher-workspace';
 import {z} from 'zod';
+import {teacherPlanRecordSchema,teacherTeachingPlanSchema,type TeacherTeachingPlan,type TeacherPlanRecord} from './teacher-teaching-plan';
 
 const BUCKET='teacher-private-workspace';
 const missing=(error:{statusCode?:string|number;status?:number;message?:string})=>Number(error.statusCode||error.status)===404||/not found|does not exist/i.test(error.message||'');
@@ -73,4 +74,45 @@ export async function loadPrivateLesson(id:string){
   const body=await bucket.download(`${user.id}/lessons/${id}/${meta.revision}.json`);
   if(body.error||!body.data)throw new Error('This saved lesson could not be opened. Please retry.');
   return {snapshot:workspaceSnapshotSchema.parse(JSON.parse(await body.data.text())),meta,ownerId:user.id};
+}
+
+/** Planning notes are private metadata, independent of lecture content/backups. */
+export async function listPrivateTeachingPlans(){
+  const {db,user}=await context();const bucket=await privateBucket(db,false);if(!bucket)return [] as TeacherPlanRecord[];
+  const records:TeacherPlanRecord[]=[];
+  for(let offset=0;;offset+=100){
+    const page=await bucket.list(`${user.id}/plans`,{limit:100,offset});
+    if(page.error)throw new Error('Your teaching plans could not be loaded. Lecture notes are unchanged.');
+    for(let start=0;start<page.data.length;start+=10){
+      records.push(...await Promise.all(page.data.slice(start,start+10).map(async file=>{
+        if(!/^[0-9a-f-]{36}\.json$/i.test(file.name))throw new Error('A teaching plan needs review.');
+        const saved=await bucket.download(`${user.id}/plans/${file.name}`);
+        if(saved.error||!saved.data)throw new Error('A teaching plan could not be read. Please refresh.');
+        const parsed=teacherPlanRecordSchema.parse(JSON.parse(await saved.data.text()));
+        if(file.name!==`${parsed.lessonId}.json`)throw new Error('The teaching plan identity could not be confirmed.');
+        return parsed;
+      })));
+    }
+    if(page.data.length<100)break;
+  }
+  return records;
+}
+export async function savePrivateTeachingPlan(id:string,plan:TeacherTeachingPlan,expectedRevision:string,expectedEmail:string){
+  z.string().uuid().parse(id);const checked=teacherTeachingPlanSchema.parse(plan);
+  const {db,user}=await context();
+  if(user.email.toLowerCase()!==expectedEmail.toLowerCase())throw new Error('Your account changed. Sign in again before saving this plan.');
+  const bucket=await privateBucket(db,false);if(!bucket)throw new Error('Save this lecture to your workspace before adding a teaching plan.');
+  const lecture=await bucket.download(`${user.id}/index/${id}.json`);
+  if(lecture.error||!lecture.data||workspaceMetaSchema.parse(JSON.parse(await lecture.data.text())).id!==id)throw new Error('This lecture was not found in your workspace.');
+  const path=`${user.id}/plans/${id}.json`,previous=await bucket.download(path);
+  let revision='';
+  if(!previous.error&&previous.data)revision=teacherPlanRecordSchema.parse(JSON.parse(await previous.data.text())).revision;
+  else if(previous.error&&!missing(previous.error))throw new Error('The current teaching plan could not be checked. Please retry.');
+  if(revision!==expectedRevision)throw new Error('This plan changed on another device. Refresh the workspace, review your device draft and save again.');
+  const record:TeacherPlanRecord={lessonId:id,revision:crypto.randomUUID(),updatedAt:new Date().toISOString(),plan:checked},content=JSON.stringify(record);
+  const saved=await bucket.upload(path,new Blob([content],{type:'application/json'}),{contentType:'application/json',upsert:true,cacheControl:'0'});
+  if(saved.error)throw new Error('Your teaching plan was not saved to the cloud. Keep your draft and retry.');
+  const confirmed=await bucket.download(path);
+  if(confirmed.error||!confirmed.data||await confirmed.data.text()!==content)throw new Error('Cloud saving could not be confirmed. Refresh before retrying.');
+  return record;
 }

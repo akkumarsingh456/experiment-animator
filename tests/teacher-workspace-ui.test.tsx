@@ -1,15 +1,15 @@
 import React,{act} from 'react';
 import {createRoot} from 'react-dom/client';
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
-const mocks=vi.hoisted(()=>({account:{signedIn:false,admin:false,email:'',name:''},refresh:vi.fn(),google:vi.fn(),otp:vi.fn(),list:vi.fn(),navigate:vi.fn()}));
+const mocks=vi.hoisted(()=>({account:{signedIn:false,admin:false,email:'',name:''},refresh:vi.fn(),google:vi.fn(),otp:vi.fn(),list:vi.fn(),plans:vi.fn(),savePlan:vi.fn(),navigate:vi.fn()}));
 vi.mock('@/hooks/use-teacher-account',()=>({useTeacherAccount:()=>({account:mocks.account,checking:false,error:'',refresh:mocks.refresh})}));
 vi.mock('@tanstack/react-router',()=>({Link:({children,to,...rest}:any)=><a href={to} {...rest}>{children}</a>,useNavigate:()=>mocks.navigate}));
 vi.mock('@/integrations/lovable',()=>({lovable:{auth:{signInWithOAuth:mocks.google}}}));
 vi.mock('@/integrations/supabase/client',()=>({supabase:{auth:{signInWithOtp:mocks.otp,signOut:vi.fn()}}}));
-vi.mock('@/lib/teacher-workspace.functions',()=>({listTeacherLessons:mocks.list}));
+vi.mock('@/lib/teacher-workspace.functions',()=>({listTeacherLessons:mocks.list,listTeacherTeachingPlans:mocks.plans,saveTeacherTeachingPlan:mocks.savePlan}));
 import {TeacherWorkspace} from '@/components/TeacherWorkspace';
 let host:HTMLDivElement,root:ReturnType<typeof createRoot>;
-beforeEach(()=>{vi.clearAllMocks();sessionStorage.clear();mocks.account={signedIn:false,admin:false,email:'',name:''};mocks.google.mockResolvedValue({redirected:true});mocks.otp.mockResolvedValue({error:null});host=document.createElement('div');document.body.append(host);root=createRoot(host);});
+beforeEach(()=>{vi.clearAllMocks();sessionStorage.clear();localStorage.clear();mocks.plans.mockResolvedValue([]);mocks.account={signedIn:false,admin:false,email:'',name:''};mocks.google.mockResolvedValue({redirected:true});mocks.otp.mockResolvedValue({error:null});host=document.createElement('div');document.body.append(host);root=createRoot(host);});
 afterEach(async()=>{await act(async()=>root.unmount());host.remove();});
 it('offers optional teacher sign-in without reading private lessons while signed out',async()=>{
  await act(async()=>root.render(<TeacherWorkspace/>));
@@ -34,4 +34,14 @@ it('opens, presents and downloads a past lecture through one-click scoped action
   await act(async()=>button.click());
   expect(mocks.navigate).toHaveBeenLastCalledWith({to:'/generate',search:{...scope,workspaceId:id,workspaceAction:action,go:''}});
  }
+});
+it('loads older history pages before grouping lectures and searching',async()=>{
+ mocks.account={signedIn:true,admin:false,email:'teacher@example.com',name:'Teacher'};
+ const make=(id:string,klass:string,subject:string)=>({id,revision:id,title:'Properties',scope:{klass,subject,chapter:'Properties',topic:'Properties',subtopics:'',mode:'topic'},savedAt:new Date().toISOString(),slides:8});
+ mocks.list.mockImplementation(async({data}:any)=>data.offset===0?{items:[make('11111111-1111-4111-8111-111111111111','12','Chemistry')],nextOffset:20}:{items:[make('22222222-2222-4222-8222-222222222222','9','Science')],nextOffset:null});
+ await act(async()=>root.render(<TeacherWorkspace/>));
+ expect(mocks.list).toHaveBeenCalledWith({data:{offset:20}});
+ expect(host.querySelector('[aria-label="Class 9 Science lectures"]')).not.toBeNull();
+ expect(host.querySelector('[aria-label="Class 12 Chemistry lectures"]')).not.toBeNull();
+ expect(host.textContent).toContain('Plan my teaching');
 });
