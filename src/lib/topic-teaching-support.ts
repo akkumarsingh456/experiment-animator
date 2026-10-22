@@ -50,7 +50,7 @@ export function supportedTeachingSections(raw: unknown, excerpts: string[]): Not
 
 /** Presentation only: original sections and saved evidence remain untouched. */
 export function withTopicTeachingSupport<T extends { kind?: string; visual?: string; teacher_pdf?: unknown; teacher_blank?: unknown; topic_recovery?: unknown; sections?: NoteSection[]; teaching_support?: NoteSection[] }>(slide: T): T {
-  if (slide.visual === 'cover' || slide.teacher_pdf || slide.teacher_blank || slide.topic_recovery || slide.kind === 'mcq' || slide.kind === 'break' || !slide.teaching_support?.length) return slide;
+  if (slide.visual === 'cover' || slide.teacher_pdf || slide.teacher_blank || slide.kind === 'mcq' || slide.kind === 'break' || !slide.teaching_support?.length) return slide;
   const existing = new Set((slide.sections || []).map(s => s.heading));
   const additions = slide.teaching_support.filter(s => !existing.has(s.heading));
   return additions.length ? { ...slide, sections: [...(slide.sections || []), ...additions] } : slide;

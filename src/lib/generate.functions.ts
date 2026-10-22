@@ -1580,6 +1580,9 @@ export const generateLesson = createServerFn({ method: "POST" })
       data.subtopics,
       data.mode,
     ]);
+    // Every successful return (including cache hits and official recovery) passes
+    // through the additive support layer below. Core generation stays unchanged.
+    const run = async (): Promise<GenerationResult> => {
     let attentionTried=false;
     const attentionFallback=async()=>{if(attentionTried)return null;attentionTried=true;return completeAttentionFallback(data,lessonKey);};
     try{
@@ -2013,4 +2016,15 @@ export const generateLesson = createServerFn({ method: "POST" })
       }
       throw error;
     }
+    };
+    const original = await run();
+    const { addLessonTeachingSupport } = await import('./lesson-teaching-support.server');
+    const enhanced = await addLessonTeachingSupport(original, { klass: String(data.klass), subject: data.subject, chapter: data.chapter || data.topic });
+    if (enhanced !== original) {
+      try {
+        const cache = await cacheSupa();
+        await (cache as any).from('lesson_cache').upsert({ cache_key: lessonKey, klass: String(data.klass), subject: data.subject, chapter: data.chapter || '', topic: data.topic, subtopics: data.subtopics, result: enhanced });
+      } catch { /* Keep the completed lesson usable if caching is unavailable. */ }
+    }
+    return enhanced;
   });
