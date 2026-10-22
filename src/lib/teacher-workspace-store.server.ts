@@ -22,9 +22,11 @@ async function privateBucket(db:Awaited<ReturnType<typeof context>>['db'],create
   if(bucket.data?.public!==false)throw new Error('Workspace storage privacy could not be confirmed. Saving is disabled.');
   return db.storage.from(BUCKET);
 }
-export async function savePrivateLesson(snapshot:WorkspaceSnapshot,id?:string){
+export async function savePrivateLesson(snapshot:WorkspaceSnapshot,id?:string,expectedEmail?:string){
   if(id)z.string().uuid().parse(id);
-  const {db,user}=await context();const bucket=(await privateBucket(db,true))!;
+  const {db,user}=await context();
+  if(expectedEmail&&user.email.toLowerCase()!==expectedEmail.toLowerCase())throw new Error('Your account changed. Please save again using your current account.');
+  const bucket=(await privateBucket(db,true))!;
   const lessonId=id||crypto.randomUUID(),revision=crypto.randomUUID(),savedAt=new Date().toISOString();
   const meta:WorkspaceMeta={id:lessonId,revision,savedAt,title:snapshot.scope.chapter||snapshot.scope.topic,scope:snapshot.scope,slides:snapshot.lesson.slides.length};
   const content=JSON.stringify(workspaceSnapshotSchema.parse(snapshot));

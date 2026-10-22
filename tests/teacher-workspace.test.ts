@@ -28,6 +28,17 @@ it('rejects signed-out access before touching privileged storage',async()=>{
  await expect(loadPrivateLesson(first)).rejects.toThrow('Sign in');
  expect(mocks.getBucket).not.toHaveBeenCalled();expect(mocks.from).not.toHaveBeenCalled();
 });
+it('rejects history saving if the account changed during preparation',async()=>{
+ await expect(savePrivateLesson(snapshot(),undefined,'different@example.com')).rejects.toThrow('account changed');
+ expect(mocks.getBucket).not.toHaveBeenCalled();
+});
+it('keeps older lectures accessible through paginated history',async()=>{
+ for(let index=0;index<21;index++)await savePrivateLesson(snapshot());
+ const firstPage=await listPrivateLessons(0),secondPage=await listPrivateLessons(20);
+ expect(firstPage.items).toHaveLength(20);expect(firstPage.nextOffset).toBe(20);
+ expect(secondPage.items).toHaveLength(1);expect(secondPage.nextOffset).toBeNull();
+ expect(new Set([...firstPage.items,...secondPage.items].map(item=>item.id)).size).toBe(21);
+});
 it('creates private storage, confirms a backup, and round trips the full lesson',async()=>{
  const original=snapshot(),meta=await savePrivateLesson(original);
  expect(mocks.createBucket).toHaveBeenCalledWith('teacher-private-workspace',expect.objectContaining({public:false}));

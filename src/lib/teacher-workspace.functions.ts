@@ -1,8 +1,8 @@
 import {createServerFn} from '@tanstack/react-start';
 import {z} from 'zod';
 import {workspaceSnapshotSchema} from './teacher-workspace';
-export const saveTeacherLesson=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({id:z.string().uuid().optional(),snapshot:workspaceSnapshotSchema}).strict().parse(raw)).handler(async({data})=>{
-  const {savePrivateLesson}=await import('./teacher-workspace-store.server');return savePrivateLesson(data.snapshot,data.id);
+export const saveTeacherLesson=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({id:z.string().uuid().optional(),expectedEmail:z.string().email().max(320).optional(),snapshot:workspaceSnapshotSchema}).strict().parse(raw)).handler(async({data})=>{
+  const {savePrivateLesson}=await import('./teacher-workspace-store.server');return savePrivateLesson(data.snapshot,data.id,data.expectedEmail);
 });
 export const listTeacherLessons=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({offset:z.number().int().min(0).max(100000).default(0)}).strict().parse(raw)).handler(async({data})=>{
   const {listPrivateLessons}=await import('./teacher-workspace-store.server');return listPrivateLessons(data.offset);

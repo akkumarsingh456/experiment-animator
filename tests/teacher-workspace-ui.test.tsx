@@ -23,3 +23,15 @@ it('shows saved lesson errors rather than claiming the workspace is empty',async
  mocks.account={signedIn:true,admin:false,email:'teacher@example.com',name:'Teacher'};mocks.list.mockRejectedValue(new Error('Private storage unavailable'));
  await act(async()=>root.render(<TeacherWorkspace/>));expect(host.querySelector('[role="alert"]')?.textContent).toContain('Private storage unavailable');expect(host.textContent).not.toContain('No cloud lessons saved yet');
 });
+it('opens, presents and downloads a past lecture through one-click scoped actions',async()=>{
+ const scope={klass:'12',subject:'Chemistry',chapter:'Chemical Kinetics',topic:'Rate of reaction',subtopics:'',mode:'topic' as const};
+ const id='11111111-1111-4111-8111-111111111111';
+ mocks.account={signedIn:true,admin:false,email:'teacher@example.com',name:'Teacher'};
+ mocks.list.mockResolvedValue({items:[{id,revision:id,title:'Chemical Kinetics',scope,savedAt:new Date().toISOString(),slides:20}],nextOffset:null});
+ await act(async()=>root.render(<TeacherWorkspace/>));
+ for(const [label,action] of [['Open saved lesson','open'],['Present','present'],['Download PDF','pdf']]){
+  const button=[...host.querySelectorAll('button')].find(node=>node.textContent===label)!;
+  await act(async()=>button.click());
+  expect(mocks.navigate).toHaveBeenLastCalledWith({to:'/generate',search:{...scope,workspaceId:id,workspaceAction:action,go:''}});
+ }
+});

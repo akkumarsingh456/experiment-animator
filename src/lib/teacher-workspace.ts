@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { GenerationResult } from './generate.functions';
 import { blankSlideRecordSchema, blankSlidesKey } from './saved-blank-slides';
 import { teachingBookmarkSchema } from './teaching-bookmark';
+import { emptyBlankRecord } from './saved-blank-slides';
 
 export const workspaceScopeSchema = z.object({ klass: z.string().min(1).max(20), subject: z.string().min(1).max(100), chapter: z.string().max(500), topic: z.string().min(1).max(500), subtopics: z.string().max(10000), mode: z.enum(['topic','chapter']) }).strict();
 export type WorkspaceScope = z.infer<typeof workspaceScopeSchema>;
@@ -12,6 +13,11 @@ export const workspaceSnapshotSchema = z.object({ version:z.literal(1), scope:wo
 export type WorkspaceSnapshot = z.infer<typeof workspaceSnapshotSchema>;
 export const workspaceMetaSchema = z.object({ id:z.string().uuid(), revision:z.string().uuid(), title:z.string(), scope:workspaceScopeSchema, savedAt:z.string().datetime(), slides:z.number().int().min(0) });
 export type WorkspaceMeta = z.infer<typeof workspaceMetaSchema>;
+export const workspaceActionSchema=z.enum(['open','present','pdf']);
+export type WorkspaceAction=z.infer<typeof workspaceActionSchema>;
+export function lectureActionSearch(item:WorkspaceMeta,action:WorkspaceAction){return {...item.scope,workspaceId:item.id,workspaceAction:action,go:''};}
+/** History contains this newly prepared result only, never unrelated device edits. */
+export function preparedLectureSnapshot(lesson:GenerationResult,scope:WorkspaceScope){return workspaceSnapshotSchema.parse({version:1,scope,lesson,blanks:emptyBlankRecord(),bookmark:null,images:[]});}
 export function workspaceDeviceKey(scope:WorkspaceScope){return blankSlidesKey([scope.klass,scope.subject,scope.chapter||scope.topic,scope.topic,scope.subtopics,scope.mode]);}
 /** Only exact selected-lesson image keys can be included in its private backup. */
 export function imageBelongsToWorkspace(key:string,scope:WorkspaceScope,titles:Set<string>){

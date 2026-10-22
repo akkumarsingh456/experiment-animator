@@ -8,7 +8,7 @@ import type {BookmarkPage} from '@/lib/teaching-bookmark';
 import {TeacherCloudSave} from '@/components/TeacherCloudSave';
 import {loadTeacherLesson} from '@/lib/teacher-workspace.functions';
 import {captureWorkspace,restoreWorkspace} from '@/lib/teacher-workspace-device';
-import {workspaceSnapshotSchema} from '@/lib/teacher-workspace';
+import {workspaceSnapshotSchema,workspaceActionSchema} from '@/lib/teacher-workspace';
 import {supabase} from '@/integrations/supabase/client';
 import {MissingTopicNotes} from '@/components/MissingTopicNotes';
 import {exactSlideVisualId} from "@/lib/exact-slide-visual";
@@ -165,6 +165,7 @@ const SearchSchema = z.object({
   mode: z.enum(["topic", "chapter"]).default("topic"),
   go: z.coerce.string().default(""),
   workspaceId: z.union([z.string().uuid(),z.literal('')]).default(''),
+  workspaceAction: workspaceActionSchema.default('open'),
 });
 
 const LANGUAGE_SUBJECTS = ["english", "hindi", "sanskrit"];
@@ -209,6 +210,7 @@ function GeneratePage() {
   const [error, setError] = useState<string | null>(null);
   const privateOwner=useRef<string|null>(null);
   const [workspaceNotice,setWorkspaceNotice]=useState('');
+  const [preparedOwnerEmail,setPreparedOwnerEmail]=useState('');
   useEffect(()=>{if(!search.workspaceId)return;const {data}=supabase.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'||event==='SIGNED_IN'&&privateOwner.current&&session?.user.id!==privateOwner.current){requestIdRef.current++;startedRequest.current='';privateOwner.current=null;setResult(null);setLoading(false);setError('Sign in to the account that owns this private lesson, then reopen it from My teaching workspace.');}});return()=>data.subscription.unsubscribe();},[search.workspaceId]);
 
   useEffect(() => {
@@ -221,6 +223,7 @@ function GeneratePage() {
     setRequestStartedAt(Date.now());
     setLoading(true);
     setError(null);
+    setPreparedOwnerEmail('');
     if(search.workspaceId){setResult(null);privateOwner.current=null;}
     let timeout: ReturnType<typeof setTimeout>;
     const deadline = new Promise<never>((_, reject) => {
@@ -229,7 +232,7 @@ function GeneratePage() {
     const request=search.workspaceId?(async()=>{const saved=await loadTeacherLesson({data:{id:search.workspaceId}});const snapshot=workspaceSnapshotSchema.parse(JSON.parse(saved.snapshotJson));const {data:session}=await supabase.auth.getSession();if(session.session?.user.id!==saved.ownerId)throw new Error('Your account changed. Reopen this lesson from My teaching workspace.');for(const field of ['klass','subject','chapter','topic','subtopics','mode'] as const)if(snapshot.scope[field]!==search[field])throw new Error('Open this saved lesson from My teaching workspace to use its correct class and chapter.');privateOwner.current=saved.ownerId;const restored=await restoreWorkspace(snapshot);if(requestIdRef.current===requestId)setWorkspaceNotice(restored.warnings.join(' '));return restored.lesson;})():run({data:search});
     Promise.race([request, deadline])
       .then(r => prepareTeacherPdfPages(r as GenerationResult))
-      .then((prepared) => { if (requestIdRef.current === requestId) setResult(prepared); })
+      .then((prepared) => {if(requestIdRef.current!==requestId)return;setResult(prepared);if(!search.workspaceId)void(async()=>{try{const {data:session}=await supabase.auth.getSession();if(session.session){const {data,error}=await supabase.auth.getUser();if(!error&&requestIdRef.current===requestId)setPreparedOwnerEmail(data.user?.email||'');}}catch{/* Public notes remain usable when account access is unavailable. */}})();})
       .catch((e) => { if (requestIdRef.current === requestId) setError(e?.message ?? String(e)); })
       .finally(() => { clearTimeout(timeout); if (requestIdRef.current === requestId) setLoading(false); });
     // Clear the one-shot URL trigger while retaining the pending request.
@@ -282,13 +285,13 @@ function GeneratePage() {
         )}
 
         {workspaceNotice&&<p role="status" className="my-3 text-sm">{workspaceNotice}</p>}
-        {result && <ResultView key={JSON.stringify(search)} result={result} title={search.topic} />}
+        {result && <ResultView key={JSON.stringify(search)} result={result} title={search.topic} preparedOwnerEmail={preparedOwnerEmail} />}
       </div>
     </div>
   );
 }
 
-function ResultView({ result, title }: { result: GenerationResult; title: string }) {
+function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationResult; title: string; preparedOwnerEmail:string }) {
   const search = Route.useSearch();
   const genImage = useServerFn(generateSlideImage);
   const makeCoverSlide = (): Slide => {
@@ -660,6 +663,16 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, section: "NCERT notes & illustration",
     content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} onNotesOverflow={continueOverflowingNotes} staticView />,
   }));
+  const handledWorkspaceAction=useRef('');
+  useEffect(()=>{
+    if(!search.workspaceId||search.workspaceAction==='open'||!originalPages.length)return;
+    const key=`${search.workspaceId}:${search.workspaceAction}`;
+    if(handledWorkspaceAction.current===key)return;
+    handledWorkspaceAction.current=key;
+    const url=new URL(window.location.href);url.searchParams.delete('workspaceAction');window.history.replaceState(window.history.state,'',`${url.pathname}${url.search}${url.hash}`);
+    if(search.workspaceAction==='present'){setLessonView('slides');setPresenting(true);}
+    else void downloadPDF('notes');
+  },[search.workspaceId,search.workspaceAction,originalPages.length]);
 
   async function downloadPDF(mode: "notes" | "slides" | "guided-slides" = lessonView) {
     if(mode==="slides"&&layoutChecking){toast.info("The free layout check is still running. Please wait for verification before downloading.");return;}
@@ -731,7 +744,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         {teachingBookmark.status&&<span role="status" className="text-sm">{teachingBookmark.status}</span>}
       </div>
       {(slides.some(slide=>slide.teacher_blank)||blankStore.deleted||blankStore.status.startsWith('Saving failed'))&&<div className="my-3 flex flex-wrap items-center gap-3 rounded-lg border bg-sky-50 p-3 text-sm print:hidden" aria-label="Added slide saving"><span role="status">{blankStore.status}</span>{blankStore.status.startsWith('Saving failed')&&<Button size="sm" variant="outline" onClick={blankStore.retrySave}>Retry saving</Button>}{blankStore.deleted&&<Button size="sm" variant="outline" onClick={undoBlankSlide}>Undo delete · {blankStore.deleted.slide.title}</Button>}</div>}
-      <TeacherCloudSave initialId={search.workspaceId||undefined} getSnapshot={()=>captureWorkspace({klass:String(search.klass),subject:search.subject,chapter:search.chapter,topic:search.topic,subtopics:search.subtopics,mode:search.mode},result,slides,blankStore.deleted,teachingBookmark.bookmark)}/>
+      <TeacherCloudSave initialId={search.workspaceId||undefined} preparedLesson={search.workspaceId?undefined:result} preparedScope={{klass:String(search.klass),subject:search.subject,chapter:search.chapter,topic:search.topic,subtopics:search.subtopics,mode:search.mode}} preparedOwnerEmail={preparedOwnerEmail} getSnapshot={()=>captureWorkspace({klass:String(search.klass),subject:search.subject,chapter:search.chapter,topic:search.topic,subtopics:search.subtopics,mode:search.mode},result,slides,blankStore.deleted,teachingBookmark.bookmark)}/>
       {/^(?:Science|Physics|Chemistry|Mathematics|Social Science|Computer Science)$/.test(search.subject||"") && <NotesContentCheck slides={slides} klass={String(search.klass||"")} subject={search.subject||""} chapter={search.chapter||title} />}
       {/* Step 1 — Activity verification (skipped for language chapters) */}
       {!skipVerify && lessonView === "slides" && (
