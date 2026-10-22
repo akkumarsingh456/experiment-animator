@@ -1,4 +1,5 @@
-export function libraryReturnPath(value: unknown): '/upload' | '/history' {
+export function libraryReturnPath(value: unknown): '/upload' | '/history' | '/workspace' {
+  if (value === '/workspace') return '/workspace';
   return value === '/history' ? '/history' : '/upload';
 }
 

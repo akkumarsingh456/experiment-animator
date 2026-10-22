@@ -19,13 +19,15 @@ export const Route = createFileRoute('/auth/callback')({
 function LibraryAuthCallback() {
   const navigate = useNavigate();
   const [error, setError] = useState(false);
+  const [returnTo,setReturnTo]=useState<ReturnType<typeof libraryReturnPath>>('/upload');
   useEffect(() => {
     let active = true;
     void (async () => {
+      const to = libraryReturnPath(sessionStorage.getItem('library-login-return'));
+      setReturnTo(to);
       const { data, error: authError } = await supabase.auth.getUser();
       if (!active) return;
       if (authError || !data.user) { setError(true); return; }
-      const to = libraryReturnPath(sessionStorage.getItem('library-login-return'));
       sessionStorage.removeItem('library-login-return');
       await navigate({ to, replace: true });
     })().catch(() => { if (active) setError(true); });
@@ -33,6 +35,6 @@ function LibraryAuthCallback() {
   }, [navigate]);
   return <main className="library-access-panel">
     <h1>{error ? 'Sign-in was not completed' : 'Finishing sign-in…'}</h1>
-    {error ? <><p role="alert">Please return to the library and try selecting your Google account again.</p><Button onClick={() => navigate({ to: '/upload', replace: true })}>Return to library</Button></> : <p role="status">Checking your account…</p>}
+    {error ? <><p role="alert">Please return and try selecting your Google account again.</p><Button onClick={() => navigate({ to: returnTo, replace: true })}>{returnTo==='/workspace'?'Return to teaching workspace':'Return to library'}</Button></> : <p role="status">Checking your account…</p>}
   </main>;
 }

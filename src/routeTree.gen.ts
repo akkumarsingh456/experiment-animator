@@ -14,6 +14,7 @@ import { Route as GenerateRouteImport } from './routes/generate'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as NotesLibraryRouteImport } from './routes/notes-library'
 import { Route as UploadRouteImport } from './routes/upload'
+import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as ApiMedEasyPdfRouteImport } from './routes/api.med-easy-pdf'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
@@ -42,6 +43,11 @@ const UploadRoute = UploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceRoute = WorkspaceRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMedEasyPdfRoute = ApiMedEasyPdfRouteImport.update({
   id: '/api/med-easy-pdf',
   path: '/api/med-easy-pdf',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/notes-library': typeof NotesLibraryRoute
   '/upload': typeof UploadRoute
+  '/workspace': typeof WorkspaceRoute
   '/api/med-easy-pdf': typeof ApiMedEasyPdfRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/notes-library': typeof NotesLibraryRoute
   '/upload': typeof UploadRoute
+  '/workspace': typeof WorkspaceRoute
   '/api/med-easy-pdf': typeof ApiMedEasyPdfRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/notes-library': typeof NotesLibraryRoute
   '/upload': typeof UploadRoute
+  '/workspace': typeof WorkspaceRoute
   '/api/med-easy-pdf': typeof ApiMedEasyPdfRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/notes-library'
     | '/upload'
+    | '/workspace'
     | '/api/med-easy-pdf'
     | '/auth/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/notes-library'
     | '/upload'
+    | '/workspace'
     | '/api/med-easy-pdf'
     | '/auth/callback'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/notes-library'
     | '/upload'
+    | '/workspace'
     | '/api/med-easy-pdf'
     | '/auth/callback'
   fileRoutesById: FileRoutesById
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   NotesLibraryRoute: typeof NotesLibraryRoute
   UploadRoute: typeof UploadRoute
+  WorkspaceRoute: typeof WorkspaceRoute
   ApiMedEasyPdfRoute: typeof ApiMedEasyPdfRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
 }
@@ -158,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UploadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workspace': {
+      id: '/workspace'
+      path: '/workspace'
+      fullPath: '/workspace'
+      preLoaderRoute: typeof WorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/med-easy-pdf': {
       id: '/api/med-easy-pdf'
       path: '/api/med-easy-pdf'
@@ -181,6 +201,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   NotesLibraryRoute: NotesLibraryRoute,
   UploadRoute: UploadRoute,
+  WorkspaceRoute: WorkspaceRoute,
   ApiMedEasyPdfRoute: ApiMedEasyPdfRoute,
   AuthCallbackRoute: AuthCallbackRoute,
 }

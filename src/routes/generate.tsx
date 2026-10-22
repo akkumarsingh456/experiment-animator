@@ -5,6 +5,11 @@ import {blankSlidesKey} from '@/lib/saved-blank-slides';
 import {useTeachingBookmark} from '@/hooks/use-teaching-bookmark';
 import {TeachingBookmarkControls} from '@/components/TeachingBookmarkControls';
 import type {BookmarkPage} from '@/lib/teaching-bookmark';
+import {TeacherCloudSave} from '@/components/TeacherCloudSave';
+import {loadTeacherLesson} from '@/lib/teacher-workspace.functions';
+import {captureWorkspace,restoreWorkspace} from '@/lib/teacher-workspace-device';
+import {workspaceSnapshotSchema} from '@/lib/teacher-workspace';
+import {supabase} from '@/integrations/supabase/client';
 import {MissingTopicNotes} from '@/components/MissingTopicNotes';
 import {exactSlideVisualId} from "@/lib/exact-slide-visual";
 import {orderTopicSections} from "@/lib/topic-lecture-order";
@@ -159,6 +164,7 @@ const SearchSchema = z.object({
   chapter: z.coerce.string().default(""),
   mode: z.enum(["topic", "chapter"]).default("topic"),
   go: z.coerce.string().default(""),
+  workspaceId: z.union([z.string().uuid(),z.literal('')]).default(''),
 });
 
 const LANGUAGE_SUBJECTS = ["english", "hindi", "sanskrit"];
@@ -201,10 +207,13 @@ function GeneratePage() {
   const [requestStartedAt, setRequestStartedAt] = useState(0);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const privateOwner=useRef<string|null>(null);
+  const [workspaceNotice,setWorkspaceNotice]=useState('');
+  useEffect(()=>{if(!search.workspaceId)return;const {data}=supabase.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'||event==='SIGNED_IN'&&privateOwner.current&&session?.user.id!==privateOwner.current){requestIdRef.current++;startedRequest.current='';privateOwner.current=null;setResult(null);setLoading(false);setError('Sign in to the account that owns this private lesson, then reopen it from My teaching workspace.');}});return()=>data.subscription.unsubscribe();},[search.workspaceId]);
 
   useEffect(() => {
-    if (!search.topic || (search.go !== "1" && retryAttempt === 0)) return;
-    const requestKey=`${search.topic}|${search.klass}|${search.subject}|${search.go}|${retryAttempt}`;
+    if (!search.topic || (!search.workspaceId&&search.go !== "1" && retryAttempt === 0)) return;
+    const requestKey=`${search.workspaceId}|${search.topic}|${search.klass}|${search.subject}|${search.go}|${retryAttempt}`;
     if(startedRequest.current===requestKey)return;
     startedRequest.current=requestKey;
     const requestId = requestIdRef.current + 1;
@@ -212,11 +221,13 @@ function GeneratePage() {
     setRequestStartedAt(Date.now());
     setLoading(true);
     setError(null);
+    if(search.workspaceId){setResult(null);privateOwner.current=null;}
     let timeout: ReturnType<typeof setTimeout>;
     const deadline = new Promise<never>((_, reject) => {
       timeout = setTimeout(() => reject(new Error("This request took too long. Please retry; any completed lesson is saved and will be reused.")), LESSON_REQUEST_TIMEOUT_MS);
     });
-    Promise.race([run({ data: search }), deadline])
+    const request=search.workspaceId?(async()=>{const saved=await loadTeacherLesson({data:{id:search.workspaceId}});const snapshot=workspaceSnapshotSchema.parse(JSON.parse(saved.snapshotJson));const {data:session}=await supabase.auth.getSession();if(session.session?.user.id!==saved.ownerId)throw new Error('Your account changed. Reopen this lesson from My teaching workspace.');for(const field of ['klass','subject','chapter','topic','subtopics','mode'] as const)if(snapshot.scope[field]!==search[field])throw new Error('Open this saved lesson from My teaching workspace to use its correct class and chapter.');privateOwner.current=saved.ownerId;const restored=await restoreWorkspace(snapshot);if(requestIdRef.current===requestId)setWorkspaceNotice(restored.warnings.join(' '));return restored.lesson;})():run({data:search});
+    Promise.race([request, deadline])
       .then(r => prepareTeacherPdfPages(r as GenerationResult))
       .then((prepared) => { if (requestIdRef.current === requestId) setResult(prepared); })
       .catch((e) => { if (requestIdRef.current === requestId) setError(e?.message ?? String(e)); })
@@ -229,7 +240,7 @@ function GeneratePage() {
     }
     // Clearing go must not invalidate this request: its result still belongs to this page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.go, retryAttempt]);
+  }, [search.go, search.workspaceId, retryAttempt]);
 
   return (
     <div className="min-h-screen">
@@ -258,10 +269,11 @@ function GeneratePage() {
         {error && (
           <Card className="border-destructive/40 bg-destructive/5">
             <CardContent className="p-6">
-              <p className="font-semibold text-destructive">Generation failed</p>
+              <p className="font-semibold text-destructive">{search.workspaceId?'Private lesson could not be opened':'Generation failed'}</p>
               <p className="text-sm mt-1">{error}</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="sm" onClick={() => setRetryAttempt(value => value + 1)}>Retry generation</Button>
+                <Button size="sm" onClick={() => setRetryAttempt(value => value + 1)}>{search.workspaceId?'Retry opening saved lesson':'Retry generation'}</Button>
+                {search.workspaceId&&<Button asChild size="sm" variant="outline"><Link to="/workspace">My teaching workspace</Link></Button>}
                 <Button size="sm" onClick={() => nav({ to: "/history" })}>Browse uploaded books</Button>
                 <Button size="sm" variant="outline" onClick={() => nav({ to: "/" })}>Back home</Button>
               </div>
@@ -269,6 +281,7 @@ function GeneratePage() {
           </Card>
         )}
 
+        {workspaceNotice&&<p role="status" className="my-3 text-sm">{workspaceNotice}</p>}
         {result && <ResultView key={JSON.stringify(search)} result={result} title={search.topic} />}
       </div>
     </div>
@@ -310,7 +323,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     });
     return [makeCoverSlide(), ...withPhysicsFormulaReference(repaired, search.klass, search.subject, search.chapter || title).map(slide => mathematicsPresentationSlide(slide, result.source_books[0]?.subject || search.subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(slide.sections, search.subject || "", search.chapter || slide.title)}))];
   };
-  const blankBase = useMemo(() => withCoverSlide(result.slides), [result]);
+  const blankBase = useMemo(() => search.workspaceId?[makeCoverSlide(),...result.slides]:withCoverSlide(result.slides), [result]);
   const lessonDeviceKey = blankSlidesKey([String(search.klass), search.subject, search.chapter || title, search.topic, search.subtopics || '', search.mode || '']);
   const blankStore = useSavedBlankSlides(blankBase, lessonDeviceKey);
   const teachingBookmark = useTeachingBookmark(lessonDeviceKey);
@@ -718,6 +731,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         {teachingBookmark.status&&<span role="status" className="text-sm">{teachingBookmark.status}</span>}
       </div>
       {(slides.some(slide=>slide.teacher_blank)||blankStore.deleted||blankStore.status.startsWith('Saving failed'))&&<div className="my-3 flex flex-wrap items-center gap-3 rounded-lg border bg-sky-50 p-3 text-sm print:hidden" aria-label="Added slide saving"><span role="status">{blankStore.status}</span>{blankStore.status.startsWith('Saving failed')&&<Button size="sm" variant="outline" onClick={blankStore.retrySave}>Retry saving</Button>}{blankStore.deleted&&<Button size="sm" variant="outline" onClick={undoBlankSlide}>Undo delete · {blankStore.deleted.slide.title}</Button>}</div>}
+      <TeacherCloudSave initialId={search.workspaceId||undefined} getSnapshot={()=>captureWorkspace({klass:String(search.klass),subject:search.subject,chapter:search.chapter,topic:search.topic,subtopics:search.subtopics,mode:search.mode},result,slides,blankStore.deleted,teachingBookmark.bookmark)}/>
       {/^(?:Science|Physics|Chemistry|Mathematics|Social Science|Computer Science)$/.test(search.subject||"") && <NotesContentCheck slides={slides} klass={String(search.klass||"")} subject={search.subject||""} chapter={search.chapter||title} />}
       {/* Step 1 — Activity verification (skipped for language chapters) */}
       {!skipVerify && lessonView === "slides" && (
