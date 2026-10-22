@@ -704,6 +704,8 @@ export type Mcq = {
 };
 
 export type Slide = {
+  /** Additive AI-drafted teaching support, separate from original notes/evidence. */
+  teaching_support?: NoteSection[];
   teacher_blank?: {id:string;topic:string};
   topic_recovery?: {status:"missing"|"teacher"|"official"; sourceUrl?:string};
   source_recovery?: {attempts:number;kind:"uploaded-ncert"|"official-ncert-mirror"|"official-online-supplement";url?:string;sources?:Array<{url:string;title:string;sourceClass:string}>};

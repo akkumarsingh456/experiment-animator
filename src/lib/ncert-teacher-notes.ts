@@ -3,6 +3,7 @@ import { secondaryMotionFormulas } from './secondary-motion-formulas';
 import {secondaryScienceSectionEvidence,substantiveStudyLine} from './secondary-study-evidence';
 import { isContentsListing } from "@/lib/note-source-noise";
 import { topicEvidence } from "@/lib/topic-evidence";
+import { supportedTeachingSections, teachingSupportPrompt, teachingSupportSchema } from './topic-teaching-support';
 import { notesQualityPolicy } from "@/lib/notes-quality-policy";
 /**
  * NCERT teacher-style structured notes.
@@ -45,6 +46,7 @@ export type NoteSourceSlide = {
   key_terms?: { term: string; meaning: string }[];
   grounding?: string;
   chapter_text?: string;
+  teaching_support?: NoteSection[];
 };
 
 const norm = (s: string) =>
@@ -308,7 +310,7 @@ export function mergeToSingleSection(sections: NoteSection[]): NoteSection[] {
 
 /* ---------------- Groq rewrite pass (NCERT + reference-book grounding) ---------------- */
 
-type TeacherSlideOut = { index: number; sections: NoteSection[] };
+type TeacherSlideOut = { index: number; sections: NoteSection[]; teaching_support?: unknown };
 
 const HEADINGS = [
   "0. Introduction",
@@ -402,8 +404,8 @@ export async function groqTeacherNotes(opts: {
   /** Excerpts from the uploaded reference books (PW / Med Easy / mind maps). */
   refContext?: string;
   slides: NoteSourceSlide[];
-}): Promise<Map<number, NoteSection[]>> {
-  const result = new Map<number, NoteSection[]>();
+}): Promise<Map<number, NoteSection[]> & { support: Map<number, NoteSection[]> }> {
+  const result = Object.assign(new Map<number, NoteSection[]>(), { support: new Map<number, NoteSection[]>() });
   if ((!opts.apiKey && !hasGatewayKey()) || opts.slides.length === 0) return result;
 
   // Reference-book text is part of the source of truth, so lines grounded in the
@@ -413,6 +415,8 @@ export async function groqTeacherNotes(opts: {
     title: s.title,
     quality_constraints: notesQualityPolicy(opts.subject,opts.chapter,s.title),
     ncert_excerpts: selectSlideExcerpts(s, opts.context),
+    // Do not use model-authored bullets/notes as their own evidence for additions.
+    teaching_excerpts: selectSlideExcerpts({ title: s.title, chapter_text: s.chapter_text, grounding: s.grounding }, opts.context),
   }));
 
   const prompt = [
@@ -487,7 +491,8 @@ export async function groqTeacherNotes(opts: {
     "Do not repeat the same fact under two headings — every fact appears exactly once.",
     "",
     "Return STRICT JSON only, no markdown fence:",
-    '{"slides":[{"index":0,"sections":[...]}]}',
+    teachingSupportPrompt,
+    '{"slides":[{"index":0,"sections":[...],"teaching_support":[{"category":"explanation","entries":[{"text":"...","quote":"..."}]}]}]}',
     "",
     ...(opts.refContext?.trim()
       ? [
@@ -504,7 +509,7 @@ export async function groqTeacherNotes(opts: {
   try {
     const gateway = hasGatewayKey() ? await gatewayJSON<{ slides?: TeacherSlideOut[] }>({ prompt, schemaName: "complete_lesson_notes", reasoningEffort: "high", schema: {
       type: "object", additionalProperties: false, required: ["slides"], properties: { slides: { type: "array", items: {
-        type: "object", additionalProperties: false, required: ["index", "sections"], properties: { index: { type: "integer" }, sections: { type: "array", items: {
+        type: "object", additionalProperties: false, required: ["index", "sections", "teaching_support"], properties: { teaching_support: teachingSupportSchema, index: { type: "integer" }, sections: { type: "array", items: {
           type: "object", additionalProperties: false, required: ["heading", "kind", "lines"], properties: { heading: { type: "string" }, kind: { type: "string", enum: ["text", "bullets", "formula", "terms", "tip"] }, lines: { type: "array", items: { type: "string" } } }
         } } }
       } } }
@@ -539,6 +544,8 @@ export async function groqTeacherNotes(opts: {
       // from an unrelated part of the chapter to validate a new claim.
       const evidence = payload[idx]?.ncert_excerpts.join(" ");
       if (!evidence) continue;
+      const support = supportedTeachingSections(s.teaching_support, payload[idx].teaching_excerpts);
+      if (support.length) result.support.set(idx, support);
       const sections = sanitizeSections((s as any)?.sections, norm(evidence), opts.subject);
       if (sections.length && sections[0].lines.length >= 3) result.set(idx, sections);
     }
@@ -586,6 +593,8 @@ export async function attachTeacherNotes<T extends NoteSourceSlide & { kind?: st
 
   for (const { batch, map } of results) {
     batch.forEach(({ i }, localIdx) => {
+      const support = map.support.get(localIdx);
+      if (support?.length) withLocal[i] = { ...withLocal[i], teaching_support: support };
       const sections = map.get(localIdx);
       const factualSize=(sections:NoteSection[]|undefined)=>(sections||[]).flatMap(section=>section.lines).filter(substantiveStudyLine).reduce((size,line)=>size+line.length,0);
       const secondaryScience=(/^(?:Class\s*)?(?:9|10)$/.test(opts.klass)&&opts.subject==="Science")||isSeniorScienceStudy(opts.klass,opts.subject);
