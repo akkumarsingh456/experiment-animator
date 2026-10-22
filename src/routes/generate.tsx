@@ -2,6 +2,9 @@ import {BlankTeacherSlideTools} from "@/components/BlankTeacherSlideTools";
 import {addBlankTeacherSlide} from "@/lib/blank-teacher-slide";
 import {useSavedBlankSlides} from '@/hooks/use-saved-blank-slides';
 import {blankSlidesKey} from '@/lib/saved-blank-slides';
+import {useTeachingBookmark} from '@/hooks/use-teaching-bookmark';
+import {TeachingBookmarkControls} from '@/components/TeachingBookmarkControls';
+import type {BookmarkPage} from '@/lib/teaching-bookmark';
 import {MissingTopicNotes} from '@/components/MissingTopicNotes';
 import {exactSlideVisualId} from "@/lib/exact-slide-visual";
 import {orderTopicSections} from "@/lib/topic-lecture-order";
@@ -308,7 +311,10 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     return [makeCoverSlide(), ...withPhysicsFormulaReference(repaired, search.klass, search.subject, search.chapter || title).map(slide => mathematicsPresentationSlide(slide, result.source_books[0]?.subject || search.subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(slide.sections, search.subject || "", search.chapter || slide.title)}))];
   };
   const blankBase = useMemo(() => withCoverSlide(result.slides), [result]);
-  const blankStore = useSavedBlankSlides(blankBase, blankSlidesKey([String(search.klass), search.subject, search.chapter || title, search.topic, search.subtopics || '', search.mode || '']));
+  const lessonDeviceKey = blankSlidesKey([String(search.klass), search.subject, search.chapter || title, search.topic, search.subtopics || '', search.mode || '']);
+  const blankStore = useSavedBlankSlides(blankBase, lessonDeviceKey);
+  const teachingBookmark = useTeachingBookmark(lessonDeviceKey);
+  const [resumeTeaching, setResumeTeaching] = useState(false);
   const {slides, setSlides} = blankStore;
   const blankSlideToShow=useRef<string|null>(null);
   function addRecoverySlide(topicTitle:string){
@@ -390,6 +396,9 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   }
   const [editing, setEditing] = useState(false);
   const [lessonView, setLessonView] = useState<"notes" | "slides">("notes");
+  function resumeTeachingBookmark(){if(!teachingBookmark.bookmark)return;setLessonView(teachingBookmark.bookmark.view);setResumeTeaching(true);}
+  function clearTeachingBookmark(){setResumeTeaching(false);teachingBookmark.clear();}
+  function renderTeachingBookmark(pages:BookmarkPage[],index:number,goTo:(index:number)=>void){return <TeachingBookmarkControls pages={pages} index={index} view={lessonView} bookmark={teachingBookmark.bookmark} status={teachingBookmark.status} resumeRequested={resumeTeaching} onSave={teachingBookmark.save} onResume={resumeTeachingBookmark} onClear={clearTeachingBookmark} onGoTo={goTo} onResumeDone={()=>setResumeTeaching(false)}/>;}
   useEffect(() => {
     document.body.dataset.lessonView = lessonView;
     return () => { delete document.body.dataset.lessonView; };
@@ -705,6 +714,8 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         <Button variant={lessonView === "notes" ? "default" : "outline"} aria-pressed={lessonView === "notes"} onClick={() => setLessonView("notes")}>Guided Notes</Button>
         <Button variant={lessonView === "slides" ? "default" : "outline"} aria-pressed={lessonView === "slides"} onClick={() => setLessonView("slides")}>Generate PPT &amp; Notes</Button>
         <Button variant="outline" onClick={presentSelectedView}><Maximize2 className="h-4 w-4" />Present {lessonView === "notes" ? "guided notes" : "PPT slides"}</Button>
+        {teachingBookmark.bookmark&&<Button variant="outline" className="h-auto max-w-full whitespace-normal text-left" onClick={resumeTeachingBookmark}>Resume teaching · {teachingBookmark.bookmark.title}</Button>}
+        {teachingBookmark.status&&<span role="status" className="text-sm">{teachingBookmark.status}</span>}
       </div>
       {(slides.some(slide=>slide.teacher_blank)||blankStore.deleted||blankStore.status.startsWith('Saving failed'))&&<div className="my-3 flex flex-wrap items-center gap-3 rounded-lg border bg-sky-50 p-3 text-sm print:hidden" aria-label="Added slide saving"><span role="status">{blankStore.status}</span>{blankStore.status.startsWith('Saving failed')&&<Button size="sm" variant="outline" onClick={blankStore.retrySave}>Retry saving</Button>}{blankStore.deleted&&<Button size="sm" variant="outline" onClick={undoBlankSlide}>Undo delete · {blankStore.deleted.slide.title}</Button>}</div>}
       {/^(?:Science|Physics|Chemistry|Mathematics|Social Science|Computer Science)$/.test(search.subject||"") && <NotesContentCheck slides={slides} klass={String(search.klass||"")} subject={search.subject||""} chapter={search.chapter||title} />}
@@ -777,7 +788,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 <Button size="sm" variant="outline" disabled={!!exportMode} onClick={() => downloadPPTX("guided-slides")}>Guided presentation PPTX</Button>
               </div>
               {guidedDisplay === "page" ? <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} /> :
-                <GuidedNotesPresentation renderTopicRecovery={renderTopicRecovery} inline mode="notes" slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={presentationPage} onPageChange={setPresentationPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("guided-slides")} />}
+                <GuidedNotesPresentation renderBookmarkControls={renderTeachingBookmark} renderTopicRecovery={renderTopicRecovery} inline mode="notes" slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={presentationPage} onPageChange={setPresentationPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("guided-slides")} />}
             </>}
             <div className={lessonView === "slides" ? "lesson-slides" : "hidden"}>
 
@@ -796,7 +807,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
                 imageLoading={!!imgLoading[activeIdx]}
                 onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
                 klass={search.klass} subject={search.subject} chapter={search.chapter || title}
-              /> : <GuidedNotesPresentation renderTopicRecovery={renderTopicRecovery} inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={originalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("slides")} />}
+              /> : <GuidedNotesPresentation renderBookmarkControls={renderTeachingBookmark} renderTopicRecovery={renderTopicRecovery} inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={originalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("slides")} />}
             </div>
 
             {((lessonView==="notes"&&guidedDisplay==="page")||editing)&&slides.filter(slide=>slide.topic_recovery).map(slide=><MissingTopicNotes onAddBlankSlide={()=>addRecoverySlide(slide.title)} key={slide.title} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onSaved={updated=>setSlides(current=>current.map(item=>item.title===slide.title&&item.topic_recovery?{...item,sections:updated.sections,topic_recovery:updated.topic_recovery}:item))}/>)}
@@ -988,7 +999,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         {exportMode === "slides" ? originalPages.map((slide, index) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} onNotesOverflow={continueOverflowingNotes} staticView /></div>) :
           <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} includeCover={exportMode === "guided-slides"} />}
       </div>}
-      {presenting && <GuidedNotesPresentation renderTopicRecovery={renderTopicRecovery} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
+      {presenting && <GuidedNotesPresentation renderBookmarkControls={renderTeachingBookmark} renderTopicRecovery={renderTopicRecovery} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
 
     </>
   );

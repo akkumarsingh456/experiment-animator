@@ -8,6 +8,7 @@ import {
 import { GuidedLessonNotes } from "@/components/GuidedLessonNotes";
 import type { ReactNode } from "react";
 import type { Slide } from "@/lib/generate.functions";
+import type { BookmarkPage } from '@/lib/teaching-bookmark';
 
 export type PresentationSlide = { title: string; section?: string; content: ReactNode };
 
@@ -26,6 +27,7 @@ type Props = {
   pageIndex?: number;
   onPageChange?: (index: number) => void;
   renderTopicRecovery?: (topicTitle: string) => ReactNode;
+  renderBookmarkControls?: (pages: BookmarkPage[], index: number, goTo: (index: number) => void) => ReactNode;
 };
 
 export function GuidedNotesPresentation({
@@ -43,6 +45,7 @@ export function GuidedNotesPresentation({
   pageIndex,
   onPageChange,
   renderTopicRecovery,
+  renderBookmarkControls,
 }: Props) {
   const source = useRef<HTMLDivElement>(null),
     display = useRef<HTMLDivElement>(null),
@@ -335,6 +338,7 @@ export function GuidedNotesPresentation({
         </div>
       </div>
       {renderTopicRecovery?.(pageTitle(index))}
+      {renderBookmarkControls?.(Array.from({length:pageCount},(_,at)=>({title:pageTitle(at),section:pageSection(at)||''})),index,goTo)}
       <footer className="presentation-footer">
         <div className="presentation-page-context">
           <strong>{sectionTitle || "Lesson overview"}</strong>
