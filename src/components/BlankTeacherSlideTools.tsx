@@ -13,6 +13,8 @@ type Props = {
   chapter: string;
   onUpdate: (lines: string[]) => void;
   onDelete: () => void;
+  saveStatus?: string;
+  onRetrySave?: () => void;
 };
 export function BlankTeacherSlideTools({
   slide,
@@ -21,6 +23,8 @@ export function BlankTeacherSlideTools({
   chapter,
   onUpdate,
   onDelete,
+  saveStatus,
+  onRetrySave,
 }: Props) {
   const [open, setOpen] = useState(false),
     [text, setText] = useState(""),
@@ -54,8 +58,9 @@ export function BlankTeacherSlideTools({
       className="mx-3 my-1 flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 print:hidden"
       aria-label="Added teacher slide controls"
     >
-      <p className="text-sm font-medium">Teacher slide · {topic}</p>
+      <p className="text-sm font-medium">Teacher slide · {topic}{saveStatus&&<span role="status" className="ml-3 text-xs font-normal">{saveStatus}</span>}</p>
       <div className="flex flex-wrap gap-2">
+        {saveStatus?.startsWith('Saving failed')&&onRetrySave&&<Button size="sm" variant="outline" onClick={onRetrySave}>Retry saving</Button>}
         <Button size="sm" variant="outline" onClick={edit}>
           Edit this slide
         </Button>
@@ -100,7 +105,7 @@ export function BlankTeacherSlideTools({
                 className="mt-2"
                 rows={9}
                 value={text}
-                onChange={(event) => setText(event.target.value)}
+                onChange={(event) => {setText(event.target.value);onUpdate(event.target.value.split(/\n+/).map(line=>line.trim()).filter(Boolean));}}
                 placeholder="Write or paste notes here. One point per line."
               />
             </label>
@@ -118,8 +123,8 @@ export function BlankTeacherSlideTools({
                     return;
                   }
                   try {
-                    setText(await file.text());
-                    setNotice("Text loaded. Review it before applying.");
+                    const value=await file.text();setText(value);onUpdate(value.split(/\n+/).map(line=>line.trim()).filter(Boolean));
+                    setNotice("Text loaded. Automatic saving status is shown below.");
                   } catch {
                     setNotice("The text file could not be read.");
                   }
@@ -134,7 +139,7 @@ export function BlankTeacherSlideTools({
                 lines={points}
                 subject={subject}
                 disabled={busy}
-                onImport={(lines) => setText(lines.join("\n"))}
+                onImport={(lines) => {setText(lines.join("\n"));onUpdate(lines);}}
               />
             )}
             <Button
@@ -148,13 +153,14 @@ export function BlankTeacherSlideTools({
                 setOpen(false);
               }}
             >
-              Apply to this slide
+              Done
             </Button>
             {notice && (
               <p role="status" className="text-sm">
                 {notice}
               </p>
             )}
+            {saveStatus&&<p role="status" className="text-sm">{saveStatus}</p>}
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>

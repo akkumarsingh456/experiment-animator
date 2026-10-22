@@ -1,11 +1,11 @@
 import type { Slide } from "./generate.functions";
 /** User-requested empty content slide. Reuse the ordinary canvas and image tools. */
-export function addBlankTeacherSlide(slides: Slide[], topic: string) {
+export function addBlankTeacherSlide(slides: Slide[], topic: string, reservedTitles: string[] = []) {
   const source = slides.findIndex((slide) => slide.title === topic && slide.topic_recovery);
   if (source < 0) return { slides, index: -1 };
   const prefix = `${topic} — Teacher slide `;
   let number = 1;
-  while (slides.some((slide) => slide.title === prefix + number)) number++;
+  while (slides.some((slide) => slide.title === prefix + number) || reservedTitles.includes(prefix + number)) number++;
   let index = source + 1;
   while (index < slides.length && slides[index].teacher_blank?.topic === topic) index++;
   const blank: Slide = {

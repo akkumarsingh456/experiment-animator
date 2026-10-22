@@ -14,7 +14,7 @@ import {DiagramImagePicker} from './DiagramImagePicker';
 import {ManualImageCropper} from './ManualImageCropper';
 import {ImageVerticalPosition} from './ImageVerticalPosition';
 
-export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoContent,alt,klass='',subject='',chapter='',topic='',slideId='',sharedSlideId,previousSharedSlideId,displaySlideNumber}:{storageKey:string;autoUrl:string;autoContent?:ReactNode;alt:string;klass?:string;subject?:string;chapter?:string;topic?:string;slideId?:string;sharedSlideId?:string;previousSharedSlideId?:string;displaySlideNumber?:number}){
+export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoContent,alt,klass='',subject='',chapter='',topic='',slideId='',sharedSlideId,previousSharedSlideId,displaySlideNumber,autoSaveDevice=false}:{storageKey:string;autoUrl:string;autoContent?:ReactNode;alt:string;klass?:string;subject?:string;chapter?:string;topic?:string;slideId?:string;sharedSlideId?:string;previousSharedSlideId?:string;displaySlideNumber?:number;autoSaveDevice?:boolean}){
  const sharedScope={klass,subject,chapter,topic,slideId:sharedSlideId||slideId},sharedKey=sharedVisualKey(sharedScope);
  const shareAllowed=[klass,subject,chapter,topic,slideId].every(value=>value.trim());
  const storageKey=shareAllowed&&sharedSlideId?`topic-visual:${sharedKey}`:legacyStorageKey;
@@ -27,6 +27,9 @@ export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoCont
  const [googleOpen,setGoogleOpen]=useState(false),[cropOpen,setCropOpen]=useState(false),[importing,setImporting]=useState(false);
  const [preserve,setPreserve]=useState(false),[sharedState,setSharedState]=useState<'loading'|'saved'|'none'|'error'>('loading');
  const dirty=useRef(false);
+ const [deviceSaveStatus,setDeviceSaveStatus]=useState('');
+ const imageSaving=useRef(false),imageRevision=useRef(0);
+ const imageSavePending=useRef<{key:string;chosen:ManualVisual|null;revision:number}|null>(null);
  const medEasyAllowed=canImportMedEasy(klass,subject),currentKey=useRef(storageKey);currentKey.current=storageKey;
  const [bookOpen,setBookOpen]=useState(false),[bookLoading,setBookLoading]=useState(false),[bookError,setBookError]=useState('');
  const [books,setBooks]=useState<Awaited<ReturnType<typeof loadManualBookLinks>>>([]);
@@ -61,6 +64,17 @@ export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoCont
   return()=>{cancelled=true;window.removeEventListener('shared-topic-visual-saved',changed);};
  },[storageKey,sharedKey,shareAllowed]);
  useEffect(()=>{setGoogleOpen(false);setCropOpen(false);setBookOpen(false);setViewer(null);},[storageKey]);
+ // Only newly added teacher slides opt into automatic device saving. Never
+ // enable shared publication or change the existing explicit save permission.
+ useEffect(()=>{
+  if(!autoSaveDevice||!dirty.current)return;
+  const key=storageKey,chosen=visual,revision=++imageRevision.current;
+  setDeviceSaveStatus('Saving image…');
+  imageSavePending.current={key,chosen,revision};
+  if(imageSaving.current)return;
+  imageSaving.current=true;
+  void(async()=>{try{while(imageSavePending.current){const next=imageSavePending.current;imageSavePending.current=null;try{await saveManualVisual(next.key,next.chosen);if(currentKey.current===next.key&&imageRevision.current===next.revision)setDeviceSaveStatus('Image saved on this device');}catch{if(currentKey.current===next.key&&imageRevision.current===next.revision)setDeviceSaveStatus('Image saving failed — use Save on this device to retry.');}}}finally{imageSaving.current=false;}})();
+ },[visual,storageKey,autoSaveDevice]);
  async function upload(file?:File,credit?:ImageCredit){
   if(!file)return;if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>12*1024*1024){toast.error('Choose a PNG, JPG or WebP image up to 12 MB.');return;}
   const key=storageKey;dirty.current=true;setPreserve(false);
@@ -80,13 +94,14 @@ export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoCont
   try{
    if(share){await preserveTopicVisual(scope,chosen);if(currentKey.current===key)setSharedState('saved');}
    try{await saveManualVisual(key,chosen);}catch{if(!share)throw new Error('Image could not be saved. Device storage may be full.');}
-   if(currentKey.current===key){dirty.current=false;setOpen(false);setToolsVisible(false);setPreserve(false);}
+   if(currentKey.current===key){dirty.current=false;setOpen(false);setToolsVisible(false);setPreserve(false);if(autoSaveDevice)setDeviceSaveStatus('Image saved on this device');}
    toast.success(share?'Image preserved for everyone on this exact chapter, topic and slide.':'Image and layout saved on this device.');
   }catch(error){toast.error(error instanceof Error?error.message:'The image could not be saved.');}finally{setSaving(false);}
  }
  async function openBooks(){if(!medEasyAllowed)return;setBookOpen(value=>!value);if(bookOpen)return;setBookLoading(true);setBookError('');try{const requestedKey=currentKey.current;const result=await cachedManualBookLinks({klass,subject,chapter,topic});if(currentKey.current!==requestedKey)return;setBooks(result);if(result[0])void cachedManualPdf(result[0].id,klass,subject).catch(()=>{});}catch{setBookError('Book links are unavailable. You can still paste a screenshot or import from your device.');}finally{setBookLoading(false);}}
  const manualOnly=!!visual&&!visual.showAuto;
  return <div ref={panel} tabIndex={0} aria-label="Topic image editor: click here and paste a screenshot" className={`manual-visual-editor relative w-full min-h-0 ${manualOnly?'manual-visual-only':'h-full'}`} onPaste={paste} onDragOver={event=>event.preventDefault()} onDrop={drop}>
+   {autoSaveDevice&&deviceSaveStatus&&<p role="status" className="manual-image-controls absolute left-2 top-2 z-20 rounded bg-white/95 px-2 py-1 text-xs print:hidden">{deviceSaveStatus}</p>}
    <div className={manualOnly?'manual-image-stage relative w-full overflow-hidden':'absolute inset-0'} style={manualOnly?{aspectRatio:String(visual.shape==='circle'?1:imageAspect)}:undefined}>
    {(!visual||visual.showAuto)&&(autoContent||<img className="w-full h-full object-contain" src={autoUrl} alt={alt}/>)}
    {visual&&<div className="absolute overflow-hidden" style={{left:`${visual.x}%`,top:`${visual.y}%`,width:`${visual.width}%`,height:visual.shape==='circle'?undefined:`${Math.max(1,100-visual.y)}%`,borderRadius:visual.shape==='circle'?'50%':visual.shape==='rounded'?16:0,aspectRatio:visual.shape==='circle'?'1':undefined,cursor:open?'move':'default',touchAction:open?'none':undefined}}

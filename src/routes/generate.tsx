@@ -1,5 +1,7 @@
 import {BlankTeacherSlideTools} from "@/components/BlankTeacherSlideTools";
-import {addBlankTeacherSlide,deleteBlankTeacherSlide} from "@/lib/blank-teacher-slide";
+import {addBlankTeacherSlide} from "@/lib/blank-teacher-slide";
+import {useSavedBlankSlides} from '@/hooks/use-saved-blank-slides';
+import {blankSlidesKey} from '@/lib/saved-blank-slides';
 import {MissingTopicNotes} from '@/components/MissingTopicNotes';
 import {exactSlideVisualId} from "@/lib/exact-slide-visual";
 import {orderTopicSections} from "@/lib/topic-lecture-order";
@@ -264,7 +266,7 @@ function GeneratePage() {
           </Card>
         )}
 
-        {result && <ResultView result={result} title={search.topic} />}
+        {result && <ResultView key={JSON.stringify(search)} result={result} title={search.topic} />}
       </div>
     </div>
   );
@@ -305,19 +307,23 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
     });
     return [makeCoverSlide(), ...withPhysicsFormulaReference(repaired, search.klass, search.subject, search.chapter || title).map(slide => mathematicsPresentationSlide(slide, result.source_books[0]?.subject || search.subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(slide.sections, search.subject || "", search.chapter || slide.title)}))];
   };
-  const [slides, setSlides] = useState<Slide[]>(() => withCoverSlide(result.slides));
+  const blankBase = useMemo(() => withCoverSlide(result.slides), [result]);
+  const blankStore = useSavedBlankSlides(blankBase, blankSlidesKey([String(search.klass), search.subject, search.chapter || title, search.topic, search.subtopics || '', search.mode || '']));
+  const {slides, setSlides} = blankStore;
   const blankSlideToShow=useRef<string|null>(null);
   function addRecoverySlide(topicTitle:string){
-    const added=addBlankTeacherSlide(slides,topicTitle);if(added.index<0)return;
+    const added=addBlankTeacherSlide(slides,topicTitle,blankStore.deleted?[blankStore.deleted.slide.title]:[]);if(added.index<0)return;
     blankSlideToShow.current=added.slides[added.index].title;
     setSlides(added.slides);setActiveIdx(added.index);setLessonView('slides');
   }
+  function undoBlankSlide(){if(blankStore.deleted)blankSlideToShow.current=blankStore.deleted.slide.title;blankStore.undo();}
   function renderTopicRecovery(topicTitle:string){
+    const undoControl=blankStore.deleted?<div className="mx-3 my-1 flex flex-wrap items-center gap-2 rounded-lg border bg-sky-50 p-2 text-sm print:hidden"><span role="status">{blankStore.status}</span><Button size="sm" variant="outline" onClick={undoBlankSlide}>Undo delete · {blankStore.deleted.slide.title}</Button></div>:null;
     const blank=slides.find(item=>item.teacher_blank&&item.title.trim()===topicTitle.trim());
-    if(blank)return <BlankTeacherSlideTools key={blank.teacher_blank!.id} slide={blank} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onUpdate={lines=>setSlides(current=>current.map(item=>item.teacher_blank?.id===blank.teacher_blank!.id?{...item,bullets:[],notes:[],sections:lines.length?[{heading:'Teacher notes',kind:'bullets' as const,lines}]:[]}:item))} onDelete={()=>setSlides(current=>deleteBlankTeacherSlide(current,blank.teacher_blank!.id))}/>;
+    if(blank)return <>{undoControl}<BlankTeacherSlideTools key={blank.teacher_blank!.id} slide={blank} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} saveStatus={blankStore.status} onRetrySave={blankStore.retrySave} onUpdate={lines=>setSlides(current=>current.map(item=>item.teacher_blank?.id===blank.teacher_blank!.id?{...item,bullets:[],notes:[],sections:lines.length?[{heading:'Teacher notes',kind:'bullets' as const,lines}]:[]}:item))} onDelete={()=>blankStore.remove(blank.teacher_blank!.id)}/></>;
 
     const slide=slides.find(item=>item.topic_recovery&&item.title.trim()===topicTitle.trim());
-    return slide?<MissingTopicNotes onAddBlankSlide={()=>addRecoverySlide(slide.title)} compact key={slide.title} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onSaved={updated=>setSlides(current=>current.map(item=>item.title===slide.title&&item.topic_recovery?{...item,sections:updated.sections,topic_recovery:updated.topic_recovery}:item))}/>:null;
+    return <>{undoControl}{slide?<MissingTopicNotes onAddBlankSlide={()=>addRecoverySlide(slide.title)} compact key={slide.title} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onSaved={updated=>setSlides(current=>current.map(item=>item.title===slide.title&&item.topic_recovery?{...item,sections:updated.sections,topic_recovery:updated.topic_recovery}:item))}/>:null}</>;
   }
 
   useEffect(()=>{const refresh=()=>setSlides(current=>[...current]);window.addEventListener('manual-visual-saved',refresh);void loadManualVisuals().catch(()=>{});return()=>window.removeEventListener('manual-visual-saved',refresh);},[]);
@@ -402,7 +408,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
   const imgHashRef = useRef<Record<number, string>>({});
   const dupRetryRef = useRef<Record<number, number>>({});
 
-  useEffect(() => { setSlides(withCoverSlide(result.slides)); setVerified(skipVerify); setActiveIdx(0); setPresentationPage(0); setOriginalPage(0); setImages({}); setImgLoading({}); setImgStatus({}); imgHashRef.current = {}; dupRetryRef.current = {}; }, [result]);
+  useEffect(() => { setVerified(skipVerify); setActiveIdx(0); setPresentationPage(0); setOriginalPage(0); setImages({}); setImgLoading({}); setImgStatus({}); imgHashRef.current = {}; dupRetryRef.current = {}; }, [result]);
 
   function updateSlide(idx: number, patch: Partial<Slide>) {
     setSlides((s) => s.map((sl, i) => (i === idx ? { ...sl, ...patch } : sl)));
@@ -700,6 +706,7 @@ function ResultView({ result, title }: { result: GenerationResult; title: string
         <Button variant={lessonView === "slides" ? "default" : "outline"} aria-pressed={lessonView === "slides"} onClick={() => setLessonView("slides")}>Generate PPT &amp; Notes</Button>
         <Button variant="outline" onClick={presentSelectedView}><Maximize2 className="h-4 w-4" />Present {lessonView === "notes" ? "guided notes" : "PPT slides"}</Button>
       </div>
+      {(slides.some(slide=>slide.teacher_blank)||blankStore.deleted||blankStore.status.startsWith('Saving failed'))&&<div className="my-3 flex flex-wrap items-center gap-3 rounded-lg border bg-sky-50 p-3 text-sm print:hidden" aria-label="Added slide saving"><span role="status">{blankStore.status}</span>{blankStore.status.startsWith('Saving failed')&&<Button size="sm" variant="outline" onClick={blankStore.retrySave}>Retry saving</Button>}{blankStore.deleted&&<Button size="sm" variant="outline" onClick={undoBlankSlide}>Undo delete · {blankStore.deleted.slide.title}</Button>}</div>}
       {/^(?:Science|Physics|Chemistry|Mathematics|Social Science|Computer Science)$/.test(search.subject||"") && <NotesContentCheck slides={slides} klass={String(search.klass||"")} subject={search.subject||""} chapter={search.chapter||title} />}
       {/* Step 1 — Activity verification (skipped for language chapters) */}
       {!skipVerify && lessonView === "slides" && (
@@ -1366,7 +1373,7 @@ function SlideCanvas({
               <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-muted-foreground bg-card/80 rounded px-1.5 py-0.5 border border-border/40">2D infographic · auto</div>
               <div className="lesson-figure-panel relative w-full flex-[3] rounded-md overflow-hidden bg-card shadow-soft border border-border/50 min-h-0 flex flex-col">
                 {isMathematics(subject) || imageUrl ? (
-                  <ManualVisualEditor displaySlideNumber={index+1} previousSharedSlideId={visualSlot||(slide as Slide & {visualSlot?:string}).visualSlot} sharedSlideId={slide.teacher_blank?`teacher-blank:${slide.teacher_blank.id}`:exactSlideVisualId(slide,visualSlot||(slide as Slide & {visualSlot?:string}).visualSlot)} slideId={String(sourceIndex)} klass={klass} subject={subject} chapter={chapter} topic={slide.title} storageKey={JSON.stringify(slide.teacher_blank?[klass,subject,chapter,slide.teacher_blank.id]:[klass,subject,chapter,slide.title,sourceIndex,slide.sections?.flatMap(section=>section.lines).slice(0,2)||slide.notes.slice(0,2)])} autoUrl={imageUrl||''} autoContent={isMathematics(subject)?<MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} />:undefined} alt={`${slide.title} — NCERT 2D infographic`} />
+                  <ManualVisualEditor autoSaveDevice={!!slide.teacher_blank} displaySlideNumber={index+1} previousSharedSlideId={visualSlot||(slide as Slide & {visualSlot?:string}).visualSlot} sharedSlideId={slide.teacher_blank?`teacher-blank:${slide.teacher_blank.id}`:exactSlideVisualId(slide,visualSlot||(slide as Slide & {visualSlot?:string}).visualSlot)} slideId={String(sourceIndex)} klass={klass} subject={subject} chapter={chapter} topic={slide.title} storageKey={JSON.stringify(slide.teacher_blank?[klass,subject,chapter,slide.teacher_blank.id]:[klass,subject,chapter,slide.title,sourceIndex,slide.sections?.flatMap(section=>section.lines).slice(0,2)||slide.notes.slice(0,2)])} autoUrl={imageUrl||''} autoContent={isMathematics(subject)?<MathematicsTopicVisual input={{ ...slide, keyTerms: slide.key_terms }} />:undefined} alt={`${slide.title} — NCERT 2D infographic`} />
                 ) : imageLoading ? (
                   <div className="flex flex-col items-center gap-2 text-[10px] text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />
