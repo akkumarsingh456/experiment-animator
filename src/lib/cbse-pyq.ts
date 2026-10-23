@@ -3,6 +3,10 @@ import {z} from 'zod';
 export const cbsePapers=catalogue.papers;
 export const cbseArchive=catalogue.source;
 export const cbseCheckedAt=catalogue.checkedAt;
+/** Apply the same catalogue identity check to cached and cloud-saved readings. */
+export function isOfficialPyqReading(reading:{url:string;klass:string;subject:string;year:number;exam:string;file:string}){
+ return /\.pdf$/i.test(reading.file)&&cbsePapers.some(paper=>paper.url===reading.url&&paper.klass===reading.klass&&paper.subject===reading.subject&&paper.year===reading.year&&paper.exam===reading.exam);
+}
 export const pyqScopeSchema=z.object({klass:z.enum(['9','10','11','12']),subject:z.string().min(1).max(120),chapter:z.string().max(300),topic:z.string().max(300),year:z.number().int().min(2000).max(2100)}).strict();
 export type PyqScope=z.infer<typeof pyqScopeSchema>;
 export const pyqNoteSchema=z.object({scope:pyqScopeSchema,text:z.string().max(12000),revision:z.string().uuid(),updatedAt:z.string().datetime()}).strict();
