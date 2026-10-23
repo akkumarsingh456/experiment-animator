@@ -2,6 +2,8 @@
 
 ## Teacher-only CBSE PYQ references
 
+- Use `fetchCbsePaper` for every CBSE paper fetch. The deployed edge runtime rejects `redirect: 'error'`; follow redirects manually with a hop limit, validate HTTPS CBSE domains at every hop, preserve Range headers and reject invalid statuses. Do not expose raw platform errors as repeated mobile-length diagnostics; deduplicate paper errors and bound the error list height.
+
 - Keep the PYQ library in the teacher workspace and Read guided notes page only. Never merge PYQ excerpts or private PYQ notebooks into GenerationResult, source extraction, lecture slides, PPTX, slide presentation or export roots. The Generate PPT & Notes form and pipeline stay unchanged.
 - `cbse-pyq-catalogue.json` is an official CBSE archive snapshot, not a claim that every subject/year/set exists. Update it with `scripts/update-cbse-pyq.mjs` after saving the current official archive HTML to `outputs/cbse-pyq-source.html`; show its checked date. Catalogue URLs include main and additional examinations and all published sets bundled by CBSE.
 - Guided notes and the workspace use the latest five calendar years including the current year in Asia/Kolkata. Class 9/11 notebooks are available, but school papers must never be labelled CBSE board PYQs or replaced by Class 10/12 papers.

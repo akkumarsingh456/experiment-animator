@@ -1,4 +1,5 @@
 import {cbsePapers,pyqSubjectMatches,pyqYears} from './cbse-pyq';
+import {fetchCbsePaper} from './cbse-fetch.server';
 const recentSearches=new Map<string,number[]>();
 /** Only catalogue URLs are fetched. A request never accepts an arbitrary PDF host. */
 export async function searchOfficialPyq(input:{url:string;topic:string;klass:'10'|'12';year:number;subject:string;file?:string}){
@@ -8,7 +9,7 @@ export async function searchOfficialPyq(input:{url:string;topic:string;klass:'10
  if(!paper||!pyqYears().includes(paper.year))throw new Error('Choose an official paper within the last five years.');
  const now=Date.now();for(const [id,times] of recentSearches)if(!times.some(time=>now-time<60000))recentSearches.delete(id);
  const times=(recentSearches.get(user.id)||[]).filter(time=>now-time<60000);if(times.length>=8)throw new Error('Please wait a minute before searching more paper sets. Downloads remain available.');recentSearches.set(user.id,[...times,now]);
- const response=await fetch(paper.url,{redirect:'error',signal:AbortSignal.timeout(25000)});
+ const response=await fetchCbsePaper(paper.url);
  if(!response.ok||!response.body)throw new Error('CBSE could not provide this paper. Use its official download link and retry later.');
  const max=35_000_000;if(Number(response.headers.get('content-length'))>max){await response.body.cancel();throw new Error('This archive is too large for inline search. Download it from CBSE to review every set.');}
  const reader=response.body.getReader(),chunks:Uint8Array[]=[];let size=0;

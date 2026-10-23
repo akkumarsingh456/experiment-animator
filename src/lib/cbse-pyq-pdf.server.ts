@@ -1,4 +1,5 @@
 import {cbsePapers} from './cbse-pyq';
+import {fetchCbsePaper} from './cbse-fetch.server';
 type Entry={name:string;offset:number;compressed:number;size:number;central:Uint8Array};
 const indexes=new Map<string,{expires:number;entries:Entry[]}>();
 export function officialPaper(url:string){const paper=cbsePapers.find(p=>p.url===url);if(!paper)throw new Error('Choose an indexed official CBSE paper.');return paper;}
@@ -10,7 +11,7 @@ async function bounded(response:Response,max:number){
  const bytes=new Uint8Array(length);let at=0;for(const chunk of chunks){bytes.set(chunk,at);at+=chunk.length;}return bytes;
 }
 async function range(url:string,value:string,max:number){
- const response=await fetch(url,{headers:{Range:value,'Accept-Encoding':'identity'},redirect:'error',signal:AbortSignal.timeout(30000)});
+ const response=await fetchCbsePaper(url,{Range:value,'Accept-Encoding':'identity'});
  if(response.status!==206){await response.body?.cancel();throw new Error('CBSE range access is temporarily unavailable. Retry this PDF later.');}
  return bounded(response,max);
 }
@@ -40,7 +41,7 @@ export async function officialPdfBytes(url:string,name:string){
  const paper=officialPaper(url);let bytes:Uint8Array;
  if(paper.format==='PDF'){
    const expected=(await listOfficialPdfs(url))[0].name;if(name!==expected)throw new Error('Select an official PDF set.');
-   bytes=await bounded(await fetch(url,{redirect:'error',signal:AbortSignal.timeout(30000)}),30_000_000);
+   bytes=await bounded(await fetchCbsePaper(url),30_000_000);
  }else{
    const entry=(await archiveEntries(url)).find(row=>row.name===name);if(!entry)throw new Error('This PDF set was not found in the official paper index.');
    if(entry.size>30_000_000||entry.compressed>30_000_000)throw new Error('This PDF exceeds the inline reader size limit.');
@@ -62,7 +63,7 @@ export async function serveOfficialPdf(request:Request){
    if(paper.format==='PDF'){
      if(file!==(await listOfficialPdfs(paper.url))[0].name)return new Response('Invalid PDF set',{status:400});
      const range=request.headers.get('range');if(range&&!/^bytes=(?:\d+-\d*|-\d+)$/.test(range))return new Response('Invalid PDF range',{status:416});
-     const response=await fetch(paper.url,{headers:range?{Range:range}:{},redirect:'error',signal:AbortSignal.timeout(30000)});
+     const response=await fetchCbsePaper(paper.url,range?{Range:range}:{});
      if(!response.ok)return new Response('The official CBSE PDF is temporarily unavailable',{status:502});
      const headers=new Headers({'Content-Type':'application/pdf','Cache-Control':'public, max-age=300','X-Content-Type-Options':'nosniff','Content-Disposition':`inline; filename*=UTF-8''${encodeURIComponent(file)}`});
      for(const name of ['content-length','content-range','accept-ranges']){const value=response.headers.get(name);if(value)headers.set(name,value);}return new Response(response.body,{status:response.status,headers});
