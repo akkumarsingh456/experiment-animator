@@ -15,6 +15,7 @@ import { Route as HistoryRouteImport } from './routes/history'
 import { Route as NotesLibraryRouteImport } from './routes/notes-library'
 import { Route as UploadRouteImport } from './routes/upload'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
+import { Route as ApiCbsePyqPdfRouteImport } from './routes/api.cbse-pyq-pdf'
 import { Route as ApiMedEasyPdfRouteImport } from './routes/api.med-easy-pdf'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
@@ -48,6 +49,11 @@ const WorkspaceRoute = WorkspaceRouteImport.update({
   path: '/workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCbsePyqPdfRoute = ApiCbsePyqPdfRouteImport.update({
+  id: '/api/cbse-pyq-pdf',
+  path: '/api/cbse-pyq-pdf',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMedEasyPdfRoute = ApiMedEasyPdfRouteImport.update({
   id: '/api/med-easy-pdf',
   path: '/api/med-easy-pdf',
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/notes-library': typeof NotesLibraryRoute
   '/upload': typeof UploadRoute
   '/workspace': typeof WorkspaceRoute
+  '/api/cbse-pyq-pdf': typeof ApiCbsePyqPdfRoute
   '/api/med-easy-pdf': typeof ApiMedEasyPdfRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/notes-library': typeof NotesLibraryRoute
   '/upload': typeof UploadRoute
   '/workspace': typeof WorkspaceRoute
+  '/api/cbse-pyq-pdf': typeof ApiCbsePyqPdfRoute
   '/api/med-easy-pdf': typeof ApiMedEasyPdfRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/notes-library': typeof NotesLibraryRoute
   '/upload': typeof UploadRoute
   '/workspace': typeof WorkspaceRoute
+  '/api/cbse-pyq-pdf': typeof ApiCbsePyqPdfRoute
   '/api/med-easy-pdf': typeof ApiMedEasyPdfRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/notes-library'
     | '/upload'
     | '/workspace'
+    | '/api/cbse-pyq-pdf'
     | '/api/med-easy-pdf'
     | '/auth/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/notes-library'
     | '/upload'
     | '/workspace'
+    | '/api/cbse-pyq-pdf'
     | '/api/med-easy-pdf'
     | '/auth/callback'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/notes-library'
     | '/upload'
     | '/workspace'
+    | '/api/cbse-pyq-pdf'
     | '/api/med-easy-pdf'
     | '/auth/callback'
   fileRoutesById: FileRoutesById
@@ -130,6 +142,7 @@ export interface RootRouteChildren {
   NotesLibraryRoute: typeof NotesLibraryRoute
   UploadRoute: typeof UploadRoute
   WorkspaceRoute: typeof WorkspaceRoute
+  ApiCbsePyqPdfRoute: typeof ApiCbsePyqPdfRoute
   ApiMedEasyPdfRoute: typeof ApiMedEasyPdfRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
 }
@@ -178,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cbse-pyq-pdf': {
+      id: '/api/cbse-pyq-pdf'
+      path: '/api/cbse-pyq-pdf'
+      fullPath: '/api/cbse-pyq-pdf'
+      preLoaderRoute: typeof ApiCbsePyqPdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/med-easy-pdf': {
       id: '/api/med-easy-pdf'
       path: '/api/med-easy-pdf'
@@ -202,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   NotesLibraryRoute: NotesLibraryRoute,
   UploadRoute: UploadRoute,
   WorkspaceRoute: WorkspaceRoute,
+  ApiCbsePyqPdfRoute: ApiCbsePyqPdfRoute,
   ApiMedEasyPdfRoute: ApiMedEasyPdfRoute,
   AuthCallbackRoute: AuthCallbackRoute,
 }
