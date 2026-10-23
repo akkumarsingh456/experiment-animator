@@ -3,8 +3,8 @@
 const ORIGIN='https://sathee.iitk.ac.in';
 const cache=new Map<string,Promise<{url:string;text:string}|null>>();
 const indexes=new Map<string,Promise<string>>();
-const identity=(text:string)=>text.replace(/^\s*(?:chapter|unit)\s*[-:]?\s*\d+\s*[-:]?\s*/i,'').replace(/\s*\((Physics|Chemistry|Biology)\)\s*$/i,'').toLowerCase().replace(/^the\s+/,'').replace(/[^a-z0-9]/g,'');
-const decode=(text:string)=>text.replace(/&#(x[0-9a-f]+|\d+);/gi,(_,n)=>String.fromCodePoint(Math.min(0x10ffff,n[0].toLowerCase()==='x'?parseInt(n.slice(1),16):Number(n)))).replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'");
+const identity=(text:string)=>text.replace(/\s*[—–-]\s*NCERT(?:\s+Theory)?\s*$/i,'').replace(/^\s*(?:chapter|unit)\s*[-:]?\s*\d+\s*[-:]?\s*/i,'').replace(/\s*\((Physics|Chemistry|Biology)\)\s*$/i,'').toLowerCase().replace(/^the\s+/,'').replace(/[^a-z0-9]/g,'');
+const decode=(text:string)=>text.replace(/&#(x[0-9a-f]+|\d+);/gi,(_,n)=>String.fromCodePoint(Math.min(0x10ffff,n[0].toLowerCase()==='x'?parseInt(n.slice(1),16):Number(n)))).replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;|&apos;|&rsquo;|&lsquo;/g,"'");
 export function trustedChapterHtmlText(html:string){
  const start=html.search(/<(?:div|article)\b[^>]*(?:class\s*=\s*(?:["'][^"']*\b(?:td-content|content-wrapper)\b|(?:td-content|content-wrapper)\b)|id\s*=\s*["']?content-section\b)/i);
  if(start<0)return '';
@@ -14,7 +14,16 @@ async function read(url:string){
  const target=new URL(url);if(target.origin!==ORIGIN||!target.pathname.includes('/ncert-books/'))return '';
  for(let attempt=0;attempt<2;attempt++){
   try{
-   const response=await fetch(url,{signal:AbortSignal.timeout(7000),redirect:'error'});
+   let current=url,response:Response|undefined;
+   for(let hop=0;hop<5;hop++){
+    const next=new URL(current);
+    if(next.origin!==ORIGIN||next.username||next.password||!next.pathname.includes('/ncert-books/'))return '';
+    response=await fetch(current,{signal:AbortSignal.timeout(7000),redirect:'manual'});
+    if(response.status<300||response.status>=400)break;
+    const location=response.headers.get('location');await response.body?.cancel();
+    if(!location)return '';current=new URL(location,current).href;response=undefined;
+   }
+   if(!response)return '';
    if(!response.ok){if(response.status===429||response.status>=500)continue;return '';}
    if(Number(response.headers.get('content-length'))>2_000_000)return '';
    const text=await response.text();return text.length<=2_000_000?text:'';
@@ -29,16 +38,22 @@ export function trustedChapterSource(klass:string,subject:string,chapter:string)
  const key=JSON.stringify([grade,subject,chapter]);
  if(!cache.has(key))cache.set(key,(async()=>{
   try{
-   const g=grade.padStart(2,'0'),base=book==='science'?`${ORIGIN}/sathee-railway-exams/student-corner/ncert-books/class-${g}/nb-${book}-${g}/`:`${ORIGIN}/sathee-${book==='math'?'jee':'neet'}/ncert-books/${book==='math'?'jee':'neet'}-ncert-books/${book==='math'?'jee':'neet'}-nb-${book}-${g}/`;
-   if(!indexes.has(base))indexes.set(base,read(base).then(value=>{if(!value)indexes.delete(base);return value;}));
-   const index=await indexes.get(base)!;let url='';
+   const g=grade.padStart(2,'0'),legacy=book==='science'?`${ORIGIN}/sathee-railway-exams/student-corner/ncert-books/class-${g}/nb-${book}-${g}/`:`${ORIGIN}/sathee-${book==='math'?'jee':'neet'}/ncert-books/${book==='math'?'jee':'neet'}-ncert-books/${book==='math'?'jee':'neet'}-nb-${book}-${g}/`;
+   const bases=[`${ORIGIN}/ncert-books/ncert-books-theory/class-${g}/nbt-${book}-${g}/`,legacy,`${ORIGIN}/sathee-icar/student-corner/ncert-books/class-${g}/nb-${book}-${g}/`];
+   const documents=await Promise.all(bases.map(async base=>{
+    if(!indexes.has(base))indexes.set(base,read(base).then(value=>{if(!value)indexes.delete(base);return value;}));
+    return {base,index:await indexes.get(base)!};
+   }));
+   for(const {base,index} of documents){let url='';
    for(const link of index.matchAll(/<a\b[^>]*href\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a>/gi)){
     const target=new URL(decode(link[1]||link[2]||link[3]),base),label=decode(link[4].replace(/<[^>]*>/g,' ')).trim();
     if(target.origin===ORIGIN&&target.pathname.startsWith(new URL(base).pathname)&&target.href!==base&&identity(label)===identity(chapter)){url=target.href;break;}
    }
-   if(!url)return null;
+   if(!url)continue;
    const text=trustedChapterHtmlText(await read(url));
-   return text.length>500?{url,text}:null;
+   if(text.length>500)return {url,text};
+   }
+   return null;
   }catch{return null;}
  })().then(result=>{if(!result)cache.delete(key);return result;}));
  return cache.get(key)!;

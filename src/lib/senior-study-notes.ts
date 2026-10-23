@@ -46,6 +46,8 @@ const aliases:Record<string,string[]>={
  'Electronic configuration':['Electronic configurations of atoms'], 'Mole concept':['Mole concept and molar masses'],
  'Stoichiometric calculations':['Stoichiometry and stoichiometric calculations'],
  'Concentration terms':['Expressing concentration of solutions'],
+ 'Vapour pressure':['Vapour Pressure of Liquid Solutions','Vapour Pressure of Liquid- Liquid Solutions'],
+ 'Colligative properties':['Colligative Properties and Determination of Molar Mass'],
  'VSEPR theory':['The valence shell electron pair repulsion theory'],
  'Transition elements properties':['General properties of the transition elements'],
  'Inner transition elements (lanthanoids and actinoids)':['The inner transition elements','The lanthanoids','The actinoids'],

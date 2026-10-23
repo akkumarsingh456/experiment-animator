@@ -83,6 +83,8 @@ export const searchMissingTopic = createServerFn({ method: "POST" })
           }),
         );
     }
+    if (!previews.length)
+      throw new Error("The official chapter sources could not be read right now. Retry the search, or provide a checked official chapter link. Your existing notes are unchanged.");
     return previews.sort(
       (a, b) => Number(b.complete) - Number(a.complete) || b.lines.length - a.lines.length,
     );

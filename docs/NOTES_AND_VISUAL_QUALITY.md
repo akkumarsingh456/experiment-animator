@@ -46,6 +46,8 @@ Apply these rules whenever changing extraction, retrieval, generation, rendering
 
 ## Always follow
 
+- Official web recovery must use edge-compatible manual redirects, validate the SATHEE origin and NCERT path on every hop, and bound redirect count. Resolve exact grade/chapter links from multiple official indexes when an older index moves; never use a redirected library homepage as chapter notes. Prefer explicit numbered or unnumbered topic sections before broad keyword recovery, retain subordinate headings and stop at the next peer section. Web section numbers may differ from the current syllabus chapter number; compare the chapter title and class, not the edition number alone.
+
 1. Clean source furniture before classification, and apply the same guard when opening saved notes and building printable note blocks.
 2. Preserve authored mathematical steps and quoted literary wording. Never guess an equation or align flattened table values by proximity alone.
 3. Put questions in practice, not definitions or formula cards. A formula needs a readable relation; a quantity needs an explicit unit statement.

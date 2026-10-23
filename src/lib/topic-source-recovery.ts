@@ -18,17 +18,26 @@ const plain=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'');
 export function recoverTopicFromSources(title:string,sources:string[]){
  const names=[title.replace(/\s*\([^)]*\)/g,''),...seniorTopicHeadings(title)];
  const results:string[]=[],legacyResults:string[]=[];let attempts=0;
- for(let pass=0;pass<3;pass++){
+ // Prefer a bounded source heading before broad keyword recovery. Official web
+ // editions sometimes print a top-level heading as "2" rather than "1.2".
+ for(const pass of [1,0,2]){
   attempts++;
   for(const raw of sources){
    const text=decodeNcertProse(raw,names);let candidates:string[]=[];
    if(pass===0)candidates=[...seniorScienceEvidence(title,text),...secondaryScienceSectionEvidence(title,text)];
    if(pass===1){
     const rows=text.split(/\r?\n/),heads=rows.flatMap((line,index)=>{
-     const normalized=line.trim().replace(/\s*\[\d+(?:\s*[-–]\s*\d+)?\]\s*#?\s*$/,'');const match=names.find(name=>plain(normalized)===plain(name)||normalized.toLowerCase().startsWith(name.toLowerCase()+' ')&&(/^[A-Z][A-Za-z0-9 ]{1,25}$/.test(normalized.slice(name.length).trim())||/^\$[^$]{1,100}\$$/.test(normalized.slice(name.length).trim())));
+     const normalized=line.trim().replace(/\s*#\s*$/,'').replace(/\s*\[\d+(?:\s*[-–]\s*\d+)?\]\s*$/,'').replace(/^\d+(?:\.\d+)*\s+/,'');const match=names.find(name=>plain(normalized)===plain(name)||normalized.toLowerCase().startsWith(name.toLowerCase()+' ')&&(/^[A-Z][A-Za-z0-9 ]{1,25}$/.test(normalized.slice(name.length).trim())||/^\$[^$]{1,100}\$$/.test(normalized.slice(name.length).trim())));
      return match?[index]:[];
     });
-    for(const start of heads){let end=start+1;while(end<rows.length&&!heads.includes(end)&&!/^\s*\d{1,2}\.\d{1,2}(?:\.\d+)?\s+[A-Z]|^\s*(?:Uses|Exercises|Summary)\s*$/i.test(rows[end]))end++;
+    for(const start of heads){
+     const depth=Math.max(2,(rows[start].trim().match(/^\d+(?:\.\d+)*/)?.[0]||'').split('.').length);
+     let end=start+1;
+     while(end<rows.length&&!heads.includes(end)){
+      const heading=rows[end].match(/^\s*(\d{1,2}(?:\.\d{1,2})*)\s+[A-Z][^.!?]{2,130}\s*$/);
+      if(heading&&Math.max(2,heading[1].split('.').length)<=depth||/^\s*(?:Uses|Exercises|Summary)\s*#?\s*$/i.test(rows[end]))break;
+      end++;
+     }
      candidates.push(...rows.slice(start+1,end).join(' ').split(/(?<=[.!?])\s+/));
     }
    }

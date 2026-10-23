@@ -1,5 +1,18 @@
 [
   {
+    "klass": "12",
+    "subject": "Chemistry",
+    "chapter": "Chapter 1: Solutions",
+    "sources": [
+      {
+        "url": "https://sathee.iitk.ac.in/sathee-neet/ncert-books/neet-ncert-books/neet-nb-che-12/chem-12-unit-2-solutions/",
+        "title": "NCERT Chemistry Class 12 · Solutions",
+        "sourceClass": "12",
+        "provider": "IIT Kanpur SATHEE NCERT mirror"
+      }
+    ]
+  },
+  {
     "klass": "9",
     "subject": "Social Science",
     "chapter": "Chapter 1: The French Revolution (History)",

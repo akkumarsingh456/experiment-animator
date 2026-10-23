@@ -46,7 +46,7 @@ it('counts separate explanations in a saved single-line paragraph without loweri
 const preparation='Potassium dichromate K2Cr2O7\nThis first source paragraph describes the preparation of potassium dichromate from a suitable chromium compound. The next source paragraph explains the separation stage and the preparation conditions for potassium dichromate.\nPotassium permanganate KMnO4\nThis source paragraph describes the preparation of potassium permanganate using a manganese compound. A further source paragraph explains the conversion stage and the conditions needed to obtain potassium permanganate.\n4.5 The lanthanoids\nUnrelated material stays outside the preparation topic.';
 it('recovers the reported formula-named topic from unnumbered named subsections',()=>{
  const result=recoverTopicFromSources('Preparation Of KMnO₄ And K₂Cr₂O₇',[preparation]);
- expect(result.complete).toBe(true);expect(result.attempts).toBe(2);
+ expect(result.complete).toBe(true);expect(result.attempts).toBeLessThanOrEqual(2);
  expect(result.lines.join(' ')).toContain('potassium dichromate');expect(result.lines.join(' ')).toContain('potassium permanganate');
  expect(result.lines.join(' ')).not.toContain('Unrelated');
 });
@@ -65,13 +65,14 @@ it('uses only an exact chapter in the requested class mirror',async()=>{
  const base='https://sathee.iitk.ac.in/sathee-neet/ncert-books/neet-ncert-books/neet-nb-che-12/';
  const url=base+'chem-12-unit-8-the-d-and-f-block-elements/';
  const fetcher=vi.spyOn(globalThis,'fetch').mockImplementation(async input=>new Response(String(input)===base?`<a href="${url}">Unit 8 The D And F Block Elements</a><a href="https://untrusted.test/">Other source</a>`:`<article id="content-section"><p>${'A source explanation of the selected chapter. '.repeat(20)}</p></article>`));
- try{const result=await trustedChapterSource('12','Chemistry','Chapter 4: The d- and f-Block Elements');expect(result?.url).toBe(url);expect(fetcher).toHaveBeenCalledTimes(2);}finally{fetcher.mockRestore();}
+ try{const result=await trustedChapterSource('12','Chemistry','Chapter 4: The d- and f-Block Elements');expect(result?.url).toBe(url);expect(fetcher).toHaveBeenCalledWith(url,expect.objectContaining({redirect:"manual"}));}finally{fetcher.mockRestore();}
 });
 it('retries a temporary mirror failure instead of treating it as a missing source',async()=>{
  const base='https://sathee.iitk.ac.in/sathee-neet/ncert-books/neet-ncert-books/neet-nb-phy-11/';
  const url=base+'phy-11-chapter-7-gravitation/';let chapterCalls=0;
  const spy=vi.spyOn(globalThis,'fetch').mockImplementation(async input=>{
   if(String(input)===base)return new Response(`<a href="${url}">Chapter 7 Gravitation</a>`);
+  if(String(input)!==url)return new Response("",{status:404});
   chapterCalls++;return chapterCalls===1?new Response('',{status:503}):new Response(`<article id="content-section">${'An authentic chapter source paragraph with readable supporting explanation. '.repeat(12)}</article>`);
  });
  try{const result=await trustedChapterSource('11','Physics','Chapter 7: Gravitation');expect(result?.url).toBe(url);expect(chapterCalls).toBe(2);}finally{spy.mockRestore();}
@@ -92,4 +93,32 @@ it('leaves adequately sourced topics unchanged',async()=>{
  const spy=vi.spyOn(globalThis,'fetch');
  const result=await recoverSparseTopicNotes([slide],{klass:'12',subject:'Chemistry',chapter:'The d- and f-Block Elements',sources:[]});
  expect(result.slides[0]).toBe(slide);expect(spy).not.toHaveBeenCalled();spy.mockRestore();
+});
+
+
+it('recovers a numbered official web section before broad chapter keywords',()=>{
+ const text='2 Expressing Concentration of Solutions [2-5] #\nComposition of a solution can be described by expressing its concentration.\nMass percentage compares the mass of a component with the total mass of the solution.\nMolarity is the number of moles of solute dissolved in one litre of solution.\nMolality is the number of moles of solute per kilogram of solvent.\n1.3 Solubility\nUnrelated solubility discussion must remain outside this section.';
+ const result=recoverTopicFromSources('Concentration terms',[text]);
+ expect(result.complete).toBe(true);
+ expect(result.lines.join(' ')).toContain('Molality');
+ expect(result.lines.join(' ')).not.toContain('Unrelated');
+});
+it('follows only bounded same-origin NCERT redirects with edge-compatible fetch',async()=>{
+ const base='https://sathee.iitk.ac.in/sathee-neet/ncert-books/neet-ncert-books/neet-nb-phy-12/';
+ const chapter=base+'ray-optics/',redirected=base+'ray-optics-current/';
+ const spy=vi.spyOn(globalThis,'fetch').mockImplementation(async(input,options)=>{
+  expect(options?.redirect).toBe('manual');
+  const url=String(input);
+  if(url===base)return new Response(`<a href="${chapter}">Chapter 9 Ray Optics and Optical Instruments</a>`);
+  if(url===chapter)return new Response(null,{status:302,headers:{location:redirected}});
+  if(url===redirected)return new Response(`<article id="content-section">${'A readable source explanation of optical instruments and their stated conditions. '.repeat(12)}</article>`);
+  return new Response('',{status:404});
+ });
+ try{const result=await trustedChapterSource('12','Physics','Chapter 9: Ray Optics and Optical Instruments');expect(result?.text).toContain('readable source');expect(spy).toHaveBeenCalledWith(redirected,expect.anything());}finally{spy.mockRestore();}
+});
+it('does not follow a redirect outside the official NCERT mirror',async()=>{
+ const base='https://sathee.iitk.ac.in/sathee-neet/ncert-books/neet-ncert-books/neet-nb-phy-11/';
+ const chapter=base+'waves-redirect/';
+ const spy=vi.spyOn(globalThis,'fetch').mockImplementation(async input=>String(input)===base?new Response(`<a href="${chapter}">Chapter 14 Waves</a>`):String(input)===chapter?new Response(null,{status:302,headers:{location:'https://untrusted.test/ncert-books/waves/'}}):new Response('',{status:404}));
+ try{expect(await trustedChapterSource('11','Physics','Chapter 14: Waves')).toBeNull();expect(spy.mock.calls.some(call=>String(call[0]).includes('untrusted.test'))).toBe(false);}finally{spy.mockRestore();}
 });

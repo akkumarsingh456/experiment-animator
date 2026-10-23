@@ -10,7 +10,7 @@ const hosts=new Set(['ncert.nic.in','www.ncert.nic.in','ciet.ncert.gov.in','www.
 export function approvedAttentionUrl(value:string){
  try{const url=new URL(value);return url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&hosts.has(url.hostname);}catch{return false;}
 }
-const decode=(s:string)=>s.replace(/&#(x[0-9a-f]+|\d+);/gi,(_,n)=>String.fromCodePoint(Math.min(0x10ffff,n[0].toLowerCase()==='x'?parseInt(n.slice(1),16):Number(n)))).replace(/&nbsp;/gi,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'");
+const decode=(s:string)=>s.replace(/&#(x[0-9a-f]+|\d+);/gi,(_,n)=>String.fromCodePoint(Math.min(0x10ffff,n[0].toLowerCase()==='x'?parseInt(n.slice(1),16):Number(n)))).replace(/&nbsp;/gi,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;|&apos;|&rsquo;|&lsquo;/g,"'");
 /** Read prose/code and keep table rows explicit. Never import logos or page images. */
 export function attentionHtmlText(html:string){
  let body=html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1];
