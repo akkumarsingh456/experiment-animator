@@ -1,7 +1,9 @@
 /** Conservative extraction checks shared by new notes and saved-source review.
  * Original text remains available; missing words/columns are never invented. */
+import {collapsedCalculusIssue,splitSourceExamples} from './source-calculus-quality';
 export function sourceExtractionIssue(raw:string):string|null {
  const text=raw.replace(/^\s*\*\*[^*]+:\*\*\s*/,'').trim();
+ const calculus=collapsedCalculusIssue(text);if(calculus)return calculus;
  // A delimited table, code block or authored mathematical expression keeps
  // its structure; these checks target flattened prose, not valid notation.
  const structured=/```|\$|\\(?:frac|begin|mathrm)\b/.test(text)||/\|[^|\n]+\|/.test(text);
@@ -33,9 +35,13 @@ export function quarantineExtractionSections<T extends {heading:string;kind:stri
  if(!sections)return sections;
  const originals:string[]=[];
  const output=sections.map(section=>{
-  if(/^Source (?:review|table)/i.test(section.heading)||section.kind==='diagram')return section;
-  const lines=section.lines.filter(line=>{if(!sourceExtractionIssue(line))return true;originals.push(line);return false;});
-  return lines.length===section.lines.length?section:{...section,lines};
+  if(/^Source (?:review|table)/i.test(section.heading)||section.kind==='diagram'||/\b(?:code|program|algorithm|syntax|output|quotation)\b/i.test(section.heading))return section;
+  const lines=section.lines.flatMap(line=>{
+   const fragments=splitSourceExamples(line),kept=fragments.filter(fragment=>!sourceExtractionIssue(fragment));
+   if(kept.length!==fragments.length)originals.push(line);
+   return kept;
+  });
+  return lines.length===section.lines.length&&lines.every((line,index)=>line===section.lines[index])?section:{...section,lines};
  }).filter(section=>section.lines.length);
  if(!originals.length)return sections;
  const heading='Source review — original extraction';

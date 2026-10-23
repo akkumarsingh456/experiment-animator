@@ -44,6 +44,7 @@ Apply these rules whenever changing extraction, retrieval, generation, rendering
 5. Ground each topic separately. Do not fill missing subtopics with unrelated chapter paragraphs.
 6. Prefer an appropriate deterministic drawing. If none exists, say so and retain device import, Check Google and eligible Med Easy imports. Do not portray a decorative icon as a scientific diagram.
 7. Never replace a user's saved imported image during an automatic visual refresh.
+8. Detect flattened calculus in every chapter before recovery and again at saved-note display: glued differentials, lost fraction/grouping positions, detached polynomial powers and running chapter titles are source-review material, not normal formula cards. A complete verbal derivative definition may supply its explicitly named numerator and denominator; never infer a full chain-rule calculation from adjacent symbols. Preserve the raw original, retain independently readable new examples and trigger the existing topic recovery for damaged generations. Keep exercise requests under practice. Automatic text visuals reserve separate space for image controls; imported image layouts remain unchanged.
 
 ## Subject and chapter risks
 

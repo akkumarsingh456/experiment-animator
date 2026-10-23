@@ -29,6 +29,8 @@ import { sourceFormulaBlocks } from "@/lib/source-derivations";
 import { isUnitStatement, isDefinitionStatement, sourceDetailLabel } from "@/lib/note-labels";
 import {joinSourceExplanations,isDependentSourceDefinition} from './source-explanation-context';
 import { sourceFormulaExplanations } from "@/lib/med-easy-supplements";
+import {isSourceTask} from './source-note-quality';
+import {splitSourceExamples} from './source-calculus-quality';
 
 
 export type NoteSectionKind = "text" | "bullets" | "formula" | "terms" | "tip" | "diagram";
@@ -97,7 +99,7 @@ export function cleanNcertLine(raw: string): string {
 function sentences(text: string): string[] {
   return joinSourceExplanations(String(text || "")
     .replace(/\s+/g, " ")
-    .split(/(?<=[.?!।])\s+/)
+    .split(/(?<=[.?!।])\s+/).flatMap(splitSourceExamples)
     .map((s) => cleanNcertLine(s))
     .filter((s) => s.length > 20 && /\p{L}/u.test(s)));
 }
@@ -172,7 +174,7 @@ const NOTE_HEADING = "Teacher Notes";
 
 
 const isDefinition = (s: string) => isDefinitionStatement(s) && !/^\s*(from|hence|therefore|next|which|\d)/i.test(s);
-const isFormula = (s: string) => /[A-Za-zΔ]\s*=\s*[^=]/.test(s) && s.length < 240;
+const isFormula = (s: string) => !isSourceTask(s) && !/^Example\s+\d+\b/i.test(s) && /[A-Za-zΔ]\s*=\s*[^=]/.test(s) && s.length < 240;
 const isUnit = isUnitStatement;
 const isDerivation = (s: string) => /\bderiv(e|ed|ation|ing)\b|\bsubstitut(e|ing)\b|\bwe get\b|\bwe obtain\b|\bon simplif/i.test(s) && /[=]|\$/.test(s);
 const isProperty = (s: string) => /\bproperty\b|\bproperties\b|\bnever\b|\balways\b|\bcannot\b|\bdepends\b|\bproportional\b|\bincreases\b|\bdecreases\b/i.test(s);

@@ -1,4 +1,5 @@
 import {splitMath} from '@/lib/latex-notation';
+import {isSourceTask} from './source-note-quality';
 
 /** Mentioning a named unit is not the same as stating a quantity's SI unit. */
 export function isUnitStatement(text:string):boolean {
@@ -26,6 +27,8 @@ export function sourceDetailLabel(text:string):string|undefined {
 
 /** Presentation repair for saved notes; never rewrite the sentence or equation. */
 export function normalNoteLabel(line:string):string {
+  const task=line.match(/^\s*\*\*(?:formulas?|equations?|relations?):\*\*\s*([\s\S]*)$/i);
+  if(task&&isSourceTask(task[1]))return `**Check your understanding:** ${task[1]}`;
   const match = line.match(/^\s*\*\*(SI units?|units?|key point|important point):\*\*\s*([\s\S]*)$/i);
   if (!match) return line;
   const body=match[2];

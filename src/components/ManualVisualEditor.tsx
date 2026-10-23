@@ -100,9 +100,10 @@ export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoCont
  }
  async function openBooks(){if(!medEasyAllowed)return;setBookOpen(value=>!value);if(bookOpen)return;setBookLoading(true);setBookError('');try{const requestedKey=currentKey.current;const result=await cachedManualBookLinks({klass,subject,chapter,topic});if(currentKey.current!==requestedKey)return;setBooks(result);if(result[0])void cachedManualPdf(result[0].id,klass,subject).catch(()=>{});}catch{setBookError('Book links are unavailable. You can still paste a screenshot or import from your device.');}finally{setBookLoading(false);}}
  const manualOnly=!!visual&&!visual.showAuto;
- return <div ref={panel} tabIndex={0} aria-label="Topic image editor: click here and paste a screenshot" className={`manual-visual-editor relative w-full min-h-0 ${manualOnly?'manual-visual-only':'h-full'}`} onPaste={paste} onDragOver={event=>event.preventDefault()} onDrop={drop}>
+ const automaticText=!!autoContent&&!visual;
+ return <div ref={panel} tabIndex={0} aria-label="Topic image editor: click here and paste a screenshot" className={`manual-visual-editor relative w-full min-h-0 ${manualOnly?'manual-visual-only':automaticText?'manual-text-visual h-full flex flex-col':'h-full'}`} onPaste={paste} onDragOver={event=>event.preventDefault()} onDrop={drop}>
    {autoSaveDevice&&deviceSaveStatus&&<p role="status" className="manual-image-controls absolute left-2 top-2 z-20 rounded bg-white/95 px-2 py-1 text-xs print:hidden">{deviceSaveStatus}</p>}
-   <div className={manualOnly?'manual-image-stage relative w-full overflow-hidden':'absolute inset-0'} style={manualOnly?{aspectRatio:String(visual.shape==='circle'?1:imageAspect)}:undefined}>
+   <div className={manualOnly?'manual-image-stage relative w-full overflow-hidden':automaticText?'manual-text-stage relative min-h-0 flex-1 overflow-auto':'absolute inset-0'} style={manualOnly?{aspectRatio:String(visual.shape==='circle'?1:imageAspect)}:undefined}>
    {(!visual||visual.showAuto)&&(autoContent||<img className="w-full h-full object-contain" src={autoUrl} alt={alt}/>)}
    {visual&&<div className="absolute overflow-hidden" style={{left:`${visual.x}%`,top:`${visual.y}%`,width:`${visual.width}%`,height:visual.shape==='circle'?undefined:`${Math.max(1,100-visual.y)}%`,borderRadius:visual.shape==='circle'?'50%':visual.shape==='rounded'?16:0,aspectRatio:visual.shape==='circle'?'1':undefined,cursor:open?'move':'default',touchAction:open?'none':undefined}}
      onPointerDown={event=>{if(!open)return;event.currentTarget.setPointerCapture(event.pointerId);drag.current={x:event.clientX,y:event.clientY,left:visual.x,top:visual.y};}}
@@ -113,7 +114,7 @@ export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoCont
    </div>
    {visual&&<ImageVerticalPosition key={storageKey} scope={storageKey}/>}
    {visual&&<button type="button" className={`manual-image-toggle absolute right-2 top-2 z-20 ${toolsVisible?'':'manual-image-toggle-pulse'}`} aria-label={toolsVisible?'Hide image options':'Show image options'} aria-expanded={toolsVisible} title={toolsVisible?'Hide image options':'Image options: import, search, crop and save'} onClick={()=>{setToolsVisible(value=>!value);setOpen(false);setBookOpen(false);}}><ImagePlus size={19}/></button>}
-   {toolsVisible&&<div className={`manual-image-controls ${manualOnly?'relative m-2':'absolute bottom-2 left-2 right-2'} flex flex-wrap gap-2 rounded-lg bg-white/95 p-3 border text-[13px] shadow`}>
+   {toolsVisible&&<div className={`manual-image-controls ${manualOnly||automaticText?'relative m-2 shrink-0':'absolute bottom-2 left-2 right-2'} flex flex-wrap gap-2 rounded-lg bg-white/95 p-3 border text-[13px] shadow`}>
      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event=>{void upload(event.target.files?.[0]);event.target.value='';}}/>
      <button onClick={()=>input.current?.click()} title="Import a picture from your device" className="flex items-center gap-1"><ImagePlus size={15}/> From device</button>
      {medEasyAllowed&&<button onClick={()=>void openBooks()} className="flex items-center gap-1"><BookOpen size={15}/> From Med Easy book</button>}

@@ -270,6 +270,7 @@ const SYM = "εμπΔδθφλωΩσραβγηΦ";
 const OPS = "=∝≈≤≥+\\-*/×÷·^_()√";
 const isMathToken = (t: string) =>
   !!t &&
+  !/^(?:and|as|at|by|if|in|is|of|on|or|to|we|be|an|the|are|for|but|let|then|when)$/i.test(t) &&
   !/^[A-Za-z]{4,}$/.test(t) &&
   new RegExp(`^[A-Za-z0-9${SYM}${OPS}₀-₉⁰-⁹⁻⁺°½.,]+$`).test(t);
 

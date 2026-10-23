@@ -1,5 +1,6 @@
 import { mapOutsideMath, splitMath } from './latex-notation';
 import { sourceExtractionIssue } from './source-extraction-review';
+import {collapsedCalculusIssue} from './source-calculus-quality';
 
 export function validStudyTerm(term:string,meaning:string):boolean {
   return term.trim().length>=3&&term.length<=48
@@ -11,7 +12,8 @@ export function validStudyTerm(term:string,meaning:string):boolean {
 
 export function isSourceTask(text:string):boolean {
   const body=text.replace(/^\*\*[^*]+:\*\*\s*/,'');
-  return /\?\s*$|^(?:calculate|comment on|show that|how can|explain why|determine|find the|state whether)\b/i.test(body)
+  return /\?\s*$|^(?:Example\s+\d+\s+)?(?:calculate|comment on|show that|how can|explain why|determine|find the|state whether)\b/i.test(body)
+    || /^Example\s+\d+\b[\s\S]*\b(?:find|calculate|determine|show that)\b/i.test(body)
     || /^\s*\(?[a-d]\)\s+/i.test(body)
     || /\b(?:Calculate|Determine|Comment on)\s+(?:the|whether|how)\b/.test(body);
 }
@@ -41,6 +43,7 @@ export function hasSourcePrintIntrusion(text: string): boolean {
 /** Detect local extraction damage even when a long prose sentence hides it. */
 export function hasBrokenSourceMath(raw:string):boolean {
   const text=String(raw||'');
+  if(collapsedCalculusIssue(text))return true;
   if (hasSourcePrintIntrusion(text)) return true;
   // NCERT magnetic-material comparison columns are sometimes flattened into
   // one row. Never assign its inequalities to the slide's first material.

@@ -1,8 +1,11 @@
 import {opticsNotation,joinOpticsFragments} from './optics-notation';
 import {autoLatex,mapOutsideMath,splitMath} from './latex-notation';
 import {quantumNumberNotation} from './quantum-number-notation';
+import {collapsedCalculusIssue,namedDerivativeNotation} from './source-calculus-quality';
 /** Display only. Never write repairs back to the uploaded extraction. */
 export function formulaPresentation(raw:string):string {
+ raw=namedDerivativeNotation(raw);
+ if(collapsedCalculusIssue(raw))return raw;
  const joined=joinOpticsFragments(raw)
   .replace(/\bn\s*e\s*n\s*\$(h\s*=\s*n\s*i\s*(?:2|²))\$/g,'n e n $1')
   .replace(/\bn\s*\$(h\s*=\s*\(\s*2\.25[^$]+)\$/g,'n $1');
@@ -30,5 +33,8 @@ export function formulaPresentation(raw:string):string {
   const mark=segment.type==='block'||body.startsWith(String.raw`\begin{aligned}\tan\angle\mathrm{NOM}`)?'$$':'$';return mark+body+mark;
  }).join('');
  // Format each remaining plain span, even next to existing authored LaTeX.
- return mapOutsideMath(quantumNumberNotation(repaired),autoLatex);
+ const formatted=mapOutsideMath(quantumNumberNotation(repaired),autoLatex);
+ // Explicit fraction bars are sufficient evidence for typesetting a derivative.
+ // Never reinterpret "ds dt" or glued OCR symbols as a fraction.
+ return mapOutsideMath(formatted,text=>text.split(/(```[\s\S]*?```|`[^`\n]*`|"[^"\n]*"|“[^”\n]*”)/g).map((part,index)=>index%2?part:part.replace(/\bd([A-Za-z])\s*\/\s*d([A-Za-z])\b/g,(_,a,b)=>`$\\frac{d${a}}{d${b}}$`)).join(''));
 }

@@ -2,6 +2,9 @@ import type { Slide } from "./generate.functions";
 import { withTopicTeachingSupport } from './topic-teaching-support';
 import { mapOutsideMath } from "./latex-notation";
 import { NCERT_SYLLABUS } from "./ncert-syllabus";
+import {quarantineExtractionSections} from './source-extraction-review';
+import {isSourceTask} from './source-note-quality';
+import {normalNoteLabel} from './note-labels';
 
 const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const titles = Array.from(new Set([
@@ -44,12 +47,23 @@ export function cleanNcertDisplayText(raw: string, sectionHeading = ""): string 
 export function ncertNotesDisplaySlide(slide: Slide, subject?: string): Slide {
   slide = withTopicTeachingSupport(slide);
   if (slide.teacher_pdf || slide.kind === "mcq" || !/^(?:Science|Physics|Chemistry|Mathematics|Social Science|Computer Science)$/i.test(subject || "")) return slide;
+  slide={...slide,sections:quarantineExtractionSections(slide.sections)};
   return {
     ...slide,
     bullets: slide.bullets?.map(line => cleanNcertDisplayText(line)) || [],
     notes: slide.notes?.map(line => cleanNcertDisplayText(line)) || [],
     chapter_text: slide.chapter_text ? cleanNcertDisplayText(slide.chapter_text) : slide.chapter_text,
-    sections: slide.sections?.map(section => section.kind === "diagram" || /^Source (?:review|table)\b/i.test(section.heading)
-      ? section : { ...section, lines: section.lines.map(line => cleanNcertDisplayText(line, section.heading)) }),
+    sections: slide.sections?.flatMap(section => {
+      if(section.kind==='diagram'||/^Source (?:review|table)\b/i.test(section.heading))return [section];
+      const lines=section.lines.map(line=>cleanNcertDisplayText(line,section.heading));
+      if(section.kind!=='formula'&&!/^formulas?(?:\s|$)/i.test(section.heading))return [{...section,lines}];
+      const groups:Array<typeof section>=[];
+      for(const line of lines){
+        const practice=isSourceTask(line),heading=practice?'Practice questions':section.heading;
+        let group=groups.at(-1);if(!group||group.heading!==heading){group={...section,heading,kind:practice?'bullets':section.kind,lines:[]};groups.push(group);}
+        group.lines.push(practice?normalNoteLabel(line):line);
+      }
+      return groups;
+    }),
   };
 }
