@@ -1,4 +1,5 @@
 import {TeacherExplanationGuide,type GuideBook} from "./TeacherExplanationGuide";
+import {guideExtractionIssue,guideNoteGroups} from '@/lib/guide-note-quality';
 import { SourceReviewEntry } from "@/components/SourceReviewEntry";
 import {NextClassPlanPage} from './NextClassPlanPage';
 import {orderTopicGroups,topicOrderRank} from "@/lib/topic-lecture-order";
@@ -26,13 +27,14 @@ import { FormulaDerivation } from "@/components/FormulaDerivation";
 import { presentNoteLabels } from "@/lib/note-label-presentation";
 import { ChemistrySourceEntry } from "@/components/ChemistrySourceEntry";
 
-function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }) {
+function NotesGroup({ group, subject, teacherGuide=false }: { group: GuidedGroup; subject?: string; teacherGuide?:boolean }) {
   const presentation = presentNoteLabels(group.lines, group.heading);
   const runs = presentation.reduce<Array<{heading?: string; lines: string[]}>>((out, line) => {
     if (line.heading || !out.length) out.push({heading:line.heading,lines:[]});
     out.at(-1)!.lines.push(line.text);
     return out;
   }, []);
+  if(teacherGuide&&group.heading==='Source review — original extraction')return <section className="guided-group"><h3>Source notation to review</h3>{group.lines.map((line,index)=><div key={index}><p className="guided-small">{guideExtractionIssue(line)||'Check this original extraction against the textbook before teaching it.'}</p><details><summary>Original extracted text · not a verified equation</summary><p className="whitespace-pre-wrap break-words">{line}</p></details></div>)}</section>;
   return <section className={`guided-group guided-${group.kind}`} data-note-category={group.heading}>
     <h3>{group.heading}</h3>
     {(group.heading === "Source table — original extracted entries" || group.heading === "Source review — original extraction") ? <div className="source-table-entries">{presentation.map((line, i) => <div key={i}>{line.heading && <h4 className="note-label-heading">{line.heading}</h4>}{group.heading === "Source table — original extracted entries" ? <ChemistrySourceEntry text={line.text} /> : <SourceReviewEntry subject={subject} text={line.text} />}</div>)}</div> : group.heading === "MLT Dimensional Formula" ? <div className="dimension-cards">{group.lines.map((line, i) => {
@@ -53,7 +55,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
   const finalRevision=physicalChemistryRevision(slides, klass||"", subject||"", slides.find(slide=>slide.visual==="cover")?.title||title);
   const content = slides.filter((slide) => (slide.kind ?? "content") === "content" || slide.kind === "chapter" || (includeBreaks && slide.kind === "break"));
   const questions = slides.flatMap((slide) => slide.mcq ? [slide.mcq] : []);
-  const topicGroups = content.map((slide) => guidedGroups(slide.sections, slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...(slide.bullets || []), ...(slide.notes || [])], true));
+  const topicGroups = content.map((slide) => {const groups=guidedGroups(slide.sections, slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...(slide.bullets || []), ...(slide.notes || [])], true);return teacherGuide?guideNoteGroups(groups):groups;});
   return <div className={`guided-notes${teacherGuide ? " teacher-guide-enabled" : ""}${textOnly ? " guided-text-only" : ""}`} aria-label="Complete guided lesson notes">
     <div className="guided-document-title"><span>Class {klass} · {subject}</span><h2>{title}</h2><p>Read · Investigate · Practise · Reflect</p></div>
     {includeCover && <article className="guided-topic guided-cover"><LessonCover title={slides.find(slide => slide.visual === "cover")?.title || title} objectives={slides.find(slide => slide.visual === "cover")?.bullets || content.map(slide => slide.title)} subject={subject} klass={klass} /></article>}
@@ -76,9 +78,9 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
         <h2><span className="guided-topic-number">{String(index + 1).padStart(2, "0")}</span>{slide.title}</h2>
         {slide.source_recovery?.url&&<p className="text-sm">{slide.source_recovery.kind==='official-online-supplement'?'Supplementary note sources':'External NCERT mirror · IIT Kanpur SATHEE'}: {(slide.source_recovery.sources?.length?slide.source_recovery.sources:[{url:slide.source_recovery.url,title:slide.source_recovery.url}]).map((source,index)=><span key={source.url}>{index>0?' · ':''}<a href={source.url} className="underline">{source.title}</a></span>)}</p>}
         {slide.notes_quality?.issues.length ? <p className="guided-quality-note">Source review: {slide.notes_quality.issues.join(" ")}</p> : null}
-        {groups.slice(0, visualAt).map((group, i) => <NotesGroup subject={subject} group={group} key={`intro:${i}`} />)}
+        {groups.slice(0, visualAt).map((group, i) => <NotesGroup teacherGuide={teacherGuide} subject={subject} group={group} key={`intro:${i}`} />)}
         {!textOnly && <TopicVisualStructures input={{ ...slide, chapter: title, keyTerms: slide.key_terms }} subject={subject} />}
-        {groups.slice(visualAt).map((group, i) => <NotesGroup subject={subject} group={group} key={`body:${i}`} />)}
+        {groups.slice(visualAt).map((group, i) => <NotesGroup teacherGuide={teacherGuide} subject={subject} group={group} key={`body:${i}`} />)}
         {!textOnly && <BookReferenceFigures figures={slide.reference_visuals} subject={subject} />}
         {!textOnly && slide.context_illustration && <figure className="guided-context-illustration"><img src={slide.context_illustration.url} alt={slide.context_illustration.description} /><figcaption>AI context illustration · {slide.context_illustration.provider}. Exact relationships are shown in the labelled diagram and source notes.</figcaption></figure>}
         {!groups.length && <p>No verified source notes are available for this topic. Regenerate the lesson after uploading the relevant textbook pages.</p>}
@@ -92,10 +94,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
     </article>}
     {!!questions.length && <article className="guided-topic guided-answer-key"><h2>Answer key</h2><ol>{questions.map((question, i) => <li key={i}><strong>{question.answer}.</strong> <MathText subject={subject} text={question.explanation || question.options.find((option) => option.key === question.answer)?.text || ""} /></li>)}</ol></article>}
     {!textOnly && <FormulaMindMap slides={content} />}
-    {finalRevision&&<article className="guided-topic physical-chemistry-final-revision" data-physical-revision="true"><h2>{finalRevision.title}</h2><p>{finalRevision.caption}</p>{finalRevision.sections?.map((section,index)=><NotesGroup key={index} subject={subject} group={{heading:section.heading,kind:"list",lines:section.lines}}/>)}</article>}
+    {finalRevision&&<article className="guided-topic physical-chemistry-final-revision" data-physical-revision="true"><h2>{finalRevision.title}</h2><p>{finalRevision.caption}</p>{finalRevision.sections?.map((section,index)=><NotesGroup teacherGuide={teacherGuide} key={index} subject={subject} group={{heading:section.heading,kind:"list",lines:section.lines}}/>)}</article>}
     {nextPlan&&<NextClassPlanPage slide={nextPlan} klass={klass} subject={subject} textOnly={textOnly}/>}
   </div>;
 }
-
-
-

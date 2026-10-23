@@ -452,6 +452,14 @@
 .lesson-export-notes th:first-child { width: 20%; }
 .lesson-export-notes th:last-child { width: 15%; }
 .lesson-export-notes .katex-display { overflow: visible; }
+.lesson-export-notes .teacher-guide-enabled { padding: 0; border: 0; border-radius: 0; }
+.lesson-export-notes .teacher-guide-enabled > .guided-topic { padding: 12px 8px; margin: 0; border: 0; }
+.lesson-export-notes .teacher-guide-enabled > .guided-topic > h2 {
+  font-weight: 800; color: #12344d; padding-top: 12px; margin: 0 0 14px;
+  border-top: 2px dashed #52758d; line-height: 1.4;
+}
+.lesson-export-notes .teacher-guide-enabled .guided-student-line { display: none; }
+.lesson-export-notes .teacher-guide-enabled .guided-group { margin: 14px 0; }
 .lesson-export-slides { width: 1120px; }
 .lesson-export-slide .lesson-slide-canvas { height: 760px; min-height: 760px; box-shadow: none; }
 .lesson-export-slide .lesson-simulation-panel { display: none; }
