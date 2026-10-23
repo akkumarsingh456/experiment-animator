@@ -2,7 +2,7 @@ import { EduPlanMark } from "@/components/EduPlanMark";
 import { WorkspacePreview } from "@/components/WorkspacePreview";
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, BookOpen, FileText, PencilLine, Presentation, FlaskConical, Ruler, CircuitBoard, Leaf, Monitor, Download, ClipboardList } from "lucide-react";
+import { ArrowRight, CircleUserRound, BookOpen, FileText, PencilLine, Presentation, FlaskConical, Ruler, CircuitBoard, Leaf, Monitor, Download, ClipboardList } from "lucide-react";
 
 const workflow = [
   {title: "Choose a chapter", Icon: ClipboardList, text: "Select your class, subject and subtopics from the available catalogue."},
@@ -29,7 +29,7 @@ const subjects = [
 
 export function EducationHomepage({generator}: {generator: ReactNode}) {
   return <div className="edu-home">
-    <header className="edu-header"><div className="edu-container edu-header-inner"><Link to="/" className="edu-brand"><EduPlanMark /><span>EduPlan<small>BY AMAN KUMAR</small></span></Link><nav aria-label="Main navigation"><a href="#generator">Prepare a lesson</a><a href="#how">How it works</a><a href="#subjects">Subjects</a><Link to="/notes-library">Notes Library</Link><Link to="/history">Uploaded books</Link><Link to="/workspace">Teacher workspace</Link></nav></div></header>
+    <header className="edu-header"><div className="edu-container edu-header-inner"><Link to="/" className="edu-brand"><EduPlanMark /><span>EduPlan<small>BY AMAN KUMAR</small></span></Link><nav aria-label="Main navigation"><a href="#generator">Prepare a lesson</a><a href="#how">How it works</a><a href="#subjects">Subjects</a><Link to="/notes-library">Notes Library</Link><Link to="/history">Uploaded books</Link></nav><Link to="/workspace" className="edu-button edu-button-small edu-teacher-login" title="Sign in or open your teacher workspace"><CircleUserRound size={19} aria-hidden="true" /><span>Teacher workspace</span></Link></div></header>
     <main>
       <section className="edu-container edu-hero"><div className="edu-hero-copy"><span className="edu-eyebrow">NCERT LESSON PREPARATION · CLASSES 9–12</span><h1>Your chapter.<br /><em>Ready for class.</em></h1><p>Prepare NCERT notes, diagrams and practice in one workspace. Review, personalise and present.</p><div className="edu-actions"><a className="edu-button" href="#generator">Prepare a lesson <ArrowRight size={18} /></a><a className="edu-text-link" href="#how">See how it works</a></div><ul className="edu-hero-details"><li><BookOpen size={17} />Textbook-based preparation</li><li><PencilLine size={17} />Review and add your own images</li><li><Presentation size={17} />Present, print or download</li></ul></div><WorkspacePreview /></section>
       <section className="edu-audience"><div className="edu-container edu-audience-grid"><div><span className="edu-eyebrow">FOR THE PEOPLE IN THE CLASSROOM</span><h2>For teaching.<br />For revision.</h2></div><article><h3>For teachers</h3><p>Prepare and adapt lessons with your own subject knowledge and classroom approach.</p></article><article><h3>For students</h3><p>Revisit concepts, follow formulas and check your understanding with practice.</p></article></div></section>

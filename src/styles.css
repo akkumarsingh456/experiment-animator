@@ -727,6 +727,8 @@
 .edu-button { display: inline-flex; align-items: center; justify-content: center; gap: 12px; padding: 15px 21px; border: 1px solid var(--edu-green); border-radius: 5px; background: var(--edu-green); color: #fff; font-size: 14px; font-weight: 600; text-decoration: none; transition: background .15s; }
 .edu-button:hover { background: #25483e; }
 .edu-button-small { padding: 10px 15px; font-size: 12px; flex-shrink: 0; }
+.edu-teacher-login { min-height:44px; border-radius:999px; gap:8px; font-size:13px; white-space:nowrap; box-shadow:0 2px 5px #23473b12; }
+.edu-teacher-login:focus-visible { outline:3px solid #ba923e; outline-offset:3px; }
 .edu-home a:focus-visible { outline: 3px solid #b37b31; outline-offset: 4px; }
 .edu-hero { display: grid; grid-template-columns: 1.12fr 1fr; gap: 65px; align-items: center; padding-block: 80px 74px; }
 .edu-eyebrow { display: block; color: #6c795e; font-size: 10px; font-weight: 700; line-height: 1.6; letter-spacing: .15em; margin-bottom: 18px; }
