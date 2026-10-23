@@ -43,5 +43,5 @@ it('loads older history pages before grouping lectures and searching',async()=>{
  expect(mocks.list).toHaveBeenCalledWith({data:{offset:20}});
  expect(host.querySelector('[aria-label="Class 9 Science lectures"]')).not.toBeNull();
  expect(host.querySelector('[aria-label="Class 12 Chemistry lectures"]')).not.toBeNull();
- expect(host.textContent).toContain('Plan my teaching');
+ expect(host.textContent).toContain('Next class plan');
 });

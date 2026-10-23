@@ -50,7 +50,7 @@ export function TeacherLecturePlanner({ownerEmail,refreshKey}:{ownerEmail:string
   const counts=(status:string)=>filtered.filter(item=>plans[item.id]?.plan.status===status).length;
   const control='mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm';
   return <section aria-label="Lecture library and teaching plans" className="space-y-5">
-    <div><h2 className="text-xl font-semibold">Your lecture library</h2><p className="mt-2 text-sm text-slate-600">Find a prepared lecture, present it, or plan what to teach next.</p></div>
+    <div><h2 className="text-xl font-semibold">Your lecture library</h2><p className="mt-2 text-sm text-slate-600">Find a lecture, then open Next class plan on its card to write tomorrow’s chapter and topics. Save teaching plan keeps it in your private account.</p></div>
     {error&&<p role="alert" className="text-destructive">{error}</p>}{planError&&<p role="alert" className="text-amber-800">{planError}</p>}
     <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white/80 p-3" aria-label="Quick lecture views">
       {([['all','All lectures'],['today',"Today's teaching"],['teaching','In progress'],['revise','Needs revision']] as const).map(([value,label])=><Button key={value} size="sm" variant={quickView===value?'default':'outline'} aria-pressed={quickView===value} disabled={busy||!!planError&&value!=='all'} onClick={()=>{setQuickView(value);setFilters(current=>({...current,status:''}));setCopyStatus('');}}>{label}</Button>)}

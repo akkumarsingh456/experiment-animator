@@ -328,3 +328,8 @@ Keep Add notes and Remove added points as explicit choices in the same topic dia
 ## Source library frozen (owner request, 24 October 2026)
 
 This supersedes earlier admin-upload instructions: no website account may upload, delete, reclassify, OCR-write or otherwise alter shared source books. The upload gate is an informational read-only page with no login/dashboard; assertLibraryAdmin always rejects, and verified identities retain private workspace access but never source admin authority. Keep public reading, recorded-book download signing, generation and private teacher edits working. Apply 0005_freeze_source_library (also mirrored in Supabase): privileges and triggers freeze ncert_books/pages/chunks and ncert-pdfs storage, including service-backed writes and old upload tickets. No existing rows/files are changed. This cannot prevent the database owner from deliberately removing database protections. Local regression checks do not prove the migration was applied to the hosted database.
+
+
+## Discoverable next class planning
+
+Keep a Next class plan shortcut beside lecture view/presentation controls and the lecture-side editor expanded once a private lecture exists. Workspace cards label their own editor Next class plan. First entry of next topics enables the final plan slide/PDF only when nextClassSlide was never set; respect explicit hidden/off preferences. Keep optional reminders/materials behind a separate disclosure. Save teaching plan uses the same owned lecture and verified account revision checks, with device drafts and explicit cloud confirmation. Never mix this plan into generation/source notes. Sign-in and saving prerequisites need visible links, not a hidden or unavailable editor.

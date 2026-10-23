@@ -37,7 +37,7 @@ export function TeacherCloudSave({getSnapshot,initialId,preparedLesson,preparedS
     const timer=setTimeout(()=>{attemptedEdit.current=autoSaveRevision;void save();},650);
     return()=>clearTimeout(timer);
   },[autoSaveRevision,checking,account?.signedIn,account?.email,busy,id]);
-  return <section className="my-3 flex flex-wrap items-center gap-3 rounded-lg border bg-white p-3 text-sm print:hidden" aria-label="Private teacher cloud backup">
+  return <section id="teacher-workspace-save" className="my-3 flex flex-wrap items-center gap-3 rounded-lg border bg-white p-3 text-sm print:hidden" aria-label="Private teacher cloud backup">
     <Link to="/workspace" target="_blank" rel="noopener noreferrer" className="font-medium underline">My teaching workspace</Link>
     {checking?<span role="status">Checking teacher sign-in…</span>:account?.signedIn?<><span>{account.email}</span><Button size="sm" variant="outline" disabled={busy} onClick={save}>{busy?'Saving…':'Save to my workspace'}</Button><span className="text-muted-foreground">Prepared lectures and extracted notes save automatically while signed in. Save manually to include other edits, images and bookmarks.</span></>:<a className="underline" href="/workspace" target="_blank" rel="noopener noreferrer">Sign in to save a cloud backup · opens a new tab</a>}
     {error&&<><span role="alert">{error}</span><Button size="sm" variant="outline" onClick={refresh}>Retry sign-in check</Button></>}
