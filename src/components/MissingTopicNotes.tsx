@@ -173,7 +173,7 @@ export function MissingTopicNotes({
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-5">
-              <p className="text-sm text-slate-600">Choose an action. Changes apply to this topic and its continuation slides. Original textbook notes stay safe.</p>
+              <p className="text-sm text-slate-600">Send a request, review the reply, then click Extract notes. Original textbook notes stay safe.</p>
               <div className="flex flex-wrap gap-2" aria-label="Choose notes action">
                 <Button variant={action==='add'?'default':'outline'} aria-pressed={action==='add'} onClick={()=>setAction('add')}>Add notes</Button>
                 <Button variant={action==='remove'?'default':'outline'} aria-pressed={action==='remove'} onClick={()=>setAction('remove')}>Remove added points ({addedTopicLines(slide).length})</Button>
@@ -322,7 +322,7 @@ export function MissingTopicNotes({
                   placeholder="Write teacher notes for this topic here…"
                 />
                 <p className="my-2 text-sm text-slate-600">
-                  This is a device draft. To add these points to your lesson, copy them into Read or edit notes above and choose Add to this topic. Shared source books and permanent source notes are locked.
+                  This is a device draft. To add these points to your lesson, copy them into Review notes above and choose Extract notes. Shared source books and permanent source notes are locked.
                 </p>
               </div>
               </div></details>

@@ -333,3 +333,6 @@ This supersedes earlier admin-upload instructions: no website account may upload
 ## Discoverable next class planning
 
 Keep a Next class plan shortcut beside lecture view/presentation controls and the lecture-side editor expanded once a private lecture exists. Workspace cards label their own editor Next class plan. First entry of next topics enables the final plan slide/PDF only when nextClassSlide was never set; respect explicit hidden/off preferences. Keep optional reminders/materials behind a separate disclosure. Save teaching plan uses the same owned lecture and verified account revision checks, with device drafts and explicit cloud confirmation. Never mix this plan into generation/source notes. Sign-in and saving prerequisites need visible links, not a hidden or unavailable editor.
+
+## Simple request and extraction flow
+Keep the slide-specific editable request first, then the review text and explicitly labelled Extract notes action. Preserve autofill/manual requests, added-point deletion, autosave and source protections. Keep direct source lookup as a secondary disclosure. An empty reply disables extraction with a clear explanation; never fabricate notes or imply live AI availability from a build check.

@@ -178,14 +178,14 @@ it("automatically displays readable text previews and imports the selected resul
   await act(async () => root.unmount());
 });
 
-it("loads preview without changing the lesson until Add to this topic is clicked", async()=>{
+it("loads preview without changing the lesson until Extract notes is clicked", async()=>{
  const host=document.createElement('div');document.body.append(host);const root=createRoot(host),saved=vi.fn();
  await act(async()=>root.render(<MissingTopicNotes slide={slide} klass="12" subject="Chemistry" chapter="Coordination Compounds" onSaved={saved}/>));
  await act(async()=>host.querySelector('button')!.click());const popup=document.querySelector('[role="dialog"]')!;
  await act(async()=>Array.from(popup.querySelectorAll('button')).find(button=>button.textContent==='Get topic notes')!.click());
  expect(popup.querySelector<HTMLTextAreaElement>('#simple-topic-notes')!.value).toContain('Primary valencies');
  expect(saved).not.toHaveBeenCalled();
- await act(async()=>Array.from(popup.querySelectorAll('button')).find(button=>button.textContent==='Add to this topic')!.click());
+ await act(async()=>Array.from(popup.querySelectorAll('button')).find(button=>button.textContent==='Extract notes')!.click());
  expect(saved).toHaveBeenCalledWith(expect.objectContaining({teacher_supplement:expect.objectContaining({lines:expect.arrayContaining(['Primary valencies are normally ionisable.'])})}));
  await act(async()=>root.unmount());
 });
