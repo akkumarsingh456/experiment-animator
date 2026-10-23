@@ -27,10 +27,19 @@ export function TopicNotesChat({scope,onExtract,preset}:Props){
   if(pending.current)return;
   pending.current=true;setBusy(true);setNotice('');const turn=++epoch.current;
   try{
-   const result=ai?await askAI({data:{...scope,recoveryOnly:true,format:manual?undefined:preset?.format,request:request.trim()||`Explain ${scope.topic} in clear teaching points`,history:[]}}):await read({data:scope});
+   let result;
+   let usedSourceFallback=false;
+   if(ai){
+    try{result=await askAI({data:{...scope,recoveryOnly:true,format:manual?undefined:preset?.format,request:request.trim()||`Explain ${scope.topic} in clear teaching points`,history:[]}});}
+    catch{
+     // AI availability must not hide already readable official notes.
+     result=await read({data:scope});usedSourceFallback=true;
+    }
+   }else result=await read({data:scope});
    if(turn!==epoch.current)return;
    setText(result.lines.join('\n'));setSources(result.sources);
    setLabel('label' in result?result.label:`${result.provider} supplementary notes`);
+   if(usedSourceFallback)setNotice('Loaded source notes because AI rewriting was unavailable. Review the text and click Extract notes.');
   }catch(reason){if(turn===epoch.current)setNotice(reason instanceof Error?reason.message:'Could not load notes. Paste your notes below and extract them.');}
   finally{if(turn===epoch.current){pending.current=false;setBusy(false);}}
  }

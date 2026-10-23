@@ -2,7 +2,8 @@ import type {Slide} from './generate.functions';
 
 export type SlideNoteFormat='activity'|'important'|'formula'|'derivation'|'example'|'revision'|'explanation';
 export function slideNotesRequest(slide:Slide,scope:{klass:string;subject:string;chapter:string},pageHeadings?:string[]){
- const headings=(pageHeadings?.length?pageHeadings:(slide.sections||[]).map(section=>section.heading)).filter(heading=>!/^Source (review|table)|supplementary teacher/i.test(heading)).join(' | ');
+ const syntheticActivity=(slide.sections||[]).some(section=>/activity|source analysis/i.test(section.heading)&&section.lines.some(line=>/teacher.designed|paper.and.pencil source analysis/i.test(line)));
+ const headings=(pageHeadings?.length?pageHeadings:(slide.sections||[]).map(section=>section.heading)).filter(heading=>!/^Source (review|table)|supplementary teacher/i.test(heading)&&!/source analysis/i.test(heading)&&!(syntheticActivity&&/^activit(?:y|ies)$/i.test(heading.trim()))).join(' | ');
  const activity=/activity|experiment|investigat|source analysis/i;
  const format:SlideNoteFormat=activity.test(headings)?'activity':/worked example|solution|solved example/i.test(headings)?'example':/derivation|proof/i.test(headings)?'derivation':/formula|equation|relation/i.test(headings)?'formula':/important|key point/i.test(headings)?'important':/revision|recap|summary/i.test(headings)?'revision':'explanation';
  const instructions:Record<SlideNoteFormat,string>={

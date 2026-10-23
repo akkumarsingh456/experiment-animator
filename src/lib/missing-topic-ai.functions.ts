@@ -28,7 +28,8 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
         "Connect Gemini or Groq by adding GEMINI_API_KEY or GROQ_API_KEY to the website server secrets. Never paste API keys into this chat. Existing notes are unchanged.",
       );
     const sources = await readAttentionSources(scope);
-    const mirror = await trustedChapterSource(scope.klass, scope.subject, scope.chapter);
+    const hasTopicEvidence=sources.some(source=>recoverTopicFromSources(scope.topic,[source.text]).complete);
+    const mirror = hasTopicEvidence?null:await trustedChapterSource(scope.klass, scope.subject, scope.chapter);
     if (mirror && !sources.some((source) => source.url === mirror.url))
       sources.push({
         ...mirror,

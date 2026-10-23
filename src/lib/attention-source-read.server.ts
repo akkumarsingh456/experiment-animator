@@ -2,6 +2,7 @@ import registry from './attention-source-registry.json';
 import type {AttentionScope} from './attention-topic-scope';
 import {canonicalOfficialRecoveryTopic} from './official-recovery-scope';
 import {trustedChapterSource} from './trusted-chapter-source.server';
+import {verifiedNcertRecovery} from './verified-ncert-recovery';
 
 export type AttentionSource={url:string;title:string;sourceClass:string;provider:string};
 export type ReadAttentionSource=AttentionSource&{text:string};
@@ -62,6 +63,11 @@ export function readAttentionSource(source:AttentionSource){
 }
 export async function readAttentionSources(input:AttentionScope){
  const canonical=canonicalOfficialRecoveryTopic(input);if(!canonical)return [];
+ // The same reviewed, exact-scope passage must serve every recovery entry
+ // point, including the no-key reader and the optional AI evidence window.
+ // These are stored source passages, never invented live search results.
+ const reviewed=verifiedNcertRecovery(canonical.klass,canonical.subject,canonical.chapter,canonical.topic);
+ if(reviewed)return [{url:reviewed.url,text:reviewed.text,title:canonical.chapter,sourceClass:canonical.klass,provider:'Reviewed NCERT source passage'}];
  const results=await Promise.all(attentionSourceBindings(input).map(readAttentionSource));
  const readable=results.filter((value):value is ReadAttentionSource=>!!value);
  if(readable.length)return readable;

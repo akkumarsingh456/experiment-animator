@@ -32,7 +32,10 @@ async function matchingSource(scope: z.infer<typeof topicNotesScope>, url: strin
   const binding = attentionSourceBindings(scope).find(
     (source) => normal(source.url) === normal(url),
   );
-  if (binding) return readAttentionSource(binding);
+  if (binding) {
+    const readable=await readAttentionSource(binding);
+    if(readable)return readable;
+  }
   const sources = await readAttentionSources(scope);
   const match = sources.find((source) => normal(source.url) === normal(url));
   if (!match) {
