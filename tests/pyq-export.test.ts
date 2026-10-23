@@ -1,5 +1,5 @@
 import {afterEach,describe,expect,it,vi} from 'vitest';
-import {cbsePapers,isOfficialPyqReading} from '../src/lib/cbse-pyq';
+import {cbsePapers,isOfficialPyqReading,pyqPapersForYear} from '../src/lib/cbse-pyq';
 import {presentPyq} from '../src/lib/pyq-presentation';
 import type {PyqQuestion,PyqReading} from '../src/lib/cbse-pyq-questions';
 
@@ -12,6 +12,13 @@ const question:PyqQuestion={id:'check',number:'27',page:16,endPage:16,text:'27. 
 const reading:PyqReading={...paper,file:'Science/paper.pdf',pages:16,ocrPages:0,questions:[question],readAt:new Date().toISOString(),sourceCheckedAt:'2026-10-23',warnings:[]};
 afterEach(()=>{vi.restoreAllMocks();vi.clearAllMocks();document.body.replaceChildren();});
 describe('CBSE-only question presentation and PDF downloads',()=>{
+ it('queues only 2024 when selected, retaining all examination groups for that year',()=>{
+  const papers=cbsePapers.filter(p=>p.klass==='12'&&p.subject.toLowerCase()==='physics');
+  const selected=pyqPapersForYear(papers,'2024');expect(selected.length).toBeGreaterThan(0);expect(selected.every(p=>p.year===2024)).toBe(true);expect(selected).toEqual(papers.filter(p=>p.year===2024));expect(selected.some(p=>p.year===2026)).toBe(false);
+ });
+ it('queues all years only for the explicit all-years choice, with no fallback for unavailable years',()=>{
+  expect(pyqPapersForYear(cbsePapers,'all')).toEqual(cbsePapers);expect(pyqPapersForYear(cbsePapers,'1900')).toEqual([]);
+ });
  it('accepts the exact indexed source and rejects third-party or mismatched metadata',()=>{
   expect(isOfficialPyqReading(reading)).toBe(true);
   for(const changed of [{url:'https://example.com/paper.pdf'},{klass:'12'},{subject:'Unrelated'},{year:2001},{exam:'Invented exam'},{file:'paper.zip'}])expect(isOfficialPyqReading({...reading,...changed})).toBe(false);

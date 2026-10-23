@@ -14,6 +14,7 @@ export type PyqNote=z.infer<typeof pyqNoteSchema>;
 export const pyqKey=(scope:PyqScope)=>JSON.stringify([scope.klass,...[scope.subject,scope.chapter,scope.topic].map(value=>value.trim().toLowerCase().replace(/\s+/g,' ')),scope.year]);
 export const pyqDraftKey=(email:string,scope:PyqScope)=>'eduplan-pyq-draft-v1:'+JSON.stringify([email.toLowerCase(),pyqKey(scope)]);
 export function pyqYears(){const current=Number(new Intl.DateTimeFormat('en',{year:'numeric',timeZone:'Asia/Kolkata'}).format(new Date()));return Array.from({length:5},(_,i)=>current-i);}
+export function pyqPapersForYear<T extends {year:number}>(papers:T[],year:string){return papers.filter(paper=>year==='all'||paper.year===Number(year));}
 const normal=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
 export function pyqSubjectMatches(source:string,subject:string){
  const a=normal(source),b=normal(subject);return a===b||b==='mathematics'&&['mathematicsbasic','mathematicsstandard','mathsbasic','mathsstandard'].includes(a);
