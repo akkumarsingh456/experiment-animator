@@ -1,6 +1,10 @@
 import {createServerFn} from '@tanstack/react-start';
 import {z} from 'zod';
 import {pyqScopeSchema} from './cbse-pyq';
+import {pyqBankSnapshot} from './saved-pyq-bank';
+export const savePyqBank=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({snapshot:pyqBankSnapshot,expectedEmail:z.string().email().max(320)}).strict().parse(raw)).handler(async({data})=>{const {savePrivatePyqBank}=await import('./teacher-workspace-store.server');return savePrivatePyqBank(data.snapshot,data.expectedEmail);});
+export const listPyqBanks=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({offset:z.number().int().min(0).max(100000)}).strict().parse(raw)).handler(async({data})=>{const {listPrivatePyqBanks}=await import('./teacher-workspace-store.server');return listPrivatePyqBanks(data.offset);});
+export const loadPyqBank=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({id:z.string().uuid()}).strict().parse(raw)).handler(async({data})=>{const {loadPrivatePyqBank}=await import('./teacher-workspace-store.server');return loadPrivatePyqBank(data.id);});
 export const listPyqPdfs=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({url:z.string().url()}).strict().parse(raw)).handler(async({data})=>{const {listOfficialPdfs}=await import('./cbse-pyq-pdf.server');return listOfficialPdfs(data.url);});
 export const organisePyqQuestions=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({url:z.string().url(),klass:z.enum(['10','12']),subject:z.string().max(120),questions:z.array(z.object({id:z.string().max(64),text:z.string().max(14000)})).max(12)}).strict().parse(raw)).handler(async({data})=>{const {mapPyqQuestions}=await import('./cbse-pyq-map.server');return mapPyqQuestions(data);});
 export const readPyqNote=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>pyqScopeSchema.parse(raw)).handler(async({data})=>{const {loadPrivatePyqNote}=await import('./teacher-workspace-store.server');return loadPrivatePyqNote(data);});

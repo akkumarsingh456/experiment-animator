@@ -2,8 +2,37 @@ import { workspaceMetaSchema, workspaceSnapshotSchema, type WorkspaceMeta, type 
 import {z} from 'zod';
 import {teacherPlanRecordSchema,teacherTeachingPlanSchema,type TeacherTeachingPlan,type TeacherPlanRecord} from './teacher-teaching-plan';
 import {pyqKey,pyqNoteSchema,type PyqScope} from './cbse-pyq';
+import {pyqBankMeta,pyqBankSnapshot,type PyqBankSnapshot} from './saved-pyq-bank';
 
 const BUCKET='teacher-private-workspace';
+export async function savePrivatePyqBank(snapshot:PyqBankSnapshot,expectedEmail:string){
+ const checked=pyqBankSnapshot.parse(snapshot),{db,user}=await context();if(user.email.toLowerCase()!==expectedEmail.toLowerCase())throw new Error('Your account changed. Please reopen your workspace before saving.');
+ const questions=checked.readings.reduce((total,reading)=>total+reading.questions.length,0);if(!questions)throw new Error('Extract some questions before saving a bank.');
+ const {cbsePapers,pyqSubjectMatches}=await import('./cbse-pyq');
+ for(const reading of checked.readings)if(reading.klass!==checked.scope.klass||!pyqSubjectMatches(reading.subject,checked.scope.subject)||checked.scope.year!=='all'&&reading.year!==Number(checked.scope.year)||!cbsePapers.some(p=>p.url===reading.url&&p.klass===reading.klass&&p.year===reading.year&&pyqSubjectMatches(p.subject,reading.subject)))throw new Error('The question bank contains a different class, subject, year or source.');
+ const bucket=(await privateBucket(db,true))!,id=crypto.randomUUID(),savedAt=new Date().toISOString(),meta=pyqBankMeta.parse({id,savedAt,title:checked.scope.chapter||`${checked.scope.subject} question bank`,scope:checked.scope,questions});
+ const body=JSON.stringify(checked);if(new TextEncoder().encode(body).length>8_000_000)throw new Error('This bank exceeds 8 MB. Choose a chapter or year and save smaller banks.');
+ const path=`${user.id}/question-banks/${id}.json`,index=`${user.id}/question-bank-index/${id}.json`;
+ const saved=await bucket.upload(path,new Blob([body],{type:'application/json'}),{upsert:false,contentType:'application/json',cacheControl:'0'});if(saved.error)throw new Error('Question-bank saving failed. Your device questions are unchanged.');
+ const confirmed=await bucket.download(path);if(confirmed.error||await confirmed.data.text()!==body)throw new Error('Question-bank saving could not be confirmed. Please retry.');
+ const summary=JSON.stringify(meta),listed=await bucket.upload(index,new Blob([summary],{type:'application/json'}),{upsert:false,contentType:'application/json',cacheControl:'0'});if(listed.error)throw new Error('The saved question bank could not be listed. Please retry.');
+ const confirmation=await bucket.download(index);if(confirmation.error||await confirmation.data.text()!==summary)throw new Error('The question-bank listing could not be confirmed. Please refresh.');
+ return meta;
+}
+export async function listPrivatePyqBanks(offset:number){
+ const {db,user}=await context(),bucket=await privateBucket(db,false);if(!bucket)return {items:[] as Array<import('./saved-pyq-bank').PyqBankMeta>,nextOffset:null as number|null};
+ const listed=await bucket.list(`${user.id}/question-bank-index`,{limit:20,offset,sortBy:{column:'updated_at',order:'desc'}});if(listed.error)throw new Error('Saved question banks could not be loaded.');
+ const items=await Promise.all(listed.data.map(async file=>{if(!/^[0-9a-f-]{36}\.json$/i.test(file.name))throw new Error('A saved question bank needs review.');const value=await bucket.download(`${user.id}/question-bank-index/${file.name}`);if(value.error)throw new Error('A saved question-bank listing could not be read.');const meta=pyqBankMeta.parse(JSON.parse(await value.data.text()));if(file.name!==`${meta.id}.json`)throw new Error('Question-bank identity could not be confirmed.');return meta;}));
+ return {items,nextOffset:listed.data.length===20?offset+20:null};
+}
+export async function loadPrivatePyqBank(id:string){
+ z.string().uuid().parse(id);const {db,user}=await context(),bucket=await privateBucket(db,false);if(!bucket)throw new Error('This question bank was not found in your workspace.');
+ const index=await bucket.download(`${user.id}/question-bank-index/${id}.json`);if(index.error)throw new Error('This question bank was not found in your workspace.');
+ const meta=pyqBankMeta.parse(JSON.parse(await index.data.text()));if(meta.id!==id)throw new Error('Question-bank identity could not be confirmed.');
+ const saved=await bucket.download(`${user.id}/question-banks/${id}.json`);if(saved.error)throw new Error('This saved question bank could not be read.');
+ const snapshot=pyqBankSnapshot.parse(JSON.parse(await saved.data.text()));if(JSON.stringify(meta.scope)!==JSON.stringify(snapshot.scope)||meta.questions!==snapshot.readings.reduce((total,reading)=>total+reading.questions.length,0))throw new Error('The saved question bank does not match its listing.');
+ return {meta,snapshot};
+}
 async function pyqPath(userId:string,scope:PyqScope){
  const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pyqKey(scope)));
  return `${userId}/pyq/${Array.from(new Uint8Array(hash),byte=>byte.toString(16).padStart(2,'0')).join('')}.json`;
