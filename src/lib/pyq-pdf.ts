@@ -25,7 +25,7 @@ export async function downloadPyqPdf(rows:{question:PyqQuestion;reading:PyqReadi
    append('h2',`${reading.year} · ${reading.exam} · Question ${question.number}`,'font-size:18px;margin:0 0 6px;color:#075985');
    append('p',`Class ${reading.klass} · ${reading.subject} · ${question.chapter||'Chapter needs review'}`,'margin:0 0 10px;font-size:13px');
    const view=presentPyq(question.text,reading.subject);
-   for(const line of view.text.split('\n'))append('p',line||'\u00a0',`margin:0;white-space:pre-wrap;${view.code?'font-family:monospace;font-size:14px;tab-size:4;':''}${/^\s*OR\s*$/i.test(line)?'margin:12px 0;font-weight:bold;color:#075985;':''}`);
+   for(const line of (view.text||'Readable English text is not available for this question. Check the English version in the original CBSE PDF.').split('\n'))append('p',line||'\u00a0',`margin:0;white-space:pre-wrap;${view.code?'font-family:monospace;font-size:14px;tab-size:4;':''}${/^\s*OR\s*$/i.test(line)?'margin:12px 0;font-weight:bold;color:#075985;':''}`);
    if(view.warnings.length)append('p',`Source review needed: ${view.warnings.join(' ')}`,'margin:16px 0 8px;padding:10px;background:#fff7df;font-size:12px');
    if(reading.questions.length&&question.ocr)append('p','OCR transcription: verify wording, options and symbols against the original PDF.','font-size:12px;margin:10px 0');
    const preparation=questionTeachingPoints(question);

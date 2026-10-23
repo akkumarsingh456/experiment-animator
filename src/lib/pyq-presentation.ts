@@ -1,7 +1,13 @@
 /** A reversible view of the source transcription. Never replace stored source text. */
 export function presentPyq(raw:string,subject=''){
  const code=/computer|informatics|programming/i.test(subject);
- const warnings:string[]=[],lines=raw.replace(/\r\n?/g,'\n').split('\n');
+ const warnings:string[]=[],sourceLines=raw.replace(/\r\n?/g,'\n').split('\n');
+ // English-only presentation applies to historical saved readings as well.
+ // Omit whole Hindi-bearing lines rather than turn their leftover symbols into
+ // an invented English question. Stored source transcriptions remain intact.
+ const hiddenHindi=sourceLines.some(line=>/\p{Script=Devanagari}/u.test(line));
+ const lines=sourceLines.filter(line=>!/\p{Script=Devanagari}/u.test(line));
+ if(hiddenHindi)warnings.push('English-only view: Hindi lines are omitted. The remaining English question may be incomplete; check the English version in the original CBSE paper.');
  let removed=false;
  // Paper identifiers are only furniture when accompanied by a page number or PTO.
  // Do not remove arbitrary numeric lines: they may be answers, matrices or code.
@@ -42,7 +48,8 @@ export function presentPyq(raw:string,subject=''){
   if(/(?:^|\n)\s*(?:\d+\s+\d+\s*=\s*\d+|\[[^\p{L}\p{N}]*\]|[^\p{L}\p{N}\s]{3,})\s*(?:\n|$)/u.test(text))warnings.push('Some marks or symbols could not be read reliably. Check their notation in the original PDF.');
  }
  if(text.includes('\uFFFD')||/[\uE000-\uF8FF]/u.test(text))warnings.push('Some PDF characters are unreadable. Use Read again or check the original PDF.');
- return {text,code,removed,warnings:[...new Set(warnings)]};
+ if(!/[A-Za-z]{3}/.test(text))text='';
+ return {text,code,removed,hiddenHindi,warnings:[...new Set(warnings)]};
 }
 
 /** Trigger OCR for broken font encodings as well as image-only pages. */

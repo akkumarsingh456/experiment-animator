@@ -336,3 +336,7 @@ Keep a Next class plan shortcut beside lecture view/presentation controls and th
 
 ## Simple request and extraction flow
 Keep the slide-specific editable request first, then the review text and explicitly labelled Extract notes action. Preserve autofill/manual requests, added-point deletion, autosave and source protections. Keep direct source lookup as a secondary disclosure. An empty reply disables extraction with a clear explanation; never fabricate notes or imply live AI availability from a build check.
+
+## English-only PYQ presentation
+
+Apply the common English-only presentation to new and historical saved question text and question PDF exports. Omit Devanagari-bearing lines as whole lines, preserve stored original source, and warn that remaining English may be partial. Never translate, guess missing subparts, or display the bilingual raw transcription through a secondary disclosure. If readable English is absent, explain this and link the original CBSE paper. The source PDF itself remains unchanged.
