@@ -192,6 +192,61 @@
 .guided-recap { background: #f7fafc; padding: 16px 20px; border-radius: 8px; margin-top: 24px; }
 .guided-recap summary { font-weight: 700; cursor: pointer; }
 .guided-recap ul { margin-top: 12px; }
+
+/* Teacher guide only: preserve the existing slide and general note typography. */
+.teacher-guide-enabled .teacher-explanation-guide {
+  border: 1px solid #a9cede; border-top: 4px solid #075985; border-radius: 12px;
+  background: #f8fbfd; padding: 20px; margin-top: 24px; color: #172f42;
+  line-height: 1.75; overflow-wrap: anywhere;
+}
+.teacher-guide-enabled .teacher-explanation-guide > summary {
+  color: #075075; font-size: 19px; line-height: 1.45; font-weight: 800; cursor: pointer;
+  padding: 4px 0; border-radius: 4px;
+}
+.teacher-guide-topic { display: block; color: #344f63; font-size: 14px; font-weight: 650; margin: 5px 0 0 20px; }
+.teacher-guide-modes { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 12px; }
+.teacher-guide-modes button { min-height: 42px; background: #fff; border-color: #aec9d9; color: #20475e; font-weight: 700; }
+.teacher-guide-modes button[aria-pressed="true"] { background: #075985; color: #fff; border-color: #075985; box-shadow: inset 0 -3px 0 #043b59; }
+.teacher-guide-modes button:hover { border-color: #075985; text-decoration: underline; text-underline-offset: 3px; }
+.teacher-guide-modes button:focus-visible, .teacher-explanation-guide > summary:focus-visible {
+  outline: 3px solid #0284c7; outline-offset: 4px;
+}
+.teacher-guide-enabled .teacher-explanation-guide .teacher-guide-context { font-size: 13px; color: #4b6170; margin: 12px 0 18px; }
+.teacher-guide-enabled .teacher-explanation-guide .guided-group {
+  padding: 18px; margin: 16px 0; border: 1px solid #d7e4ec; border-left: 4px solid #237391;
+  border-radius: 8px; background: #fff; min-width: 0;
+}
+.teacher-guide-enabled .teacher-explanation-guide .guided-group .guided-group {
+  border: 0; border-top: 1px solid #dce6ed; border-radius: 0; background: transparent; padding: 12px 0 0;
+}
+.teacher-guide-enabled .teacher-explanation-guide h3 { color: #075075; font-weight: 800; font-size: 18px; margin: 0 0 14px; break-after: avoid; }
+.teacher-guide-enabled .teacher-explanation-guide h4 { color: #25475e; font-weight: 750; font-size: 16px; margin: 0 0 10px; break-after: avoid; }
+.teacher-guide-enabled .teacher-explanation-guide strong,
+.teacher-guide-enabled .guided-teacher-topic strong,
+.teacher-guide-enabled .guided-planner strong { color: #143e57; font-weight: 800; }
+.teacher-guide-enabled .teacher-explanation-guide p:has(> strong:first-child) {
+  padding: 10px 12px; border-left: 3px solid #7cb8cd; background: #edf7fb; border-radius: 4px;
+}
+.teacher-guide-enabled .teacher-explanation-guide .teacher-guide-example { border-left-color: #6d4ba0; }
+.teacher-guide-enabled .teacher-explanation-guide .teacher-guide-formula { border-left-color: #21639b; background: #f4f9ff; }
+.teacher-guide-enabled .teacher-explanation-guide .teacher-guide-caution { border-left-color: #a16b14; background: #fffbef; }
+.teacher-guide-enabled .teacher-explanation-guide .teacher-guide-check { border-left-color: #20705c; background: #f2faf6; }
+.teacher-guide-enabled .teacher-explanation-guide .teacher-guide-sources { border-left-color: #647789; background: #f4f6f8; font-size: 14px; }
+.teacher-guide-enabled .teacher-explanation-guide a { color: #075985; text-decoration: underline; text-underline-offset: 3px; }
+.teacher-guide-enabled .teacher-explanation-guide li::marker { color: #075985; font-weight: 800; }
+.teacher-guide-enabled .teacher-explanation-guide [role="note"] { color: #74430c; font-weight: 700; border-left: 3px solid #a16b14; padding-left: 12px; }
+.teacher-guide-enabled .guided-teacher-topic h3, .teacher-guide-enabled .guided-planner h3 { font-weight: 800; }
+@media(max-width:600px) {
+  .teacher-guide-enabled .teacher-explanation-guide { padding: 14px; }
+  .teacher-guide-enabled .teacher-explanation-guide .guided-group { padding: 14px 12px; }
+  .teacher-guide-modes button { flex: 1 1 130px; }
+}
+@media print {
+  .teacher-guide-enabled .teacher-explanation-guide { box-shadow: none; }
+  .teacher-guide-enabled .teacher-explanation-guide .teacher-guide-modes { display: none !important; }
+  .teacher-guide-enabled .teacher-explanation-guide h3,
+  .teacher-guide-enabled .teacher-explanation-guide h4 { break-after: avoid; }
+}
 .guided-quality-note { padding: 12px 16px; border-left: 3px solid #a16207; background: #fff8e7; font-size: 14px; }
 .guided-slide-frame { position: relative; flex: none; margin: 0; border-radius: 10px; box-shadow:
     0 24px 70px #02061755,

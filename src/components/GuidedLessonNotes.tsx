@@ -54,7 +54,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
   const content = slides.filter((slide) => (slide.kind ?? "content") === "content" || slide.kind === "chapter" || (includeBreaks && slide.kind === "break"));
   const questions = slides.flatMap((slide) => slide.mcq ? [slide.mcq] : []);
   const topicGroups = content.map((slide) => guidedGroups(slide.sections, slide.chapter_text ? slide.chapter_text.split(/\n\s*\n/).filter(Boolean) : [...(slide.bullets || []), ...(slide.notes || [])], true));
-  return <div className="guided-notes" aria-label="Complete guided lesson notes">
+  return <div className={`guided-notes${teacherGuide ? " teacher-guide-enabled" : ""}`} aria-label="Complete guided lesson notes">
     <div className="guided-document-title"><span>Class {klass} · {subject}</span><h2>{title}</h2><p>Read · Investigate · Practise · Reflect</p></div>
     {includeCover && <article className="guided-topic guided-cover"><LessonCover title={slides.find(slide => slide.visual === "cover")?.title || title} objectives={slides.find(slide => slide.visual === "cover")?.bullets || content.map(slide => slide.title)} subject={subject} klass={klass} /></article>}
     {!!content.length && <LessonNotesPlanner topics={content.filter(slide=>slide.visual!=='cover'&&slide.kind!=='break').map(slide=>slide.title)} sourceTopics={content.flatMap((slide,index)=>slide.visual==='cover'||slide.kind==='break'?[]:[{title:slide.title,groups:topicGroups[index]}])} chapter={title} subject={subject} klass={klass} />}
@@ -96,4 +96,5 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
     {nextPlan&&<NextClassPlanPage slide={nextPlan} klass={klass} subject={subject}/>}
   </div>;
 }
+
 
