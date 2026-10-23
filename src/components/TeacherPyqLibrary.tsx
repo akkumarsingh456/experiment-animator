@@ -12,6 +12,8 @@ import type {PyqBankSnapshot,PyqBankMeta} from '@/lib/saved-pyq-bank';
 import {PyqSourceBrowser} from './PyqSourceBrowser';
 import {PyqQuestionText} from './PyqQuestionText';
 import {PyqPdfButton} from './PyqPdfButton';
+import {createLocalBookReader} from '@/lib/local-book-reader';
+import {mapPyqBatches} from '@/lib/pyq-mapping-queue';
 type Paper=typeof cbsePapers[number];
 const sameSubject=(a:string,b:string)=>pyqSubjectMatches(a,b)||pyqSubjectMatches(b,a);
 function QuestionCard({question,reading,email,onChange}:{question:PyqQuestion;reading:PyqReading;email:string;onChange:(question:PyqQuestion)=>void}){
@@ -58,19 +60,24 @@ export function TeacherPyqPanel({klass:initialClass='10',subject:initialSubject=
    setOpenedBank(null);
    const version=++run.current;paused.current=false;setBusy(true);setErrors([]);let finished=0,cached=0,failed=0;
    const stopped=()=>paused.current||version!==run.current;
+   const reader=createLocalBookReader(message=>{if(!stopped())setStatus(message);});
    try{for(const paper of targets){if(stopped())break;
      let entries:{name:string;size:number}[];try{setStatus(`${paper.year} · locating official PDFs…`);entries=await pdfs(paper);}catch(error){failed++;if(!stopped())setErrors(current=>[...new Set([...current,`${paper.year} ${paper.exam}: ${error instanceof Error?error.message:'PDF list unavailable'}`])]);continue;}
      for(const entry of entries.filter(entry=>!oneFile||entry.name===oneFile)){if(stopped())break;
-       if(!force&&readings.some(reading=>reading.url===paper.url&&reading.file===entry.name)){cached++;continue;}
-       try{const reading=await readPyqPdf(paper,entry.name,message=>{if(!stopped())setStatus(message);},stopped);if(stopped())break;await persist(reading);
-         if(email&&reading.questions.length){for(let at=0;at<reading.questions.length;at+=12){if(stopped())break;
+       if(!force&&savedReadings.current.some(reading=>reading.url===paper.url&&reading.file===entry.name)){cached++;continue;}
+       try{const reading=await readPyqPdf(paper,entry.name,message=>{if(!stopped())setStatus(message);},stopped,reader);if(stopped())break;await persist(reading);
+         if(email&&reading.questions.length){
            setStatus(`${paper.year} · organising chapter topics for ${entry.name}…`);
-           try{const mappings=await organisePyqQuestions({data:{url:paper.url,klass:klass as '10'|'12',subject,questions:reading.questions.slice(at,at+12).map(({id,text})=>({id,text}))}});if(stopped())break;for(const mapping of mappings){const question=reading.questions.find(question=>question.id===mapping.id);if(question)Object.assign(question,{chapter:mapping.chapter,topics:mapping.topics,mapping:'suggested'});}}catch{reading.warnings.push('AI topic organisation was unavailable. Review keyword suggestions and unmapped questions.');break;}
-         }}
-         if(stopped())break;await persist(reading);finished++;
+           const result=await mapPyqBatches(reading.questions,batch=>organisePyqQuestions({data:{url:paper.url,klass:klass as '10'|'12',subject,questions:batch.map(({id,text})=>({id,text}))}}),stopped,(done,total)=>{if(!stopped())setStatus(`${paper.year} · chapter topics ${done}/${total} · ${entry.name}`);});
+           if(stopped())break;
+           for(const mapping of result.mappings){const question=reading.questions.find(question=>question.id===mapping.id);if(question)Object.assign(question,{chapter:mapping.chapter,topics:mapping.topics,mapping:'suggested'});}
+           if(result.failed)reading.warnings.push('AI topic organisation was unavailable. Review keyword suggestions and unmapped questions.');
+           await persist(reading);
+         }
+         if(stopped())break;finished++;
        }catch(error){if(stopped())break;failed++;setErrors(current=>[...new Set([...current,`${paper.year} · ${entry.name}: ${error instanceof Error?error.message:'Reading failed'}`])]);}
      }
-   }}finally{if(version===run.current){setBusy(false);setStatus(`${paused.current?'Paused':'Reading queue finished'} · ${finished} PDF sets read · ${cached} already on this device · ${failed} unavailable. Question text and chapter suggestions still need PDF review.`);}}
+   }}finally{await reader.close();if(version===run.current){setBusy(false);setStatus(`${paused.current?'Paused':'Reading queue finished'} · ${finished} PDF sets read · ${cached} already on this device · ${failed} unavailable. Question text and chapter suggestions still need PDF review.`);}}
  }
  async function changeQuestion(reading:PyqReading,question:PyqQuestion){if(openedBank){setOpenedBank(current=>current?{...current,snapshot:{...current.snapshot,readings:current.snapshot.readings.map(item=>item.url===reading.url&&item.file===reading.file?{...item,questions:item.questions.map(value=>value.id===question.id?question:value)}:item)}}:null);const local=savedReadings.current.find(item=>item.url===reading.url&&item.file===reading.file)||reading;await persist({...local,questions:local.questions.map(value=>value.id===question.id?question:value)});}else await persist({...reading,questions:reading.questions.map(value=>value.id===question.id?question:value)});}
  function snapshot():PyqBankSnapshot{const ids=new Set(visible.map(item=>item.question.id));return {version:1,scope:{klass:klass as PyqScope['klass'],subject,chapter,year,search,showUnmapped},readings:relevant.map(reading=>({...reading,questions:reading.questions.filter(question=>ids.has(question.id))})).filter(reading=>reading.questions.length>0)};}
