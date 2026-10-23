@@ -270,6 +270,13 @@
 .guided-text-only .guided-terms, .guided-text-only .guided-quality-note,
 .guided-text-only .guided-group[data-note-category],
 .guided-text-only .guided-learning-tasks > div { background: transparent; border: 0; box-shadow: none; border-radius: 0; }
+.teacher-guide-passage, .mathematics-guide-line { margin: 0 0 12px; line-height: 1.8; min-width: 0; overflow-wrap: anywhere; }
+.teacher-guide-enabled .mathematics-teacher-guide h4 { margin-top: 18px; }
+.teacher-guide-enabled .mathematics-teacher-guide li { margin-bottom: 12px; }
+.teacher-guide-enabled .formula-derivation,
+.teacher-guide-enabled .formula-derivation-target,
+.teacher-guide-enabled .guided-derivation-flow > li,
+.teacher-guide-enabled .formula-step-number { background: transparent; border: 0; box-shadow: none; border-radius: 0; }
 @media(max-width:600px) {
   .teacher-guide-enabled { padding: 18px 16px; }
   .teacher-guide-enabled .teacher-explanation-guide { padding: 16px 0 0; }

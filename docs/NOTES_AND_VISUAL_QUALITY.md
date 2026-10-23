@@ -2,6 +2,8 @@
 
 ## Teacher explanation companion
 
+- Mathematics teacher companions use source-safe `MathematicsProse` for explanatory passages and derivation lines. Add subject-specific teaching prompts for method selection, theorem hypotheses, domain restrictions and answer verification, with a plain numbered board-work sequence. Do not generate missing proofs, infer lost notation or alter shared PPT generation. Distinguish pedagogical checking prompts from source facts and worked answers.
+
 - Teacher guide reading is a continuous text document: exclude notebook illustrations, concept-map structures, reference images, AI context pictures and the formula mind-map graphic. Retain formula text in the original note groups. Open the explanation companion initially and use compact heading highlights rather than nested cards. Original uploaded PDF pages are linked as sources instead of embedded; the final next-class plan is text-only in this view. All presentation/PPT visual tools and saved images remain intact.
 
 - Enable `TeacherExplanationGuide` only through the explicit `teacherGuide` flag in the Read guided notes page and notes PDF. Default it off for every presentation and slide/PPTX export. Never write its view state, prompts or reorganised excerpts into Slide sections or generation results.

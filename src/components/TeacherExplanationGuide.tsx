@@ -1,5 +1,8 @@
 import {useState} from 'react';
 import {MathText} from './MathText';
+import {MathematicsProse} from './MathematicsProse';
+import {MathematicsTeacherGuide} from './MathematicsTeacherGuide';
+import {isMathematics} from '@/lib/mathematics-presentation';
 import {FormulaDerivation} from './FormulaDerivation';
 import {teacherTopicPlans} from '@/lib/teacher-topic-plan';
 import type {GuidedGroup} from '@/lib/guided-notes';
@@ -10,12 +13,14 @@ export type GuideBook={chapter:string;class:string;subject:string};
 /** Read-only teaching companion. Never writes into generation data or slide sections. */
 export function TeacherExplanationGuide({slide,groups,subject,klass,chapter,books=[]}:{slide:Slide;groups:GuidedGroup[];subject?:string;klass?:string;chapter:string;books?:GuideBook[]}){
  const [mode,setMode]=useState<'revision'|'full'>('full');
+ const mathematics=isMathematics(subject);
+ const passage=(text:string)=>mathematics?<MathematicsProse text={text}/>:<MathText subject={subject} text={text}/>;
  const plan=teacherTopicPlans([{title:slide.title,groups}],subject,klass)[0];
  const usable=groups.filter(group=>!/^Source (review|table)/i.test(group.heading));
  const matching=(pattern:RegExp)=>usable.filter(group=>pattern.test(group.heading));
  const support=(pattern:RegExp)=>(slide.teaching_support||[]).filter(section=>pattern.test(section.heading));
- const renderGroups=(items:GuidedGroup[],empty:string)=>items.length?items.map((group,i)=><section className="guided-group" key={i}><h4>{group.heading}</h4>{group.kind==='derivation'?<FormulaDerivation subject={subject} lines={group.lines}/>:group.lines.map((line,j)=><p key={j}><MathText subject={subject} text={line}/></p>)}</section>):<p className="guided-small">{empty}</p>;
- const renderSupport=(pattern:RegExp)=>support(pattern).map((section,i)=><section className="guided-group" key={i}><h4>{section.heading}</h4><p className="guided-small">Source-supported supplementary teaching notes · review alongside the original notes.</p>{section.lines.map((line,j)=><p key={j}><MathText subject={subject} text={line}/></p>)}</section>);
+ const renderGroups=(items:GuidedGroup[],empty:string)=>items.length?items.map((group,i)=><section className="guided-group" key={i}><h4>{group.heading}</h4>{group.kind==='derivation'&&!mathematics?<FormulaDerivation subject={subject} lines={group.lines}/>:group.kind==='derivation'?<ol>{group.lines.map((line,j)=><li key={j}>{passage(line)}</li>)}</ol>:group.lines.map((line,j)=><div className="teacher-guide-passage" key={j}>{passage(line)}</div>)}</section>):<p className="guided-small">{empty}</p>;
+ const renderSupport=(pattern:RegExp)=>support(pattern).map((section,i)=><section className="guided-group" key={i}><h4>{section.heading}</h4><p className="guided-small">Source-supported supplementary teaching notes · review alongside the original notes.</p>{section.lines.map((line,j)=><div className="teacher-guide-passage" key={j}>{passage(line)}</div>)}</section>);
  const explanations=matching(/Understanding|How it works|Key terms|Important points/);
  const examples=matching(/Worked examples|Answers and explanations|Step-by-step derivation/);
  const formula=usable.some(group=>group.kind==='formula'||group.kind==='derivation');
@@ -33,10 +38,11 @@ export function TeacherExplanationGuide({slide,groups,subject,klass,chapter,book
    <p><strong>Learning target:</strong> <MathText subject={subject} text={plan.goal}/></p>
   </section>
   <section className="guided-group"><h3>2. Explain the key idea</h3>
-   {mode==='revision'?(plan.anchor?<p><MathText subject={subject} text={plan.anchor}/></p>:<p>No readable source anchor is available. Resolve the source gap first.</p>):<>{renderGroups(explanations,'No readable explanatory passage is available. Use the topic recovery tools to supply it before teaching.')}{renderSupport(/explanation/i)}</>}
+   {mode==='revision'?(plan.anchor?<div className="teacher-guide-passage">{passage(plan.anchor)}</div>:<p>No readable source anchor is available. Resolve the source gap first.</p>):<>{renderGroups(explanations,'No readable explanatory passage is available. Use the topic recovery tools to supply it before teaching.')}{renderSupport(/explanation/i)}</>}
    <p><strong>Ask:</strong> {plan.question}</p>
   </section>
   <div className={mode==='revision'?'hidden print:block':undefined}>
+   {mathematics&&<MathematicsTeacherGuide title={slide.title} groups={usable}/>}
    <section className="guided-group teacher-guide-example"><h3>3. Model an example with reasoning</h3>
     {renderGroups(examples,'No complete worked example is identified in these notes. Do not treat a question alone as a solved example.')}{renderSupport(/worked example/i)}
     <ol><li>Identify the given information and the question to answer.</li><li>Explain why the source method applies, including its stated conditions.</li><li>Follow the source steps in order; ask for the reason behind each step.</li><li>Interpret the source result. For calculations, check signs, units and whether the result answers the question.</li></ol>
@@ -44,7 +50,7 @@ export function TeacherExplanationGuide({slide,groups,subject,klass,chapter,book
    </section>
    {formula&&<section className="guided-group teacher-guide-formula"><h3>4. Formula meaning, conditions and limits</h3>
     {renderGroups(matching(/Formulas and relations|Symbols|Meaning and conditions|Conditions and assumptions|Limitations and exceptions|Problem-solving formula/),'No explicit formula guidance is available.')}
-    <p><strong>Teacher check:</strong> name every symbol from the source, retain its stated unit, identify the assumptions, and explain where the relationship can be used. If a definition or condition is missing, verify it in the original chapter; do not guess from the symbol alone.</p>
+    <p><strong>Teacher check:</strong> {mathematics?'Define each symbol and its permitted values from the source. State the domain and theorem hypotheses before applying a relation. Distinguish an identity, an equation to solve and a conditional result. Verify any missing restriction in the original chapter.':'name every symbol from the source, retain its stated unit, identify the assumptions, and explain where the relationship can be used. If a definition or condition is missing, verify it in the original chapter; do not guess from the symbol alone.'}</p>
    </section>}
    <section className="guided-group teacher-guide-caution"><h3>{formula?'5':'4'}. Misconceptions and classroom prompts</h3>
     {renderGroups(matching(/misconception/i),'No topic-specific misconception correction is supplied. Ask students to justify a claim against the source before correcting it.')}{renderSupport(/misconception/i)}
