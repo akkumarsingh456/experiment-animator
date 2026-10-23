@@ -5,10 +5,13 @@ import {saveTeacherLesson} from '@/lib/teacher-workspace.functions';
 import {preparedLectureSnapshot,type WorkspaceSnapshot,type WorkspaceScope} from '@/lib/teacher-workspace';
 import type {GenerationResult} from '@/lib/generate.functions';
 import {Button} from './ui/button';
-export function TeacherCloudSave({getSnapshot,initialId,preparedLesson,preparedScope,preparedOwnerEmail='',onLessonSaved}:{getSnapshot:()=>Promise<WorkspaceSnapshot>;initialId?:string;preparedLesson?:GenerationResult;preparedScope?:WorkspaceScope;preparedOwnerEmail?:string;onLessonSaved?:(id:string)=>void}){
+export function TeacherCloudSave({getSnapshot,initialId,preparedLesson,preparedScope,preparedOwnerEmail='',onLessonSaved,autoSaveRevision=0,onSaveStatus}:{getSnapshot:()=>Promise<WorkspaceSnapshot>;initialId?:string;preparedLesson?:GenerationResult;preparedScope?:WorkspaceScope;preparedOwnerEmail?:string;onLessonSaved?:(id:string)=>void;autoSaveRevision?:number;onSaveStatus?:(status:string)=>void}){
   const {account,checking,error,refresh}=useTeacherAccount();
   const [id,setId]=useState(initialId),[busy,setBusy]=useState(false),[status,setStatus]=useState('');
   const revision=useRef(0);
+  const snapshotRef=useRef(getSnapshot);snapshotRef.current=getSnapshot;
+  const attemptedEdit=useRef(0),autoOwner=useRef("");
+  useEffect(()=>{onSaveStatus?.(status);},[status,onSaveStatus]);
   const automatic=useRef<{lesson:GenerationResult;owner:string;id:string;promise:ReturnType<typeof saveTeacherLesson>}|null>(null);
   useEffect(()=>{revision.current++;setStatus('');setBusy(false);setId(initialId);return()=>{revision.current++;};},[account,initialId]);
   useEffect(()=>{
@@ -24,10 +27,19 @@ export function TeacherCloudSave({getSnapshot,initialId,preparedLesson,preparedS
     void pending.promise.then(saved=>{if(active&&run===revision.current){setId(saved.id);onLessonSaved?.(saved.id);setStatus('Prepared lecture saved to your history.');}}).catch(()=>{if(active&&run===revision.current)setStatus('Lecture history saving failed. Your notes are still open. Use Save to my workspace to retry.');}).finally(()=>{if(active&&run===revision.current)setBusy(false);});
     return()=>{active=false;};
   },[preparedLesson,preparedOwnerEmail,account?.email,account?.signedIn,checking,initialId]);
-  async function save(){const run=++revision.current;setBusy(true);setStatus('Saving private cloud backup…');try{const snapshot=await getSnapshot();const saved=await saveTeacherLesson({data:{id,snapshot,expectedEmail:account?.email}});if(run===revision.current){setId(saved.id);onLessonSaved?.(saved.id);setStatus('Cloud backup confirmed. Saved to My teaching workspace.');}}catch(e){if(run===revision.current)setStatus(e instanceof Error?e.message:'Cloud saving failed. Your local notes are unchanged.');}finally{if(run===revision.current)setBusy(false);}}
+  async function save(){const run=++revision.current;setBusy(true);setStatus('Saving private cloud backup…');try{const snapshot=await snapshotRef.current();const saved=await saveTeacherLesson({data:{id,snapshot,expectedEmail:account?.email}});if(run===revision.current){setId(saved.id);onLessonSaved?.(saved.id);setStatus('Cloud backup confirmed. Saved to My teaching workspace.');}}catch(e){if(run===revision.current)setStatus(e instanceof Error?e.message:'Cloud saving failed. Your local notes are unchanged.');}finally{if(run===revision.current)setBusy(false);}}
+  useEffect(()=>{
+    if(!autoSaveRevision||checking||!account?.signedIn||busy)return;
+    const owner=account.email.toLowerCase();
+    if(autoOwner.current&&autoOwner.current!==owner){autoOwner.current=owner;attemptedEdit.current=autoSaveRevision;return;}
+    autoOwner.current=owner;
+    if(attemptedEdit.current>=autoSaveRevision)return;
+    const timer=setTimeout(()=>{attemptedEdit.current=autoSaveRevision;void save();},650);
+    return()=>clearTimeout(timer);
+  },[autoSaveRevision,checking,account?.signedIn,account?.email,busy,id]);
   return <section className="my-3 flex flex-wrap items-center gap-3 rounded-lg border bg-white p-3 text-sm print:hidden" aria-label="Private teacher cloud backup">
     <Link to="/workspace" target="_blank" rel="noopener noreferrer" className="font-medium underline">My teaching workspace</Link>
-    {checking?<span role="status">Checking teacher sign-in…</span>:account?.signedIn?<><span>{account.email}</span><Button size="sm" variant="outline" disabled={busy} onClick={save}>{busy?'Saving…':'Save to my workspace'}</Button><span className="text-muted-foreground">Signed-in preparation is added to history automatically. Click Save to include later personal edits, images and bookmarks.</span></>:<a className="underline" href="/workspace" target="_blank" rel="noopener noreferrer">Sign in to save a cloud backup · opens a new tab</a>}
+    {checking?<span role="status">Checking teacher sign-in…</span>:account?.signedIn?<><span>{account.email}</span><Button size="sm" variant="outline" disabled={busy} onClick={save}>{busy?'Saving…':'Save to my workspace'}</Button><span className="text-muted-foreground">Prepared lectures and extracted notes save automatically while signed in. Save manually to include other edits, images and bookmarks.</span></>:<a className="underline" href="/workspace" target="_blank" rel="noopener noreferrer">Sign in to save a cloud backup · opens a new tab</a>}
     {error&&<><span role="alert">{error}</span><Button size="sm" variant="outline" onClick={refresh}>Retry sign-in check</Button></>}
     {status&&<span role="status">{status}</span>}
   </section>;

@@ -18,7 +18,9 @@ export async function restoreWorkspace(snapshot:WorkspaceSnapshot){
     const local=readBlankSlides(key),merged=new Map(blanks.blanks.map(item=>[item.slide.teacher_blank.id,item]));
     for(const item of local.blanks)merged.set(item.slide.teacher_blank.id,item);
     if(local.deleted)merged.delete(local.deleted.slide.teacher_blank.id);
-    blanks={version:1,blanks:[...merged.values()].sort((a,b)=>a.index-b.index),deleted:local.deleted||blanks.deleted};
+    const additions=new Map((blanks.additions||[]).map(item=>[JSON.stringify([item.title,item.occurrence]),item]));
+    for(const item of local.additions||[])additions.set(JSON.stringify([item.title,item.occurrence]),item);
+    blanks={version:1,blanks:[...merged.values()].sort((a,b)=>a.index-b.index),deleted:local.deleted||blanks.deleted,additions:[...additions.values()]};
     localStorage.setItem(key,JSON.stringify(blanks));
   }catch{warnings.push('Some slide additions could not be saved on this device. Keep the cloud backup.');}
   try{

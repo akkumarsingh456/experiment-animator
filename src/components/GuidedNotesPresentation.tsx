@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 import type { Slide } from "@/lib/generate.functions";
 import type { BookmarkPage } from '@/lib/teaching-bookmark';
 
-export type PresentationSlide = { title: string; section?: string; content: ReactNode };
+export type PresentationSlide = { title: string; section?: string; content: ReactNode; sourceIndex?:number };
 
 type Props = {
   presentationSlides?: PresentationSlide[];
@@ -27,6 +27,7 @@ type Props = {
   pageIndex?: number;
   onPageChange?: (index: number) => void;
   renderTopicRecovery?: (topicTitle: string) => ReactNode;
+  renderSlideNotesIcon?: (topicTitle:string,sourceIndex?:number)=>ReactNode;
   renderBookmarkControls?: (pages: BookmarkPage[], index: number, goTo: (index: number) => void) => ReactNode;
 };
 
@@ -45,6 +46,7 @@ export function GuidedNotesPresentation({
   pageIndex,
   onPageChange,
   renderTopicRecovery,
+  renderSlideNotesIcon,
   renderBookmarkControls,
 }: Props) {
   const source = useRef<HTMLDivElement>(null),
@@ -345,6 +347,7 @@ export function GuidedNotesPresentation({
           <span>Use ← → to move between slides</span>
         </div>
         <div className="presentation-navigation">
+          {renderSlideNotesIcon?.(pageTitle(index),presentationSlides?.[index]?.sourceIndex)}
           <button
             className="presentation-icon-button"
             disabled={!pageCount || !index}

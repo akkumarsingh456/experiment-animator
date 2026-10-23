@@ -9,7 +9,7 @@ import {MathematicsProse} from './MathematicsProse';
 import {isMathematics} from '@/lib/mathematics-presentation';
 
 type Source={url:string;title:string};
-type Props={scope:{klass:string;subject:string;chapter:string;topic:string};onExtract:(lines:string[],sources:Source[])=>void};
+type Props={scope:{klass:string;subject:string;chapter:string;topic:string};onExtract:(lines:string[],sources:Source[])=>void|boolean};
 
 /** One preview and one extraction action; advanced AI is optional. */
 export function TopicNotesChat({scope,onExtract}:Props){
@@ -41,7 +41,7 @@ export function TopicNotesChat({scope,onExtract}:Props){
    <details><summary className="cursor-pointer text-sm font-semibold">Preview formatted points</summary><ol className="mt-3 list-decimal space-y-3 pl-6">{lines.map((line,index)=><li key={index}>{isMathematics(scope.subject)?<MathematicsProse text={line}/>:<MathText subject={scope.subject} text={line}/>}</li>)}</ol></details>
    {sources.map(source=><a key={source.url} className="block text-xs text-sky-800 underline" href={source.url} target="_blank" rel="noopener noreferrer">Reference: {source.title}</a>)}
   </>}
-  <Button disabled={busy||!valid} onClick={()=>{onExtract(lines,sources);setNotice('Notes extracted into this topic. Extra slides are created automatically when needed.');}}>Extract notes</Button>
+  <Button disabled={busy||!valid} onClick={()=>{if(onExtract(lines,sources)!==false)setNotice('Notes extracted into this topic. Extra slides are created automatically when needed.');}}>Extract notes</Button>
   {!!lines.length&&!valid&&<p role="alert" className="text-sm text-amber-800">Use up to 500 points, each under 1,800 characters. Split long paragraphs onto separate lines.</p>}
   {notice&&<p role="status" className="text-sm text-sky-900">{notice}</p>}
   <details><summary className="cursor-pointer text-sm text-slate-600">Optional: ask the connected AI</summary><label htmlFor="simple-topic-request" className="my-2 block text-sm">What would you like to explain about {scope.topic}?</label><Textarea id="simple-topic-request" rows={2} maxLength={2000} disabled={busy} value={request} onChange={event=>setRequest(event.target.value)} placeholder={`Explain ${scope.topic} in detail…`}/><Button className="mt-2" variant="outline" disabled={busy} onClick={()=>void load(true)}>Ask AI</Button><p className="mt-2 text-xs text-slate-600">Needs a configured AI API key. Get topic notes and paste/extract do not need an AI key.</p></details>

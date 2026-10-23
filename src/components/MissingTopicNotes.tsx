@@ -1,4 +1,5 @@
 import {TopicNotesChat} from "./TopicNotesChat";
+import {FilePlus2} from 'lucide-react';
 import {importedTopicDraft,importMissingTopicNotes} from "@/lib/missing-topic-import";
 import { TopicTextPreview } from "@/components/TopicTextPreview";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -17,6 +18,10 @@ import type { Slide } from "@/lib/generate.functions";
 
 type Props = {
   compact?: boolean;
+  iconOnly?: boolean;
+  storageId?: string;
+  onExtracted?:()=>void;
+  saveStatus?: string;
   onAddBlankSlide?: () => void;
   slide: Slide;
   klass: string;
@@ -26,6 +31,10 @@ type Props = {
 };
 export function MissingTopicNotes({
   compact = false,
+  iconOnly = false,
+  storageId = '',
+  onExtracted,
+  saveStatus,
   onAddBlankSlide,
   slide,
   klass,
@@ -34,8 +43,8 @@ export function MissingTopicNotes({
   onSaved,
 }: Props) {
   const scope = { klass, subject, chapter, topic: slide.title };
-  const draftKey = "missing-topic-draft:" + JSON.stringify([klass, subject, chapter, slide.title]);
-  const importKey = "missing-topic-import-v1:" + JSON.stringify([klass, subject, chapter, slide.title]);
+  const draftKey = "missing-topic-draft:" + JSON.stringify([klass, subject, chapter, slide.title,...(storageId?[storageId]:[])]);
+  const importKey = "missing-topic-import-v1:" + JSON.stringify([klass, subject, chapter, slide.title,...(storageId?[storageId]:[])]);
   const [open, setOpen] = useState(false),
     [text, setText] = useState(""),
     [url, setUrl] = useState(""),
@@ -61,6 +70,7 @@ export function MissingTopicNotes({
       if(draft.success){importedRef.current=true;onSaved(importMissingTopicNotes(slide,draft.data.lines,draft.data.sources[0]?.url));}
     } catch {}
     let current = true;
+    if(!slide.topic_recovery)return ()=>{current=false;};
     void read({ data: scope })
       .then((saved) => {
         if (current && saved && !importedRef.current) {
@@ -134,13 +144,13 @@ export function MissingTopicNotes({
   return (
     <section
       className={
-        compact
+        iconOnly ? 'inline-flex shrink-0 print:hidden' : compact
           ? "mx-3 my-1 flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 print:hidden"
           : "my-4 rounded-xl border border-amber-200 bg-amber-50/70 p-4 print:hidden"
       }
       aria-label={`Recover notes for ${slide.title}`}
     >
-      <p className="font-semibold">
+      {!iconOnly&&<><p className="font-semibold">
         {slide.title}
         {compact && (
           <span className="ml-2 text-sm font-normal">
@@ -152,13 +162,15 @@ export function MissingTopicNotes({
         {slide.topic_recovery?.status === "missing"
           ? "This topic needs notes. The remaining chapter continues."
           : "Saved supplementary notes for this topic."}
-      </p>
+      </p></>}
       <Button
-        className={compact ? "h-8 text-sm" : "mt-3"}
+        className={iconOnly ? 'h-9 w-9 p-0' : compact ? "h-8 text-sm" : "mt-3"}
+        title={`Add notes · ${slide.title}`}
+        aria-label={`Add notes to ${slide.title}`}
         variant="outline"
         onClick={() => changePopup(true)}
       >
-        Get / Extract notes
+        {iconOnly?<FilePlus2 size={17} aria-hidden="true"/>:'Get / Extract notes'}
       </Button>
       <Dialog open={open} onOpenChange={changePopup}>
         <DialogPrimitive.Portal
@@ -184,14 +196,18 @@ export function MissingTopicNotes({
             </DialogHeader>
             <div className="space-y-5">
               <TopicNotesChat scope={scope} onExtract={(lines,sources)=>{
+                lines=[...new Set([...(slide.teacher_supplement?.lines||[]),...lines])];
+                if(lines.length>500){setNotice('This slide already has many added points. Use Add blank slide for the next set; existing notes are preserved.');return false;}
                 importedRef.current=true;
                 const updated=importMissingTopicNotes(slide,lines,sources[0]?.url);
                 onSaved(updated);
+                onExtracted?.();
                 edit(lines.join("\n"));
                 setUrl(sources[0]?.url||"");
-                try{localStorage.setItem(importKey,JSON.stringify({lines,sources}));setNotice("Extracted into this lesson and saved on this device. Use Save to my workspace for a private cloud backup, or permanent topic saving below for reuse in future generations.");}
+                try{const value=JSON.stringify({lines,sources});localStorage.setItem(importKey,value);if(localStorage.getItem(importKey)!==value)throw new Error('Save not confirmed');setNotice("Extracted and saved on this device. Signed-in teachers receive an automatic private workspace backup. Permanent topic saving below is optional and affects reuse in future generations.");}
                 catch{setNotice("Extracted into this lesson. Device saving failed; save the lesson to your workspace before leaving.");}
               }}/>
+              {saveStatus&&<p role="status" className="text-xs text-slate-600">{saveStatus}</p>}
               {onAddBlankSlide&&<Button variant="outline" disabled={busy} onClick={onAddBlankSlide}>Add blank slide</Button>}
               <details><summary className="cursor-pointer font-semibold text-sky-900">Source lookup and manual / permanent saving</summary>
               <div className="mt-4 space-y-5">
