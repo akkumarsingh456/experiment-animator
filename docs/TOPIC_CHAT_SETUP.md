@@ -1,5 +1,7 @@
 # Topic chat AI connection
 
+The main recovery popup is now **Get topic notes → review/edit → Extract notes**. It does not require an AI key. Paste-and-extract also works without a network request. The Class 12 Chemistry Solutions topics concentration terms, vapour pressure, Raoult's law and colligative properties have reviewed supplementary summaries with chapter references, so an upstream blocked host does not prevent their display. These summaries are not live AI or verbatim NCERT extraction. Other topics use the official source reader and report unavailability honestly. The AI connection below is optional, under Ask the connected AI.
+
 The missing-topic chat supports direct Gemini and Groq connections, independent of Lovable AI credits. This does not change normal lesson generation or any image feature.
 
 ## One-time setup

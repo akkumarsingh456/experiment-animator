@@ -158,7 +158,7 @@ export function MissingTopicNotes({
         variant="outline"
         onClick={() => changePopup(true)}
       >
-        AI topic chat / Extract notes
+        Get / Extract notes
       </Button>
       <Dialog open={open} onOpenChange={changePopup}>
         <DialogPrimitive.Portal
@@ -177,7 +177,7 @@ export function MissingTopicNotes({
               Close
             </DialogPrimitive.Close>
             <DialogHeader>
-              <DialogTitle className="pr-14 break-words">{slide.title} · Topic notes assistant</DialogTitle>
+              <DialogTitle className="pr-14 break-words">{slide.title} · Extract notes</DialogTitle>
               <DialogDescription>
                 Class {klass} · {subject} · {chapter} · {slide.title}
               </DialogDescription>

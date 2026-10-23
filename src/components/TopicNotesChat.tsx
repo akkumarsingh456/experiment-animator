@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {useServerFn} from '@tanstack/react-start';
 import {draftMissingTopicPoints} from '@/lib/missing-topic-ai.functions';
+import {getSimpleTopicNotes} from '@/lib/topic-notes.functions';
 import {Button} from './ui/button';
 import {Textarea} from './ui/textarea';
 import {MathText} from './MathText';
@@ -8,50 +9,41 @@ import {MathematicsProse} from './MathematicsProse';
 import {isMathematics} from '@/lib/mathematics-presentation';
 
 type Source={url:string;title:string};
-type Message={id:string;role:'user'|'assistant';text:string;lines?:string[];sources?:Source[];provider?:string};
 type Props={scope:{klass:string;subject:string;chapter:string;topic:string};onExtract:(lines:string[],sources:Source[])=>void};
 
-/** Conversation stays in this recovery popup; only explicit extraction updates a lesson. */
+/** One preview and one extraction action; advanced AI is optional. */
 export function TopicNotesChat({scope,onExtract}:Props){
- const request=useServerFn(draftMissingTopicPoints);
- const [messages,setMessages]=useState<Message[]>([]),[input,setInput]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[imported,setImported]=useState('');
- const sequence=useRef(0),pending=useRef(false),end=useRef<HTMLDivElement>(null);
+ const read=useServerFn(getSimpleTopicNotes),askAI=useServerFn(draftMissingTopicPoints);
+ const [text,setText]=useState(''),[sources,setSources]=useState<Source[]>([]),[label,setLabel]=useState('Teacher notes'),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[request,setRequest]=useState('');
+ const epoch=useRef(0),pending=useRef(false);
  const identity=JSON.stringify(scope);
- useEffect(()=>{sequence.current++;pending.current=false;setBusy(false);setMessages([]);setError('');setInput('');setImported('');return()=>{sequence.current++;};},[identity]);
- useEffect(()=>{end.current?.scrollIntoView({block:'nearest',behavior:'smooth'});},[messages,busy]);
- async function send(value:string){
-  const text=value.trim();if(text.length<3||pending.current)return;
-  pending.current=true;setBusy(true);setError('');setInput('');
-  const turn=++sequence.current;
-  const history=messages.slice(-8).map(message=>({role:message.role,text:message.text.slice(0,16000)}));
-  setMessages(current=>[...current,{id:crypto.randomUUID(),role:'user',text}]);
+ useEffect(()=>{epoch.current++;pending.current=false;setText('');setSources([]);setLabel('Teacher notes');setBusy(false);setNotice('');setRequest('');return()=>{epoch.current++;};},[identity]);
+ const lines=text.split(/\n+/).map(line=>line.trim().replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '')).filter(Boolean);
+ const valid=lines.length>0&&lines.length<=500&&lines.every(line=>line.length<=1800);
+ async function load(ai=false){
+  if(pending.current)return;
+  pending.current=true;setBusy(true);setNotice('');const turn=++epoch.current;
   try{
-   const response=await request({data:{...scope,recoveryOnly:true,request:text,history}});
-   if(turn!==sequence.current)return;
-   setMessages(current=>[...current,{id:crypto.randomUUID(),role:'assistant',text:response.lines.join('\n'),lines:response.lines,sources:response.sources,provider:response.provider}]);
-  }catch(reason){if(turn===sequence.current){setError(reason instanceof Error?reason.message:'The assistant could not respond. Retry your message.');setInput(text);}}
-  finally{if(turn===sequence.current){pending.current=false;setBusy(false);}}
+   const result=ai?await askAI({data:{...scope,recoveryOnly:true,request:request.trim()||`Explain ${scope.topic} in clear teaching points`,history:[]}}):await read({data:scope});
+   if(turn!==epoch.current)return;
+   setText(result.lines.join('\n'));setSources(result.sources);
+   setLabel('label' in result?result.label:`${result.provider} supplementary notes`);
+  }catch(reason){if(turn===epoch.current)setNotice(reason instanceof Error?reason.message:'Could not load notes. Paste your notes below and extract them.');}
+  finally{if(turn===epoch.current){pending.current=false;setBusy(false);}}
  }
- return <section aria-label="Topic notes AI chat" className="space-y-4">
-  <p className="text-sm text-slate-600">Ask for explanations, important points or a more detailed version of <strong>{scope.topic}</strong>. Review the reply, then extract it into this topic. Existing NCERT topics are preserved.</p>
-  <div role="log" aria-label="Topic conversation" aria-live="polite" aria-busy={busy} className="max-h-[45dvh] min-h-40 space-y-5 overflow-y-auto border-y py-4">
-   {!messages.length&&<div><p className="font-semibold">What notes would you like to prepare?</p><p className="mt-1 text-sm">Replies appear here as numbered, source-supported teaching points.</p></div>}
-   {messages.map(message=><article key={message.id} className={message.role==='user'?'ml-6 border-l-2 border-slate-300 pl-3':'space-y-3'}>
-    <h3 className="text-sm font-bold text-sky-900">{message.role==='user'?'You':`${message.provider||'AI topic assistant'} · ${scope.topic}`}</h3>
-    {message.lines?<><p className="text-xs text-slate-600">Supplementary AI notes · supported by official evidence · review before teaching</p><ol className="list-decimal space-y-3 pl-6">{message.lines.map((line,index)=><li key={index} className="leading-relaxed">{isMathematics(scope.subject)?<MathematicsProse text={line}/>:<MathText subject={scope.subject} text={line}/>}</li>)}</ol>
-     <div className="flex flex-wrap gap-2">{message.sources?.map(source=><a key={source.url} className="text-xs text-sky-800 underline" href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a>)}</div>
-     <Button disabled={busy} onClick={()=>{onExtract(message.lines!,message.sources||[]);setImported(message.id);}}>{imported===message.id?'Extracted · update these notes':'Extract notes'}</Button>
-    </>:<p className="whitespace-pre-wrap break-words">{message.text}</p>}
-   </article>)}
-   {busy&&<p role="status" className="text-sm font-semibold text-sky-900">Preparing topic notes from official evidence…</p>}<div ref={end}/>
-  </div>
-  <div className="flex flex-wrap gap-2">{[`Explain ${scope.topic} in clear teaching points`,`Give detailed notes on ${scope.topic} with definitions and conditions`,`Explain a source example of ${scope.topic} step by step`].map(prompt=><Button key={prompt} className="h-auto whitespace-normal text-left" size="sm" variant="outline" disabled={busy} onClick={()=>void send(prompt)}>{prompt}</Button>)}</div>
-  <form className="space-y-2" onSubmit={event=>{event.preventDefault();void send(input);}}>
-   <label htmlFor="topic-chat-request" className="block text-sm font-semibold">Ask about {scope.topic}</label>
-   <Textarea id="topic-chat-request" rows={3} maxLength={2000} disabled={busy} value={input} onChange={event=>setInput(event.target.value)} placeholder={`Ask for point-wise notes or a supported example of ${scope.topic}…`}/>
-   <Button type="submit" disabled={busy||input.trim().length<3}>{busy?'Writing…':'Send message'}</Button>
-  </form>
-  {error&&<p role="alert" className="text-sm text-red-800">{error}</p>}
-  {!!imported&&<p role="status" className="text-sm text-emerald-800">Notes added to the current topic. Continuation slides are created automatically as needed. The popup stays open for follow-up questions.</p>}
+ return <section aria-label={`Extract notes for ${scope.topic}`} className="space-y-4">
+  <p className="text-sm">Get notes for <strong>{scope.topic}</strong>, review the text, then click <strong>Extract notes</strong>. You can also paste text from another AI chat or your own notes.</p>
+  <Button disabled={busy} onClick={()=>void load()}>{busy?'Getting notes…':`Get topic notes`}</Button>
+  <label htmlFor="simple-topic-notes" className="block font-semibold">{scope.topic} · notes to extract</label>
+  <Textarea id="simple-topic-notes" rows={10} maxLength={200000} value={text} disabled={busy} onChange={event=>{setText(event.target.value);setLabel('Edited teacher notes');setNotice('');}} placeholder="Notes appear here. Or paste notes here, with one point per line."/>
+  {!!lines.length&&<>
+   <p className="text-xs text-slate-600">{label} · {lines.length} points</p>
+   <details><summary className="cursor-pointer text-sm font-semibold">Preview formatted points</summary><ol className="mt-3 list-decimal space-y-3 pl-6">{lines.map((line,index)=><li key={index}>{isMathematics(scope.subject)?<MathematicsProse text={line}/>:<MathText subject={scope.subject} text={line}/>}</li>)}</ol></details>
+   {sources.map(source=><a key={source.url} className="block text-xs text-sky-800 underline" href={source.url} target="_blank" rel="noopener noreferrer">Reference: {source.title}</a>)}
+  </>}
+  <Button disabled={busy||!valid} onClick={()=>{onExtract(lines,sources);setNotice('Notes extracted into this topic. Extra slides are created automatically when needed.');}}>Extract notes</Button>
+  {!!lines.length&&!valid&&<p role="alert" className="text-sm text-amber-800">Use up to 500 points, each under 1,800 characters. Split long paragraphs onto separate lines.</p>}
+  {notice&&<p role="status" className="text-sm text-sky-900">{notice}</p>}
+  <details><summary className="cursor-pointer text-sm text-slate-600">Optional: ask the connected AI</summary><label htmlFor="simple-topic-request" className="my-2 block text-sm">What would you like to explain about {scope.topic}?</label><Textarea id="simple-topic-request" rows={2} maxLength={2000} disabled={busy} value={request} onChange={event=>setRequest(event.target.value)} placeholder={`Explain ${scope.topic} in detail…`}/><Button className="mt-2" variant="outline" disabled={busy} onClick={()=>void load(true)}>Ask AI</Button><p className="mt-2 text-xs text-slate-600">Needs a configured AI API key. Get topic notes and paste/extract do not need an AI key.</p></details>
  </section>;
 }

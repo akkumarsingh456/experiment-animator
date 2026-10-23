@@ -15,6 +15,7 @@ import {
   attentionSourceBindings,
 } from "./attention-source-read.server";
 import { recoverTopicFromSources } from "./topic-source-recovery";
+import {reviewedSolutionsNotes} from './reviewed-solutions-notes';
 function canonical(scope: z.infer<typeof topicNotesScope>) {
   const match = canonicalOfficialRecoveryTopic(scope);
   if (!match)
@@ -92,6 +93,18 @@ export const searchMissingTopic = createServerFn({ method: "POST" })
 export const readMissingTopicNotes = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => topicNotesScope.parse(input))
   .handler(async ({ data }) => loadTopicNotes(canonical(data)));
+/** Simple source reader: no AI key, conversation or generated facts required. */
+export const getSimpleTopicNotes=createServerFn({method:'POST'})
+ .inputValidator((input:unknown)=>topicNotesScope.parse(input))
+ .handler(async({data})=>{
+  const scope=canonical(data);
+  const reviewed=reviewedSolutionsNotes(scope);if(reviewed)return reviewed;
+  const sources=await readAttentionSources(scope);
+  const choices=sources.map(source=>({source,recovered:recoverTopicFromSources(scope.topic,[source.text])})).filter(item=>item.recovered.lines.length).sort((a,b)=>Number(b.recovered.complete)-Number(a.recovered.complete)||b.recovered.lines.length-a.recovered.lines.length);
+  const best=choices[0];
+  if(!best)throw new Error('Online notes are unavailable right now. Paste your notes below, then click Extract notes.');
+  return {lines:best.recovered.lines,sources:[{url:best.source.url,title:best.source.title}],label:best.recovered.complete?'Official source text · review before extracting':'Partial official source text · review and complete before extracting'};
+ });
 export const saveMissingTopicNotes = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     topicNotesScope
