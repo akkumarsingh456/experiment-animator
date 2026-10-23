@@ -1,7 +1,8 @@
 import {TopicNotesChat} from "./TopicNotesChat";
+import {AddedTopicNotes} from './AddedTopicNotes';
 import {FilePlus2} from 'lucide-react';
 import {slideNotesRequest} from '@/lib/slide-notes-request';
-import {importedTopicDraft,importMissingTopicNotes} from "@/lib/missing-topic-import";
+import {importedTopicDraft,importMissingTopicNotes,addedTopicLines} from "@/lib/missing-topic-import";
 import { TopicTextPreview } from "@/components/TopicTextPreview";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useRef, useState } from "react";
@@ -67,10 +68,10 @@ export function MissingTopicNotes({
     try {
       setText(localStorage.getItem(draftKey) || "");
     } catch {}
-    importedRef.current = false;
+    importedRef.current = !!slide.teacher_supplement;
     try {
       const draft=importedTopicDraft.safeParse(JSON.parse(localStorage.getItem(importKey)||"null"));
-      if(draft.success){importedRef.current=true;onSaved(importMissingTopicNotes(slide,draft.data.lines,draft.data.sources[0]?.url));}
+      if(draft.success&&!slide.teacher_supplement){importedRef.current=true;onSaved(importMissingTopicNotes(slide,draft.data.lines,draft.data.sources[0]?.url));}
     } catch {}
     let current = true;
     if(!slide.topic_recovery)return ()=>{current=false;};
@@ -198,8 +199,18 @@ export function MissingTopicNotes({
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-5">
+              <AddedTopicNotes subject={subject} lines={addedTopicLines(slide)} onChange={lines=>{
+                importedRef.current=true;
+                const sourceUrl=slide.teacher_supplement?.sourceUrl||slide.topic_recovery?.sourceUrl||'';
+                const sources=sourceUrl?[{url:sourceUrl,title:'Supplementary notes reference'}]:[];
+                onSaved(importMissingTopicNotes(slide,lines,sourceUrl));
+                edit(lines.join('\n'));
+                try{const value=JSON.stringify({lines,sources});localStorage.setItem(importKey,value);if(localStorage.getItem(importKey)!==value)throw new Error('Save not confirmed');setNotice('Added notes updated and saved on this device.');}
+                catch{setNotice('Notes updated in the open lesson, but device saving failed. Keep this lesson open.');}
+                onExtracted?.();
+              }}/>
               <TopicNotesChat scope={scope} preset={slideNotesRequest(slide,{klass,subject,chapter},pageHeadings)} onExtract={(lines,sources)=>{
-                lines=[...new Set([...(slide.teacher_supplement?.lines||[]),...lines])];
+                lines=[...new Set([...addedTopicLines(slide),...lines])];
                 if(lines.length>500){setNotice('This slide already has many added points. Use Add blank slide for the next set; existing notes are preserved.');return false;}
                 importedRef.current=true;
                 const updated=importMissingTopicNotes(slide,lines,sources[0]?.url);

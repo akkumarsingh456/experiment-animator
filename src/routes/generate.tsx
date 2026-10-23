@@ -341,6 +341,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
   const slides=useMemo(()=>withNextClassPlan(blankStore.slides,planSlide),[blankStore.slides,planSlide]);
   const setSlides=(action:Parameters<typeof blankStore.setSlides>[0])=>blankStore.setSlides(current=>withoutNextClassPlan(typeof action==='function'?action(current):action));
   function renderNextClassEditor(forceOpen=false){return nextPlan.lessonId&&nextPlan.owner&&!nextPlan.loading&&!nextPlan.error?<TeacherPlanEditor key={JSON.stringify([nextPlan.owner,nextPlan.lessonId])} lessonId={nextPlan.lessonId} ownerEmail={nextPlan.owner} record={nextPlan.record} value={nextPlan.plan} onDraftChange={nextPlan.change} topicHint={search.subtopics||search.topic} onSaved={nextPlan.saved} forceOpen={forceOpen}/>:null;}
+  const notesEditAnchor=useRef<number|null>(null);
   const [notesSaveRevision,setNotesSaveRevision]=useState(0);
   const [notesCloudStatus,setNotesCloudStatus]=useState("");
   const blankSlideToShow=useRef<string|null>(null);
@@ -364,7 +365,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
     const slide=slides[index];
     if(!slide||slide.visual==='cover'||slide.kind==='mcq'||slide.kind==='break'||slide.teacher_next_class||slide.teacher_pdf)return null;
     const occurrence=slides.slice(0,index).filter(item=>!item.teacher_blank&&item.title===slide.title).length;
-    return <MissingTopicNotes pageHeadings={noteHeadings} saveStatus={`${blankStore.status}${notesCloudStatus?" · "+notesCloudStatus:""}`} iconOnly key={`${slide.title}:${occurrence}`} storageId={`${lessonDeviceKey}:${occurrence}`} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onExtracted={()=>setNotesSaveRevision(value=>value+1)} onSaved={updated=>setSlides(current=>current.map((item,at)=>at===index?{...item,sections:updated.sections,teacher_supplement:updated.teacher_supplement,topic_recovery:updated.topic_recovery,notes_quality:updated.notes_quality,caption:updated.caption}:item))}/>;
+    return <MissingTopicNotes pageHeadings={noteHeadings} saveStatus={`${blankStore.status}${notesCloudStatus?" · "+notesCloudStatus:""}`} iconOnly key={`${slide.title}:${occurrence}`} storageId={`${lessonDeviceKey}:${occurrence}`} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onExtracted={()=>{notesEditAnchor.current=index;setNotesSaveRevision(value=>value+1);}} onSaved={updated=>setSlides(current=>current.map((item,at)=>at===index?{...item,sections:updated.sections,teacher_supplement:updated.teacher_supplement,topic_recovery:updated.topic_recovery,notes_quality:updated.notes_quality,caption:updated.caption}:item))}/>;
   }
   useEffect(()=>{const refresh=()=>setSlides(current=>[...current]);window.addEventListener('manual-visual-saved',refresh);void loadManualVisuals().catch(()=>{});return()=>window.removeEventListener('manual-visual-saved',refresh);},[]);
   const [bookCaptureBusy, setBookCaptureBusy] = useState(false);
@@ -678,6 +679,15 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
   const [layoutChecking,setLayoutChecking]=useState(true);
   const layoutGroups=useMemo(()=>layoutPlan?.key===baselineLayoutKey?layoutPlan.groups:baseOriginalPages.map((_,index)=>[index]),[baselineLayoutKey,layoutPlan]);
   const originalPages=useMemo(()=>materializeLayout(baseOriginalPages,layoutGroups),[baseOriginalPages,layoutGroups]);
+  const anchoredOriginalPage=notesEditAnchor.current!==null&&originalPages[originalPage]?.sourceIndex!==notesEditAnchor.current
+    ? originalPages.reduce((nearest,page,index)=>page.sourceIndex===notesEditAnchor.current&&(nearest<0||Math.abs(index-originalPage)<Math.abs(nearest-originalPage))?index:nearest,-1)
+    : originalPage;
+  const visibleOriginalPage=anchoredOriginalPage<0?originalPage:anchoredOriginalPage;
+  useEffect(()=>{
+    if(notesEditAnchor.current===null)return;
+    notesEditAnchor.current=null;
+    if(visibleOriginalPage!==originalPage)setOriginalPage(visibleOriginalPage);
+  },[originalPages,visibleOriginalPage,originalPage]);
   const displayLayoutKey=useMemo(()=>layoutKey(originalPages),[originalPages]);
   useEffect(()=>{if(!blankSlideToShow.current)return;const page=originalPages.findIndex(slide=>slide.title===blankSlideToShow.current);if(page>=0){setOriginalPage(page);blankSlideToShow.current=null;}},[originalPages]);
 
@@ -860,7 +870,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
                 imageLoading={!!imgLoading[activeIdx]}
                 onRegenImage={() => { setImages((m) => { const n = { ...m }; delete n[activeIdx]; return n; }); ensureImage(activeIdx, { force: true }); }}
                 klass={search.klass} subject={search.subject} chapter={search.chapter || title}
-              /> : <GuidedNotesPresentation renderSlideNotesIcon={renderSlideNotesIcon} renderBookmarkControls={renderTeachingBookmark} renderTopicRecovery={renderTopicRecovery} inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={originalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("slides")} />}
+              /> : <GuidedNotesPresentation renderSlideNotesIcon={renderSlideNotesIcon} renderBookmarkControls={renderTeachingBookmark} renderTopicRecovery={renderTopicRecovery} inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={visibleOriginalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("slides")} />}
             </div>
 
             {((lessonView==="notes"&&guidedDisplay==="page")||editing)&&slides.filter(slide=>slide.topic_recovery).map(slide=><MissingTopicNotes onExtracted={()=>setNotesSaveRevision(value=>value+1)} onAddBlankSlide={()=>addRecoverySlide(slide.title)} key={slide.title} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onSaved={updated=>setSlides(current=>current.map(item=>item.title===slide.title&&item.topic_recovery?{...item,sections:updated.sections,topic_recovery:updated.topic_recovery,notes_quality:updated.notes_quality,teacher_supplement:updated.teacher_supplement,caption:updated.caption}:item))}/>)}
@@ -1053,7 +1063,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
         {exportMode === "slides" ? originalPages.filter(slide=>exportPurpose!=='pdf'||!slide.teacher_next_class||slide.teacher_next_class.includeInPdf).map((slide, index,items) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={items.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} onNotesOverflow={continueOverflowingNotes} staticView /></div>) :
           <GuidedLessonNotes textOnly={exportPurpose === "pdf" || exportMode === "notes"} teacherGuide={exportMode === "notes"} sourceBooks={result.source_books} slides={exportPurpose==='pdf'?nextClassPdfSlides(slides):slides} title={title} klass={String(search.klass || "")} subject={search.subject} includeCover={exportMode === "guided-slides"} />}
       </div>}
-      {presenting && <GuidedNotesPresentation renderSlideNotesIcon={renderSlideNotesIcon} renderBookmarkControls={renderTeachingBookmark} renderTopicRecovery={renderTopicRecovery} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
+      {presenting && <GuidedNotesPresentation renderSlideNotesIcon={renderSlideNotesIcon} renderBookmarkControls={renderTeachingBookmark} renderTopicRecovery={renderTopicRecovery} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? visibleOriginalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
 
     </>
   );
