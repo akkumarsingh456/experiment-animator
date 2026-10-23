@@ -1,7 +1,8 @@
-import { draftMissingTopicPoints } from "@/lib/missing-topic-ai.functions";
+import {TopicNotesChat} from "./TopicNotesChat";
+import {importedTopicDraft,importMissingTopicNotes} from "@/lib/missing-topic-import";
 import { TopicTextPreview } from "@/components/TopicTextPreview";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export function MissingTopicNotes({
 }: Props) {
   const scope = { klass, subject, chapter, topic: slide.title };
   const draftKey = "missing-topic-draft:" + JSON.stringify([klass, subject, chapter, slide.title]);
+  const importKey = "missing-topic-import-v1:" + JSON.stringify([klass, subject, chapter, slide.title]);
   const [open, setOpen] = useState(false),
     [text, setText] = useState(""),
     [url, setUrl] = useState(""),
@@ -44,8 +46,7 @@ export function MissingTopicNotes({
     [results, setResults] = useState<
       Array<{ url: string; title: string; lines: string[]; complete?: boolean }>
     >([]);
-  const [aiPoints, setAiPoints] = useState<string[]>([]);
-  const draftAI = useServerFn(draftMissingTopicPoints);
+  const importedRef = useRef(false);
   const search = useServerFn(searchMissingTopic),
     read = useServerFn(readMissingTopicNotes),
     save = useServerFn(saveMissingTopicNotes);
@@ -54,10 +55,15 @@ export function MissingTopicNotes({
     try {
       setText(localStorage.getItem(draftKey) || "");
     } catch {}
+    importedRef.current = false;
+    try {
+      const draft=importedTopicDraft.safeParse(JSON.parse(localStorage.getItem(importKey)||"null"));
+      if(draft.success){importedRef.current=true;onSaved(importMissingTopicNotes(slide,draft.data.lines,draft.data.sources[0]?.url));}
+    } catch {}
     let current = true;
     void read({ data: scope })
       .then((saved) => {
-        if (current && saved) {
+        if (current && saved && !importedRef.current) {
           if (!localStorage.getItem(draftKey))
             setText(saved.sections.flatMap((section) => section.lines).join("\n"));
           setUrl(saved.sourceUrl);
@@ -98,24 +104,9 @@ export function MissingTopicNotes({
       setBusy(false);
     }
   }
-  async function draftImportantPoints() {
-    setBusy(true);
-    setNotice("Drafting a few important points for this topic…");
-    try {
-      const draft = await draftAI({ data: { ...scope, recoveryOnly: true } });
-      setAiPoints(draft.lines);
-      setNotice("AI supplementary draft ready. Review the points before importing and saving.");
-    } catch (error) {
-      setNotice(
-        error instanceof Error ? error.message : "AI drafting failed. Your notes are unchanged.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
   function changePopup(value: boolean) {
     setOpen(value);
-    if (value) void find();
+
   }
   async function preserve() {
     setBusy(true);
@@ -132,6 +123,7 @@ export function MissingTopicNotes({
       );
       try {
         localStorage.removeItem(draftKey);
+        localStorage.removeItem(importKey);
       } catch {}
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Save failed. Your draft remains here.");
@@ -166,7 +158,7 @@ export function MissingTopicNotes({
         variant="outline"
         onClick={() => changePopup(true)}
       >
-        Teacher notes / Google search
+        AI topic chat / Extract notes
       </Button>
       <Dialog open={open} onOpenChange={changePopup}>
         <DialogPrimitive.Portal
@@ -185,12 +177,24 @@ export function MissingTopicNotes({
               Close
             </DialogPrimitive.Close>
             <DialogHeader>
-              <DialogTitle>Complete this topic</DialogTitle>
+              <DialogTitle>Topic notes assistant</DialogTitle>
               <DialogDescription>
                 Class {klass} · {subject} · {chapter} · {slide.title}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-5">
+              <TopicNotesChat scope={scope} onExtract={(lines,sources)=>{
+                importedRef.current=true;
+                const updated=importMissingTopicNotes(slide,lines,sources[0]?.url);
+                onSaved(updated);
+                edit(lines.join("\n"));
+                setUrl(sources[0]?.url||"");
+                try{localStorage.setItem(importKey,JSON.stringify({lines,sources}));setNotice("Extracted into this lesson and saved on this device. Use Save to my workspace for a private cloud backup, or permanent topic saving below for reuse in future generations.");}
+                catch{setNotice("Extracted into this lesson. Device saving failed; save the lesson to your workspace before leaving.");}
+              }}/>
+              {onAddBlankSlide&&<Button variant="outline" disabled={busy} onClick={onAddBlankSlide}>Add blank slide</Button>}
+              <details><summary className="cursor-pointer font-semibold text-sky-900">Source lookup and manual / permanent saving</summary>
+              <div className="mt-4 space-y-5">
               <div>
                 <h3 className="font-semibold">1. Find matching text</h3>
                 <label className="mt-2 block text-sm" htmlFor="topic-search">
@@ -296,50 +300,6 @@ export function MissingTopicNotes({
                   ))}
                 </div>
               )}
-              {slide.topic_recovery && (
-                <section
-                  className="rounded-lg border p-4"
-                  aria-label="AI supplement for missing topic"
-                >
-                  <h3 className="font-semibold">AI supplementary important points</h3>
-                  <p className="my-2 text-sm text-slate-600">
-                    For this incomplete topic only. Draft a few class-level explanations in original
-                    wording, supported by matching official evidence. These are teacher notes for
-                    review, not end-to-end NCERT extraction.
-                  </p>
-                  <Button variant="outline" disabled={busy} onClick={draftImportantPoints}>
-                    Draft AI important points
-                  </Button>
-                  {onAddBlankSlide && (
-                    <Button
-                      className="ml-2"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => {
-                        onAddBlankSlide();
-                        setOpen(false);
-                      }}
-                    >
-                      Add blank slide
-                    </Button>
-                  )}
-
-                  {!!aiPoints.length && (
-                    <TopicTextPreview
-                      lines={aiPoints}
-                      subject={subject}
-                      disabled={busy}
-                      onImport={(passages) => {
-                        edit(passages.join("\n"));
-                        setUrl("");
-                        setNotice(
-                          "AI points imported as teacher notes. Review them, then use the existing save button.",
-                        );
-                      }}
-                    />
-                  )}
-                </section>
-              )}
               <div>
                 <h3 className="font-semibold">3. Organise and save topic notes</h3>
                 <label htmlFor="teacher-topic-text" className="my-2 block text-sm">
@@ -360,6 +320,7 @@ export function MissingTopicNotes({
                   {busy ? "Working…" : "Save topic notes permanently"}
                 </Button>
               </div>
+              </div></details>
               {notice && (
                 <p role="status" className="rounded-lg bg-slate-100 p-3 text-sm">
                   {notice}

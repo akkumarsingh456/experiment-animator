@@ -355,7 +355,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
     if(blank)return <>{undoControl}<BlankTeacherSlideTools key={blank.teacher_blank!.id} slide={blank} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} saveStatus={blankStore.status} onRetrySave={blankStore.retrySave} onUpdate={lines=>setSlides(current=>current.map(item=>item.teacher_blank?.id===blank.teacher_blank!.id?{...item,bullets:[],notes:[],sections:lines.length?[{heading:'Teacher notes',kind:'bullets' as const,lines}]:[]}:item))} onDelete={()=>blankStore.remove(blank.teacher_blank!.id)}/></>;
 
     const slide=slides.find(item=>item.topic_recovery&&item.title.trim()===topicTitle.trim());
-    return <>{undoControl}{slide?<MissingTopicNotes onAddBlankSlide={()=>addRecoverySlide(slide.title)} compact key={slide.title} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onSaved={updated=>setSlides(current=>current.map(item=>item.title===slide.title&&item.topic_recovery?{...item,sections:updated.sections,topic_recovery:updated.topic_recovery}:item))}/>:null}</>;
+    return <>{undoControl}{slide?<MissingTopicNotes onAddBlankSlide={()=>addRecoverySlide(slide.title)} compact key={slide.title} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onSaved={updated=>setSlides(current=>current.map(item=>item.title===slide.title&&item.topic_recovery?{...item,sections:updated.sections,topic_recovery:updated.topic_recovery,notes_quality:updated.notes_quality,caption:updated.caption}:item))}/>:null}</>;
   }
 
   useEffect(()=>{const refresh=()=>setSlides(current=>[...current]);window.addEventListener('manual-visual-saved',refresh);void loadManualVisuals().catch(()=>{});return()=>window.removeEventListener('manual-visual-saved',refresh);},[]);
@@ -855,7 +855,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
               /> : <GuidedNotesPresentation renderBookmarkControls={renderTeachingBookmark} renderTopicRecovery={renderTopicRecovery} inline mode="slides" presentationSlides={originalPresentationSlides} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={originalPage} onPageChange={setOriginalPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("slides")} />}
             </div>
 
-            {((lessonView==="notes"&&guidedDisplay==="page")||editing)&&slides.filter(slide=>slide.topic_recovery).map(slide=><MissingTopicNotes onAddBlankSlide={()=>addRecoverySlide(slide.title)} key={slide.title} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onSaved={updated=>setSlides(current=>current.map(item=>item.title===slide.title&&item.topic_recovery?{...item,sections:updated.sections,topic_recovery:updated.topic_recovery}:item))}/>)}
+            {((lessonView==="notes"&&guidedDisplay==="page")||editing)&&slides.filter(slide=>slide.topic_recovery).map(slide=><MissingTopicNotes onAddBlankSlide={()=>addRecoverySlide(slide.title)} key={slide.title} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onSaved={updated=>setSlides(current=>current.map(item=>item.title===slide.title&&item.topic_recovery?{...item,sections:updated.sections,topic_recovery:updated.topic_recovery,notes_quality:updated.notes_quality,caption:updated.caption}:item))}/>)}
             <details className="lesson-presentation-checks mt-4 rounded-xl border border-border/60 bg-card/60 print:hidden">
               <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-medium">
                 <span>Lesson checks <span className="ml-2 text-xs font-normal text-muted-foreground">Sources, visuals and figure references</span></span>
@@ -1514,5 +1514,3 @@ function SimPanel({ slide, index, subject, editable }: { slide: Slide; index: nu
     </div>
   );
 }
-
-
