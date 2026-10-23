@@ -1,5 +1,10 @@
 # Shared notes and visual safeguards
 
+## Teacher explanation companion
+
+- Enable `TeacherExplanationGuide` only through the explicit `teacherGuide` flag in the Read guided notes page and notes PDF. Default it off for every presentation and slide/PPTX export. Never write its view state, prompts or reorganised excerpts into Slide sections or generation results.
+- Keep original topic notes intact. Offer quick revision and full lesson guidance; show source passages, verified supplementary teaching support, examples/derivations, formula definitions/conditions, misconceptions, assessment and chapter references separately. Teaching checklists are suggestions, not missing factual answers. Explicitly identify absent examples, definitions and page metadata instead of reconstructing them.
+
 ## Teacher-only CBSE PYQ references
 
 - Render all PYQ cards through the shared reversible presentation layer, including saved banks. Hide only recognised paper/page furniture; retain raw extraction in an expandable source view. Separate subparts and OR visually, preserve computer-code indentation and numeric/multilingual content, and flag missing alternatives, empty terminal labels or unreadable symbols. Never invent missing questions, marks, equations or table cells. OCR should also run for detected replacement/private-use font corruption, not only short native text. Question IDs, source text, private notes and snapshots remain unchanged by presentation cleanup.

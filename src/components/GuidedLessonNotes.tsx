@@ -1,3 +1,4 @@
+import {TeacherExplanationGuide,type GuideBook} from "./TeacherExplanationGuide";
 import { SourceReviewEntry } from "@/components/SourceReviewEntry";
 import {NextClassPlanPage} from './NextClassPlanPage';
 import {orderTopicGroups,topicOrderRank} from "@/lib/topic-lecture-order";
@@ -45,7 +46,7 @@ function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }
   </section>;
 }
 
-export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks = false, includeCover = false }: { slides: Slide[]; title: string; subject?: string; klass?: string; includeBreaks?: boolean; includeCover?: boolean }) {
+export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks = false, includeCover = false, teacherGuide = false, sourceBooks = [] }: { slides: Slide[]; title: string; subject?: string; klass?: string; includeBreaks?: boolean; includeCover?: boolean; teacherGuide?: boolean; sourceBooks?: GuideBook[] }) {
   const nextPlan=slides.find(slide=>slide.teacher_next_class);
   slides=slides.filter(slide=>!slide.teacher_next_class);
   slides = withPhysicsFormulaReference(slides.map(slide=>ncertNotesDisplaySlide(polishChemistryPresentation(readableIndexPresentation(slide),subject||""),subject)).filter(hasMeaningfulSlide), klass || "", subject || "", slides.find(slide => slide.visual === "cover")?.title || title).map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(withPhysicsDimensions(slide.sections, subject || "", slide.title, true), subject || "", title)}));
@@ -82,6 +83,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
         {slide.context_illustration && <figure className="guided-context-illustration"><img src={slide.context_illustration.url} alt={slide.context_illustration.description} /><figcaption>AI context illustration · {slide.context_illustration.provider}. Exact relationships are shown in the labelled diagram and source notes.</figcaption></figure>}
         {!groups.length && <p>No verified source notes are available for this topic. Regenerate the lesson after uploading the relevant textbook pages.</p>}
         {!!groups.length && <><TopicLearningTasks title={slide.title} groups={groups} /><TopicRecap groups={groups} /></>}
+        {teacherGuide && slide.visual!=="cover" && !slide.teacher_blank && <TeacherExplanationGuide slide={slide} groups={groups} subject={subject} klass={klass} chapter={title} books={sourceBooks}/>}
         <footer>{subject} · Class {klass} · Topic {index + 1} of {content.length}</footer>
       </article>;
     })}
@@ -94,3 +96,4 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
     {nextPlan&&<NextClassPlanPage slide={nextPlan} klass={klass} subject={subject}/>}
   </div>;
 }
+
