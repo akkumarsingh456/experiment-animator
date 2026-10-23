@@ -177,7 +177,7 @@ export function MissingTopicNotes({
               Close
             </DialogPrimitive.Close>
             <DialogHeader>
-              <DialogTitle>Topic notes assistant</DialogTitle>
+              <DialogTitle className="pr-14 break-words">{slide.title} · Topic notes assistant</DialogTitle>
               <DialogDescription>
                 Class {klass} · {subject} · {chapter} · {slide.title}
               </DialogDescription>

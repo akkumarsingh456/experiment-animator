@@ -37,7 +37,7 @@ export function TopicNotesChat({scope,onExtract}:Props){
   <div role="log" aria-label="Topic conversation" aria-live="polite" aria-busy={busy} className="max-h-[45dvh] min-h-40 space-y-5 overflow-y-auto border-y py-4">
    {!messages.length&&<div><p className="font-semibold">What notes would you like to prepare?</p><p className="mt-1 text-sm">Replies appear here as numbered, source-supported teaching points.</p></div>}
    {messages.map(message=><article key={message.id} className={message.role==='user'?'ml-6 border-l-2 border-slate-300 pl-3':'space-y-3'}>
-    <h3 className="text-sm font-bold text-sky-900">{message.role==='user'?'You':'AI topic assistant'}</h3>
+    <h3 className="text-sm font-bold text-sky-900">{message.role==='user'?'You':`AI topic assistant · ${scope.topic}`}</h3>
     {message.lines?<><p className="text-xs text-slate-600">Supplementary AI notes · supported by official evidence · review before teaching</p><ol className="list-decimal space-y-3 pl-6">{message.lines.map((line,index)=><li key={index} className="leading-relaxed">{isMathematics(scope.subject)?<MathematicsProse text={line}/>:<MathText subject={scope.subject} text={line}/>}</li>)}</ol>
      <div className="flex flex-wrap gap-2">{message.sources?.map(source=><a key={source.url} className="text-xs text-sky-800 underline" href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a>)}</div>
      <Button disabled={busy} onClick={()=>{onExtract(message.lines!,message.sources||[]);setImported(message.id);}}>{imported===message.id?'Extracted · update these notes':'Extract notes'}</Button>
@@ -45,10 +45,10 @@ export function TopicNotesChat({scope,onExtract}:Props){
    </article>)}
    {busy&&<p role="status" className="text-sm font-semibold text-sky-900">Preparing topic notes from official evidence…</p>}<div ref={end}/>
   </div>
-  <div className="flex flex-wrap gap-2">{['Explain this topic in clear teaching points','Give detailed notes with definitions and conditions','Explain a source example step by step'].map(prompt=><Button key={prompt} size="sm" variant="outline" disabled={busy} onClick={()=>void send(prompt)}>{prompt}</Button>)}</div>
+  <div className="flex flex-wrap gap-2">{[`Explain ${scope.topic} in clear teaching points`,`Give detailed notes on ${scope.topic} with definitions and conditions`,`Explain a source example of ${scope.topic} step by step`].map(prompt=><Button key={prompt} className="h-auto whitespace-normal text-left" size="sm" variant="outline" disabled={busy} onClick={()=>void send(prompt)}>{prompt}</Button>)}</div>
   <form className="space-y-2" onSubmit={event=>{event.preventDefault();void send(input);}}>
-   <label htmlFor="topic-chat-request" className="block text-sm font-semibold">Message the topic assistant</label>
-   <Textarea id="topic-chat-request" rows={3} maxLength={2000} disabled={busy} value={input} onChange={event=>setInput(event.target.value)} placeholder="Ask for point-wise notes, clearer reasoning or a supported example…"/>
+   <label htmlFor="topic-chat-request" className="block text-sm font-semibold">Ask about {scope.topic}</label>
+   <Textarea id="topic-chat-request" rows={3} maxLength={2000} disabled={busy} value={input} onChange={event=>setInput(event.target.value)} placeholder={`Ask for point-wise notes or a supported example of ${scope.topic}…`}/>
    <Button type="submit" disabled={busy||input.trim().length<3}>{busy?'Writing…':'Send message'}</Button>
   </form>
   {error&&<p role="alert" className="text-sm text-red-800">{error}</p>}
