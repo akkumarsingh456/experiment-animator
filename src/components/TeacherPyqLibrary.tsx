@@ -43,7 +43,7 @@ export function TeacherPyqPanel({klass:initialClass='10',subject:initialSubject=
  useEffect(()=>{run.current++;paused.current=true;setBusy(false);setErrors([]);setStatus('');},[klass,subject,email]);
  useEffect(()=>setLimit(40),[klass,subject,chapter,search,year,showUnmapped]);
  const papers=cbsePapers.filter(p=>p.klass===klass&&years.includes(p.year)&&pyqSubjectMatches(p.subject,subject)),displayPapers=papers.filter(p=>year==='all'||p.year===Number(year));
- const subjects=[...new Set([...cbsePapers.filter(p=>p.klass===klass).map(p=>p.subject),...(klass==='9'?['Science','Social Science','Mathematics','Computer Science']:klass==='11'?['Physics','Chemistry','Mathematics','Computer Science']:[]),subject])].sort();
+ const subjects=['9','10'].includes(klass)?['Social Science','Science','Mathematics','Computer Science']:['Physics','Chemistry','Mathematics','Computer Science'];
  const chapters=pyqChapters(klass,subject),relevant=(openedBank?.snapshot.readings||readings).filter(reading=>reading.klass===klass&&sameSubject(reading.subject,subject)&&(openedBank||years.includes(reading.year)));
  const visible=relevant.filter(reading=>year==='all'||reading.year===Number(year)).flatMap(reading=>reading.questions.map(question=>({reading,question}))).filter(({question})=>(!chapter||question.chapter===chapter||showUnmapped&&!question.chapter)&&(!search||`${question.text} ${question.topics.join(' ')}`.toLowerCase().includes(search.toLowerCase())));
  const chapterRank=(name:string)=>{const index=chapters.findIndex(chapter=>chapter.chapter===name);return index<0?Number.MAX_SAFE_INTEGER:index;};
