@@ -390,6 +390,7 @@ export function GuidedNotesPresentation({
             klass={klass}
             subject={subject}
             includeCover
+            textOnly={mode === "notes"}
             includeBreaks={mode === "slides"}
           />
         </div>
@@ -397,3 +398,4 @@ export function GuidedNotesPresentation({
     </div>
   );
 }
+

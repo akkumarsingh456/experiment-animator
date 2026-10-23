@@ -1043,7 +1043,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
 
       {exportMode && <div ref={exportRef} className={`lesson-export-root lesson-export-${exportMode === "notes" ? "notes" : "slides"} ${exportMode === "slides" ? "original-slide-deck" : ""}`} data-presentation-style={exportMode === "slides" ? "lovable" : "guided"} aria-hidden="true">
         {exportMode === "slides" ? originalPages.filter(slide=>exportPurpose!=='pdf'||!slide.teacher_next_class||slide.teacher_next_class.includeInPdf).map((slide, index,items) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={items.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} onNotesOverflow={continueOverflowingNotes} staticView /></div>) :
-          <GuidedLessonNotes teacherGuide={exportMode === "notes"} sourceBooks={result.source_books} slides={exportPurpose==='pdf'?nextClassPdfSlides(slides):slides} title={title} klass={String(search.klass || "")} subject={search.subject} includeCover={exportMode === "guided-slides"} />}
+          <GuidedLessonNotes textOnly={exportPurpose === "pdf" || exportMode === "notes"} teacherGuide={exportMode === "notes"} sourceBooks={result.source_books} slides={exportPurpose==='pdf'?nextClassPdfSlides(slides):slides} title={title} klass={String(search.klass || "")} subject={search.subject} includeCover={exportMode === "guided-slides"} />}
       </div>}
       {presenting && <GuidedNotesPresentation renderBookmarkControls={renderTeachingBookmark} renderTopicRecovery={renderTopicRecovery} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
 
@@ -1514,4 +1514,5 @@ function SimPanel({ slide, index, subject, editable }: { slide: Slide; index: nu
     </div>
   );
 }
+
 

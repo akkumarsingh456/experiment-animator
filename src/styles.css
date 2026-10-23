@@ -249,6 +249,27 @@
 .teacher-guide-enabled .teacher-explanation-guide .teacher-guide-caution h3 { background: #fff7df; border-left-color: #a16b14; }
 .teacher-guide-enabled .teacher-explanation-guide .teacher-guide-check h3 { background: #edf8f2; border-left-color: #20705c; }
 .teacher-guide-enabled .teacher-explanation-guide .teacher-guide-sources h3 { background: #f1f4f6; border-left-color: #647789; }
+/* Plain reading notes: typography carries hierarchy, never enclosing boxes. */
+.guided-text-only .guided-topic,
+.guided-text-only .guided-group,
+.guided-text-only .guided-recap,
+.guided-text-only .guided-learning-tasks,
+.teacher-guide-enabled,
+.teacher-guide-enabled .teacher-explanation-guide,
+.teacher-guide-enabled .teacher-explanation-guide .guided-group,
+.teacher-guide-enabled .teacher-explanation-guide h3,
+.teacher-guide-enabled .guided-planner .guided-group h3,
+.teacher-guide-enabled .guided-teacher-topic .guided-group h3,
+.teacher-guide-enabled .teacher-explanation-guide p:has(> strong:first-child) {
+  background: transparent; border: 0; border-radius: 0; box-shadow: none;
+}
+.teacher-guide-enabled .teacher-explanation-guide h3,
+.teacher-guide-enabled .guided-planner .guided-group h3,
+.teacher-guide-enabled .guided-teacher-topic .guided-group h3,
+.teacher-guide-enabled .teacher-explanation-guide p:has(> strong:first-child) { padding-left: 0; padding-right: 0; }
+.guided-text-only .guided-terms, .guided-text-only .guided-quality-note,
+.guided-text-only .guided-group[data-note-category],
+.guided-text-only .guided-learning-tasks > div { background: transparent; border: 0; box-shadow: none; border-radius: 0; }
 @media(max-width:600px) {
   .teacher-guide-enabled { padding: 18px 16px; }
   .teacher-guide-enabled .teacher-explanation-guide { padding: 16px 0 0; }
