@@ -1,4 +1,5 @@
 import { SourceReviewEntry } from "@/components/SourceReviewEntry";
+import {NextClassPlanPage} from './NextClassPlanPage';
 import {orderTopicGroups,topicOrderRank} from "@/lib/topic-lecture-order";
 import {ncertNotesDisplaySlide} from "@/lib/ncert-display-cleanup";
 import {polishChemistryPresentation} from "@/lib/chemistry-note-presentation";
@@ -45,6 +46,8 @@ function NotesGroup({ group, subject }: { group: GuidedGroup; subject?: string }
 }
 
 export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks = false, includeCover = false }: { slides: Slide[]; title: string; subject?: string; klass?: string; includeBreaks?: boolean; includeCover?: boolean }) {
+  const nextPlan=slides.find(slide=>slide.teacher_next_class);
+  slides=slides.filter(slide=>!slide.teacher_next_class);
   slides = withPhysicsFormulaReference(slides.map(slide=>ncertNotesDisplaySlide(polishChemistryPresentation(readableIndexPresentation(slide),subject||""),subject)).filter(hasMeaningfulSlide), klass || "", subject || "", slides.find(slide => slide.visual === "cover")?.title || title).map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(withPhysicsDimensions(slide.sections, subject || "", slide.title, true), subject || "", title)}));
   const finalRevision=physicalChemistryRevision(slides, klass||"", subject||"", slides.find(slide=>slide.visual==="cover")?.title||title);
   const content = slides.filter((slide) => (slide.kind ?? "content") === "content" || slide.kind === "chapter" || (includeBreaks && slide.kind === "break"));
@@ -88,5 +91,6 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
     {!!questions.length && <article className="guided-topic guided-answer-key"><h2>Answer key</h2><ol>{questions.map((question, i) => <li key={i}><strong>{question.answer}.</strong> <MathText subject={subject} text={question.explanation || question.options.find((option) => option.key === question.answer)?.text || ""} /></li>)}</ol></article>}
     <FormulaMindMap slides={content} />
     {finalRevision&&<article className="guided-topic physical-chemistry-final-revision" data-physical-revision="true"><h2>{finalRevision.title}</h2><p>{finalRevision.caption}</p>{finalRevision.sections?.map((section,index)=><NotesGroup key={index} subject={subject} group={{heading:section.heading,kind:"list",lines:section.lines}}/>)}</article>}
+    {nextPlan&&<NextClassPlanPage slide={nextPlan} klass={klass} subject={subject}/>}
   </div>;
 }

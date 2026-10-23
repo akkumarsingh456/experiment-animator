@@ -707,6 +707,7 @@ export type Slide = {
   /** Additive AI-drafted teaching support, separate from original notes/evidence. */
   teaching_support?: NoteSection[];
   teacher_blank?: {id:string;topic:string};
+  teacher_next_class?: {lessonId:string;chapter:string;includeInPdf:boolean};
   topic_recovery?: {status:"missing"|"teacher"|"official"; sourceUrl?:string};
   source_recovery?: {attempts:number;kind:"uploaded-ncert"|"official-ncert-mirror"|"official-online-supplement";url?:string;sources?:Array<{url:string;title:string;sourceClass:string}>};
   teacher_pdf?: {path:string;page:number;file_name:string};

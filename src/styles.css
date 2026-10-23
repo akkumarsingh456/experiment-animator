@@ -450,6 +450,9 @@
 .mathematics-matrix-structure small { margin: 18px 0 0; }
 .mathematics-source-review { padding: 10px 12px; border: 1px solid #dacdaf; border-radius: 8px; background: #fffaf0; text-indent: 0; }
 .mathematics-source-review summary { cursor: pointer; font-weight: 600; }
+.next-class-plan-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.next-class-plan-canvas .next-class-plan-page { margin: 0; max-width: none; padding: 22px 28px; }
+@media(max-width:640px) { .next-class-plan-grid { grid-template-columns: minmax(0,1fr); } }
 .mathematics-source-review p { font-size: .85em; line-height: 1.6; white-space: normal; overflow-wrap: anywhere; margin-top: 10px; }
 .mathematics-prose { margin-bottom: 12px; }
 .lesson-export-root .mathematics-source-review > details { display: none; }

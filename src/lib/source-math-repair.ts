@@ -25,6 +25,7 @@ export function repairSourceMathLine(line: string): string {
 }
 
 export function repairSourceMathSlide(slide: Slide): Slide {
+  if(slide.teacher_next_class)return slide;
   slide={...slide,sections:contextualizeSourceDefinitions(slide.sections,slide.grounding||slide.chapter_text||'')};
   slide = layoutChemistrySlide(slide);
   const notices=["These original entries contain damaged extraction or exercise options whose answer has not been established.","They are retained for comparison with the textbook, not presented as verified formulas or facts."];

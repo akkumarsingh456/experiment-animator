@@ -46,7 +46,7 @@ export function cleanNcertDisplayText(raw: string, sectionHeading = ""): string 
 /** Shared presentation boundary for slides, concept maps and recap views. */
 export function ncertNotesDisplaySlide(slide: Slide, subject?: string): Slide {
   slide = withTopicTeachingSupport(slide);
-  if (slide.teacher_pdf || slide.kind === "mcq" || !/^(?:Science|Physics|Chemistry|Mathematics|Social Science|Computer Science)$/i.test(subject || "")) return slide;
+  if (slide.teacher_next_class || slide.teacher_pdf || slide.kind === "mcq" || !/^(?:Science|Physics|Chemistry|Mathematics|Social Science|Computer Science)$/i.test(subject || "")) return slide;
   slide={...slide,sections:quarantineExtractionSections(slide.sections)};
   return {
     ...slide,

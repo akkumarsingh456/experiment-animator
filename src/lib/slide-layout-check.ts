@@ -25,6 +25,7 @@ const identity = (page: LayoutPage) => {
   return JSON.stringify(rest);
 };
 const protectedPage = (page: LayoutPage) =>
+  !!page.teacher_next_class ||
   !!page.teacher_pdf ||
   page.kind === "mcq" ||
   page.kind === "break" ||
@@ -126,6 +127,7 @@ export function compactLayoutGroups(pages: LayoutPage[], measured: PageSpace[]):
 export function slideSpace(element: HTMLElement, page: LayoutPage, index: number): PageSpace {
   const content = element.querySelector<HTMLElement>("[data-note-content]");
   const exempt =
+    !!page.teacher_next_class ||
     !!page.teacher_pdf ||
     page.kind === "mcq" ||
     page.kind === "break" ||

@@ -7,6 +7,10 @@ import {useTeachingBookmark} from '@/hooks/use-teaching-bookmark';
 import {TeachingBookmarkControls} from '@/components/TeachingBookmarkControls';
 import type {BookmarkPage} from '@/lib/teaching-bookmark';
 import {TeacherCloudSave} from '@/components/TeacherCloudSave';
+import {TeacherPlanEditor} from '@/components/TeacherPlanEditor';
+import {NextClassPlanCanvas} from '@/components/NextClassPlanCanvas';
+import {useNextClassPlan} from '@/hooks/use-next-class-plan';
+import {nextClassPlanSlide,withNextClassPlan,withoutNextClassPlan,nextClassPdfSlides,NEXT_CLASS_TITLE} from '@/lib/next-class-plan';
 import {loadTeacherLesson} from '@/lib/teacher-workspace.functions';
 import {captureWorkspace,restoreWorkspace} from '@/lib/teacher-workspace-device';
 import {workspaceSnapshotSchema,workspaceActionSchema} from '@/lib/teacher-workspace';
@@ -332,7 +336,11 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
   const blankStore = useSavedBlankSlides(blankBase, lessonDeviceKey);
   const teachingBookmark = useTeachingBookmark(lessonDeviceKey);
   const [resumeTeaching, setResumeTeaching] = useState(false);
-  const {slides, setSlides} = blankStore;
+  const nextPlan=useNextClassPlan(search.workspaceId||'');
+  const planSlide=useMemo(()=>nextClassPlanSlide(nextPlan.plan,{klass:String(search.klass),subject:search.subject,chapter:search.chapter||title},nextPlan.lessonId),[nextPlan.plan,nextPlan.lessonId,search.klass,search.subject,search.chapter,title]);
+  const slides=useMemo(()=>withNextClassPlan(blankStore.slides,planSlide),[blankStore.slides,planSlide]);
+  const setSlides=(action:Parameters<typeof blankStore.setSlides>[0])=>blankStore.setSlides(current=>withoutNextClassPlan(typeof action==='function'?action(current):action));
+  function renderNextClassEditor(forceOpen=false){return nextPlan.lessonId&&nextPlan.owner&&!nextPlan.loading&&!nextPlan.error?<TeacherPlanEditor key={JSON.stringify([nextPlan.owner,nextPlan.lessonId])} lessonId={nextPlan.lessonId} ownerEmail={nextPlan.owner} record={nextPlan.record} value={nextPlan.plan} onDraftChange={nextPlan.change} topicHint={search.subtopics||search.topic} onSaved={nextPlan.saved} forceOpen={forceOpen}/>:null;}
   const blankSlideToShow=useRef<string|null>(null);
   function addRecoverySlide(topicTitle:string){
     const added=addBlankTeacherSlide(slides,topicTitle,blankStore.deleted?[blankStore.deleted.slide.title]:[]);if(added.index<0)return;
@@ -341,6 +349,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
   }
   function undoBlankSlide(){if(blankStore.deleted)blankSlideToShow.current=blankStore.deleted.slide.title;blankStore.undo();}
   function renderTopicRecovery(topicTitle:string){
+    if(topicTitle===NEXT_CLASS_TITLE&&planSlide)return renderNextClassEditor(true);
     const undoControl=blankStore.deleted?<div className="mx-3 my-1 flex flex-wrap items-center gap-2 rounded-lg border bg-sky-50 p-2 text-sm print:hidden"><span role="status">{blankStore.status}</span><Button size="sm" variant="outline" onClick={undoBlankSlide}>Undo delete · {blankStore.deleted.slide.title}</Button></div>:null;
     const blank=slides.find(item=>item.teacher_blank&&item.title.trim()===topicTitle.trim());
     if(blank)return <>{undoControl}<BlankTeacherSlideTools key={blank.teacher_blank!.id} slide={blank} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} saveStatus={blankStore.status} onRetrySave={blankStore.retrySave} onUpdate={lines=>setSlides(current=>current.map(item=>item.teacher_blank?.id===blank.teacher_blank!.id?{...item,bullets:[],notes:[],sections:lines.length?[{heading:'Teacher notes',kind:'bullets' as const,lines}]:[]}:item))} onDelete={()=>blankStore.remove(blank.teacher_blank!.id)}/></>;
@@ -393,6 +402,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
   const [guidedDisplay, setGuidedDisplay] = useState<"page" | "presentation">("page");
   const closePresentation = useCallback(() => setPresenting(false), []);
   const [exportMode, setExportMode] = useState<"notes" | "slides" | "guided-slides" | null>(null);
+  const [exportPurpose,setExportPurpose]=useState<'pdf'|'pptx'>('pdf');
   const exportRef = useRef<HTMLDivElement>(null);
   const [exportProgress, setExportProgress] = useState("");
   const [readyDownloads, setReadyDownloads] = useState<Record<string, { url: string; filename: string }>>({});
@@ -504,6 +514,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
     if (!force && (images[idx] || imgLoading[idx])) return { hasImage: true, state: imgStatus[idx]?.state ?? "cached" };
     const s = slides[idx];
     if (!s) return { hasImage: false, state: "failed" };
+    if(s.teacher_next_class)return {hasImage:true,state:'cached'};
     setImgLoading((m) => ({ ...m, [idx]: true }));
     setImgStatus((m) => ({ ...m, [idx]: { state: "loading" } }));
     try {
@@ -599,6 +610,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
   // Live progress indicator so the teacher can verify every subject/slide is
   // getting its 2D infographic auto-generated.
   const generatedCount = Object.values(images).filter(Boolean).length;
+  const sourceVisualCount=slides.filter(slide=>!slide.teacher_next_class).length;
   const inFlightCount = Object.values(imgLoading).filter(Boolean).length;
   const cachedCount = Object.values(imgStatus).filter((s) => s.state === "cached").length;
   const freshCount = Object.values(imgStatus).filter((s) => s.state === "fresh").length;
@@ -640,7 +652,8 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
   }, []);
 
   // Retain Lovable's notes-and-illustration layout independently of guided worksheets.
-  const baseOriginalPages = useMemo(() => withPhysicalChemistryRevision(slides, String(search.klass||""), search.subject||"", search.chapter||title).flatMap((originalSlide, sourceIndex) => {
+  const baseOriginalPages = useMemo(() => [...withPhysicalChemistryRevision(withoutNextClassPlan(slides), String(search.klass||""), search.subject||"", search.chapter||title),...slides.filter(slide=>slide.teacher_next_class)].flatMap((originalSlide, sourceIndex) => {
+    if(originalSlide.teacher_next_class)return [{...originalSlide,sourceIndex}];
     const visualSlot=originalSlide.teacher_blank?`teacher-blank:${originalSlide.teacher_blank.id}`:`topic-slide:${slides.slice(0,sourceIndex).filter(item=>item.title.trim().toLowerCase()===originalSlide.title.trim().toLowerCase()).length}`;
     const slide=ncertNotesDisplaySlide(polishChemistryPresentation(readableIndexPresentation(originalSlide), search.subject||""),search.subject);
     if (!hasMeaningfulSlide(slide)) return [];
@@ -666,22 +679,23 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
   }));
   const handledWorkspaceAction=useRef('');
   useEffect(()=>{
-    if(!search.workspaceId||search.workspaceAction==='open'||!originalPages.length)return;
+    if(!search.workspaceId||search.workspaceAction==='open'||!originalPages.length||nextPlan.loading||nextPlan.error)return;
     const key=`${search.workspaceId}:${search.workspaceAction}`;
     if(handledWorkspaceAction.current===key)return;
     handledWorkspaceAction.current=key;
     const url=new URL(window.location.href);url.searchParams.delete('workspaceAction');window.history.replaceState(window.history.state,'',`${url.pathname}${url.search}${url.hash}`);
     if(search.workspaceAction==='present'){setLessonView('slides');setPresenting(true);}
     else void downloadPDF('notes');
-  },[search.workspaceId,search.workspaceAction,originalPages.length]);
+  },[search.workspaceId,search.workspaceAction,originalPages.length,nextPlan.loading,nextPlan.error]);
 
   async function downloadPDF(mode: "notes" | "slides" | "guided-slides" = lessonView) {
+    if(nextPlan.loading||nextPlan.error){toast.info(nextPlan.error||'Loading the private next class plan. Please wait before downloading.');return;}
     if(mode==="slides"&&layoutChecking){toast.info("The free layout check is still running. Please wait for verification before downloading.");return;}
     await loadManualVisuals().catch(()=>{});
     if (exportMode) return;
     const cached = downloadCache.current.get(`pdf-${mode}`);
     if (cached?.slides === slides && cached.layoutKey===displayLayoutKey) { setReadyDownload(`pdf-${mode}`, cached); savePreparedFile(cached); return; }
-    setExportMode(mode);
+    setExportPurpose('pdf');setExportMode(mode);
     setExportProgress("Preparing PDF...");
     let exportCopy: HTMLElement | undefined;
     try {
@@ -708,6 +722,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
   }
 
   async function downloadPPTX(mode: "guided-slides" | "slides") {
+    if(nextPlan.loading||nextPlan.error){toast.info(nextPlan.error||'Loading your next class plan. Please wait.');return;}
     if(mode==="slides"&&layoutChecking){toast.info("The free layout check is still running. Please wait for verification before downloading.");return;}
     await loadManualVisuals().catch(()=>{});
     if (exportMode) return;
@@ -715,7 +730,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
     const cached = downloadCache.current.get(key);
     if (cached?.slides === slides && cached.layoutKey===displayLayoutKey) { setReadyDownload(key, cached); savePreparedFile(cached); return; }
     setExportProgress("Preparing PowerPoint...");
-    setExportMode(mode);
+    setExportPurpose('pptx');setExportMode(mode);
     let exportCopy: HTMLElement | undefined;
     try {
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
@@ -745,8 +760,10 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
         {teachingBookmark.status&&<span role="status" className="text-sm">{teachingBookmark.status}</span>}
       </div>
       {(slides.some(slide=>slide.teacher_blank)||blankStore.deleted||blankStore.status.startsWith('Saving failed'))&&<div className="my-3 flex flex-wrap items-center gap-3 rounded-lg border bg-sky-50 p-3 text-sm print:hidden" aria-label="Added slide saving"><span role="status">{blankStore.status}</span>{blankStore.status.startsWith('Saving failed')&&<Button size="sm" variant="outline" onClick={blankStore.retrySave}>Retry saving</Button>}{blankStore.deleted&&<Button size="sm" variant="outline" onClick={undoBlankSlide}>Undo delete · {blankStore.deleted.slide.title}</Button>}</div>}
-      <TeacherCloudSave initialId={search.workspaceId||undefined} preparedLesson={search.workspaceId?undefined:result} preparedScope={{klass:String(search.klass),subject:search.subject,chapter:search.chapter,topic:search.topic,subtopics:search.subtopics,mode:search.mode}} preparedOwnerEmail={preparedOwnerEmail} getSnapshot={()=>captureWorkspace({klass:String(search.klass),subject:search.subject,chapter:search.chapter,topic:search.topic,subtopics:search.subtopics,mode:search.mode},result,slides,blankStore.deleted,teachingBookmark.bookmark)}/>
-      {/^(?:Science|Physics|Chemistry|Mathematics|Social Science|Computer Science)$/.test(search.subject||"") && <NotesContentCheck slides={slides} klass={String(search.klass||"")} subject={search.subject||""} chapter={search.chapter||title} />}
+      <TeacherCloudSave onLessonSaved={nextPlan.setLessonId} initialId={search.workspaceId||undefined} preparedLesson={search.workspaceId?undefined:result} preparedScope={{klass:String(search.klass),subject:search.subject,chapter:search.chapter,topic:search.topic,subtopics:search.subtopics,mode:search.mode}} preparedOwnerEmail={preparedOwnerEmail} getSnapshot={()=>captureWorkspace({klass:String(search.klass),subject:search.subject,chapter:search.chapter,topic:search.topic,subtopics:search.subtopics,mode:search.mode},result,slides,blankStore.deleted,teachingBookmark.bookmark,nextPlan.lessonId)}/>
+      <section className="my-3 rounded-xl border bg-sky-50/60 p-4 print:hidden" aria-label="Next Class Plan"><h3 className="font-semibold text-sky-900">Next Class Plan · optional final slide</h3>{nextPlan.loading?<p role="status" className="mt-2 text-sm">Loading your private teaching plan…</p>:nextPlan.error?<div className="mt-2 text-sm" role="alert">{nextPlan.error}<Button size="sm" variant="outline" onClick={nextPlan.retry}>Retry plan loading</Button></div>:nextPlan.lessonId&&nextPlan.owner?renderNextClassEditor():<p className="mt-2 text-sm">Save this lecture to My teaching workspace above to add a private next class plan. Reading and presenting existing notes remain available.</p>}<p className="mt-2 text-xs text-slate-600">Write the plan once in Plan my teaching. Device drafts are automatic; Save teaching plan confirms the private cloud copy. Use Save to my workspace to back up imported plan images.</p></section>
+      {planSlide&&<Button className="mb-3 print:hidden" size="sm" variant="outline" onClick={()=>{setLessonView('slides');setOriginalPage(originalPages.length-1);}}>View final plan slide</Button>}
+      {/^(?:Science|Physics|Chemistry|Mathematics|Social Science|Computer Science)$/.test(search.subject||"") && <NotesContentCheck slides={withoutNextClassPlan(slides)} klass={String(search.klass||"")} subject={search.subject||""} chapter={search.chapter||title} />}
       {/* Step 1 — Activity verification (skipped for language chapters) */}
       {!skipVerify && lessonView === "slides" && (
         <ActivityVerification
@@ -848,8 +865,8 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
             {/* Live auto-gen status — proves the 2D pipeline is running for
                 every subject and every slide, not just Physics. */}
             <div className="mb-3 flex flex-wrap items-center gap-2 text-xs print:hidden">
-              <Badge variant="outline" className={`rounded-full ${generatedCount === slides.length ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" : "bg-primary/10 text-primary border-primary/30"}`}>
-                2D infographics: {generatedCount}/{slides.length} ready
+              <Badge variant="outline" className={`rounded-full ${generatedCount === sourceVisualCount ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" : "bg-primary/10 text-primary border-primary/30"}`}>
+                2D infographics: {generatedCount}/{sourceVisualCount} ready
                 {inFlightCount > 0 ? ` · ${inFlightCount} drawing…` : ""}
               </Badge>
               <Badge variant="outline" className="rounded-full bg-sky-500/10 text-sky-700 border-sky-500/30">Cached: {cachedCount}</Badge>
@@ -894,6 +911,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
                   </thead>
                   <tbody>
                     {slides.map((sl, i) => {
+                      if(sl.teacher_next_class)return null;
                       const st = imgStatus[i]?.state ?? (imgLoading[i] ? "loading" : "pending");
                       const err = imgStatus[i]?.error;
                       const cls =
@@ -1010,7 +1028,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
 
             </>}
             <div className="hidden print:block">
-              <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} />
+              <GuidedLessonNotes slides={nextClassPdfSlides(slides)} title={title} klass={String(search.klass || "")} subject={search.subject} />
             </div>
             </div>
           </section>
@@ -1024,8 +1042,8 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
       </p>
 
       {exportMode && <div ref={exportRef} className={`lesson-export-root lesson-export-${exportMode === "notes" ? "notes" : "slides"} ${exportMode === "slides" ? "original-slide-deck" : ""}`} data-presentation-style={exportMode === "slides" ? "lovable" : "guided"} aria-hidden="true">
-        {exportMode === "slides" ? originalPages.map((slide, index) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} onNotesOverflow={continueOverflowingNotes} staticView /></div>) :
-          <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} includeCover={exportMode === "guided-slides"} />}
+        {exportMode === "slides" ? originalPages.filter(slide=>exportPurpose!=='pdf'||!slide.teacher_next_class||slide.teacher_next_class.includeInPdf).map((slide, index,items) => <div className="lesson-export-slide original-slide-display" key={index}><SlideCanvas slide={slide} index={index} total={items.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} onNotesOverflow={continueOverflowingNotes} staticView /></div>) :
+          <GuidedLessonNotes slides={exportPurpose==='pdf'?nextClassPdfSlides(slides):slides} title={title} klass={String(search.klass || "")} subject={search.subject} includeCover={exportMode === "guided-slides"} />}
       </div>}
       {presenting && <GuidedNotesPresentation renderBookmarkControls={renderTeachingBookmark} renderTopicRecovery={renderTopicRecovery} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} mode={lessonView} presentationSlides={lessonView === "slides" ? originalPresentationSlides : undefined} pageIndex={lessonView === "slides" ? originalPage : presentationPage} onPageChange={lessonView === "slides" ? setOriginalPage : setPresentationPage} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF(lessonView === "notes" ? "guided-slides" : "slides")} />}
 
@@ -1234,6 +1252,7 @@ function SlideCanvas({
   onNotesOverflow?: (sourceIndex: number, ratio: number, lines: string[]) => void;
 }) {
   if (!slide) return null;
+  if(slide.teacher_next_class)return <NextClassPlanCanvas slide={slide} index={index} total={total} klass={klass} subject={subject}/>;
   const sourceIndex = (slide as Slide & { sourceIndex?: number }).sourceIndex ?? index;
   imageUrl = renderLessonIllustrationDataUrl({ ...slide, keyTerms: slide.key_terms, chapter, subject, slideIndex: sourceIndex });
   const illustrationCaption=lessonIllustrationCaption(slide.title,subject,{...slide,keyTerms:slide.key_terms,chapter});

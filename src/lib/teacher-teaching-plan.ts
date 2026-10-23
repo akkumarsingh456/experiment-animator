@@ -5,6 +5,8 @@ export const teacherTeachingPlanSchema=z.object({
   status:z.enum(['unplanned','planned','teaching','taught','revise']),
   date:z.string().refine(value=>!value||/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value,'Choose a valid teaching date.'),
   nextTopics:z.string().max(2000),notes:z.string().max(4000),
+  nextChapter:z.string().max(500).optional(),continueFrom:z.string().max(1500).optional(),materials:z.string().max(1500).optional(),
+  nextClassSlide:z.enum(['off','visible','hidden']).optional(),includeInPdf:z.boolean().optional(),
 }).strict();
 export type TeacherTeachingPlan=z.infer<typeof teacherTeachingPlanSchema>;
 export const teacherPlanRecordSchema=z.object({lessonId:z.string().uuid(),revision:z.string().uuid(),updatedAt:z.string().datetime(),plan:teacherTeachingPlanSchema}).strict();
@@ -18,7 +20,7 @@ export function filterTeachingLectures(items:WorkspaceMeta[],plans:Record<string
   const words=filters.query.toLowerCase().trim().split(/\s+/).filter(Boolean);
   return items.filter(item=>{
     const plan=plans[item.id]?.plan||emptyTeachingPlan();
-    const haystack=[item.title,item.scope.klass,item.scope.subject,item.scope.chapter,item.scope.topic,item.scope.subtopics,plan.nextTopics,plan.notes].join(' ').toLowerCase();
+    const haystack=[item.title,item.scope.klass,item.scope.subject,item.scope.chapter,item.scope.topic,item.scope.subtopics,plan.nextChapter,plan.nextTopics,plan.continueFrom,plan.materials,plan.notes].join(' ').toLowerCase();
     return (!filters.klass||item.scope.klass===filters.klass)&&(!filters.subject||item.scope.subject===filters.subject)&&(!filters.chapter||item.scope.chapter===filters.chapter)&&(!filters.status||plan.status===filters.status)&&words.every(word=>haystack.includes(word));
   });
 }

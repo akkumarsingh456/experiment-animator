@@ -14,10 +14,10 @@ import {DiagramImagePicker} from './DiagramImagePicker';
 import {ManualImageCropper} from './ManualImageCropper';
 import {ImageVerticalPosition} from './ImageVerticalPosition';
 
-export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoContent,alt,klass='',subject='',chapter='',topic='',slideId='',sharedSlideId,previousSharedSlideId,displaySlideNumber,autoSaveDevice=false}:{storageKey:string;autoUrl:string;autoContent?:ReactNode;alt:string;klass?:string;subject?:string;chapter?:string;topic?:string;slideId?:string;sharedSlideId?:string;previousSharedSlideId?:string;displaySlideNumber?:number;autoSaveDevice?:boolean}){
+export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoContent,alt,klass='',subject='',chapter='',topic='',slideId='',sharedSlideId,previousSharedSlideId,displaySlideNumber,autoSaveDevice=false,privateOnly=false}:{storageKey:string;autoUrl:string;autoContent?:ReactNode;alt:string;klass?:string;subject?:string;chapter?:string;topic?:string;slideId?:string;sharedSlideId?:string;previousSharedSlideId?:string;displaySlideNumber?:number;autoSaveDevice?:boolean;privateOnly?:boolean}){
  const sharedScope={klass,subject,chapter,topic,slideId:sharedSlideId||slideId},sharedKey=sharedVisualKey(sharedScope);
- const shareAllowed=[klass,subject,chapter,topic,slideId].every(value=>value.trim());
- const storageKey=shareAllowed&&sharedSlideId?`topic-visual:${sharedKey}`:legacyStorageKey;
+ const scoped=[klass,subject,chapter,topic,slideId].every(value=>value.trim()),shareAllowed=scoped&&!privateOnly;
+ const storageKey=scoped&&sharedSlideId?`topic-visual:${sharedKey}`:legacyStorageKey;
  const exactPage=sharedSlideId?.startsWith('page:');
  const [previousVisual,setPreviousVisual]=useState<ManualVisual|null>(null);
  const [visual,setVisual]=useState<ManualVisual|null>(()=>manualVisualCache.get(storageKey)||null);
@@ -38,7 +38,7 @@ export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoCont
  const drag=useRef<{x:number;y:number;left:number;top:number}|null>(null);
  useEffect(()=>{
   let cancelled=false,hadLocal=false;dirty.current=false;setPreviousVisual(null);setPreserve(false);setToolsVisible(!manualVisualCache.has(storageKey));setOpen(false);setVisual(manualVisualCache.get(storageKey)||null);setSharedState(shareAllowed?'loading':'none');
-  const applyShared=()=>{const record=sharedVisualRecords.get(sharedKey);if(record&&!dirty.current&&!hadLocal){setVisual(record.visual);setToolsVisible(false);manualVisualCache.set(storageKey,record.visual);setSharedState('saved');window.dispatchEvent(new Event('manual-visual-saved'));}};
+  const applyShared=()=>{if(!shareAllowed)return;const record=sharedVisualRecords.get(sharedKey);if(record&&!dirty.current&&!hadLocal){setVisual(record.visual);setToolsVisible(false);manualVisualCache.set(storageKey,record.visual);setSharedState('saved');window.dispatchEvent(new Event('manual-visual-saved'));}};
   const changed=(event:Event)=>{if((event as CustomEvent).detail?.key===sharedKey)applyShared();};
   window.addEventListener('shared-topic-visual-saved',changed);
   void(async()=>{
@@ -140,10 +140,10 @@ export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoCont
        <label><input type="checkbox" checked={visual.showAuto} onChange={event=>change({showAuto:event.target.checked})}/> Show automatic diagram</label>
        <div className="col-span-2 rounded border border-blue-200 bg-blue-50 p-2">
          <p className="font-semibold">Preserve this topic image</p>
-         <p className="mt-1">{sharedState==='saved'?'A shared image is saved for this slide. Saving for everyone replaces that shared version.':sharedState==='loading'?'Checking for a shared image…':sharedState==='error'?'Shared images could not be loaded. You can still edit and save on this device.':'Keep the cropped image and its layout after refresh, for everyone viewing this exact slide.'}</p>
+         <p className="mt-1">{privateOnly?'This plan image stays private to this lecture. Device saving is automatic; use Save to my workspace for a private cloud image backup.':sharedState==='saved'?'A shared image is saved for this slide. Saving for everyone replaces that shared version.':sharedState==='loading'?'Checking for a shared image…':sharedState==='error'?'Shared images could not be loaded. You can still edit and save on this device.':'Keep the cropped image and its layout after refresh, for everyone viewing this exact slide.'}</p>
          <p className="mt-1 break-words">Class {klass} · {subject} · {chapter} · {topic} · Slide {displaySlideNumber??Number(slideId)+1}</p>
-         <label className="mt-2 flex items-start gap-2"><input type="checkbox" disabled={!shareAllowed||saving} checked={preserve} onChange={event=>setPreserve(event.target.checked)}/><span>Yes, preserve for everyone. This image belongs to this chapter, topic and slide, and I can share it.</span></label>
-         {!shareAllowed&&<p>Open a slide with complete chapter and topic details to share an image.</p>}
+         {!privateOnly&&<label className="mt-2 flex items-start gap-2"><input type="checkbox" disabled={!shareAllowed||saving} checked={preserve} onChange={event=>setPreserve(event.target.checked)}/><span>Yes, preserve for everyone. This image belongs to this chapter, topic and slide, and I can share it.</span></label>}
+         {!privateOnly&&!shareAllowed&&<p>Open a slide with complete chapter and topic details to share an image.</p>}
        </div>
        <button disabled={saving} onClick={()=>void save()} className="flex items-center gap-1 text-blue-700"><Save size={15}/>{saving?'Saving…':preserve?'Save for everyone':'Save on this device'}</button>
        <button onClick={()=>{dirty.current=true;setPreserve(false);setVisual(null);void saveManualVisual(storageKey,null).then(()=>toast.success('Automatic diagram restored.')).catch(()=>toast.error('Could not remove the saved image.'));}} className="flex items-center gap-1"><RotateCcw size={15}/> Restore automatic</button>

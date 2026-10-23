@@ -4,10 +4,10 @@ import {imageBelongsToWorkspace,workspaceDeviceKey,workspaceLesson,workspaceSnap
 import type {GenerationResult,Slide} from './generate.functions';
 import {teachingBookmarkSchema,type TeachingBookmark} from './teaching-bookmark';
 
-export async function captureWorkspace(scope:WorkspaceScope,result:GenerationResult,slides:Slide[],deleted:SavedBlankPosition|null,bookmark:TeachingBookmark|null){
+export async function captureWorkspace(scope:WorkspaceScope,result:GenerationResult,slides:Slide[],deleted:SavedBlankPosition|null,bookmark:TeachingBookmark|null,planLessonId?:string){
   await loadManualVisuals();
   const titles=new Set(slides.map(slide=>slide.title));
-  return workspaceSnapshotSchema.parse({version:1,scope,lesson:{...result,slides:slides.slice(1)},blanks:captureBlankSlides(slides,deleted),bookmark,images:[...manualVisualCache].filter(([key])=>imageBelongsToWorkspace(key,scope,titles)).map(([key,visual])=>({key,visual}))});
+  return workspaceSnapshotSchema.parse({version:1,scope,planLessonId:planLessonId||undefined,lesson:{...result,slides:slides.slice(1).filter(slide=>!slide.teacher_next_class)},blanks:captureBlankSlides(slides,deleted),bookmark,images:[...manualVisualCache].filter(([key])=>imageBelongsToWorkspace(key,scope,titles,planLessonId)).map(([key,visual])=>({key,visual}))});
 }
 /** Restore a deliberate private backup without replacing existing device images
  * or locally edited blank slides. Never publish restored data for everyone. */
@@ -27,7 +27,7 @@ export async function restoreWorkspace(snapshot:WorkspaceSnapshot){
   }catch{warnings.push('The teaching bookmark could not be restored on this device.');}
   try{
     await loadManualVisuals();const titles=new Set(snapshot.lesson.slides.map(slide=>slide.title));
-    for(const item of snapshot.images)if(!manualVisualCache.has(item.key)&&imageBelongsToWorkspace(item.key,snapshot.scope,titles))await saveManualVisual(item.key,item.visual);
+    for(const item of snapshot.images)if(!manualVisualCache.has(item.key)&&imageBelongsToWorkspace(item.key,snapshot.scope,titles,snapshot.planLessonId))await saveManualVisual(item.key,item.visual);
   }catch{warnings.push('Some private images could not be restored on this device. The cloud backup remains available.');}
   const lesson=workspaceLesson(snapshot);
   return {lesson:{...lesson,slides:restoreBlankSlides(lesson.slides.filter(slide=>!slide.teacher_blank),blanks)},warnings};

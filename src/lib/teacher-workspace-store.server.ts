@@ -168,3 +168,14 @@ export async function savePrivateTeachingPlan(id:string,plan:TeacherTeachingPlan
   if(confirmed.error||!confirmed.data||await confirmed.data.text()!==content)throw new Error('Cloud saving could not be confirmed. Refresh before retrying.');
   return record;
 }
+
+export async function loadPrivateTeachingPlan(id:string){
+ z.string().uuid().parse(id);const {db,user}=await context(),bucket=await privateBucket(db,false);
+ if(!bucket)throw new Error('Your private workspace is unavailable. Refresh and retry.');
+ const lecture=await bucket.download(`${user.id}/index/${id}.json`);
+ if(lecture.error||!lecture.data||workspaceMetaSchema.parse(JSON.parse(await lecture.data.text())).id!==id)throw new Error('This lecture was not found in your private workspace.');
+ const response=await bucket.download(`${user.id}/plans/${id}.json`);
+ if(response.error){if(missing(response.error))return null;throw new Error('Your teaching plan could not be loaded. Retry before presenting or downloading.');}
+ if(!response.data)return null;const record=teacherPlanRecordSchema.parse(JSON.parse(await response.data.text()));
+ if(record.lessonId!==id)throw new Error('The teaching plan identity could not be confirmed.');return record;
+}

@@ -12,6 +12,7 @@ export const loadTeacherLesson=createServerFn({method:'POST'}).inputValidator((r
   const {loadPrivateLesson}=await import('./teacher-workspace-store.server');const loaded=await loadPrivateLesson(data.id);return {snapshotJson:JSON.stringify(loaded.snapshot),meta:loaded.meta,ownerId:loaded.ownerId};
 });
 export const listTeacherTeachingPlans=createServerFn({method:'POST'}).handler(async()=>{const {listPrivateTeachingPlans}=await import('./teacher-workspace-store.server');return listPrivateTeachingPlans();});
+export const loadTeacherTeachingPlan=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({id:z.string().uuid()}).strict().parse(raw)).handler(async({data})=>{const {loadPrivateTeachingPlan}=await import('./teacher-workspace-store.server');return loadPrivateTeachingPlan(data.id);});
 export const saveTeacherTeachingPlan=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({id:z.string().uuid(),plan:teacherTeachingPlanSchema,expectedRevision:z.union([z.string().uuid(),z.literal('')]),expectedEmail:z.string().email().max(320)}).strict().parse(raw)).handler(async({data})=>{
   const {savePrivateTeachingPlan}=await import('./teacher-workspace-store.server');return savePrivateTeachingPlan(data.id,data.plan,data.expectedRevision,data.expectedEmail);
 });
