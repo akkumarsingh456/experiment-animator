@@ -2,6 +2,8 @@
 
 ## Teacher-only CBSE PYQ references
 
+- Render all PYQ cards through the shared reversible presentation layer, including saved banks. Hide only recognised paper/page furniture; retain raw extraction in an expandable source view. Separate subparts and OR visually, preserve computer-code indentation and numeric/multilingual content, and flag missing alternatives, empty terminal labels or unreadable symbols. Never invent missing questions, marks, equations or table cells. OCR should also run for detected replacement/private-use font corruption, not only short native text. Question IDs, source text, private notes and snapshots remain unchanged by presentation cleanup.
+
 - Below extraction, keep Questions, Source papers and Chapter notebook in separate accessible views without unmounting visited content or stopping the reading job. Source-paper browsing shows one year/examination at a time, searchable set rows and independent PDF/text actions. Keep questions grouped in expandable chapters and retain private note state when a group or view is hidden. Reading, saved-bank and extraction logic stay independent of these layout choices.
 
 - Save question bank creates an immutable private cloud snapshot of all matching text questions, source references, selected chapter/topic tags and filter scope, including results beyond the visible card page. Store bodies and listings under the verified teacher's separate question-bank prefixes, confirm writes by reading them back, and keep older snapshots. Enforce class/subject/year/source checks and the 8 MB limit. Lists and opens are owner-scoped and paginated.

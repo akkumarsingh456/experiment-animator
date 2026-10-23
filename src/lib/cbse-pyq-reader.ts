@@ -2,6 +2,7 @@ import {loadPdfjs} from './pdf-extract';
 import {createLocalBookReader} from './local-book-reader';
 import {questionBlocks,suggestQuestionTopics,pyqPdfHref,type PyqReading} from './cbse-pyq-questions';
 import {cbseCheckedAt} from './cbse-pyq';
+import {needsPyqOcr} from './pyq-presentation';
 const key=(url:string,file:string)=>JSON.stringify(['pyq-pdf-v3',cbseCheckedAt,url,file]);
 async function database(){return new Promise<IDBDatabase>((resolve,reject)=>{const request=indexedDB.open('eduplan-pyq-readings',1);request.onupgradeneeded=()=>request.result.createObjectStore('papers');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});}
 export async function savedPyqReadings(){const db=await database();try{return await new Promise<PyqReading[]>((resolve,reject)=>{const request=db.transaction('papers').objectStore('papers').getAll();request.onsuccess=()=>resolve(request.result.filter((r:PyqReading)=>r.questions&&r.readAt&&r.sourceCheckedAt===cbseCheckedAt));request.onerror=()=>reject(request.error);});}finally{db.close();}}
@@ -19,7 +20,7 @@ export async function readPyqPdf(paper:{url:string;klass:string;subject:string;y
      if(cancelled())throw new Error('Reading paused. Completed PDF sets remain saved.');onProgress(`${paper.year} · ${file} · page ${number}/${pdf.numPages}`);
      const page=await pdf.getPage(number),content=await page.getTextContent();
      let text=content.items.map(item=>'str'in item?item.str+(item.hasEOL?'\n':' '):'').join(''),ocr=false;
-     if(text.trim().length<100){ocr=true;const natural=page.getViewport({scale:1}),viewport=page.getViewport({scale:1800/natural.width}),canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+     if(needsPyqOcr(text)){ocr=true;const natural=page.getViewport({scale:1}),viewport=page.getViewport({scale:1800/natural.width}),canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
        try{await page.render({canvas,viewport}).promise;text=await reader.recognize(canvas.toDataURL('image/jpeg',.9));}finally{canvas.width=canvas.height=0;}
      }
      pages.push({page:number,text,ocr});page.cleanup();
