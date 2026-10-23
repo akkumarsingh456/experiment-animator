@@ -29,7 +29,7 @@ export function NotesContentCheck({ slides, klass, subject, chapter }: { slides:
   const review = useMemo(() => reportOpen ? reviewLessonFacts(slides, source?.sources || []) : {claims:[],matched:0,conflicts:0,unreviewed:0,imageOnly:0}, [slides, source, reportOpen]);
   const pending = review.claims.filter(claim => claim.status !== "source-match").sort((a,b) => Number(b.status === "possible-conflict") - Number(a.status === "possible-conflict"));
   return <aside className="print:hidden rounded-lg border p-3 mb-4" aria-label="Notes source and content check" data-report-only="true">
-    <details data-notes-report="true" onToggle={event => setReportOpen(event.currentTarget.open)}><summary className="cursor-pointer font-medium">View notes verification report · view only</summary>
+    <details data-notes-report="true" onToggle={event => setReportOpen(event.currentTarget.open)}><summary className="cursor-pointer font-bold text-blue-800 hover:text-blue-900">View notes verification report · view only</summary>
     <p className="text-sm mt-2">This report does not remove, hide or rewrite any formula, note, PPT slide or lecture-plan content.</p>
     <label className="flex gap-2 items-center font-medium"><input type="checkbox" checked={enabled} onChange={event => setEnabled(event.target.checked)} />Show source comparison · view only · free</label>
     {enabled && <>
