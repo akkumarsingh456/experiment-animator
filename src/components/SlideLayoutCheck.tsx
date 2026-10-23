@@ -133,11 +133,11 @@ export function SlideLayoutCheck({
     overflow = currentResults.filter((item) => item.overflow).length;
   return (
     <section
-      className="my-4 rounded-xl border border-border bg-card p-4 print:hidden"
+      className="my-4 rounded-xl border border-border bg-card p-4 font-bold print:hidden"
       aria-label="Free slide layout check"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <label className="flex items-center gap-2 font-semibold">
+        <label className="flex items-center gap-2 font-bold">
           <input
             type="checkbox"
             checked={enabled}
@@ -170,7 +170,7 @@ export function SlideLayoutCheck({
         </p>
       )}
       {phase === "done" && resultKey === key && briefTopics.length>0 && <details className="mt-2 rounded border border-amber-200 bg-amber-50 p-3 text-sm" open>
-        <summary className="cursor-pointer font-semibold">Topics with little explanatory content ({briefTopics.length})</summary>
+        <summary className="cursor-pointer font-bold">Topics with little explanatory content ({briefTopics.length})</summary>
         <ul className="mt-2 list-disc pl-5">{briefTopics.map(item=><li key={item.page}>Slide {item.page}: {item.title} — review source coverage.</li>)}</ul>
         <p className="mt-2">This is a completeness warning, not proof that the notes are false. Existing content is preserved.</p>
       </details>}
