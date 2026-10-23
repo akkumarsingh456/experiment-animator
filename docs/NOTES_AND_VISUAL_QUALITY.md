@@ -2,6 +2,8 @@
 
 ## Teacher-only CBSE PYQ references
 
+- PYQ subject selection is a searchable keyboard-accessible picker restricted to the available class subjects. Do not accept arbitrary typed subjects or change the fixed subject in a guided lecture. Display extracted questions as text in curriculum chapter order, with separate relevant-syllabus-topic and practice subnotes. Source PDFs remain optional references; never generate a question PDF or mix these questions into lecture exports. Keep unassigned questions out of a selected chapter by default and make review opt-in.
+
 - Workspace organisation uses separate Lectures & plans and CBSE question bank tabs. Keep visited panels mounted when hidden, so changing tabs does not discard filters, private plan drafts or an active local PYQ reading run. The PYQ panel is mounted lazily on its first visit. Layout changes must not alter extraction, saved data, generation, presentations or exports.
 
 - Use `fetchCbsePaper` for every CBSE paper fetch. The deployed edge runtime rejects `redirect: 'error'`; follow redirects manually with a hop limit, validate HTTPS CBSE domains at every hop, preserve Range headers and reject invalid statuses. Do not expose raw platform errors as repeated mobile-length diagnostics; deduplicate paper errors and bound the error list height.
