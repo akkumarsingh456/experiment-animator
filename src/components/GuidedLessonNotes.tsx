@@ -49,6 +49,7 @@ function NotesGroup({ group, subject, teacherGuide=false }: { group: GuidedGroup
 }
 
 export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks = false, includeCover = false, teacherGuide = false, sourceBooks = [], textOnly = teacherGuide }: { slides: Slide[]; title: string; subject?: string; klass?: string; includeBreaks?: boolean; includeCover?: boolean; teacherGuide?: boolean; sourceBooks?: GuideBook[]; textOnly?: boolean }) {
+  const sourceSlides=slides;
   const nextPlan=slides.find(slide=>slide.teacher_next_class);
   slides=slides.filter(slide=>!slide.teacher_next_class);
   slides = withPhysicsFormulaReference(slides.map(slide=>ncertNotesDisplaySlide(polishChemistryPresentation(readableIndexPresentation(slide),subject||""),subject)).filter(hasMeaningfulSlide), klass || "", subject || "", slides.find(slide => slide.visual === "cover")?.title || title).map(omitContentsListings).map(slide => mathematicsPresentationSlide(slide, subject)).map(repairSourceMathSlide).map(slide => ({...slide, sections: sequenceChemistryNotes(withPhysicsDimensions(slide.sections, subject || "", slide.title, true), subject || "", title)}));
@@ -73,7 +74,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
       const groups = orderTopicGroups(topicGroups[index]);
       const firstDetail = groups.findIndex(group => topicOrderRank(group.heading) >= 20);
       const visualAt = firstDetail < 0 ? groups.length : firstDetail;
-      return <article className="guided-topic" key={`${index}:${slide.title}`}>
+      return <article className="guided-topic" data-topic-title={slide.title} data-source-index={sourceSlides.map((item,at)=>({item,at})).filter(({item})=>item.title===slide.title)[content.slice(0,index).filter(item=>item.title===slide.title).length]?.at} key={`${index}:${slide.title}`}>
         <div className="guided-student-line"><span>Name: ____________________</span><span>Date: ____________________</span></div>
         <h2><span className="guided-topic-number">{String(index + 1).padStart(2, "0")}</span>{slide.title}</h2>
         {slide.source_recovery?.url&&<p className="text-sm">{slide.source_recovery.kind==='official-online-supplement'?'Supplementary note sources':'External NCERT mirror · IIT Kanpur SATHEE'}: {(slide.source_recovery.sources?.length?slide.source_recovery.sources:[{url:slide.source_recovery.url,title:slide.source_recovery.url}]).map((source,index)=><span key={source.url}>{index>0?' · ':''}<a href={source.url} className="underline">{source.title}</a></span>)}</p>}

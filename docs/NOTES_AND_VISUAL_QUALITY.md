@@ -318,3 +318,8 @@ Newly completed public preparations can enter the signed-in teacher's private hi
 - Keep device drafts scoped to teacher and lecture; clearly distinguish device drafts from cloud plans. Cloud saving requires the explicit Save teaching plan action. Failed plan loading must not disable lecture access or imply a lecture was taught.
 - Teaching next uses authored dates and the teacher's local calendar. Status is teacher-controlled; reminders are written notes, not scheduled notifications.
 - Workspace quick views combine with class/subject/chapter/search filters; Today excludes taught lectures. Clear filters also resets the quick view. Sorting stays within class/subject groups. Copy teaching plan copies only matching saved plans through the browser clipboard, reports failures, and never edits lecture content.
+
+
+## Teacher-friendly added notes controls
+
+Keep Add notes and Remove added points as explicit choices in the same topic dialog. Preserve Undo when switching choices; do not unmount the manager. Keep original NCERT sections protected and existing autosave/failure indicators. Guided articles carry their unnumbered topic title and original source index through cloned continuation pages, so numbering and repeated titles cannot redirect edits to the wrong topic. Cover, quiz, break, original PDF and next-class-plan pages retain their dedicated controls.

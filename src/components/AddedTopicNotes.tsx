@@ -9,10 +9,11 @@ import {isMathematics} from '@/lib/mathematics-presentation';
 export function AddedTopicNotes({lines,subject,onChange}:{lines:string[];subject:string;onChange:(lines:string[])=>void}){
  const [selected,setSelected]=useState<Set<string>>(()=>new Set()),[undo,setUndo]=useState<string[]>([]),[notice,setNotice]=useState('');
  useEffect(()=>{setSelected(current=>new Set([...current].filter(line=>lines.includes(line))));},[lines]);
- if(!lines.length&&!undo.length)return null;
+
  return <section className="space-y-3 border-t pt-4" aria-label="Manage added notes">
-  <h3 className="font-bold text-sky-950">Manage added notes · {lines.length} points</h3>
-  <p className="text-sm text-slate-600">Select the added AI, online or pasted points you want to remove. Original NCERT notes cannot be selected here.</p>
+  <h3 className="font-bold text-sky-950">Remove added points · {lines.length} points</h3>
+  <p className="text-sm text-slate-600">Tick the points you no longer need, then choose Delete selected. Undo is available while this window stays open. Original NCERT notes cannot be removed here.</p>
+  {!lines.length&&<p role="status" className="text-sm">No added points to remove. Choose Add notes to add teaching points.</p>}
   {!!lines.length&&<>
    <div className="flex flex-wrap items-center gap-2">
     <Button size="sm" variant="outline" onClick={()=>setSelected(new Set(lines))}>Select all added points</Button>

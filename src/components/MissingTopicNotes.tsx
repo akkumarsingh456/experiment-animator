@@ -50,6 +50,7 @@ export function MissingTopicNotes({
   const draftKey = "missing-topic-draft:" + JSON.stringify([klass, subject, chapter, slide.title,...(storageId?[storageId]:[])]);
   const importKey = "missing-topic-import-v1:" + JSON.stringify([klass, subject, chapter, slide.title,...(storageId?[storageId]:[])]);
   const [open, setOpen] = useState(false),
+    [action,setAction] = useState<'add'|'remove'>('add'),
     [text, setText] = useState(""),
     [url, setUrl] = useState(""),
     [query, setQuery] = useState(""),
@@ -169,12 +170,12 @@ export function MissingTopicNotes({
       </p></>}
       <Button
         className={iconOnly ? 'h-9 w-9 p-0' : compact ? "h-8 text-sm" : "mt-3"}
-        title={`Add notes · ${slide.title}`}
-        aria-label={`Add notes to ${slide.title}`}
+        title={`Add or remove notes · ${slide.title}`}
+        aria-label={`Add or remove notes for ${slide.title}`}
         variant="outline"
         onClick={() => changePopup(true)}
       >
-        {iconOnly?<FilePlus2 size={17} aria-hidden="true"/>:'Get / Extract notes'}
+        {iconOnly?<FilePlus2 size={17} aria-hidden="true"/>:'Add or remove notes'}
       </Button>
       <Dialog open={open} onOpenChange={changePopup}>
         <DialogPrimitive.Portal
@@ -193,13 +194,18 @@ export function MissingTopicNotes({
               Close
             </DialogPrimitive.Close>
             <DialogHeader>
-              <DialogTitle className="pr-14 break-words">{slide.title} · Extract notes</DialogTitle>
+              <DialogTitle className="pr-14 break-words">{slide.title} · Teacher notes</DialogTitle>
               <DialogDescription>
                 Class {klass} · {subject} · {chapter} · {slide.title}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-5">
-              <AddedTopicNotes subject={subject} lines={addedTopicLines(slide)} onChange={lines=>{
+              <p className="text-sm text-slate-600">Choose an action. Changes apply to this topic and its continuation slides. Original textbook notes stay safe.</p>
+              <div className="flex flex-wrap gap-2" aria-label="Choose notes action">
+                <Button variant={action==='add'?'default':'outline'} aria-pressed={action==='add'} onClick={()=>setAction('add')}>Add notes</Button>
+                <Button variant={action==='remove'?'default':'outline'} aria-pressed={action==='remove'} onClick={()=>setAction('remove')}>Remove added points ({addedTopicLines(slide).length})</Button>
+              </div>
+              <div hidden={action!=='remove'}><AddedTopicNotes subject={subject} lines={addedTopicLines(slide)} onChange={lines=>{
                 importedRef.current=true;
                 const sourceUrl=slide.teacher_supplement?.sourceUrl||slide.topic_recovery?.sourceUrl||'';
                 const sources=sourceUrl?[{url:sourceUrl,title:'Supplementary notes reference'}]:[];
@@ -209,7 +215,8 @@ export function MissingTopicNotes({
                 catch{setNotice('Notes updated in the open lesson, but device saving failed. Keep this lesson open.');}
                 onExtracted?.();
               }}/>
-              <TopicNotesChat scope={scope} preset={slideNotesRequest(slide,{klass,subject,chapter},pageHeadings)} onExtract={(lines,sources)=>{
+              </div>
+              <div hidden={action!=='add'}><TopicNotesChat scope={scope} preset={slideNotesRequest(slide,{klass,subject,chapter},pageHeadings)} onExtract={(lines,sources)=>{
                 lines=[...new Set([...addedTopicLines(slide),...lines])];
                 if(lines.length>500){setNotice('This slide already has many added points. Use Add blank slide for the next set; existing notes are preserved.');return false;}
                 importedRef.current=true;
@@ -218,12 +225,13 @@ export function MissingTopicNotes({
                 onExtracted?.();
                 edit(lines.join("\n"));
                 setUrl(sources[0]?.url||"");
-                try{const value=JSON.stringify({lines,sources});localStorage.setItem(importKey,value);if(localStorage.getItem(importKey)!==value)throw new Error('Save not confirmed');setNotice("Extracted and saved on this device. Signed-in teachers receive an automatic private workspace backup. Permanent topic saving below is optional and affects reuse in future generations.");}
+                try{const value=JSON.stringify({lines,sources});localStorage.setItem(importKey,value);if(localStorage.getItem(importKey)!==value)throw new Error('Save not confirmed');setNotice("Added to this topic and saved on this device. Extra slides adjust automatically.");}
                 catch{setNotice("Extracted into this lesson. Device saving failed; save the lesson to your workspace before leaving.");}
               }}/>
+              </div>
               {saveStatus&&<p role="status" className="text-xs text-slate-600">{saveStatus}</p>}
               {onAddBlankSlide&&<Button variant="outline" disabled={busy} onClick={onAddBlankSlide}>Add blank slide</Button>}
-              <details><summary className="cursor-pointer font-semibold text-sky-900">Source lookup and manual / permanent saving</summary>
+              <details><summary className="cursor-pointer font-semibold text-sky-900">More options: source links and reusable notes</summary>
               <div className="mt-4 space-y-5">
               <div>
                 <h3 className="font-semibold">1. Find matching text</h3>

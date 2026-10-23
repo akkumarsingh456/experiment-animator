@@ -222,7 +222,7 @@ export function GuidedNotesPresentation({
   }, [inline]);
 
   const pageTitle = (at: number) =>
-    presentationSlides?.[at]?.title || pages[at]?.querySelector("h2")?.textContent || title;
+    presentationSlides?.[at]?.title || pages[at]?.dataset.topicTitle || pages[at]?.querySelector("h2")?.textContent || title;
   const pageSection = (at: number) =>
     presentationSlides?.[at]?.section ||
     pages[at]?.querySelector("h3, .guided-figure-heading strong, summary")?.textContent;
@@ -347,7 +347,7 @@ export function GuidedNotesPresentation({
           <span>Use ← → to move between slides</span>
         </div>
         <div className="presentation-navigation">
-          {renderSlideNotesIcon?.(pageTitle(index),presentationSlides?.[index]?.sourceIndex,presentationSlides?.[index]?.noteHeadings||Array.from(pages[index]?.querySelectorAll('h3')||[]).map(heading=>heading.textContent||''))}
+          {renderSlideNotesIcon?.(pageTitle(index),presentationSlides?.[index]?.sourceIndex ?? (pages[index]?.dataset.sourceIndex !== undefined ? Number(pages[index].dataset.sourceIndex) : undefined),presentationSlides?.[index]?.noteHeadings||Array.from(pages[index]?.querySelectorAll('h3')||[]).map(heading=>heading.textContent||''))}
           <button
             className="presentation-icon-button"
             disabled={!pageCount || !index}

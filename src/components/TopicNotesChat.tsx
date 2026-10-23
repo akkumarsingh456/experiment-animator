@@ -44,20 +44,20 @@ export function TopicNotesChat({scope,onExtract,preset}:Props){
   finally{if(turn===epoch.current){pending.current=false;setBusy(false);}}
  }
  return <section aria-label={`Extract notes for ${scope.topic}`} className="space-y-4">
-  <p className="text-sm">Get notes for <strong>{scope.topic}</strong>, review the text, then click <strong>Extract notes</strong>. You can also paste text from another AI chat or your own notes.</p>
+  <p className="text-sm">Get notes for <strong>{scope.topic}</strong>, review the text, then click <strong>Add to this topic</strong>. You can also paste text from another AI chat or your own notes.</p>
   <Button disabled={busy} onClick={()=>void load()}>{busy?'Getting notes…':`Get topic notes`}</Button>
-  <label htmlFor="simple-topic-notes" className="block font-semibold">{scope.topic} · notes to extract</label>
+  <label htmlFor="simple-topic-notes" className="block font-semibold">Read or edit notes · {scope.topic}</label>
   <Textarea id="simple-topic-notes" rows={10} maxLength={200000} value={text} disabled={busy} onChange={event=>{setText(event.target.value);setLabel('Edited teacher notes');setNotice('');}} placeholder="Notes appear here. Or paste notes here, with one point per line."/>
   {!!lines.length&&<>
    <p className="text-xs text-slate-600">{label} · {lines.length} points</p>
    <details><summary className="cursor-pointer text-sm font-semibold">Preview formatted points</summary><ol className="mt-3 list-decimal space-y-3 pl-6">{lines.map((line,index)=><li key={index}>{isMathematics(scope.subject)?<MathematicsProse text={line}/>:<MathText subject={scope.subject} text={line}/>}</li>)}</ol></details>
    {sources.map(source=><a key={source.url} className="block text-xs text-sky-800 underline" href={source.url} target="_blank" rel="noopener noreferrer">Reference: {source.title}</a>)}
   </>}
-  <Button disabled={busy||!valid} onClick={()=>{if(onExtract(lines,sources)!==false)setNotice('Notes extracted into this topic. Extra slides are created automatically when needed.');}}>Extract notes</Button>
+  <Button disabled={busy||!valid} onClick={()=>{if(onExtract(lines,sources)!==false)setNotice('Notes extracted into this topic. Extra slides are created automatically when needed.');}}>Add to this topic</Button>
   {!!lines.length&&!valid&&<p role="alert" className="text-sm text-amber-800">Use up to 500 points, each under 1,800 characters. Split long paragraphs onto separate lines.</p>}
   {notice&&<p role="status" className="text-sm text-sky-900">{notice}</p>}
   <section className="border-t pt-4" aria-label="Slide-based request">
-   <h3 className="font-semibold text-sky-950">Request for this slide · {preset?.label||'Topic notes'}</h3>
+   <h3 className="font-semibold text-sky-950">Optional: ask for more detail · {preset?.label||'Topic notes'}</h3>
    <p className="my-2 text-sm text-slate-600">Already filled for this slide. Send it as it is, or write your own request.</p>
    <div className="mb-2 flex flex-wrap gap-2">
     <Button size="sm" variant={manual?'outline':'default'} aria-pressed={!manual} disabled={busy} onClick={()=>{setManual(false);setRequest(preset?.request||`Explain ${scope.topic} in clear teaching points`);}}>Autofill from slide</Button>
