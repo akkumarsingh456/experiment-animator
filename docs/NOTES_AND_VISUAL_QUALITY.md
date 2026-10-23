@@ -2,6 +2,8 @@
 
 ## Teacher-only CBSE PYQ references
 
+- Below extraction, keep Questions, Source papers and Chapter notebook in separate accessible views without unmounting visited content or stopping the reading job. Source-paper browsing shows one year/examination at a time, searchable set rows and independent PDF/text actions. Keep questions grouped in expandable chapters and retain private note state when a group or view is hidden. Reading, saved-bank and extraction logic stay independent of these layout choices.
+
 - Save question bank creates an immutable private cloud snapshot of all matching text questions, source references, selected chapter/topic tags and filter scope, including results beyond the visible card page. Store bodies and listings under the verified teacher's separate question-bank prefixes, confirm writes by reading them back, and keep older snapshots. Enforce class/subject/year/source checks and the 8 MB limit. Lists and opens are owner-scoped and paginated.
 - Opening a saved bank uses a separate view, never replacing the complete device reading cache. Teacher edits may be saved as a new bank; existing cloud snapshots remain unchanged. Per-question private notebooks keep their own Save PYQ notes action and stable question IDs. Guided-lecture saved-bank lists stay restricted to the matching class, subject and chapter. No PDF or lecture export is created by saving a bank.
 
