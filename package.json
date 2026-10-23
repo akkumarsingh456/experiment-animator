@@ -65,6 +65,7 @@
     "html-to-image": "^1.11.13",
     "input-otp": "^1.4.2",
     "jspdf": "^4.2.1",
+    "jszip": "^3.10.1",
     "katex": "^0.18.1",
     "lucide-react": "^0.575.0",
     "pdfjs-dist": "^6.0.227",

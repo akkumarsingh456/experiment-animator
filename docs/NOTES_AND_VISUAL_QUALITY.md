@@ -1,5 +1,13 @@
 # Shared notes and visual safeguards
 
+## Teacher-only CBSE PYQ references
+
+- Keep the PYQ library in the teacher workspace and Read guided notes page only. Never merge PYQ excerpts or private PYQ notebooks into GenerationResult, source extraction, lecture slides, PPTX, slide presentation or export roots. The Generate PPT & Notes form and pipeline stay unchanged.
+- `cbse-pyq-catalogue.json` is an official CBSE archive snapshot, not a claim that every subject/year/set exists. Update it with `scripts/update-cbse-pyq.mjs` after saving the current official archive HTML to `outputs/cbse-pyq-source.html`; show its checked date. Catalogue URLs include main and additional examinations and all published sets bundled by CBSE.
+- Guided topic references use the latest five calendar years including the current year in Asia/Kolkata. Workspace archive links also expose older indexed years. Class 9/11 notebooks are available, but school papers must never be labelled CBSE board PYQs or replaced by Class 10/12 papers.
+- Inline PDF search is an explicit authenticated request against an exact catalogue URL/class/subject/year. It scans one selected PDF set at a time, up to 80 pages, and labels keyword matches as page excerpts, not complete verified questions. Keep original filename/year/page/source; no invented questions, answers or OCR/math reconstruction. Large ZIP/PDF files and non-searchable scans require reviewing official downloads. Download links remain public.
+- PYQ notebooks are independent owner-scoped private storage, keyed by normalized class/subject/chapter/topic/year. Confirm account and revision, read back cloud writes, keep local drafts and show cloud errors. Device drafts are not cloud saves. Editing a notebook never changes original lecture content.
+
 Apply these rules whenever changing extraction, retrieval, generation, rendering or exports. They apply to all configured Classes 9–12 subjects; chapter-specific constraints supplement them.
 
 ## Causes addressed

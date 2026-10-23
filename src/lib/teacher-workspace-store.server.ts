@@ -1,8 +1,31 @@
 import { workspaceMetaSchema, workspaceSnapshotSchema, type WorkspaceMeta, type WorkspaceSnapshot } from './teacher-workspace';
 import {z} from 'zod';
 import {teacherPlanRecordSchema,teacherTeachingPlanSchema,type TeacherTeachingPlan,type TeacherPlanRecord} from './teacher-teaching-plan';
+import {pyqKey,pyqNoteSchema,type PyqScope} from './cbse-pyq';
 
 const BUCKET='teacher-private-workspace';
+async function pyqPath(userId:string,scope:PyqScope){
+ const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pyqKey(scope)));
+ return `${userId}/pyq/${Array.from(new Uint8Array(hash),byte=>byte.toString(16).padStart(2,'0')).join('')}.json`;
+}
+export async function loadPrivatePyqNote(scope:PyqScope){
+ const {db,user}=await context(),bucket=await privateBucket(db,false);if(!bucket)return null;
+ const saved=await bucket.download(await pyqPath(user.id,scope));
+ if(saved.error){if(missing(saved.error))return null;throw new Error('PYQ notes could not be loaded. Keep your device draft and retry.');}
+ const record=pyqNoteSchema.parse(JSON.parse(await saved.data.text()));
+ if(pyqKey(record.scope)!==pyqKey(scope))throw new Error('PYQ note scope could not be confirmed.');
+ return record;
+}
+export async function savePrivatePyqNote(data:{scope:PyqScope;text:string;expectedRevision:string;expectedEmail:string}){
+ const {db,user}=await context();if(user.email.toLowerCase()!==data.expectedEmail.toLowerCase())throw new Error('Your account changed. Reopen your PYQ notes before saving.');
+ const bucket=(await privateBucket(db,true))!,path=await pyqPath(user.id,data.scope),previous=await bucket.download(path);
+ let revision='';if(!previous.error)revision=pyqNoteSchema.parse(JSON.parse(await previous.data.text())).revision;else if(!missing(previous.error))throw new Error('The cloud notes could not be checked.');
+ if(revision!==data.expectedRevision)throw new Error('These PYQ notes changed elsewhere. Reopen this topic and review your draft before saving.');
+ const record=pyqNoteSchema.parse({scope:data.scope,text:data.text,revision:crypto.randomUUID(),updatedAt:new Date().toISOString()}),body=JSON.stringify(record);
+ const saved=await bucket.upload(path,new Blob([body],{type:'application/json'}),{upsert:true,contentType:'application/json',cacheControl:'0'});if(saved.error)throw new Error('Cloud saving failed. Your device draft is kept.');
+ const checked=await bucket.download(path);if(checked.error||await checked.data.text()!==body)throw new Error('Cloud saving could not be confirmed. Keep your draft and reload.');
+ return record;
+}
 const missing=(error:{statusCode?:string|number;status?:number;message?:string})=>Number(error.statusCode||error.status)===404||/not found|does not exist/i.test(error.message||'');
 async function context(){
   const {readLibraryIdentity}=await import('./library-access.server');

@@ -1,4 +1,5 @@
 import {BlankTeacherSlideTools} from "@/components/BlankTeacherSlideTools";
+import {TeacherPyqPanel} from '@/components/TeacherPyqPanel';
 import {addBlankTeacherSlide} from "@/lib/blank-teacher-slide";
 import {useSavedBlankSlides} from '@/hooks/use-saved-blank-slides';
 import {blankSlidesKey} from '@/lib/saved-blank-slides';
@@ -814,7 +815,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
                 <Button size="sm" variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("guided-slides")}>Guided presentation PDF</Button>
                 <Button size="sm" variant="outline" disabled={!!exportMode} onClick={() => downloadPPTX("guided-slides")}>Guided presentation PPTX</Button>
               </div>
-              {guidedDisplay === "page" ? <GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} /> :
+              {guidedDisplay === "page" ? <><GuidedLessonNotes slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} /><TeacherPyqPanel key={JSON.stringify([search.klass,search.subject,search.chapter,search.topic])} guided klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} topics={[...new Set(slides.filter(slide=>(!slide.kind||slide.kind==='content')&&!slide.teacher_pdf&&!slide.teacher_blank).map(slide=>slide.title).filter(Boolean))]}/></> :
                 <GuidedNotesPresentation renderBookmarkControls={renderTeachingBookmark} renderTopicRecovery={renderTopicRecovery} inline mode="notes" slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={presentationPage} onPageChange={setPresentationPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("guided-slides")} />}
             </>}
             <div className={lessonView === "slides" ? "lesson-slides" : "hidden"}>
