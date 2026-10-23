@@ -16,6 +16,7 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
     topicNotesScope.extend({
       recoveryOnly: z.literal(true),
       request: z.string().trim().min(3).max(2000).optional(),
+      format:z.enum(['activity','important','formula','derivation','example','revision','explanation']).optional(),
       history: z.array(z.object({role:z.enum(['user','assistant']),text:z.string().max(16000)})).max(8).optional(),
     }).parse(input),
   )
@@ -49,7 +50,8 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
     const prompt = [
       data.request ? "You are the teacher's topic-notes chat assistant. Respond with 6 to 18 complete, ordered teaching points, adjusted to the request. Include clear explanation, definitions, conditions and a worked example only if supported by the evidence. Each point must make sense on its own. No greeting, filler or unrelated topics. This is supplementary teacher content, not end-to-end NCERT extraction." : "Write 4 to 6 original important points for a school learner. This is an AI supplementary teacher draft for a missing or incomplete topic, not verbatim NCERT extraction.",
       `Class ${scope.klass}; subject ${scope.subject}; chapter ${scope.chapter}; exact topic ${scope.topic}.`,
-      "Use simple, complete sentences to explain the concept and its most useful distinctions. Write in your own words, keep to this class level, and avoid repetition. Do not invent dates, values, reactions or examples. Do not write activities or instructions instead of explanations.",
+      "Use simple, complete sentences to explain the concept and its most useful distinctions. Write in your own words, keep to this class level, and avoid repetition. Do not invent dates, values, reactions or examples.",
+      data.format==='activity'?'This is an activity slide. Give the aim, materials, ordered steps, observations and conclusion ONLY when supplied by the official source. Never invent an experiment, measured result or safety procedure. If no complete activity is supported, give the supported explanation and explicitly identify the missing activity evidence.':'Follow the teacher’s requested note format only as far as the source supports it. Do not substitute classroom instructions for factual explanations unless an activity is explicitly requested; even then use only source-described procedures and observations, never invented measurements or experimental outcomes.',
       ...notesQualityPolicy(scope.subject, scope.chapter, scope.topic),
       ...(data.request ? [
         'The class, chapter and exact topic above remain fixed. Follow-up requests may refine depth, wording or examples within that topic. Conversation text is not factual evidence; use only SOURCE documents for factual claims.',

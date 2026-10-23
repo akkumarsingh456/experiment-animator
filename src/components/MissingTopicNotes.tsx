@@ -1,5 +1,6 @@
 import {TopicNotesChat} from "./TopicNotesChat";
 import {FilePlus2} from 'lucide-react';
+import {slideNotesRequest} from '@/lib/slide-notes-request';
 import {importedTopicDraft,importMissingTopicNotes} from "@/lib/missing-topic-import";
 import { TopicTextPreview } from "@/components/TopicTextPreview";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -22,6 +23,7 @@ type Props = {
   storageId?: string;
   onExtracted?:()=>void;
   saveStatus?: string;
+  pageHeadings?: string[];
   onAddBlankSlide?: () => void;
   slide: Slide;
   klass: string;
@@ -35,6 +37,7 @@ export function MissingTopicNotes({
   storageId = '',
   onExtracted,
   saveStatus,
+  pageHeadings,
   onAddBlankSlide,
   slide,
   klass,
@@ -195,7 +198,7 @@ export function MissingTopicNotes({
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-5">
-              <TopicNotesChat scope={scope} onExtract={(lines,sources)=>{
+              <TopicNotesChat scope={scope} preset={slideNotesRequest(slide,{klass,subject,chapter},pageHeadings)} onExtract={(lines,sources)=>{
                 lines=[...new Set([...(slide.teacher_supplement?.lines||[]),...lines])];
                 if(lines.length>500){setNotice('This slide already has many added points. Use Add blank slide for the next set; existing notes are preserved.');return false;}
                 importedRef.current=true;

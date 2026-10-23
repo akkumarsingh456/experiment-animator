@@ -383,6 +383,30 @@
 .presentation-page-count span { color: #64748b; font-weight: 400; }
 .presentation-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: #e8eff5; }
 .presentation-progress > span { display: block; height: 100%; background: #1393b0; transition: width 0.2s ease; }
+/* Match navigation chrome to the deck's pale-blue paper and navy headings. */
+.guided-presentation .presentation-toolbar {
+  background: linear-gradient(110deg, #f0f8ff, #fff 72%); border-bottom: 1px solid #bed6e7;
+  box-shadow: 0 2px 8px #0c294513; color: #12344d;
+}
+.guided-presentation .presentation-heading strong { color: #12344d; font-weight: 800; }
+.guided-presentation .presentation-eyebrow { color: #365f7e; font-weight: 750; letter-spacing: .07em; }
+.guided-presentation .presentation-footer {
+  background: linear-gradient(110deg, #edf7ff, #f8fcff); border-top: 1px solid #bed6e7;
+  box-shadow: 0 -2px 8px #0c29450a; color: #12344d;
+}
+.guided-presentation .presentation-page-context strong { color: #193f5c; font-size: 13px; font-weight: 800; }
+.guided-presentation .presentation-page-context > span { color: #456680; font-size: 11px; }
+.guided-presentation .presentation-icon-button { color: #204c6a; border-color: #b8cfdf; box-shadow: 0 1px 2px #12344d0a; }
+.guided-presentation .presentation-icon-button:disabled { opacity: .4; cursor: default; box-shadow: none; }
+.guided-presentation .presentation-icon-button:hover:not(:disabled) { background: #deeffc; border-color: #5b9bc4; }
+.guided-presentation .presentation-page-count { padding: 7px 10px; border-radius: 8px; background: #fff; border: 1px solid #c5dceb; color: #12344d; font-size: 14px; font-weight: 800; }
+.guided-presentation .presentation-page-count span { color: #476780; font-weight: 650; }
+.guided-presentation .presentation-navigation > section > button { background: #e2f1ff; border-color: #8bb7d4; color: #0b4b76; }
+.guided-presentation .presentation-navigation > section > button:hover { background: #cce7fa; }
+.guided-presentation .presentation-progress { background: #d8e7f2; }
+.guided-presentation .presentation-progress > span { background: #147fba; }
+.guided-presentation [aria-label="Teaching bookmark"] { background: #eaf5fd; color: #244d69; border-color: #c1d9e8; }
+.guided-presentation [aria-label="Teaching bookmark"] > button { color: #214c6c; font-weight: 650; border-color: #b8cfdf; }
 .presentation-loading { position: absolute; inset: 0; display: grid; place-items: center; color: #64748b; font-size: 14px; }
 .activity-source-review summary::-webkit-details-marker { display: none; }
 .activity-source-review summary:focus-visible, .lesson-presentation-checks > summary:focus-visible { outline: 3px solid #38bdf8; outline-offset: -3px; border-radius: 12px; }

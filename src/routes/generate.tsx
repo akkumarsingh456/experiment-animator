@@ -359,12 +359,12 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
     return undoControl;
   }
 
-  function renderSlideNotesIcon(topicTitle:string,sourceIndex?:number){
+  function renderSlideNotesIcon(topicTitle:string,sourceIndex?:number,noteHeadings?:string[]){
     const index=sourceIndex!==undefined&&slides[sourceIndex]?.title===topicTitle?sourceIndex:slides.findIndex(item=>item.title.trim()===topicTitle.trim());
     const slide=slides[index];
     if(!slide||slide.visual==='cover'||slide.kind==='mcq'||slide.kind==='break'||slide.teacher_next_class||slide.teacher_pdf)return null;
     const occurrence=slides.slice(0,index).filter(item=>!item.teacher_blank&&item.title===slide.title).length;
-    return <MissingTopicNotes saveStatus={`${blankStore.status}${notesCloudStatus?" · "+notesCloudStatus:""}`} iconOnly key={`${slide.title}:${occurrence}`} storageId={`${lessonDeviceKey}:${occurrence}`} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onExtracted={()=>setNotesSaveRevision(value=>value+1)} onSaved={updated=>setSlides(current=>current.map((item,at)=>at===index?{...item,sections:updated.sections,teacher_supplement:updated.teacher_supplement,topic_recovery:updated.topic_recovery,notes_quality:updated.notes_quality,caption:updated.caption}:item))}/>;
+    return <MissingTopicNotes pageHeadings={noteHeadings} saveStatus={`${blankStore.status}${notesCloudStatus?" · "+notesCloudStatus:""}`} iconOnly key={`${slide.title}:${occurrence}`} storageId={`${lessonDeviceKey}:${occurrence}`} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onExtracted={()=>setNotesSaveRevision(value=>value+1)} onSaved={updated=>setSlides(current=>current.map((item,at)=>at===index?{...item,sections:updated.sections,teacher_supplement:updated.teacher_supplement,topic_recovery:updated.topic_recovery,notes_quality:updated.notes_quality,caption:updated.caption}:item))}/>;
   }
   useEffect(()=>{const refresh=()=>setSlides(current=>[...current]);window.addEventListener('manual-visual-saved',refresh);void loadManualVisuals().catch(()=>{});return()=>window.removeEventListener('manual-visual-saved',refresh);},[]);
   const [bookCaptureBusy, setBookCaptureBusy] = useState(false);
@@ -682,7 +682,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
   useEffect(()=>{if(!blankSlideToShow.current)return;const page=originalPages.findIndex(slide=>slide.title===blankSlideToShow.current);if(page>=0){setOriginalPage(page);blankSlideToShow.current=null;}},[originalPages]);
 
   useEffect(()=>setOriginalPage(current=>Math.min(current,Math.max(0,originalPages.length-1))),[originalPages.length]);
-  const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, sourceIndex:slide.sourceIndex, section: "NCERT notes & illustration",
+  const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, sourceIndex:slide.sourceIndex,noteHeadings:slide.sections?.map(section=>section.heading), section: "NCERT notes & illustration",
     content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} onNotesOverflow={continueOverflowingNotes} staticView />,
   }));
   const handledWorkspaceAction=useRef('');

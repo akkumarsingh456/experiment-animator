@@ -1,3 +1,4 @@
+import type {SlideNoteFormat} from "@/lib/slide-notes-request";
 import {useEffect,useRef,useState} from 'react';
 import {useServerFn} from '@tanstack/react-start';
 import {draftMissingTopicPoints} from '@/lib/missing-topic-ai.functions';
@@ -9,22 +10,24 @@ import {MathematicsProse} from './MathematicsProse';
 import {isMathematics} from '@/lib/mathematics-presentation';
 
 type Source={url:string;title:string};
-type Props={scope:{klass:string;subject:string;chapter:string;topic:string};onExtract:(lines:string[],sources:Source[])=>void|boolean};
+type Props={preset?:{request:string;format:SlideNoteFormat;label:string};scope:{klass:string;subject:string;chapter:string;topic:string};onExtract:(lines:string[],sources:Source[])=>void|boolean};
 
 /** One preview and one extraction action; advanced AI is optional. */
-export function TopicNotesChat({scope,onExtract}:Props){
+export function TopicNotesChat({scope,onExtract,preset}:Props){
  const read=useServerFn(getSimpleTopicNotes),askAI=useServerFn(draftMissingTopicPoints);
- const [text,setText]=useState(''),[sources,setSources]=useState<Source[]>([]),[label,setLabel]=useState('Teacher notes'),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[request,setRequest]=useState('');
- const epoch=useRef(0),pending=useRef(false);
+ const [text,setText]=useState(''),[sources,setSources]=useState<Source[]>([]),[label,setLabel]=useState('Teacher notes'),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[request,setRequest]=useState(preset?.request||'');
+ const epoch=useRef(0),pending=useRef(false),requestEditor=useRef<HTMLTextAreaElement>(null);
+ const [manual,setManual]=useState(false);
  const identity=JSON.stringify(scope);
- useEffect(()=>{epoch.current++;pending.current=false;setText('');setSources([]);setLabel('Teacher notes');setBusy(false);setNotice('');setRequest('');return()=>{epoch.current++;};},[identity]);
+ useEffect(()=>{epoch.current++;pending.current=false;setText('');setSources([]);setLabel('Teacher notes');setBusy(false);setNotice('');setRequest(preset?.request||'');setManual(false);return()=>{epoch.current++;};},[identity]);
+ useEffect(()=>{if(!manual)setRequest(preset?.request||`Explain ${scope.topic} in clear teaching points`);},[preset?.request,manual]);
  const lines=text.split(/\n+/).map(line=>line.trim().replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '')).filter(Boolean);
  const valid=lines.length>0&&lines.length<=500&&lines.every(line=>line.length<=1800);
  async function load(ai=false){
   if(pending.current)return;
   pending.current=true;setBusy(true);setNotice('');const turn=++epoch.current;
   try{
-   const result=ai?await askAI({data:{...scope,recoveryOnly:true,request:request.trim()||`Explain ${scope.topic} in clear teaching points`,history:[]}}):await read({data:scope});
+   const result=ai?await askAI({data:{...scope,recoveryOnly:true,format:manual?undefined:preset?.format,request:request.trim()||`Explain ${scope.topic} in clear teaching points`,history:[]}}):await read({data:scope});
    if(turn!==epoch.current)return;
    setText(result.lines.join('\n'));setSources(result.sources);
    setLabel('label' in result?result.label:`${result.provider} supplementary notes`);
@@ -44,6 +47,17 @@ export function TopicNotesChat({scope,onExtract}:Props){
   <Button disabled={busy||!valid} onClick={()=>{if(onExtract(lines,sources)!==false)setNotice('Notes extracted into this topic. Extra slides are created automatically when needed.');}}>Extract notes</Button>
   {!!lines.length&&!valid&&<p role="alert" className="text-sm text-amber-800">Use up to 500 points, each under 1,800 characters. Split long paragraphs onto separate lines.</p>}
   {notice&&<p role="status" className="text-sm text-sky-900">{notice}</p>}
-  <details><summary className="cursor-pointer text-sm text-slate-600">Optional: ask the connected AI</summary><label htmlFor="simple-topic-request" className="my-2 block text-sm">What would you like to explain about {scope.topic}?</label><Textarea id="simple-topic-request" rows={2} maxLength={2000} disabled={busy} value={request} onChange={event=>setRequest(event.target.value)} placeholder={`Explain ${scope.topic} in detail…`}/><Button className="mt-2" variant="outline" disabled={busy} onClick={()=>void load(true)}>Ask AI</Button><p className="mt-2 text-xs text-slate-600">Needs a configured AI API key. Get topic notes and paste/extract do not need an AI key.</p></details>
+  <section className="border-t pt-4" aria-label="Slide-based request">
+   <h3 className="font-semibold text-sky-950">Request for this slide · {preset?.label||'Topic notes'}</h3>
+   <p className="my-2 text-sm text-slate-600">Already filled for this slide. Send it as it is, or write your own request.</p>
+   <div className="mb-2 flex flex-wrap gap-2">
+    <Button size="sm" variant={manual?'outline':'default'} aria-pressed={!manual} disabled={busy} onClick={()=>{setManual(false);setRequest(preset?.request||`Explain ${scope.topic} in clear teaching points`);}}>Autofill from slide</Button>
+    <Button size="sm" variant={manual?'default':'outline'} aria-pressed={manual} disabled={busy} onClick={()=>{setManual(true);setRequest('');requestEditor.current?.focus();}}>Write my own</Button>
+   </div>
+   <label htmlFor="simple-topic-request" className="sr-only">Editable request for {scope.topic}</label>
+   <Textarea ref={requestEditor} id="simple-topic-request" rows={5} maxLength={2000} disabled={busy} value={request} onChange={event=>{setManual(true);setRequest(event.target.value);}}/>
+   <Button className="mt-2" disabled={busy||request.trim().length<3} onClick={()=>void load(true)}>{busy?'Preparing notes…':'Send request'}</Button>
+   <p className="mt-2 text-xs text-slate-600">Send request uses the connected AI. Get topic notes and paste/extract remain available without an AI key.</p>
+  </section>
  </section>;
 }
