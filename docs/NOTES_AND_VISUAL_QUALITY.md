@@ -2,6 +2,8 @@
 
 ## Teacher explanation companion
 
+- Teacher guide reading is a continuous text document: exclude notebook illustrations, concept-map structures, reference images, AI context pictures and the formula mind-map graphic. Retain formula text in the original note groups. Open the explanation companion initially and use compact heading highlights rather than nested cards. Original uploaded PDF pages are linked as sources instead of embedded; the final next-class plan is text-only in this view. All presentation/PPT visual tools and saved images remain intact.
+
 - Enable `TeacherExplanationGuide` only through the explicit `teacherGuide` flag in the Read guided notes page and notes PDF. Default it off for every presentation and slide/PPTX export. Never write its view state, prompts or reorganised excerpts into Slide sections or generation results.
 - Keep original topic notes intact. Offer quick revision and full lesson guidance; show source passages, verified supplementary teaching support, examples/derivations, formula definitions/conditions, misconceptions, assessment and chapter references separately. Teaching checklists are suggestions, not missing factual answers. Explicitly identify absent examples, definitions and page metadata instead of reconstructing them.
 

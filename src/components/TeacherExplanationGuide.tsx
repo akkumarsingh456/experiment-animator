@@ -20,7 +20,7 @@ export function TeacherExplanationGuide({slide,groups,subject,klass,chapter,book
  const examples=matching(/Worked examples|Answers and explanations|Step-by-step derivation/);
  const formula=usable.some(group=>group.kind==='formula'||group.kind==='derivation');
  const sources=slide.source_recovery?.sources?.length?slide.source_recovery.sources:slide.source_recovery?.url?[{url:slide.source_recovery.url,title:slide.source_recovery.url}]:[];
- return <details className="guided-recap teacher-explanation-guide">
+ return <details open className="guided-recap teacher-explanation-guide">
   <summary>Teacher explanation guide <span className="teacher-guide-topic">{slide.title}</span></summary>
   <div className="teacher-guide-modes print:hidden" role="group" aria-label={`Teaching detail for ${slide.title}`}>
    <button type="button" aria-pressed={mode==='revision'} onClick={()=>setMode('revision')} className="rounded border px-3 py-2">Quick revision</button>

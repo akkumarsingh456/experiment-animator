@@ -65,7 +65,7 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
         const image = slide.reference_visuals?.find(figure => figure.url);
         return <article className="guided-topic guided-original-page" data-teacher-page="true" key={`original:${index}`}>
           <h2>{slide.title}</h2>
-          {image ? <figure><img src={image.url} alt={`${slide.teacher_pdf.file_name} · original PDF page ${slide.teacher_pdf.page}`} style={{width:"100%",maxHeight:"580px",objectFit:"contain"}}/><figcaption>{slide.teacher_pdf.file_name} · PDF page {slide.teacher_pdf.page}</figcaption></figure> : <p role="alert">The original chapter PDF page has not loaded. Reload the lesson before exporting.</p>}
+          {teacherGuide ? <p>{slide.teacher_pdf.file_name} · PDF page {slide.teacher_pdf.page}. Original page image omitted in the text-only guide.{image&&<> <a href={image.url} target="_blank" rel="noopener noreferrer">View original source page</a></>}</p> : image ? <figure><img src={image.url} alt={`${slide.teacher_pdf.file_name} · original PDF page ${slide.teacher_pdf.page}`} style={{width:"100%",maxHeight:"580px",objectFit:"contain"}}/><figcaption>{slide.teacher_pdf.file_name} · PDF page {slide.teacher_pdf.page}</figcaption></figure> : <p role="alert">The original chapter PDF page has not loaded. Reload the lesson before exporting.</p>}
         </article>;
       }
       const groups = orderTopicGroups(topicGroups[index]);
@@ -77,10 +77,10 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
         {slide.source_recovery?.url&&<p className="text-sm">{slide.source_recovery.kind==='official-online-supplement'?'Supplementary note sources':'External NCERT mirror · IIT Kanpur SATHEE'}: {(slide.source_recovery.sources?.length?slide.source_recovery.sources:[{url:slide.source_recovery.url,title:slide.source_recovery.url}]).map((source,index)=><span key={source.url}>{index>0?' · ':''}<a href={source.url} className="underline">{source.title}</a></span>)}</p>}
         {slide.notes_quality?.issues.length ? <p className="guided-quality-note">Source review: {slide.notes_quality.issues.join(" ")}</p> : null}
         {groups.slice(0, visualAt).map((group, i) => <NotesGroup subject={subject} group={group} key={`intro:${i}`} />)}
-        <TopicVisualStructures input={{ ...slide, chapter: title, keyTerms: slide.key_terms }} subject={subject} />
+        {!teacherGuide && <TopicVisualStructures input={{ ...slide, chapter: title, keyTerms: slide.key_terms }} subject={subject} />}
         {groups.slice(visualAt).map((group, i) => <NotesGroup subject={subject} group={group} key={`body:${i}`} />)}
-        <BookReferenceFigures figures={slide.reference_visuals} subject={subject} />
-        {slide.context_illustration && <figure className="guided-context-illustration"><img src={slide.context_illustration.url} alt={slide.context_illustration.description} /><figcaption>AI context illustration · {slide.context_illustration.provider}. Exact relationships are shown in the labelled diagram and source notes.</figcaption></figure>}
+        {!teacherGuide && <BookReferenceFigures figures={slide.reference_visuals} subject={subject} />}
+        {!teacherGuide && slide.context_illustration && <figure className="guided-context-illustration"><img src={slide.context_illustration.url} alt={slide.context_illustration.description} /><figcaption>AI context illustration · {slide.context_illustration.provider}. Exact relationships are shown in the labelled diagram and source notes.</figcaption></figure>}
         {!groups.length && <p>No verified source notes are available for this topic. Regenerate the lesson after uploading the relevant textbook pages.</p>}
         {!!groups.length && <><TopicLearningTasks title={slide.title} groups={groups} /><TopicRecap groups={groups} /></>}
         {teacherGuide && slide.visual!=="cover" && !slide.teacher_blank && <TeacherExplanationGuide slide={slide} groups={groups} subject={subject} klass={klass} chapter={title} books={sourceBooks}/>}
@@ -91,9 +91,9 @@ export function GuidedLessonNotes({ slides, title, subject, klass, includeBreaks
       <ol>{questions.map((question, i) => <li key={i}><p><MathText subject={subject} text={question.question} /></p><ul>{question.options.map((option) => <li key={option.key}><strong>{option.key}.</strong> <MathText subject={subject} text={option.text} /></li>)}</ul></li>)}</ol>
     </article>}
     {!!questions.length && <article className="guided-topic guided-answer-key"><h2>Answer key</h2><ol>{questions.map((question, i) => <li key={i}><strong>{question.answer}.</strong> <MathText subject={subject} text={question.explanation || question.options.find((option) => option.key === question.answer)?.text || ""} /></li>)}</ol></article>}
-    <FormulaMindMap slides={content} />
+    {!teacherGuide && <FormulaMindMap slides={content} />}
     {finalRevision&&<article className="guided-topic physical-chemistry-final-revision" data-physical-revision="true"><h2>{finalRevision.title}</h2><p>{finalRevision.caption}</p>{finalRevision.sections?.map((section,index)=><NotesGroup key={index} subject={subject} group={{heading:section.heading,kind:"list",lines:section.lines}}/>)}</article>}
-    {nextPlan&&<NextClassPlanPage slide={nextPlan} klass={klass} subject={subject}/>}
+    {nextPlan&&<NextClassPlanPage slide={nextPlan} klass={klass} subject={subject} textOnly={teacherGuide}/>}
   </div>;
 }
 

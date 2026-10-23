@@ -236,9 +236,23 @@
 .teacher-guide-enabled .teacher-explanation-guide li::marker { color: #075985; font-weight: 800; }
 .teacher-guide-enabled .teacher-explanation-guide [role="note"] { color: #74430c; font-weight: 700; border-left: 3px solid #a16b14; padding-left: 12px; }
 .teacher-guide-enabled .guided-teacher-topic h3, .teacher-guide-enabled .guided-planner h3 { font-weight: 800; }
+/* Reading guide flows as one document, without diagram cards or page-like gaps. */
+.teacher-guide-enabled { background: #fff; padding: 24px 32px; border: 1px solid #dbe3ea; border-radius: 10px; }
+.teacher-guide-enabled > .guided-topic { border: 0; border-radius: 0; box-shadow: none; padding: 24px 0; margin: 0; border-top: 1px solid #dbe3ea; }
+.teacher-guide-enabled .teacher-explanation-guide { background: transparent; border: 0; border-top: 2px solid #b9d8e6; border-radius: 0; padding: 18px 0 0; }
+.teacher-guide-enabled .teacher-explanation-guide .guided-group,
+.teacher-guide-enabled .guided-planner .guided-group,
+.teacher-guide-enabled .guided-teacher-topic .guided-group { border: 0; border-radius: 0; background: transparent; padding: 8px 0; margin: 14px 0; }
+.teacher-guide-enabled .teacher-explanation-guide h3,
+.teacher-guide-enabled .guided-planner .guided-group h3,
+.teacher-guide-enabled .guided-teacher-topic .guided-group h3 { padding: 6px 10px; border-left: 3px solid #237391; background: #edf6fa; }
+.teacher-guide-enabled .teacher-explanation-guide .teacher-guide-caution h3 { background: #fff7df; border-left-color: #a16b14; }
+.teacher-guide-enabled .teacher-explanation-guide .teacher-guide-check h3 { background: #edf8f2; border-left-color: #20705c; }
+.teacher-guide-enabled .teacher-explanation-guide .teacher-guide-sources h3 { background: #f1f4f6; border-left-color: #647789; }
 @media(max-width:600px) {
-  .teacher-guide-enabled .teacher-explanation-guide { padding: 14px; }
-  .teacher-guide-enabled .teacher-explanation-guide .guided-group { padding: 14px 12px; }
+  .teacher-guide-enabled { padding: 18px 16px; }
+  .teacher-guide-enabled .teacher-explanation-guide { padding: 16px 0 0; }
+  .teacher-guide-enabled .teacher-explanation-guide .guided-group { padding: 8px 0; }
   .teacher-guide-modes button { flex: 1 1 130px; }
 }
 @media print {
