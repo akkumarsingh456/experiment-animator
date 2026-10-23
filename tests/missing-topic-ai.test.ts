@@ -81,16 +81,16 @@ it("rejects fabricated supporting quotes instead of accepting the draft", async 
       ],
     })),
   });
-  await expect(draftMissingTopicPoints({ data: scope })).rejects.toThrow("source checks");
+  await expect(draftMissingTopicPoints({ data: scope })).rejects.toThrow("source-checked notes");
 });
 it("keeps extraction available when the server has no AI configuration", async () => {
   mocks.key.mockReturnValue(false);
-  await expect(draftMissingTopicPoints({ data: scope })).rejects.toThrow("not configured");
+  await expect(draftMissingTopicPoints({ data: scope })).rejects.toThrow("Connect Gemini or Groq");
   expect(mocks.sources).not.toHaveBeenCalled();
   expect(mocks.gateway).not.toHaveBeenCalled();
 });
 
 it("rejects malformed AI output safely", async () => {
   mocks.gateway.mockResolvedValue({ notes: null });
-  await expect(draftMissingTopicPoints({ data: scope })).rejects.toThrow("source checks");
+  await expect(draftMissingTopicPoints({ data: scope })).rejects.toThrow("source-checked notes");
 });

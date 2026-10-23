@@ -1,43 +1,6 @@
-import {useEffect,useState,type ReactNode,type FormEvent} from "react";
-import {Link, useNavigate} from "@tanstack/react-router";
-import {useQueryClient} from "@tanstack/react-query";
-import {lovable} from "@/integrations/lovable";
-import {Button} from "@/components/ui/button";
-import {googleLibraryOptions, libraryReturnPath} from "@/lib/library-login";
-import {supabase} from "@/integrations/supabase/client";
-import {LibraryAdminDashboard} from "@/components/LibraryAdminDashboard";
-import {submitBookRequest} from "@/lib/book-requests.functions";
-import {getLibraryAccess} from "@/lib/library-access.functions";
-import {BookOpen,Mail,LogOut,ShieldCheck,LoaderCircle,Save} from "lucide-react";
-type Access={signedIn:boolean;admin:boolean;email:string;name:string};
-export function LibraryAccessGate({children}:{children:ReactNode}){
- const navigate=useNavigate(), queryClient=useQueryClient();
- const [profileId,setProfileId]=useState<string|null>(null);
- const [access,setAccess]=useState<Access|null>(null),[checking,setChecking]=useState(true),[error,setError]=useState("");
- const [email,setEmail]=useState(""),[name,setName]=useState("");
- const [bookTitle,setBookTitle]=useState("");
- const [message,setMessage]=useState("I have just seen your website and would like to suggest some changes. Please also consider the following books or resources:\n\nBook title / author / class / subject:\nWhy this would be useful:\nOther suggestions:\n");
- const [busy,setBusy]=useState(false),[notice,setNotice]=useState("");
- useEffect(()=>{let active=true;let revision=0;
-  const refresh=async()=>{const run=++revision;setChecking(true);try{await supabase.auth.getSession();const value=await getLibraryAccess();let savedName=value.name;let id:string|null=null;if(value.signedIn){const {data:user}=await supabase.auth.getUser();id=user.user?.id??null;if(id){const {data:profile}=await supabase.from("profiles").select("display_name").eq("id",id).maybeSingle();if(profile?.display_name)savedName=profile.display_name;}}if(active&&run===revision){setAccess(value);setProfileId(id);setEmail(value.email);setName(savedName);setError("");}}catch{if(active&&run===revision){setAccess(null);setError("Sign-in status could not be verified. Please try again.");}}finally{if(active&&run===revision)setChecking(false);}};
-  void refresh();const {data}=supabase.auth.onAuthStateChange((event)=>{if(event!=="SIGNED_IN"&&event!=="SIGNED_OUT"&&event!=="USER_UPDATED")return;setChecking(true);setTimeout(()=>void refresh(),0);});return()=>{active=false;data.subscription.unsubscribe();};
- },[]);
- const google=async()=>{setBusy(true);setError("");setNotice("");try{const to=libraryReturnPath(window.location.pathname);sessionStorage.setItem("library-login-return",to);const result=await lovable.auth.signInWithOAuth("google",googleLibraryOptions(window.location.origin));if(result.error)throw result.error;if(result.redirected)return;const {data,error:authError}=await supabase.auth.getUser();if(authError||!data.user)throw new Error("Sign-in was not completed");sessionStorage.removeItem("library-login-return");await navigate({to,replace:true});}catch{setError("Google sign-in could not be completed. Please try again or use your email sign-in link.");}finally{setBusy(false);}};
- const magic=async(event:FormEvent)=>{event.preventDefault();setBusy(true);setError("");try{const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:`${window.location.origin}/upload`}});if(error)throw error;setNotice("Check your email for your sign-in link. If it does not arrive, try Google sign-in or contact the administrator.");}catch{setError("The sign-in email could not be sent. Please retry later or use Google sign-in.");}finally{setBusy(false);}};
- const logout=async()=>{setChecking(true);await queryClient.cancelQueries();queryClient.clear();const {error}=await supabase.auth.signOut();if(error){setError("Sign-out could not be completed. Please try again.");setChecking(false);return;}setAccess(null);setProfileId(null);setNotice("");await navigate({to:libraryReturnPath(window.location.pathname),replace:true});setChecking(false);};
- const saveProfile=async()=>{if(!profileId)return;setBusy(true);setNotice("");const {error}=await supabase.from("profiles").update({display_name:name.trim()}).eq("id",profileId);setBusy(false);if(error)setError("Your name could not be saved. Please try again.");else{setError("");setNotice("Your profile name is saved.");}};
- const submitRequest=async()=>{
-  setBusy(true);setError("");setNotice("");
-  try{const saved=await submitBookRequest({data:{name:name.trim(),bookTitle:bookTitle.trim(),message:message.trim()}});await queryClient.invalidateQueries({queryKey:["admin-book-requests"]});try{localStorage.setItem("edu-book-request-saved",String(Date.now()));}catch{}setNotice(`Request saved for “${bookTitle.trim()}”. Receipt: ${saved.id}. It will appear under Book requests. No email was sent.`);}
-  catch(error){setError(error instanceof Error?error.message:"Your request could not be saved. Please retry.");}
-  finally{setBusy(false);}
- };
- if(checking)return <main className="library-access-panel"><p role="status">Checking your verified sign-in…</p></main>;
- if(access?.admin)return <><div className="library-admin-bar"><ShieldCheck size={18}/><span><strong>Administrator · {access.email}</strong><br/>Book and notes uploads enabled</span><Button variant="outline" onClick={logout}><LogOut size={16}/>Sign out</Button></div><LibraryAdminDashboard>{children}</LibraryAdminDashboard></>;
- const body=`Hi Aman,\n\nMy name is ${name || "[your name]"} and my email is ${email || "[your email]"}.\n\n${message}\n\nThank you,\n${name || "[your name]"}`;
- return <main className="library-access-panel"><Link to="/" className="edu-brand"><BookOpen/>EduPlan</Link><h1>{access?.signedIn?"Suggest a book or an improvement":"Admin login"}</h1><p>Sign in with an authorised account to upload books and notes. Existing books, notes and lesson preparation are available without signing in.</p>
- {error&&<p role="alert" className="library-access-error">{error}</p>}
- {!access?.signedIn?<><Button variant="outline" size="lg" className="w-full mt-4 border-primary text-foreground" disabled={busy} onClick={google}>{busy?<LoaderCircle className="animate-spin"/>:<span aria-hidden="true" className="font-bold text-lg text-primary">G</span>}Sign in with Google</Button><div className="library-access-divider">or use an email sign-in link</div><form onSubmit={magic}><label>Email address<input type="email" required autoComplete="email" value={email} onChange={event=>setEmail(event.target.value)}/></label><Button type="submit" size="lg" className="w-full" disabled={busy}><Mail/>Send sign-in link</Button></form>{notice&&<p role="status">{notice}</p>}</>:<><p>Your account can suggest books, but cannot upload source files. If you are the administrator, sign out and choose your authorised account.</p><p className="library-verified-email"><ShieldCheck size={17}/>Signed in as {access.email}</p><label>Your name<input maxLength={120} value={name} onChange={event=>setName(event.target.value)} autoComplete="name"/></label><Button variant="outline" disabled={busy||!profileId} onClick={saveProfile}><Save/>Save profile name</Button>{notice&&<p role="status">{notice}</p>}<label>Your contact email<input type="email" value={email} onChange={event=>setEmail(event.target.value)}/></label><label>Book title<input required maxLength={200} value={bookTitle} onChange={event=>setBookTitle(event.target.value)} placeholder="e.g. NCERT Physics, Class 12, Part I"/></label><label>Message and book details<textarea maxLength={4700} rows={8} value={message} onChange={event=>setMessage(event.target.value)}/></label><Button size="lg" disabled={busy||!name.trim()||!bookTitle.trim()||message.trim().length<10} onClick={submitRequest}>Submit book request</Button><p className="text-sm">Click Submit book request to save it to the dashboard. Opening an email draft alone does not submit a website request. Requests include your verified sign-in email.</p><Button asChild size="lg"><a href={`mailto:akkumarsingh456@gmail.com?subject=${encodeURIComponent("EduPlan — book recommendation and suggestions")}&body=${encodeURIComponent(body)}`}><Mail size={18}/>Open draft in my email app</a></Button><p className="text-sm">The draft opens in your configured email app. Edit it there before sending. This website does not send it automatically.</p><Button variant="link" onClick={logout}>Sign out</Button></>}
- <p><Link to="/history">Browse uploaded books</Link> · <Link to="/">Prepare a lesson</Link></p>
- </main>;
+import type {ReactNode} from 'react';
+import {Link} from '@tanstack/react-router';
+/** Source management is closed for everyone, including previously authorised accounts. */
+export function LibraryAccessGate({children:_children}:{children:ReactNode}){
+ return <main className="library-access-panel"><h1>Book library is protected</h1><p>New uploads, deletion and changes to existing source books are disabled. You can continue reading uploaded books and preparing lessons.</p><p><Link to="/history">Browse uploaded books</Link> · <Link to="/">Prepare a lesson</Link> · <Link to="/workspace">Teacher workspace</Link></p></main>;
 }

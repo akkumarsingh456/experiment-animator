@@ -14,14 +14,14 @@ it('restores a device draft and clears it only after confirmed private saving',a
  const saved={lessonId:id,revision,updatedAt:new Date().toISOString(),plan},onSaved=vi.fn();mocks.save.mockResolvedValue(saved);
  await act(async()=>root.render(<TeacherPlanEditor lessonId={id} ownerEmail={owner} topicHint="Valency" onSaved={onSaved}/>));
  expect(host.querySelector('textarea')?.value).toBe(plan.nextTopics);
- await act(async()=>host.querySelector('button')!.click());
- expect(mocks.save).toHaveBeenCalledWith({data:{id,plan,expectedRevision:'',expectedEmail:owner}});
+ await act(async()=>Array.from(host.querySelectorAll('button')).find(button=>button.textContent==='Save teaching plan')!.click());
+ expect(mocks.save).toHaveBeenCalledWith({data:{id,plan:expect.objectContaining(plan),expectedRevision:'',expectedEmail:owner}});
  expect(onSaved).toHaveBeenCalledWith(saved);expect(localStorage.getItem(teacherPlanDraftKey(owner,id))).toBeNull();
  expect(host.textContent).toContain('saved to your private workspace');
 });
 it('keeps the device draft after cloud failure and allows retry',async()=>{
  mocks.save.mockRejectedValue(new Error('Cloud unavailable'));
  await act(async()=>root.render(<TeacherPlanEditor lessonId={id} ownerEmail={owner} topicHint="Valency" onSaved={vi.fn()}/>));
- await act(async()=>host.querySelector('button')!.click());
+ await act(async()=>Array.from(host.querySelectorAll('button')).find(button=>button.textContent==='Save teaching plan')!.click());
  expect(host.textContent).toContain('Cloud unavailable');expect(localStorage.getItem(teacherPlanDraftKey(owner,id))).not.toBeNull();expect(host.querySelector('button')!.disabled).toBe(false);
 });

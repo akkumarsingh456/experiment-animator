@@ -1,7 +1,7 @@
 import { getRequest, setResponseHeader } from "@tanstack/react-start/server";
 import { createClient } from "@supabase/supabase-js";
 
-const ADMINS = new Set(["akkumarsingh456@gmail.com", "ak25edi00022@student.nitw.ac.in"]);
+
 /** Identity comes from Auth's verified server response, never browser fields/user_metadata. */
 export async function readLibraryIdentity() {
   setResponseHeader("Cache-Control", "private, no-store");
@@ -14,10 +14,9 @@ export async function readLibraryIdentity() {
   const {data,error} = await db.auth.getUser(authorization.slice(7));
   if (error || !data.user || !data.user.email || !data.user.email_confirmed_at) return null;
   const email = data.user.email.toLowerCase();
-  return {id:data.user.id,email,name:String(data.user.user_metadata?.full_name || data.user.user_metadata?.name || ""),admin:ADMINS.has(email)};
+  return {id:data.user.id,email,name:String(data.user.user_metadata?.full_name || data.user.user_metadata?.name || ""),admin:false};
 }
-export async function assertLibraryAdmin() {
-  const identity = await readLibraryIdentity();
-  if (!identity?.admin) throw new Error("Access denied. Verified administrator sign-in is required.");
-  return identity;
+/** No browser account may mutate the shared source library, even with an old session. */
+export async function assertLibraryAdmin(): Promise<NonNullable<Awaited<ReturnType<typeof readLibraryIdentity>>>> {
+  throw new Error("The source library is read-only. Uploads, deletion and source changes are disabled for everyone.");
 }

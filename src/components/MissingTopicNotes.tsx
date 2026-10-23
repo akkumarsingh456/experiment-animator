@@ -14,7 +14,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   searchMissingTopic,
   readMissingTopicNotes,
-  saveMissingTopicNotes,
 } from "@/lib/topic-notes.functions";
 import type { Slide } from "@/lib/generate.functions";
 
@@ -56,14 +55,12 @@ export function MissingTopicNotes({
     [query, setQuery] = useState(""),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState(""),
-    [official, setOfficial] = useState(false),
     [results, setResults] = useState<
       Array<{ url: string; title: string; lines: string[]; complete?: boolean }>
     >([]);
   const importedRef = useRef(false);
   const search = useServerFn(searchMissingTopic),
-    read = useServerFn(readMissingTopicNotes),
-    save = useServerFn(saveMissingTopicNotes);
+    read = useServerFn(readMissingTopicNotes);
   useEffect(() => {
     setQuery(`Class ${klass} ${subject} ${chapter} ${slide.title} NCERT notes`);
     try {
@@ -96,7 +93,6 @@ export function MissingTopicNotes({
   }, [draftKey]);
   function edit(value: string) {
     setText(value);
-    setOfficial(false);
     try {
       localStorage.setItem(draftKey, value);
     } catch {
@@ -122,29 +118,6 @@ export function MissingTopicNotes({
   function changePopup(value: boolean) {
     setOpen(value);
 
-  }
-  async function preserve() {
-    setBusy(true);
-    setNotice("");
-    try {
-      const saved = await save({ data: { ...scope, text, url, official } });
-      onSaved({
-        ...slide,
-        sections: saved.sections,
-        topic_recovery: { status: saved.mode, sourceUrl: saved.sourceUrl },
-      });
-      setNotice(
-        "Saved and confirmed. These topic notes will be reused after refresh and regeneration.",
-      );
-      try {
-        localStorage.removeItem(draftKey);
-        localStorage.removeItem(importKey);
-      } catch {}
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Save failed. Your draft remains here.");
-    } finally {
-      setBusy(false);
-    }
   }
   return (
     <section
@@ -231,7 +204,7 @@ export function MissingTopicNotes({
               </div>
               {saveStatus&&<p role="status" className="text-xs text-slate-600">{saveStatus}</p>}
               {onAddBlankSlide&&<Button variant="outline" disabled={busy} onClick={onAddBlankSlide}>Add blank slide</Button>}
-              <details><summary className="cursor-pointer font-semibold text-sky-900">More options: source links and reusable notes</summary>
+              <details><summary className="cursor-pointer font-semibold text-sky-900">More options: source links and device drafts</summary>
               <div className="mt-4 space-y-5">
               <div>
                 <h3 className="font-semibold">1. Find matching text</h3>
@@ -269,8 +242,7 @@ export function MissingTopicNotes({
                   value={url}
                   onChange={(event) => {
                     setUrl(event.target.value);
-                    setOfficial(false);
-                  }}
+                                  }}
                   placeholder="https://…"
                 />
                 <Button
@@ -322,7 +294,6 @@ export function MissingTopicNotes({
                             onImport={(passages, wholePassage) => {
                               setText(passages.join("\n"));
                               setUrl(item.url);
-                              setOfficial(item.complete !== false && wholePassage);
                               try {
                                 localStorage.setItem(draftKey, passages.join("\n"));
                               } catch {}
@@ -339,7 +310,7 @@ export function MissingTopicNotes({
                 </div>
               )}
               <div>
-                <h3 className="font-semibold">3. Organise and save topic notes</h3>
+                <h3 className="font-semibold">3. Optional device draft</h3>
                 <label htmlFor="teacher-topic-text" className="my-2 block text-sm">
                   Write one complete point or teaching step per line.
                 </label>
@@ -351,12 +322,8 @@ export function MissingTopicNotes({
                   placeholder="Write teacher notes for this topic here…"
                 />
                 <p className="my-2 text-sm text-slate-600">
-                  Drafts stay on this device. An administrator can permanently save notes for future
-                  lessons. Edited or written text is labelled Teacher notes.
+                  This is a device draft. To add these points to your lesson, copy them into Read or edit notes above and choose Add to this topic. Shared source books and permanent source notes are locked.
                 </p>
-                <Button disabled={busy || text.trim().length < 10} onClick={preserve}>
-                  {busy ? "Working…" : "Save topic notes permanently"}
-                </Button>
               </div>
               </div></details>
               {notice && (

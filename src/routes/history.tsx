@@ -131,11 +131,6 @@ function HistoryPage() {
               EduPlan AI
             </span>
           </Link>
-          <div className="flex items-center gap-3">
-            <Link to="/upload" className="text-sm underline-offset-4 hover:underline">
-              Upload a new book
-            </Link>
-          </div>
         </div>
       </header>
 

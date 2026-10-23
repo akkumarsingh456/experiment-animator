@@ -88,7 +88,7 @@ it("drafts for the original topic and applies only on request while leaving the 
   );
   await act(async () =>
     Array.from(popup.querySelectorAll("button"))
-      .find((button) => button.textContent === "Apply to this slide")!
+      .find((button) => button.textContent === "Done")!
       .click(),
   );
   expect(apply).toHaveBeenCalledWith([

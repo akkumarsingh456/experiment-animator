@@ -10,6 +10,7 @@ vi.mock("@/lib/missing-topic-ai.functions", () => ({
 }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
 vi.mock("@/lib/topic-notes.functions", () => ({
+  getSimpleTopicNotes: async () => ({lines:["Primary valencies are normally ionisable.","Secondary valencies are non ionisable."],sources:[],label:"Source notes"}),
   readMissingTopicNotes: async () => null,
   searchMissingTopic: search,
   saveMissingTopicNotes: async () => {
@@ -21,6 +22,7 @@ import { GuidedNotesPresentation } from "@/components/GuidedNotesPresentation";
 import { MissingTopicNotes } from "@/components/MissingTopicNotes";
 import type { Slide } from "@/lib/generate.functions";
 afterEach(() => {
+  localStorage.clear();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   Reflect.deleteProperty(document, "fullscreenElement");
@@ -80,14 +82,14 @@ it("shows topic recovery inside the deck and preserves next and previous navigat
   );
   const deck = host.querySelector(".guided-presentation")!;
   const button = Array.from(deck.querySelectorAll("button")).find(
-    (button) => button.textContent === "Teacher notes / Google search",
+    (button) => button.textContent === "Add or remove notes",
   )!;
   expect(button).toBeTruthy();
   expect(deck.querySelector(".presentation-footer")).toBeTruthy();
   await act(async () => button.click());
   const popup = document.querySelector('[role="dialog"]:not([aria-label="Lesson presentation"])')!;
   expect(popup.querySelector("textarea")).toBeTruthy();
-  expect(popup.querySelector("a")?.href).toContain("Class%2012");
+  expect(popup.querySelector("#simple-topic-notes")).toBeTruthy();
   await act(async () =>
     popup.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })),
   );
@@ -100,12 +102,12 @@ it("shows topic recovery inside the deck and preserves next and previous navigat
     deck.querySelector<HTMLButtonElement>('[aria-label="Next slide"]')!.click(),
   );
   expect(change).toHaveBeenLastCalledWith(1);
-  expect(deck.textContent).not.toContain("Teacher notes / Google search");
+  expect(deck.textContent).not.toContain("Add or remove notes");
   await act(async () =>
     deck.querySelector<HTMLButtonElement>('[aria-label="Previous slide"]')!.click(),
   );
   expect(change).toHaveBeenLastCalledWith(0);
-  expect(deck.textContent).toContain("Teacher notes / Google search");
+  expect(deck.textContent).toContain("Add or remove notes");
   await act(async () => root.unmount());
 });
 it("keeps the popup inside the browser fullscreen element", async () => {
@@ -158,6 +160,7 @@ it("automatically displays readable text previews and imports the selected resul
   );
   await act(async () => host.querySelector<HTMLButtonElement>("button")!.click());
   const popup = document.querySelector('[role="dialog"]')!;
+  await act(async()=>Array.from(popup.querySelectorAll('button')).find(button=>button.textContent==='Search notes here')!.click());
   expect(popup.querySelector('[aria-label="Source notes preview"]')?.textContent).toContain(
     "Primary valencies",
   );
@@ -169,49 +172,22 @@ it("automatically displays readable text previews and imports the selected resul
       .find((button) => button.textContent === "Import these notes")!
       .click(),
   );
-  expect(popup.querySelector("textarea")?.value).toContain(
+  expect(popup.querySelector<HTMLTextAreaElement>("#teacher-topic-text")?.value).toContain(
     "Primary valencies are normally ionisable.\nSecondary valencies",
   );
   await act(async () => root.unmount());
 });
 
-it("previews AI important points without replacing the teacher draft until import", async () => {
-  const host = document.createElement("div");
-  document.body.append(host);
-  const root = createRoot(host);
-  await act(async () =>
-    root.render(
-      <MissingTopicNotes
-        slide={slide}
-        klass="12"
-        subject="Chemistry"
-        chapter="Chapter 5: Coordination Compounds"
-        onSaved={() => {}}
-      />,
-    ),
-  );
-  await act(async () => host.querySelector<HTMLButtonElement>("button")!.click());
-  const popup = document.querySelector('[role="dialog"]')!;
-  const original = popup.querySelector("textarea")!.value;
-  expect(
-    popup.querySelector('[aria-label="AI supplement for missing topic"]')?.textContent,
-  ).not.toContain("AI draft important point for review.");
-  await act(async () =>
-    Array.from(popup.querySelectorAll("button"))
-      .find((button) => button.textContent === "Draft AI important points")!
-      .click(),
-  );
-  expect(popup.querySelector("textarea")!.value).toBe(original);
-  const supplement = popup.querySelector('[aria-label="AI supplement for missing topic"]')!;
-  expect(supplement.textContent).toContain("AI draft important point for review.");
-  await act(async () =>
-    Array.from(supplement.querySelectorAll("button"))
-      .find((button) => button.textContent === "Import these notes")!
-      .click(),
-  );
-  expect(popup.querySelector("textarea")!.value).toBe("AI draft important point for review.");
-  await act(async () => root.unmount());
-  host.remove();
+it("loads preview without changing the lesson until Add to this topic is clicked", async()=>{
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host),saved=vi.fn();
+ await act(async()=>root.render(<MissingTopicNotes slide={slide} klass="12" subject="Chemistry" chapter="Coordination Compounds" onSaved={saved}/>));
+ await act(async()=>host.querySelector('button')!.click());const popup=document.querySelector('[role="dialog"]')!;
+ await act(async()=>Array.from(popup.querySelectorAll('button')).find(button=>button.textContent==='Get topic notes')!.click());
+ expect(popup.querySelector<HTMLTextAreaElement>('#simple-topic-notes')!.value).toContain('Primary valencies');
+ expect(saved).not.toHaveBeenCalled();
+ await act(async()=>Array.from(popup.querySelectorAll('button')).find(button=>button.textContent==='Add to this topic')!.click());
+ expect(saved).toHaveBeenCalledWith(expect.objectContaining({teacher_supplement:expect.objectContaining({lines:expect.arrayContaining(['Primary valencies are normally ionisable.'])})}));
+ await act(async()=>root.unmount());
 });
 
 it("offers Add blank slide only when the recovery host provides that action", async () => {
@@ -239,7 +215,7 @@ it("offers Add blank slide only when the recovery host provides that action", as
       .click(),
   );
   expect(add).toHaveBeenCalledOnce();
-  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(document.querySelector('[role="dialog"]')).toBeTruthy();
   await act(async () => root.unmount());
   host.remove();
 });

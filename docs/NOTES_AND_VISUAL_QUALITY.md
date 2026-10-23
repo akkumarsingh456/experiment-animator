@@ -323,3 +323,8 @@ Newly completed public preparations can enter the signed-in teacher's private hi
 ## Teacher-friendly added notes controls
 
 Keep Add notes and Remove added points as explicit choices in the same topic dialog. Preserve Undo when switching choices; do not unmount the manager. Keep original NCERT sections protected and existing autosave/failure indicators. Guided articles carry their unnumbered topic title and original source index through cloned continuation pages, so numbering and repeated titles cannot redirect edits to the wrong topic. Cover, quiz, break, original PDF and next-class-plan pages retain their dedicated controls.
+
+
+## Source library frozen (owner request, 24 October 2026)
+
+This supersedes earlier admin-upload instructions: no website account may upload, delete, reclassify, OCR-write or otherwise alter shared source books. The upload gate is an informational read-only page with no login/dashboard; assertLibraryAdmin always rejects, and verified identities retain private workspace access but never source admin authority. Keep public reading, recorded-book download signing, generation and private teacher edits working. Apply 0005_freeze_source_library (also mirrored in Supabase): privileges and triggers freeze ncert_books/pages/chunks and ncert-pdfs storage, including service-backed writes and old upload tickets. No existing rows/files are changed. This cannot prevent the database owner from deliberately removing database protections. Local regression checks do not prove the migration was applied to the hosted database.
