@@ -2,6 +2,8 @@
 
 ## Teacher explanation companion
 
+- Popup-only checked source snapshots and direct chapter links live in topic-popup-sources.server.ts. The Vitamins prose passage is fixed to Class 12 Chemistry/Biomolecules and omits the damaged deficiency table. It can supply chat evidence and a labelled non-AI fallback without a library/index network request. Do not import these popup snapshots into ordinary generation or use them for unrelated classes/topics.
+
 - The topic popup uses Gemini only. Cloud-secret access uses the authenticated gemini-topic-chat backend bridge when SSR lacks the direct key. Never expose credentials or relax source-evidence checks. Other provider consumers retain their existing configuration. Deploy the backend function separately from frontend publishing.
 
 - Guide-only formula presentation requires meaningful structured formula cells; ordinary prose and incidental equations belong in flowing explanations, not mostly empty Concept/Formula/Unit tables. Flag joined decimal operands and detached operator/power sequences without guessing a corrected equation. Keep raw damaged excerpts in an explicitly labelled source-review section. Apply this when displaying cached lessons too; presentation/PPT source data remains unchanged.

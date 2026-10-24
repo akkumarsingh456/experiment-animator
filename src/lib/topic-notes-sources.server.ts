@@ -1,8 +1,9 @@
+import {reviewedPopupSource,popupChapterSources} from './topic-popup-sources.server';
 import {boundSavedChapterPages} from './saved-chapter-boundary';
 import {getRequest} from '@tanstack/react-start/server';
 import type {AttentionScope} from './attention-topic-scope';
 import {canonicalOfficialRecoveryTopic} from './official-recovery-scope';
-import {readAttentionSources,type ReadAttentionSource} from './attention-source-read.server';
+import {readAttentionSource,readAttentionSources,type ReadAttentionSource} from './attention-source-read.server';
 import {readSavedChapterSources} from './saved-chapter-sources.server';
 import {recoverTopicFromSources} from './topic-source-recovery';
 
@@ -10,6 +11,8 @@ import {recoverTopicFromSources} from './topic-source-recovery';
  * Never use generated lesson_cache notes as independent textbook evidence. */
 export async function readTopicNotesSources(input:AttentionScope):Promise<ReadAttentionSource[]>{
  const scope=canonicalOfficialRecoveryTopic(input);if(!scope)return [];
+ const reviewed=reviewedPopupSource(scope);
+ if(reviewed&&recoverTopicFromSources(scope.topic,[reviewed.text]).complete)return [reviewed];
  const saved:ReadAttentionSource[]=[];
  try{
   const chapter=await readSavedChapterSources(scope);
@@ -22,5 +25,12 @@ export async function readTopicNotesSources(input:AttentionScope):Promise<ReadAt
   }
  }catch{/* A library outage must still allow official online recovery. */}
  if(saved.some(source=>recoverTopicFromSources(scope.topic,[source.text]).complete))return saved;
+ for(const binding of popupChapterSources(scope)){
+  try{
+   const source=await readAttentionSource(binding);
+   if(source&&recoverTopicFromSources(scope.topic,[source.text]).lines.length)saved.push(source);
+   if(saved.some(source=>recoverTopicFromSources(scope.topic,[source.text]).complete))return saved;
+  }catch{/* Continue through the existing official readers. */}
+ }
  try{return [...saved,...await readAttentionSources(scope)];}catch{return saved;}
 }
