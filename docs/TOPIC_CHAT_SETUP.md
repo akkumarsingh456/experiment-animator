@@ -1,20 +1,26 @@
-# Connect the topic notes assistant
+# Gemini topic chat setup
 
-This setup is for the website owner once. Teachers do not enter keys.
+The topic notes popup uses Gemini only. Teachers click Send, review the reply, then Insert notes. No additional provider key is required.
 
-1. Open Google AI Studio (https://aistudio.google.com), choose API keys, and create an API key for your project.
-2. Open your EduPlan project in Lovable. In the project toolbar, open More, then Secrets (Cloud/backend). Add GEMINI_API_KEY as the name and your key as the value. Enter the value only in the secret field, not in Lovable chat, source code or GitHub.
-3. Save the secret, publish the latest version, and refresh the website. Open a topic's notes icon, leave AI on Auto, and click Send. Review the returned points and choose Insert notes. A successful connection must be checked on the deployed server; a build alone cannot verify it.
+## Owner setup
 
-Optional backup: create a key at https://console.groq.com/keys and add a second server secret named GROQ_API_KEY. Auto can then try another configured provider if one fails. Choosing Gemini or Groq explicitly uses that provider before the labelled textbook fallback.
+1. Keep GEMINI_API_KEY in this project's Lovable Settings > Secrets. Never paste its value into chat, GitHub, browser code or a VITE_ variable.
+2. Deploy supabase/functions/gemini-topic-chat/index.ts with supabase/config.toml. Cloud secrets are read by this backend using Deno.env. The website server uses its managed SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to call it. The function checks the server credential and rejects anonymous calls.
+3. Publish/update the website and verify Send, a real Gemini reply, then Insert notes. Frontend publishing alone does not deploy a new backend function. A build does not verify the live AI connection.
 
-The default topic models are gemini-3.1-flash-lite and openai/gpt-oss-120b. Optional server variables GEMINI_TOPIC_CHAT_MODEL and GROQ_TOPIC_CHAT_MODEL override them. Use a model available to your account and quota. Free tiers have provider, account and rate restrictions; unlimited responses are not promised. The website gateway remains another Auto option if already configured.
+Copyable Lovable request:
 
-If Gemini cannot answer, choose Auto or Use textbook notes under Sources and other options. Notes from sources are labelled as excerpts. If there is no readable matching evidence, the assistant reports it rather than inventing textbook claims. Do not use a VITE_ variable for a private API key.
+> Deploy the gemini-topic-chat backend function from the synced repository using the existing GEMINI_API_KEY and supabase/config.toml. Preserve its server-credential authentication. Ensure the website server has its managed SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY connection. Verify a Gemini topic reply, then publish. Never expose secrets to the browser.
 
-Official setup references:
+## Connection and limitations
+
+If the website server already has a direct GEMINI_API_KEY, it uses Gemini directly. Otherwise it uses the protected backend bridge. Cloud Secrets do not necessarily populate the website SSR process.env runtime. Backend deployment, missing credentials and quota problems have separate safe error messages.
+
+Default model: gemini-3.1-flash-lite. Optional GEMINI_TOPIC_CHAT_MODEL selects another account-supported model. Free-tier eligibility and quotas depend on Google; unlimited replies are not promised.
+
+Existing source-evidence checks remain required. On failure, matching textbook excerpts may be shown with an explicit source label. Existing notes are preserved. Other generation/PYQ provider configuration is unchanged.
+
+References:
+- https://docs.lovable.dev/features/secrets
 - https://ai.google.dev/gemini-api/docs/api-key
 - https://ai.google.dev/gemini-api/docs/billing
-- https://console.groq.com/docs/quickstart
-- https://console.groq.com/docs/rate-limits
-- https://docs.lovable.dev/features/secrets

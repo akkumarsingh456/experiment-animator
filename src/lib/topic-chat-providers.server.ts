@@ -1,11 +1,12 @@
 import {gatewayJSON,hasGatewayKey} from './structured-response-client';
+import {hasGeminiCloudBridge,cloudGeminiDraft} from './gemini-cloud-bridge.server';
 
 /** Keys stay server-side. Only the missing-topic chat uses these providers. */
 export type TopicChatProvider='auto'|'gemini'|'groq';
 export function hasTopicChatProvider(provider:TopicChatProvider='auto'){
- if(provider==='gemini')return Boolean(process.env.GEMINI_API_KEY||process.env.GOOGLE_API_KEY);
+ if(provider==='gemini')return Boolean(process.env.GEMINI_API_KEY||process.env.GOOGLE_API_KEY||hasGeminiCloudBridge());
  if(provider==='groq')return Boolean(process.env.GROQ_API_KEY);
- return Boolean(process.env.GEMINI_API_KEY||process.env.GOOGLE_API_KEY||process.env.GROQ_API_KEY||hasGatewayKey());
+ return Boolean(process.env.GEMINI_API_KEY||process.env.GOOGLE_API_KEY||hasGeminiCloudBridge()||process.env.GROQ_API_KEY||hasGatewayKey());
 }
 function parseJSON(text:string):unknown{
  try{return JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g,''));}catch{return null;}
@@ -34,6 +35,12 @@ async function topicRequest(url:string,options:RequestInit):Promise<Response|nul
 /** Caller verifies each candidate against source evidence before accepting it. */
 export async function* topicChatDrafts(options:{prompt:string;schema:Record<string,unknown>;provider?:TopicChatProvider}){
  const geminiKey=process.env.GEMINI_API_KEY||process.env.GOOGLE_API_KEY;
+ if(!geminiKey&&options.provider!=='groq'&&hasGeminiCloudBridge()){
+  try{
+   const draft=await cloudGeminiDraft(options);
+   if(draft)yield {draft,provider:'Gemini'};
+  }catch(error){if(options.provider==='gemini')throw error;}
+ }
  if(geminiKey&&options.provider!=='groq'){
   try{
    const model=process.env.GEMINI_TOPIC_CHAT_MODEL||'gemini-3.1-flash-lite';

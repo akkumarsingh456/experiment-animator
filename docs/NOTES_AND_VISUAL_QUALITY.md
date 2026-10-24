@@ -2,6 +2,8 @@
 
 ## Teacher explanation companion
 
+- The topic popup uses Gemini only. Cloud-secret access uses the authenticated gemini-topic-chat backend bridge when SSR lacks the direct key. Never expose credentials or relax source-evidence checks. Other provider consumers retain their existing configuration. Deploy the backend function separately from frontend publishing.
+
 - Guide-only formula presentation requires meaningful structured formula cells; ordinary prose and incidental equations belong in flowing explanations, not mostly empty Concept/Formula/Unit tables. Flag joined decimal operands and detached operator/power sequences without guessing a corrected equation. Keep raw damaged excerpts in an explicitly labelled source-review section. Apply this when displaying cached lessons too; presentation/PPT source data remains unchanged.
 - Guided notes PDFs pack rendered article slices into remaining page space instead of starting every topic/planner article on a new page. Use consistent text scale, safe paragraph/text-line/equation boundaries, heading-with-first-lines protection, clickable source links and numbered footers. Topic headings are bold with a dashed separator. The optional Next Class Plan alone retains its separate final-page placement. Landscape slide exports remain one page per slide.
 

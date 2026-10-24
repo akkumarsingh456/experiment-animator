@@ -1,1 +1,5 @@
 project_id = "ylxdoavfgqdcrrsfbvdt"
+
+[functions.gemini-topic-chat]
+# The function validates the server service credential itself, including opaque keys.
+verify_jwt = false

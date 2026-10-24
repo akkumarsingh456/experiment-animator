@@ -14,7 +14,7 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     topicNotesScope.extend({
       recoveryOnly: z.literal(true),
-      provider:z.enum(['auto','gemini','groq']).default('auto'),
+      provider:z.enum(['auto','gemini','groq']).default('gemini'),
       request: z.string().trim().min(3).max(2000).optional(),
       format:z.enum(['activity','important','formula','derivation','example','revision','explanation']).optional(),
       history: z.array(z.object({role:z.enum(['user','assistant']),text:z.string().max(16000)})).max(8).optional(),
@@ -23,9 +23,9 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const scope = canonicalOfficialRecoveryTopic(data);
     if (!scope) throw new Error("Choose an exact catalogue class, subject, chapter and topic.");
-    if (!hasTopicChatProvider(data.provider))
+    if (!hasTopicChatProvider('gemini'))
       throw new Error(
-        "Connect Gemini or Groq by adding GEMINI_API_KEY or GROQ_API_KEY to the website server secrets. Never paste API keys into this chat. Existing notes are unchanged.",
+        "Connect Gemini by adding GEMINI_API_KEY to the website backend secrets and deploying gemini-topic-chat. Never paste API keys into this chat. Existing notes are unchanged.",
       );
     const {readTopicNotesSources}=await import('./topic-notes-sources.server');
     const sources = await readTopicNotesSources(scope);
@@ -93,7 +93,7 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
         },
         required: ["topic_present", "notes"],
       };
-    for await(const candidate of topicChatDrafts({prompt,schema,provider:data.provider})){
+    for await(const candidate of topicChatDrafts({prompt,schema,provider:'gemini'})){
     const parsed = z
       .object({
         topic_present: z.boolean(),
@@ -125,5 +125,5 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
       sources: supported.sources.filter(source=>!!source.url),
     };
     }
-    throw new Error("The configured AI services could not return source-checked notes. Their key, quota or connection may need attention; retry later. Your existing notes are unchanged.");
+    throw new Error("Gemini could not return source-checked notes. Its connection, quota or the available source evidence may need attention; retry later. Your existing notes are unchanged.");
   });
