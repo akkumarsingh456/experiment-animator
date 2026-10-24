@@ -704,7 +704,7 @@ export type Mcq = {
 };
 
 export type Slide = {
-  teacher_supplement?: {lines:string[];sourceUrl:string};
+  teacher_supplement?: {lines:string[];sourceUrl:string;placements?:Array<{id:string;afterPageId:string;lines:string[]}>};
   /** Additive AI-drafted teaching support, separate from original notes/evidence. */
   teaching_support?: NoteSection[];
   teacher_blank?: {id:string;topic:string};

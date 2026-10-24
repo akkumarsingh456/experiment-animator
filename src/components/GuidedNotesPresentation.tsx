@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 import type { Slide } from "@/lib/generate.functions";
 import type { BookmarkPage } from '@/lib/teaching-bookmark';
 
-export type PresentationSlide = { title: string; section?: string; content: ReactNode; sourceIndex?:number; noteHeadings?:string[] };
+export type PresentationSlide = { title: string; section?: string; content: ReactNode; sourceIndex?:number; notePageId?:string; noteHeadings?:string[] };
 
 type Props = {
   presentationSlides?: PresentationSlide[];
@@ -27,7 +27,7 @@ type Props = {
   pageIndex?: number;
   onPageChange?: (index: number) => void;
   renderTopicRecovery?: (topicTitle: string) => ReactNode;
-  renderSlideNotesIcon?: (topicTitle:string,sourceIndex?:number,noteHeadings?:string[])=>ReactNode;
+  renderSlideNotesIcon?: (topicTitle:string,sourceIndex?:number,noteHeadings?:string[],notePageId?:string)=>ReactNode;
   renderBookmarkControls?: (pages: BookmarkPage[], index: number, goTo: (index: number) => void) => ReactNode;
 };
 
@@ -347,7 +347,7 @@ export function GuidedNotesPresentation({
           <span>Use ← → to move between slides</span>
         </div>
         <div className="presentation-navigation">
-          {renderSlideNotesIcon?.(pageTitle(index),presentationSlides?.[index]?.sourceIndex ?? (pages[index]?.dataset.sourceIndex !== undefined ? Number(pages[index].dataset.sourceIndex) : undefined),presentationSlides?.[index]?.noteHeadings||Array.from(pages[index]?.querySelectorAll('h3')||[]).map(heading=>heading.textContent||''))}
+          {renderSlideNotesIcon?.(pageTitle(index),presentationSlides?.[index]?.sourceIndex ?? (pages[index]?.dataset.sourceIndex !== undefined ? Number(pages[index].dataset.sourceIndex) : undefined),presentationSlides?.[index]?.noteHeadings||Array.from(pages[index]?.querySelectorAll('h3')||[]).map(heading=>heading.textContent||''),presentationSlides?.[index]?.notePageId)}
           <button
             className="presentation-icon-button"
             disabled={!pageCount || !index}

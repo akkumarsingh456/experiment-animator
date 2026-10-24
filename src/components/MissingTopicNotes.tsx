@@ -24,6 +24,7 @@ type Props = {
   onExtracted?:()=>void;
   saveStatus?: string;
   pageHeadings?: string[];
+  afterPageId?:string;
   onAddBlankSlide?: () => void;
   slide: Slide;
   klass: string;
@@ -38,6 +39,7 @@ export function MissingTopicNotes({
   onExtracted,
   saveStatus,
   pageHeadings,
+  afterPageId,
   onAddBlankSlide,
   slide,
   klass,
@@ -69,7 +71,7 @@ export function MissingTopicNotes({
     importedRef.current = !!slide.teacher_supplement;
     try {
       const draft=importedTopicDraft.safeParse(JSON.parse(localStorage.getItem(importKey)||"null"));
-      if(draft.success&&!slide.teacher_supplement){importedRef.current=true;onSaved(importMissingTopicNotes(slide,draft.data.lines,draft.data.sources[0]?.url));}
+      if(draft.success&&!slide.teacher_supplement){importedRef.current=true;onSaved(importMissingTopicNotes({...slide,teacher_supplement:{lines:draft.data.lines,sourceUrl:draft.data.sources[0]?.url||'',placements:draft.data.placements}},draft.data.lines,draft.data.sources[0]?.url));}
     } catch {}
     let current = true;
     if(!slide.topic_recovery)return ()=>{current=false;};
@@ -182,9 +184,10 @@ export function MissingTopicNotes({
                 importedRef.current=true;
                 const sourceUrl=slide.teacher_supplement?.sourceUrl||slide.topic_recovery?.sourceUrl||'';
                 const sources=sourceUrl?[{url:sourceUrl,title:'Supplementary notes reference'}]:[];
-                onSaved(importMissingTopicNotes(slide,lines,sourceUrl));
+                const updated=importMissingTopicNotes(slide,lines,sourceUrl);
+                onSaved(updated);
                 edit(lines.join('\n'));
-                try{const value=JSON.stringify({lines,sources});localStorage.setItem(importKey,value);if(localStorage.getItem(importKey)!==value)throw new Error('Save not confirmed');setNotice('Added notes updated and saved on this device.');}
+                try{const value=JSON.stringify({lines,sources,placements:updated.teacher_supplement?.placements});localStorage.setItem(importKey,value);if(localStorage.getItem(importKey)!==value)throw new Error('Save not confirmed');setNotice('Added notes updated and saved on this device.');}
                 catch{setNotice('Notes updated in the open lesson, but device saving failed. Keep this lesson open.');}
                 onExtracted?.();
               }}/>
@@ -193,12 +196,12 @@ export function MissingTopicNotes({
                 lines=[...new Set([...addedTopicLines(slide),...lines])];
                 if(lines.length>500){setNotice('This slide already has many added points. Use Add blank slide for the next set; existing notes are preserved.');return false;}
                 importedRef.current=true;
-                const updated=importMissingTopicNotes(slide,lines,sources[0]?.url);
+                const updated=importMissingTopicNotes(slide,lines,sources[0]?.url,afterPageId);
                 onSaved(updated);
                 onExtracted?.();
                 edit(lines.join("\n"));
                 setUrl(sources[0]?.url||"");
-                try{const value=JSON.stringify({lines,sources});localStorage.setItem(importKey,value);if(localStorage.getItem(importKey)!==value)throw new Error('Save not confirmed');setNotice("Added to this topic and saved on this device. Extra slides adjust automatically.");}
+                try{const value=JSON.stringify({lines,sources,placements:updated.teacher_supplement?.placements});localStorage.setItem(importKey,value);if(localStorage.getItem(importKey)!==value)throw new Error('Save not confirmed');setNotice("Added to this topic and saved on this device. Extra slides adjust automatically.");}
                 catch{setNotice("Extracted into this lesson. Device saving failed; save the lesson to your workspace before leaving.");}
               }}/>
               </div>

@@ -2,6 +2,8 @@
 
 ## Teacher explanation companion
 
+- New presentation chat insertions store a stable clicked-page anchor with each added batch. Exclude those lines before measuring original pages; paginate them separately and insert new note-only pages after the anchor. Keep original page content/order, later topics, nested insertions, per-point deletion and autosave restoration. Persist placement metadata in device/private workspace schemas, including explicit blank slides. Chat generation remains unchanged.
+
 - Add notes Gemini drafts receive a separate Gemini review before display: check facts, notation, conditions, class level and organisation; remove uncertain or duplicate claims. Never return the unchecked first draft on review failure. This is AI self-review, not independent source verification or an accuracy guarantee; retain the AI-draft label and teacher review step. Other generation paths remain unchanged.
 
 - Explicit Add notes Send requests use teacherChat mode: Gemini may answer from subject knowledge without an extracted-source prerequisite, as requested by the owner. Label every such response AI draft for teacher review, never source-verified NCERT extraction. Keep fixed catalogue scope, bounded history, explicit Insert notes, existing saving/deletion and labelled textbook fallbacks. Legacy source-grounded recovery, blank-slide tools and normal generation retain their existing checks.

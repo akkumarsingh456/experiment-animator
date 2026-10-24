@@ -26,6 +26,7 @@ import {SourceIndexReview} from "@/components/SourceIndexReview";
 import {readableIndexPresentation} from "@/lib/source-index-presentation";
 import {hasMeaningfulSlide} from "@/lib/slide-space-organizer";
 import {SlideLayoutCheck} from '@/components/SlideLayoutCheck';
+import {withoutPlacedNotes,insertNotesPages} from '@/lib/inserted-notes-pages';
 import {layoutKey,materializeLayout} from '@/lib/slide-layout-check';
 import { socialNotesPresentationSlide } from "@/lib/social-note-presentation";
 import { prepareTeacherPdfPages } from "@/lib/teacher-pdf-pages";
@@ -360,12 +361,12 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
     return undoControl;
   }
 
-  function renderSlideNotesIcon(topicTitle:string,sourceIndex?:number,noteHeadings?:string[]){
+  function renderSlideNotesIcon(topicTitle:string,sourceIndex?:number,noteHeadings?:string[],notePageId?:string){
     const index=sourceIndex!==undefined&&slides[sourceIndex]?.title===topicTitle?sourceIndex:slides.findIndex(item=>item.title.trim()===topicTitle.trim());
     const slide=slides[index];
     if(!slide||slide.visual==='cover'||slide.kind==='mcq'||slide.kind==='break'||slide.teacher_next_class||slide.teacher_pdf)return null;
     const occurrence=slides.slice(0,index).filter(item=>!item.teacher_blank&&item.title===slide.title).length;
-    return <MissingTopicNotes pageHeadings={noteHeadings} saveStatus={`${blankStore.status}${notesCloudStatus?" · "+notesCloudStatus:""}`} iconOnly key={`${slide.title}:${occurrence}`} storageId={`${lessonDeviceKey}:${occurrence}`} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onExtracted={()=>{notesEditAnchor.current=index;setNotesSaveRevision(value=>value+1);}} onSaved={updated=>setSlides(current=>current.map((item,at)=>at===index?{...item,sections:updated.sections,teacher_supplement:updated.teacher_supplement,topic_recovery:updated.topic_recovery,notes_quality:updated.notes_quality,caption:updated.caption}:item))}/>;
+    return <MissingTopicNotes afterPageId={notePageId||'original:0'} pageHeadings={noteHeadings} saveStatus={`${blankStore.status}${notesCloudStatus?" · "+notesCloudStatus:""}`} iconOnly key={`${slide.title}:${occurrence}`} storageId={`${lessonDeviceKey}:${occurrence}`} slide={slide} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} onExtracted={()=>{notesEditAnchor.current=index;setNotesSaveRevision(value=>value+1);}} onSaved={updated=>setSlides(current=>current.map((item,at)=>at===index?{...item,sections:updated.sections,teacher_supplement:updated.teacher_supplement,topic_recovery:updated.topic_recovery,notes_quality:updated.notes_quality,caption:updated.caption}:item))}/>;
   }
   useEffect(()=>{const refresh=()=>setSlides(current=>[...current]);window.addEventListener('manual-visual-saved',refresh);void loadManualVisuals().catch(()=>{});return()=>window.removeEventListener('manual-visual-saved',refresh);},[]);
   const [bookCaptureBusy, setBookCaptureBusy] = useState(false);
@@ -664,7 +665,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
   const baseOriginalPages = useMemo(() => [...withPhysicalChemistryRevision(withoutNextClassPlan(slides), String(search.klass||""), search.subject||"", search.chapter||title),...slides.filter(slide=>slide.teacher_next_class)].flatMap((originalSlide, sourceIndex) => {
     if(originalSlide.teacher_next_class)return [{...originalSlide,sourceIndex}];
     const visualSlot=originalSlide.teacher_blank?`teacher-blank:${originalSlide.teacher_blank.id}`:`topic-slide:${slides.slice(0,sourceIndex).filter(item=>item.title.trim().toLowerCase()===originalSlide.title.trim().toLowerCase()).length}`;
-    const slide=ncertNotesDisplaySlide(polishChemistryPresentation(readableIndexPresentation(originalSlide), search.subject||""),search.subject);
+    const slide=ncertNotesDisplaySlide(polishChemistryPresentation(readableIndexPresentation(withoutPlacedNotes(originalSlide)), search.subject||""),search.subject);
     if (!hasMeaningfulSlide(slide)) return [];
     if (slide.kind === "break" || slide.kind === "mcq") return [{ ...slide, sourceIndex }];
     const sections = slide.sections?.filter((section) => section.kind !== "diagram" && section.lines.some(line=>line.trim()));
@@ -678,7 +679,8 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
   const [layoutPlan,setLayoutPlan]=useState<{key:string;groups:number[][]}|null>(null);
   const [layoutChecking,setLayoutChecking]=useState(true);
   const layoutGroups=useMemo(()=>layoutPlan?.key===baselineLayoutKey?layoutPlan.groups:baseOriginalPages.map((_,index)=>[index]),[baselineLayoutKey,layoutPlan]);
-  const originalPages=useMemo(()=>materializeLayout(baseOriginalPages,layoutGroups),[baseOriginalPages,layoutGroups]);
+  const measuredOriginalPages=useMemo(()=>materializeLayout(baseOriginalPages,layoutGroups),[baseOriginalPages,layoutGroups]);
+  const originalPages=useMemo(()=>insertNotesPages(measuredOriginalPages,slides),[measuredOriginalPages,slides]);
   const anchoredOriginalPage=notesEditAnchor.current!==null&&originalPages[originalPage]?.sourceIndex!==notesEditAnchor.current
     ? originalPages.reduce((nearest,page,index)=>page.sourceIndex===notesEditAnchor.current&&(nearest<0||Math.abs(index-originalPage)<Math.abs(nearest-originalPage))?index:nearest,-1)
     : originalPage;
@@ -692,7 +694,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
   useEffect(()=>{if(!blankSlideToShow.current)return;const page=originalPages.findIndex(slide=>slide.title===blankSlideToShow.current);if(page>=0){setOriginalPage(page);blankSlideToShow.current=null;}},[originalPages]);
 
   useEffect(()=>setOriginalPage(current=>Math.min(current,Math.max(0,originalPages.length-1))),[originalPages.length]);
-  const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, sourceIndex:slide.sourceIndex,noteHeadings:slide.sections?.map(section=>section.heading), section: "NCERT notes & illustration",
+  const originalPresentationSlides = originalPages.map((slide, index) => ({ title: slide.title, sourceIndex:slide.sourceIndex,notePageId:slide.notePageId,noteHeadings:slide.sections?.map(section=>section.heading), section: "NCERT notes & illustration",
     content: <SlideCanvas slide={slide} index={index} total={originalPages.length} editing={false} onChange={() => {}} klass={search.klass} subject={search.subject} chapter={search.chapter || title} onNotesOverflow={continueOverflowingNotes} staticView />,
   }));
   const handledWorkspaceAction=useRef('');
@@ -840,7 +842,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
             </div>
 
             <SourceIndexReview slides={slides}/>
-            <SlideLayoutCheck base={baseOriginalPages} pages={originalPages} groups={layoutGroups} onBusyChange={setLayoutChecking}
+            <SlideLayoutCheck base={baseOriginalPages} pages={measuredOriginalPages} groups={layoutGroups} onBusyChange={setLayoutChecking}
               onOrganise={groups=>setLayoutPlan({key:baselineLayoutKey,groups})}
               renderPage={(page,index)=><SlideCanvas slide={page} index={index} total={originalPages.length} editing={false} onChange={()=>{}} klass={search.klass} subject={search.subject} chapter={search.chapter||title} staticView/>}/>
             {lessonView === "notes" && <>

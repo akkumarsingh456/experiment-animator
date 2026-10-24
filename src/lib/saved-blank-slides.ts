@@ -2,10 +2,12 @@ import type { Slide } from './generate.functions';
 import { z } from 'zod';
 import {importMissingTopicNotes} from './missing-topic-import';
 
+const placement=z.object({id:z.string().uuid(),afterPageId:z.string().min(1).max(200),lines:z.array(z.string().min(1).max(1800)).max(500)});
+const supplement=z.object({lines:z.array(z.string().min(1).max(1800)).max(500),sourceUrl:z.string().max(2000),placements:z.array(placement).max(500).optional()});
 const section = z.object({ heading: z.string(), kind: z.enum(['text', 'bullets', 'formula', 'terms', 'tip', 'diagram']), lines: z.array(z.string()) });
-const savedSlide = z.object({ title: z.string(), teacher_blank: z.object({ id: z.string().uuid(), topic: z.string() }), kind: z.literal('content'), visual: z.literal('book'), bullets: z.array(z.string()), notes: z.array(z.string()), key_terms: z.array(z.object({ term: z.string(), meaning: z.string() })), sections: z.array(section).optional(), caption: z.string().optional() });
+const savedSlide = z.object({ title: z.string(), teacher_blank: z.object({ id: z.string().uuid(), topic: z.string() }), kind: z.literal('content'), visual: z.literal('book'), bullets: z.array(z.string()), notes: z.array(z.string()), key_terms: z.array(z.object({ term: z.string(), meaning: z.string() })), sections: z.array(section).optional(), caption: z.string().optional(),teacher_supplement:supplement.optional() });
 const position = z.object({ slide: savedSlide, index: z.number().int().min(0), after: z.string(), occurrence: z.number().int().min(0), offset: z.number().int().min(0).default(0) });
-const addition=z.object({title:z.string(),occurrence:z.number().int().min(0),lines:z.array(z.string().min(1).max(1800)).max(500),sourceUrl:z.string().max(2000)});
+const addition=z.object({title:z.string(),occurrence:z.number().int().min(0),lines:z.array(z.string().min(1).max(1800)).max(500),sourceUrl:z.string().max(2000),placements:z.array(placement).max(500).optional()});
 export const blankSlideRecordSchema = z.object({ version: z.literal(1), blanks: z.array(position), deleted: position.nullable(),additions:z.array(addition).max(3000).optional() });
 const record = blankSlideRecordSchema;
 export type BlankSlideRecord = z.infer<typeof record>;
@@ -30,7 +32,7 @@ export function restoreBlankSlides(base: Slide[], saved: BlankSlideRecord): Slid
   const result = base.map((slide,index)=>{
     const occurrence=base.slice(0,index).filter(item=>!item.teacher_blank&&item.title===slide.title).length;
     const savedAddition=saved.additions?.find(item=>item.title===slide.title&&item.occurrence===occurrence);
-    return savedAddition&&!slide.teacher_blank?importMissingTopicNotes(slide,savedAddition.lines,savedAddition.sourceUrl):slide;
+    return savedAddition&&!slide.teacher_blank?importMissingTopicNotes({...slide,teacher_supplement:{lines:savedAddition.lines,sourceUrl:savedAddition.sourceUrl,placements:savedAddition.placements}},savedAddition.lines,savedAddition.sourceUrl):slide;
   });
   const seen = new Set(result.flatMap(s => s.teacher_blank ? [s.teacher_blank.id] : []));
   for (const item of saved.blanks) {
