@@ -1,5 +1,5 @@
 /** A reversible view of the source transcription. Never replace stored source text. */
-export function presentPyq(raw:string,subject=''){
+export function presentPyq(raw:string,subject='',layoutText?:string){
  const code=/computer|informatics|programming/i.test(subject);
  const warnings:string[]=[],sourceLines=raw.replace(/\r\n?/g,'\n').split('\n');
  // English-only presentation applies to historical saved readings as well.
@@ -49,7 +49,15 @@ export function presentPyq(raw:string,subject=''){
  }
  if(text.includes('\uFFFD')||/[\uE000-\uF8FF]/u.test(text))warnings.push('Some PDF characters are unreadable. Use Read again or check the original PDF.');
  if(!/[A-Za-z]{3}/.test(text))text='';
- return {text,code,removed,hiddenHindi,warnings:[...new Set(warnings)]};
+ const layoutApplied=!code&&validPyqLayout(text,layoutText);
+ if(layoutApplied)text=layoutText!;
+ return {text,code,removed,hiddenHindi,layoutApplied,warnings:[...new Set(warnings)]};
+}
+
+/** Layout changes may only replace existing whitespace, never question tokens. */
+export function validPyqLayout(source:string,candidate?:string):boolean{
+ return !!source.trim()&&typeof candidate==='string'&&candidate.length<=20000&&
+  source.trim().split(/\s+/).join(' ')===candidate.trim().split(/\s+/).join(' ');
 }
 
 /** Trigger OCR for broken font encodings as well as image-only pages. */

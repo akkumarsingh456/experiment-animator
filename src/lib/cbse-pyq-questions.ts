@@ -1,5 +1,5 @@
 import {NCERT_SYLLABUS} from './ncert-syllabus';
-export type PyqQuestion={id:string;number:string;page:number;endPage:number;text:string;ocr:boolean;chapter:string;topics:string[];mapping:'suggested'|'teacher'|'unmapped'};
+export type PyqQuestion={id:string;number:string;page:number;endPage:number;text:string;layoutText?:string;ocr:boolean;chapter:string;topics:string[];mapping:'suggested'|'teacher'|'unmapped'};
 export type PyqReading={url:string;file:string;klass:string;subject:string;year:number;exam:string;pages:number;ocrPages:number;questions:PyqQuestion[];readAt:string;sourceCheckedAt:string;warnings:string[]};
 export function pyqChapters(klass:string,subject:string){const entries=Object.entries(NCERT_SYLLABUS[klass]||{}),normal=(s:string)=>s.toLowerCase().replace(/[^a-z]/g,'');const key=entries.find(([key])=>normal(key)===normal(subject)||normal(key)==='mathematics'&&normal(subject).startsWith('mathematics'))?.[0];return key?NCERT_SYLLABUS[klass][key]:[];}
 export function questionBlocks(pages:{page:number;text:string;ocr:boolean}[]){

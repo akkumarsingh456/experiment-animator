@@ -846,14 +846,18 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
             {lessonView === "notes" && <>
               <div className="flex flex-wrap gap-2 mb-4 print:hidden" aria-label="Guided notes layout">
                 <Button size="sm" variant={guidedDisplay === "page" ? "default" : "outline"} onClick={() => setGuidedDisplay("page")}>Read guided notes</Button>
+                <Button size="sm" variant="outline" onClick={()=>{setGuidedDisplay("page");requestAnimationFrame(()=>{const section=document.getElementById('chapter-pyqs');section?.scrollIntoView({behavior:'smooth',block:'start'});section?.querySelector<HTMLElement>('section')?.focus({preventScroll:true});});}}>Chapter PYQs ↓</Button>
                 <Button size="sm" variant={guidedDisplay === "presentation" ? "default" : "outline"} onClick={() => setGuidedDisplay("presentation")}>Guided notes presentation</Button>
                 <Button size="sm" variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("notes")}>Guided notes PDF</Button>
                 <Button size="sm" variant="outline" disabled={!!exportMode} onClick={() => downloadPDF("guided-slides")}>Guided presentation PDF</Button>
                 <Button size="sm" variant="outline" disabled={!!exportMode} onClick={() => downloadPPTX("guided-slides")}>Guided presentation PPTX</Button>
               </div>
-              {guidedDisplay === "page" ? <><GuidedLessonNotes teacherGuide sourceBooks={result.source_books} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} /><TeacherPyqPanel key={JSON.stringify([search.klass,search.subject,search.chapter,search.topic])} guided klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} topics={[...new Set(slides.filter(slide=>(!slide.kind||slide.kind==='content')&&!slide.teacher_pdf&&!slide.teacher_blank).map(slide=>slide.title).filter(Boolean))]}/></> :
+              {guidedDisplay === "page" ? <><GuidedLessonNotes teacherGuide sourceBooks={result.source_books} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} /></> :
                 <GuidedNotesPresentation renderSlideNotesIcon={renderSlideNotesIcon} renderBookmarkControls={renderTeachingBookmark} renderTopicRecovery={renderTopicRecovery} inline mode="notes" slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={presentationPage} onPageChange={setPresentationPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("guided-slides")} />}
             </>}
+            <div id="chapter-pyqs" className={`scroll-mt-8 ${lessonView==="notes"&&guidedDisplay==="page"?'':'hidden'}`}>
+              <TeacherPyqPanel key={JSON.stringify([search.klass,search.subject,search.chapter,search.topic])} guided autoStart={!search.workspaceId} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} topics={[...new Set(slides.filter(slide=>(!slide.kind||slide.kind==='content')&&!slide.teacher_pdf&&!slide.teacher_blank).map(slide=>slide.title).filter(Boolean))]}/>
+            </div>
             <div className={lessonView === "slides" ? "lesson-slides" : "hidden"}>
 
             <div
