@@ -27,9 +27,9 @@ describe('CBSE-only question presentation and PDF downloads',()=>{
   const source=question.text,view=presentPyq(source,'Science');
   expect(view.text).toContain('(iii) Corrosion');expect(view.text).not.toContain('31(B)');expect(view.text.endsWith('OR')).toBe(true);expect(view.warnings.length).toBeGreaterThan(0);expect(question.text).toBe(source);
  });
- it('preserves code, explicit notation and multilingual prose',()=>{
+ it('preserves code and notation while displaying English only',()=>{
   const code='Write the output:\nif x:\n    print("H2O")\nelse:\n    print(2)';expect(presentPyq(code,'Computer Science').text).toBe(code);
-  const symbols='Find x: x² + y² = 25\nH₂O, SO₄²⁻\nप्रश्न का उत्तर दीजिए।';expect(presentPyq(symbols,'Science').text).toBe(symbols);
+  const symbols='Find x: x² + y² = 25\nH₂O, SO₄²⁻\nप्रश्न का उत्तर दीजिए।';const view=presentPyq(symbols,'Science');expect(view.text).toBe('Find x: x² + y² = 25\nH₂O, SO₄²⁻');expect(view.hiddenHindi).toBe(true);expect(view.warnings.join(' ')).toContain('English-only');
  });
  it('exports every supplied question, preserves warnings and cleans up its isolated rendering root',async()=>{
   Object.defineProperty(document,'fonts',{configurable:true,value:{ready:Promise.resolve()}});

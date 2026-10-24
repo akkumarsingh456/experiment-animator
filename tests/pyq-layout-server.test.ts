@@ -1,0 +1,15 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+const mocks=vi.hoisted(()=>({identity:vi.fn(),configured:vi.fn(),drafts:vi.fn()}));
+vi.mock('@/lib/library-access.server',()=>({readLibraryIdentity:mocks.identity}));
+vi.mock('@/lib/cbse-pyq-pdf.server',()=>({officialPaper:()=>({klass:'10',subject:'Science',year:2026})}));
+vi.mock('@/lib/topic-chat-providers.server',()=>({hasTopicChatProvider:mocks.configured,topicChatDrafts:async function*(options:unknown){for(const draft of mocks.drafts(options))yield {draft,provider:'Test provider'};}}));
+import {checkPyqLayout} from '@/lib/pyq-layout.server';
+const raw='1. Explain the reaction. (a) Give the correct unit.';
+const input={url:'https://www.cbse.gov.in/example.zip',klass:'10',subject:'Science',questions:[{id:'q1',text:raw}]};
+beforeEach(()=>{vi.resetAllMocks();mocks.identity.mockResolvedValue({email:'teacher@example.com'});mocks.configured.mockReturnValue(true);mocks.drafts.mockReturnValue([{items:[{id:'q1',text:raw.replace('reaction. ','reaction.\n')}]}]);});
+it('accepts layout-only changes and preserves the source input',async()=>{const source=JSON.stringify(input);const result=await checkPyqLayout(input);expect(result.available).toBe(true);expect(result.items).toHaveLength(1);expect(result.items[0].text).toContain('\n');expect(JSON.stringify(input)).toBe(source);});
+it('rejects word changes and unknown question IDs',async()=>{mocks.drafts.mockReturnValue([{items:[{id:'q1',text:raw.replace('correct','incorrect')},{id:'unknown',text:raw}]}]);expect(await checkPyqLayout(input)).toEqual({available:false,items:[]});});
+it('reports an unavailable provider without editing the questions',async()=>{mocks.configured.mockReturnValue(false);expect(await checkPyqLayout(input)).toEqual({available:false,items:[]});expect(mocks.drafts).not.toHaveBeenCalled();});
+it('requires sign-in for this optional AI action',async()=>{mocks.identity.mockResolvedValue(null);await expect(checkPyqLayout(input)).rejects.toThrow('Sign in');expect(mocks.drafts).not.toHaveBeenCalled();});
+it('rejects class or subject mismatch before contacting AI',async()=>{await expect(checkPyqLayout({...input,klass:'12'})).rejects.toThrow('does not match');await expect(checkPyqLayout({...input,subject:'Physics'})).rejects.toThrow('does not match');expect(mocks.drafts).not.toHaveBeenCalled();});
+it('skips the AI provider when there are no question texts',async()=>{expect(await checkPyqLayout({...input,subject:'Science',questions:[]})).toEqual({available:true,items:[]});expect(mocks.drafts).not.toHaveBeenCalled();});

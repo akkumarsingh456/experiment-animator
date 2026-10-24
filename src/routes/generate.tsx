@@ -855,7 +855,7 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
               {guidedDisplay === "page" ? <><GuidedLessonNotes teacherGuide sourceBooks={result.source_books} slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} /></> :
                 <GuidedNotesPresentation renderSlideNotesIcon={renderSlideNotesIcon} renderBookmarkControls={renderTeachingBookmark} renderTopicRecovery={renderTopicRecovery} inline mode="notes" slides={slides} title={title} klass={String(search.klass || "")} subject={search.subject} pageIndex={presentationPage} onPageChange={setPresentationPage} onPresent={presentSelectedView} onClose={closePresentation} downloading={exportMode !== null} onPdf={() => downloadPDF("guided-slides")} />}
             </>}
-            <div id="chapter-pyqs" className={`scroll-mt-8 ${lessonView==="notes"&&guidedDisplay==="page"?'':'hidden'}`}>
+            <div id="chapter-pyqs" className={`scroll-mt-24 ${lessonView==="notes"&&guidedDisplay==="page"?'':'hidden'}`}>
               <TeacherPyqPanel key={JSON.stringify([search.klass,search.subject,search.chapter,search.topic])} guided autoStart={!search.workspaceId} klass={String(search.klass)} subject={search.subject} chapter={search.chapter||title} topics={[...new Set(slides.filter(slide=>(!slide.kind||slide.kind==='content')&&!slide.teacher_pdf&&!slide.teacher_blank).map(slide=>slide.title).filter(Boolean))]}/>
             </div>
             <div className={lessonView === "slides" ? "lesson-slides" : "hidden"}>

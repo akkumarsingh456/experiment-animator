@@ -1,0 +1,8 @@
+import {it,expect} from 'vitest';
+import {presentPyq,validPyqLayout} from '@/lib/pyq-presentation';
+const raw='1. Calculate the value of x² + y² = 25.\n(a) Give the unit.\nOR\n(b) Explain the result.';
+it('accepts new paragraph breaks only when ordered original tokens are unchanged',()=>{const view=presentPyq(raw,'Physics');const layout=view.text.replace('value of','value\nof');expect(validPyqLayout(view.text,layout)).toBe(true);expect(presentPyq(raw,'Physics',layout).text).toBe(layout);expect(presentPyq(raw,'Physics',layout).layoutApplied).toBe(true);});
+it.each([raw.replace('25','26'),raw.replace('x²','x³'),raw.replace('Calculate','Explain'),raw+' The answer is 5.',raw.replace('OR','')])('rejects AI rewriting or missing question tokens',candidate=>{expect(validPyqLayout(raw,candidate)).toBe(false);expect(presentPyq(raw,'Physics',candidate).layoutApplied).toBe(false);});
+it('does not reformat program indentation even if a proposed layout has the same tokens',()=>{const code='Write the output:\nif x:\n    print(2)';expect(presentPyq(code,'Computer Science',code.replace('    ',' ')).text).toBe(code);expect(presentPyq(code,'Computer Science',code).layoutApplied).toBe(false);});
+it('does not restore hidden Hindi via an AI or saved layout',()=>{const text=raw+'\nहिंदी प्रश्न';const view=presentPyq(text,'Science',text);expect(view.hiddenHindi).toBe(true);expect(view.text).not.toContain('हिंदी');expect(view.layoutApplied).toBe(false);});
+it('rejects empty, reordered and oversized layout candidates',()=>{expect(validPyqLayout('','')).toBe(false);expect(validPyqLayout('one two','two one')).toBe(false);expect(validPyqLayout('one','one'+' '.repeat(20001))).toBe(false);});

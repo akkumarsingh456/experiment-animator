@@ -1,0 +1,30 @@
+import React,{act} from 'react';
+import {createRoot} from 'react-dom/client';
+import {beforeEach,afterEach,it,expect,vi} from 'vitest';
+const mocks=vi.hoisted(()=>({account:vi.fn(),saved:vi.fn(),store:vi.fn(),list:vi.fn(),read:vi.fn(),layout:vi.fn(),pdf:vi.fn(),close:vi.fn()}));
+vi.mock('@/hooks/use-teacher-account',()=>({useTeacherAccount:mocks.account}));
+vi.mock('@/lib/cbse-pyq.functions',()=>({listPyqPdfs:mocks.list,organisePyqQuestions:vi.fn(async()=>[]),improvePyqLayout:mocks.layout}));
+vi.mock('@/lib/cbse-pyq-reader',()=>({savedPyqReadings:mocks.saved,storePyqReading:mocks.store,readPyqPdf:mocks.read}));
+vi.mock('@/lib/local-book-reader',()=>({createLocalBookReader:()=>({close:mocks.close})}));
+vi.mock('@/components/PyqPdfButton',()=>({PyqPdfButton:(props:any)=>{mocks.pdf(props);return <button disabled={props.disabled||!props.rows.length}>Download PYQ text to PDF</button>;}}));
+vi.mock('@/components/SavedPyqBanks',()=>({SavedPyqBanks:()=>null}));
+vi.mock('@/components/PyqSourceBrowser',()=>({PyqSourceBrowser:()=>null}));
+vi.mock('@/components/PyqNotebook',()=>({PyqNotebook:()=>null}));
+vi.mock('@/lib/cbse-pyq',async load=>{const original=await load<typeof import('@/lib/cbse-pyq')>();return {...original,cbsePapers:original.cbsePapers.filter(p=>p.klass==='10'&&p.subject.toLowerCase()==='science').slice(0,1)};});
+import {cbsePapers,cbseCheckedAt} from '@/lib/cbse-pyq';
+import {TeacherPyqPanel} from '@/components/TeacherPyqPanel';
+const paper=cbsePapers[0];
+const chapter='Chapter 1: Chemical Reactions and Equations (Chemistry)';
+const makeReading=(count=1)=>({...paper,file:'Science/paper.pdf',pages:1,ocrPages:0,readAt:new Date().toISOString(),sourceCheckedAt:cbseCheckedAt,warnings:[],questions:Array.from({length:count},(_,index)=>({id:'q'+index,number:String(index+1),text:`Explain chemical reaction number ${index+1}. Give a complete explanation of the reaction.`,ocr:false,page:1,endPage:1,chapter,topics:[],mapping:'suggested' as const}))});
+let root:ReturnType<typeof createRoot>,host:HTMLDivElement;
+async function render(autoStart=false){await act(async()=>{root.render(<TeacherPyqPanel guided autoStart={autoStart} klass="10" subject="Science" chapter={chapter}/>);await new Promise(resolve=>setTimeout(resolve,10));});}
+async function settle(){await act(async()=>{await new Promise(resolve=>setTimeout(resolve,20));});}
+beforeEach(()=>{vi.resetAllMocks();mocks.account.mockReturnValue({account:null,checking:false});mocks.saved.mockResolvedValue([]);mocks.list.mockResolvedValue([{name:'Science/paper.pdf',size:100}]);mocks.read.mockResolvedValue(makeReading());mocks.close.mockResolvedValue(undefined);mocks.store.mockResolvedValue(undefined);host=document.createElement('div');document.body.append(host);root=createRoot(host);});
+afterEach(async()=>{await act(async()=>root.unmount());host.remove();});
+it('starts extraction automatically once, then reuses the mounted panel on rerender',async()=>{await render(true);await settle();expect(mocks.read).toHaveBeenCalledTimes(1);expect(mocks.store).toHaveBeenCalled();await render(true);await settle();expect(mocks.read).toHaveBeenCalledTimes(1);expect(host.textContent).toContain('Reading queue finished');});
+it('does not automatically extract when a saved lesson or standalone library opens',async()=>{await render();await settle();expect(mocks.read).not.toHaveBeenCalled();expect(mocks.list).not.toHaveBeenCalled();});
+it('reuses device paper sets instead of reading their PDFs again',async()=>{mocks.saved.mockResolvedValue([makeReading()]);await render(true);await settle();expect(mocks.read).not.toHaveBeenCalled();expect(host.textContent).toContain('1 already on this device');});
+it('exports every chapter question even after search and beyond the 40-card limit',async()=>{mocks.saved.mockResolvedValue([makeReading(55)]);await render();const latest=()=>mocks.pdf.mock.calls.map(call=>call[0]).filter(props=>!props.label).at(-1);expect(latest().rows).toHaveLength(55);const search=host.querySelector<HTMLInputElement>('input[placeholder="Search within the selected chapter…"]')!;await act(async()=>{const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!;setter.call(search,'unmatched query');search.dispatchEvent(new Event('input',{bubbles:true}));search.dispatchEvent(new Event('change',{bubbles:true}));});expect(host.textContent).toContain('No questions match these filters');expect(latest().rows).toHaveLength(55);expect(host.textContent).toContain('all 55 extracted questions');});
+it('keeps optional AI disabled when signed out without disabling PDF downloads',async()=>{mocks.saved.mockResolvedValue([makeReading()]);await render();const buttons=Array.from(host.querySelectorAll('button'));expect(buttons.find(b=>b.textContent==='Check reading layout with AI')!.disabled).toBe(true);expect(buttons.find(b=>b.textContent==='Download PYQ text to PDF')!.disabled).toBe(false);});
+it('does not invent board-paper extraction for class 9',async()=>{await act(async()=>root.render(<TeacherPyqPanel autoStart klass="9" subject="Science"/>));await settle();expect(mocks.read).not.toHaveBeenCalled();expect(host.textContent).toContain('school-conducted examinations');});
+it('saves accepted AI layout beside unchanged source question text',async()=>{const reading=makeReading();mocks.account.mockReturnValue({account:{signedIn:true,email:'teacher@example.com'},checking:false});mocks.saved.mockResolvedValue([reading]);const layout=reading.questions[0].text.replace('number','\nnumber');mocks.layout.mockResolvedValue({available:true,items:[{id:'q0',text:layout}]});await render();const source=reading.questions[0].text;await act(async()=>Array.from(host.querySelectorAll('button')).find(b=>b.textContent==='Check reading layout with AI')!.click());expect(mocks.layout).toHaveBeenCalledTimes(1);const stored=mocks.store.mock.calls.at(-1)![0];expect(stored.questions[0].text).toBe(source);expect(stored.questions[0].layoutText).toBe(layout);});
