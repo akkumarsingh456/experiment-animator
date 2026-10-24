@@ -343,3 +343,7 @@ Apply the common English-only presentation to new and historical saved question 
 
 ### Topic popup source recovery and preview persistence
 The explicit notes popup reads chapter-scoped raw saved textbook pages/chunks before falling back to external sources. This is read-only and does not change normal lesson generation or source-library protections. Generated lesson notes are never independent evidence. Failed AI requests retain their cause; available source excerpts are labelled as excerpts, not newly generated activities. Preview text is cached per lecture/topic on the device and retained across failed retries. Import still requires Extract notes and uses the existing supplementary-note save path.
+
+The topic assistant retries a transient network/408/429/5xx failure once with a short bounded delay. Bad credentials, completed timeouts and long Retry-After waits move on without repeating the same failing request. Every returned draft still passes source checks; gateway exceptions return control to the existing source fallback. Missing credentials never imply a connected live AI service.
+
+Live verification of Carbohydrates exposed legacy next-chapter text and an alphabetical index in the saved-source fallback. Popup source preparation now bounds legacy numbered chapter sections and removes dense index pages before topic recovery. This supplements catalogue scoping without changing the main generation path.

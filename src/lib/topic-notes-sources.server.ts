@@ -1,3 +1,4 @@
+import {boundSavedChapterPages} from './saved-chapter-boundary';
 import {getRequest} from '@tanstack/react-start/server';
 import type {AttentionScope} from './attention-topic-scope';
 import {canonicalOfficialRecoveryTopic} from './official-recovery-scope';
@@ -16,7 +17,7 @@ export async function readTopicNotesSources(input:AttentionScope):Promise<ReadAt
   for(const source of chapter.sources){const rows=books.get(source.book)||[];rows.push(source.text);books.set(source.book,rows);}
   let url='';try{url=new URL('/history',getRequest().url).href;}catch{/* Non-request fixtures have no source navigation link. */}
   for(const [book,rows] of books){
-   const text=rows.join('\n\n').slice(0,500000);
+   const text=boundSavedChapterPages(rows).join('\n\n').slice(0,500000);
    if(recoverTopicFromSources(scope.topic,[text]).lines.length)saved.push({url,text,title:`${book} · ${scope.chapter}`,sourceClass:scope.klass,provider:'Saved textbook source'});
   }
  }catch{/* A library outage must still allow official online recovery. */}
