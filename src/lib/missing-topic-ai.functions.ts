@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { topicNotesScope } from "./topic-notes-store.server";
 import { canonicalOfficialRecoveryTopic } from "./official-recovery-scope";
-import { readAttentionSources } from "./attention-source-read.server";
 import { trustedChapterSource } from "./trusted-chapter-source.server";
 import {hasTopicChatProvider,topicChatDrafts} from "./topic-chat-providers.server";
 import {recoverTopicFromSources} from "./topic-source-recovery";
@@ -27,7 +26,8 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
       throw new Error(
         "Connect Gemini or Groq by adding GEMINI_API_KEY or GROQ_API_KEY to the website server secrets. Never paste API keys into this chat. Existing notes are unchanged.",
       );
-    const sources = await readAttentionSources(scope);
+    const {readTopicNotesSources}=await import('./topic-notes-sources.server');
+    const sources = await readTopicNotesSources(scope);
     const hasTopicEvidence=sources.some(source=>recoverTopicFromSources(scope.topic,[source.text]).complete);
     const mirror = hasTopicEvidence?null:await trustedChapterSource(scope.klass, scope.subject, scope.chapter);
     if (mirror && !sources.some((source) => source.url === mirror.url))
@@ -121,7 +121,7 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
     return {
       provider: candidate.provider,
       lines: supported.sections.flatMap((section) => section.lines),
-      sources: supported.sources,
+      sources: supported.sources.filter(source=>!!source.url),
     };
     }
     throw new Error("The configured AI services could not return source-checked notes. Their key, quota or connection may need attention; retry later. Your existing notes are unchanged.");

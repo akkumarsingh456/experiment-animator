@@ -340,3 +340,6 @@ Keep the slide-specific editable request first, then the review text and explici
 ## English-only PYQ presentation
 
 Apply the common English-only presentation to new and historical saved question text and question PDF exports. Omit Devanagari-bearing lines as whole lines, preserve stored original source, and warn that remaining English may be partial. Never translate, guess missing subparts, or display the bilingual raw transcription through a secondary disclosure. If readable English is absent, explain this and link the original CBSE paper. The source PDF itself remains unchanged.
+
+### Topic popup source recovery and preview persistence
+The explicit notes popup reads chapter-scoped raw saved textbook pages/chunks before falling back to external sources. This is read-only and does not change normal lesson generation or source-library protections. Generated lesson notes are never independent evidence. Failed AI requests retain their cause; available source excerpts are labelled as excerpts, not newly generated activities. Preview text is cached per lecture/topic on the device and retained across failed retries. Import still requires Extract notes and uses the existing supplementary-note save path.

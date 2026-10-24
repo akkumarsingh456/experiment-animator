@@ -102,11 +102,12 @@ export const getSimpleTopicNotes=createServerFn({method:'POST'})
  .handler(async({data})=>{
   const scope=canonical(data);
   const reviewed=reviewedSolutionsNotes(scope);if(reviewed)return reviewed;
-  const sources=await readAttentionSources(scope);
+  const {readTopicNotesSources}=await import('./topic-notes-sources.server');
+  const sources=await readTopicNotesSources(scope);
   const choices=sources.map(source=>({source,recovered:recoverTopicFromSources(scope.topic,[source.text])})).filter(item=>item.recovered.lines.length).sort((a,b)=>Number(b.recovered.complete)-Number(a.recovered.complete)||b.recovered.lines.length-a.recovered.lines.length);
   const best=choices[0];
   if(!best)throw new Error('Online notes are unavailable right now. Paste your notes below, then click Extract notes.');
-  return {lines:best.recovered.lines,sources:[{url:best.source.url,title:best.source.title}],label:best.recovered.complete?'Official source text · review before extracting':'Partial official source text · review and complete before extracting'};
+  return {lines:best.recovered.lines,sources:best.source.url?[{url:best.source.url,title:best.source.title}]:[],label:best.source.provider==='Saved textbook source'?'Saved textbook excerpt · review before extracting':best.recovered.complete?'Official source text · review before extracting':'Partial official source text · review and complete before extracting'};
  });
 export const saveMissingTopicNotes = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
