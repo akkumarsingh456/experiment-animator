@@ -2,6 +2,8 @@
 
 ## Teacher explanation companion
 
+- Explicit Add notes Send requests use teacherChat mode: Gemini may answer from subject knowledge without an extracted-source prerequisite, as requested by the owner. Label every such response AI draft for teacher review, never source-verified NCERT extraction. Keep fixed catalogue scope, bounded history, explicit Insert notes, existing saving/deletion and labelled textbook fallbacks. Legacy source-grounded recovery, blank-slide tools and normal generation retain their existing checks.
+
 - Popup-only checked source snapshots and direct chapter links live in topic-popup-sources.server.ts. The Vitamins prose passage is fixed to Class 12 Chemistry/Biomolecules and omits the damaged deficiency table. It can supply chat evidence and a labelled non-AI fallback without a library/index network request. Do not import these popup snapshots into ordinary generation or use them for unrelated classes/topics.
 
 - The topic popup uses Gemini only. Cloud-secret access uses the authenticated gemini-topic-chat backend bridge when SSR lacks the direct key. Never expose credentials or relax source-evidence checks. Other provider consumers retain their existing configuration. Deploy the backend function separately from frontend publishing.

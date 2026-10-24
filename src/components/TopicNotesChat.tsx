@@ -47,13 +47,13 @@ export function TopicNotesChat({scope,onExtract,preset,sourceText='',previewKey=
   try{
    let result;
    if(ai){
-    try{result=await askAI({data:{...scope,recoveryOnly:true,provider:'gemini',format:manual?undefined:preset?.format,request:sent,history}});
+    try{result=await askAI({data:{...scope,recoveryOnly:true,teacherChat:true,provider:'gemini',format:manual?undefined:preset?.format,request:sent,history}});
      if(!result.lines?.length)throw new Error('The AI returned no usable points.');
     }catch(reason){aiIssue=friendly(reason);result=await read({data:scope});}
    }else result=await read({data:scope});
    if(turn!==epoch.current)return;
    if(!result.lines?.length||result.lines.length>500||result.lines.some(line=>!line.trim()||line.length>1800))throw new Error('The service did not return usable points.');
-   const name='label' in result?result.label:`${result.provider} supplementary notes`;
+   const name=('label' in result&&typeof result.label==='string')?result.label:('provider' in result?`${result.provider} supplementary notes`:'Teacher notes');
    const value=result.lines.join('\n');setText(value);setSources(result.sources);setLabel(name);remember(value,result.sources,name);setMessages(current=>[...current.slice(-11),{role:'assistant',text:value,label:name}]);
    setNotice(aiIssue?`${aiIssue} Loaded available source excerpts instead; these are not a new AI response. Review them, then click Insert notes.`:'Points are ready. Review them, then click Insert notes.');
   }catch(reason){if(turn===epoch.current){
@@ -91,6 +91,6 @@ export function TopicNotesChat({scope,onExtract,preset,sourceText='',previewKey=
   </form>
   {!!lines.length&&!valid&&<p role="alert" className="text-sm text-amber-800">Use up to 500 points, each under 1,800 characters. Split long paragraphs onto separate lines.</p>}
   <details className="text-sm"><summary className="cursor-pointer font-semibold text-sky-900">Edit or paste notes</summary><label htmlFor="simple-topic-notes" className="my-2 block font-medium">Review notes · {scope.topic}</label><Textarea id="simple-topic-notes" rows={5} maxLength={200000} value={text} disabled={busy} onChange={event=>{setText(event.target.value);setLabel('Edited teacher notes');setNotice('');remember(event.target.value,sources,'Edited teacher notes');}} placeholder="Paste checked notes here, one point per line."/><p className="mt-1 text-xs text-slate-600">{label}. Insert notes uses the points in this field.</p></details>
-  <details className="text-sm"><summary className="cursor-pointer text-slate-600">Sources and other options</summary><Button type="button" className="my-2" size="sm" variant="outline" disabled={busy} onClick={()=>void load()}>Use textbook notes</Button>{sources.map(source=><a key={source.url} className="my-1 block text-xs text-sky-800 underline" href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a>)}<p className="mt-2 text-xs leading-5 text-slate-500">Gemini uses the secure website connection. Teachers do not need an API key. If Gemini is unavailable, matching textbook excerpts are labelled with their source.</p></details>
+  <details className="text-sm"><summary className="cursor-pointer text-slate-600">Sources and other options</summary><Button type="button" className="my-2" size="sm" variant="outline" disabled={busy} onClick={()=>void load()}>Use textbook notes</Button>{sources.map(source=><a key={source.url} className="my-1 block text-xs text-sky-800 underline" href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a>)}<p className="mt-2 text-xs leading-5 text-slate-500">Gemini drafts notes using its subject knowledge for the selected class and topic. Review AI drafts before teaching; they are not verified NCERT extracts. Teachers do not need an API key. Textbook fallback notes are labelled separately.</p></details>
  </section>;
 }

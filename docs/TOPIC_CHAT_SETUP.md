@@ -18,7 +18,7 @@ If the website server already has a direct GEMINI_API_KEY, it uses Gemini direct
 
 Default model: gemini-3.1-flash-lite. Optional GEMINI_TOPIC_CHAT_MODEL selects another account-supported model. Free-tier eligibility and quotas depend on Google; unlimited replies are not promised.
 
-Existing source-evidence checks remain required. On failure, matching textbook excerpts may be shown with an explicit source label. Existing notes are preserved. Other generation/PYQ provider configuration is unchanged.
+The explicit Add notes chat answers from Gemini subject knowledge without requiring an extracted passage. Its replies are labelled AI drafts for teacher review, not verified NCERT extracts. Legacy source-grounded recovery retains source-evidence checks. On connection failure, matching textbook excerpts may be shown with an explicit source label. Existing notes are preserved. Other generation/PYQ provider configuration is unchanged.
 
 References:
 - https://docs.lovable.dev/features/secrets

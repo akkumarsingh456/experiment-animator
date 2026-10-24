@@ -14,6 +14,7 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     topicNotesScope.extend({
       recoveryOnly: z.literal(true),
+      teacherChat:z.boolean().default(false),
       provider:z.enum(['auto','gemini','groq']).default('gemini'),
       request: z.string().trim().min(3).max(2000).optional(),
       format:z.enum(['activity','important','formula','derivation','example','revision','explanation']).optional(),
@@ -27,6 +28,10 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
       throw new Error(
         "Connect Gemini by adding GEMINI_API_KEY to the website backend secrets and deploying gemini-topic-chat. Never paste API keys into this chat. Existing notes are unchanged.",
       );
+    if(data.teacherChat){
+      const {teacherGeminiChat}=await import('./teacher-gemini-chat.server');
+      return teacherGeminiChat(scope,data);
+    }
     const {readTopicNotesSources}=await import('./topic-notes-sources.server');
     const sources = await readTopicNotesSources(scope);
     const hasTopicEvidence=sources.some(source=>recoverTopicFromSources(scope.topic,[source.text]).complete);
