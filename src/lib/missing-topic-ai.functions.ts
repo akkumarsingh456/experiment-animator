@@ -14,6 +14,7 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     topicNotesScope.extend({
       recoveryOnly: z.literal(true),
+      provider:z.enum(['auto','gemini','groq']).default('auto'),
       request: z.string().trim().min(3).max(2000).optional(),
       format:z.enum(['activity','important','formula','derivation','example','revision','explanation']).optional(),
       history: z.array(z.object({role:z.enum(['user','assistant']),text:z.string().max(16000)})).max(8).optional(),
@@ -22,7 +23,7 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const scope = canonicalOfficialRecoveryTopic(data);
     if (!scope) throw new Error("Choose an exact catalogue class, subject, chapter and topic.");
-    if (!hasTopicChatProvider())
+    if (!hasTopicChatProvider(data.provider))
       throw new Error(
         "Connect Gemini or Groq by adding GEMINI_API_KEY or GROQ_API_KEY to the website server secrets. Never paste API keys into this chat. Existing notes are unchanged.",
       );
@@ -92,7 +93,7 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
         },
         required: ["topic_present", "notes"],
       };
-    for await(const candidate of topicChatDrafts({prompt,schema})){
+    for await(const candidate of topicChatDrafts({prompt,schema,provider:data.provider})){
     const parsed = z
       .object({
         topic_present: z.boolean(),

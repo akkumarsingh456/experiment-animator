@@ -159,7 +159,7 @@ export function MissingTopicNotes({
           }
         >
           <DialogPrimitive.Overlay className="fixed inset-0 z-[80] bg-black/70" />
-          <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-[81] grid max-h-[90dvh] w-[calc(100%_-_24px)] max-w-3xl -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl border bg-background p-6 shadow-lg">
+          <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-[81] grid max-h-[90dvh] w-[calc(100%_-_24px)] max-w-4xl -translate-x-1/2 -translate-y-1/2 gap-3 overflow-y-auto rounded-xl border bg-background p-4 sm:p-5 shadow-lg">
             <DialogPrimitive.Close
               className="absolute right-3 top-3 rounded border px-2 py-1 text-sm"
               aria-label="Close topic notes"
@@ -172,8 +172,8 @@ export function MissingTopicNotes({
                 Class {klass} · {subject} · {chapter} · {slide.title}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-5">
-              <p className="text-sm text-slate-600">Send a request, review the reply, then click Extract notes. Original textbook notes stay safe.</p>
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">Send a request, read the reply, then click Insert notes.</p>
               <div className="flex flex-wrap gap-2" aria-label="Choose notes action">
                 <Button variant={action==='add'?'default':'outline'} aria-pressed={action==='add'} onClick={()=>setAction('add')}>Add notes</Button>
                 <Button variant={action==='remove'?'default':'outline'} aria-pressed={action==='remove'} onClick={()=>setAction('remove')}>Remove added points ({addedTopicLines(slide).length})</Button>

@@ -1,7 +1,10 @@
 import {gatewayJSON,hasGatewayKey} from './structured-response-client';
 
 /** Keys stay server-side. Only the missing-topic chat uses these providers. */
-export function hasTopicChatProvider(){
+export type TopicChatProvider='auto'|'gemini'|'groq';
+export function hasTopicChatProvider(provider:TopicChatProvider='auto'){
+ if(provider==='gemini')return Boolean(process.env.GEMINI_API_KEY||process.env.GOOGLE_API_KEY);
+ if(provider==='groq')return Boolean(process.env.GROQ_API_KEY);
  return Boolean(process.env.GEMINI_API_KEY||process.env.GOOGLE_API_KEY||process.env.GROQ_API_KEY||hasGatewayKey());
 }
 function parseJSON(text:string):unknown{
@@ -29,9 +32,9 @@ async function topicRequest(url:string,options:RequestInit):Promise<Response|nul
 }
 
 /** Caller verifies each candidate against source evidence before accepting it. */
-export async function* topicChatDrafts(options:{prompt:string;schema:Record<string,unknown>}){
+export async function* topicChatDrafts(options:{prompt:string;schema:Record<string,unknown>;provider?:TopicChatProvider}){
  const geminiKey=process.env.GEMINI_API_KEY||process.env.GOOGLE_API_KEY;
- if(geminiKey){
+ if(geminiKey&&options.provider!=='groq'){
   try{
    const model=process.env.GEMINI_TOPIC_CHAT_MODEL||'gemini-3.1-flash-lite';
    if(!/^[a-zA-Z0-9._-]{1,100}$/.test(model))throw new Error('Invalid configured model');
@@ -49,7 +52,7 @@ export async function* topicChatDrafts(options:{prompt:string;schema:Record<stri
    }
   }catch{/* Continue to another configured provider without exposing credentials or raw errors. */}
  }
- if(process.env.GROQ_API_KEY){
+ if(process.env.GROQ_API_KEY&&options.provider!=='gemini'){
   try{
    const response=await topicRequest('https://api.groq.com/openai/v1/chat/completions',{
     method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${process.env.GROQ_API_KEY}`},
@@ -64,7 +67,7 @@ export async function* topicChatDrafts(options:{prompt:string;schema:Record<stri
    }
   }catch{/* Source extraction and teacher drafts remain available. */}
  }
- if(hasGatewayKey()){
+ if(hasGatewayKey()&&(!options.provider||options.provider==='auto')){
   try{
    const draft=await gatewayJSON<unknown>({prompt:options.prompt,schema:options.schema,schemaName:'missing_topic_important_points'});
    if(draft)yield {draft,provider:'Website AI'};
