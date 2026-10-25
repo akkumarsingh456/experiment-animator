@@ -62,7 +62,7 @@ export function TopicNotesChat({scope,onExtract,preset,sourceText='',previewKey=
     const value=fallback.join('\n'),name='Current lesson source excerpt · not a new AI response';
     setText(value);setSources([]);setLabel(name);remember(value,[],name);setMessages(current=>[...current.slice(-11),{role:'assistant',text:value,label:name}]);
     setNotice(`${aiIssue?aiIssue+' ':''}Online retrieval failed. Showing readable source text already attached to this topic. It may overlap existing notes and does not supply a missing activity.`);
-   }else setNotice(`${aiIssue?aiIssue+' ':''}${friendly(reason)} ${text.trim()?'Your previous preview is kept.':'No readable points are available yet. Paste checked notes under Edit or paste notes, or retry after the service is restored.'}`);
+   }else setNotice(`${aiIssue||friendly(reason)} ${text.trim()?'Your previous preview is kept.':'No readable points are available yet. Paste checked notes under Edit or paste notes, or retry after the service is restored.'}`);
   }}finally{if(turn===epoch.current){pending.current=false;setBusy(false);}}
  }
  return <section aria-label={`Extract notes for ${scope.topic}`} className="flex min-h-0 flex-col gap-3">

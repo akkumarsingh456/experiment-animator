@@ -44,7 +44,7 @@ export function BlankTeacherSlideTools({
     setBusy(true);
     setNotice("Drafting for the original topic…");
     try {
-      const result = await draft({ data: { klass, subject, chapter, topic, recoveryOnly: true } });
+      const result = await draft({ data: { klass, subject, chapter, topic, recoveryOnly: true,teacherChat:true,provider:'gemini' } });
       setPoints(result.lines);
       setNotice("Review the AI draft before importing it into this slide.");
     } catch (error) {

@@ -2,6 +2,8 @@
 
 ## Teacher explanation companion
 
+- Teacher chat scope comes from every configured subject and chapter in NCERT_SYLLABUS/subtopicsFor, including language subjects. Do not reuse the restricted official-recovery subject allowlist for AI drafts. Preserve Unicode letters/marks and mathematical operators when matching titles. The shared blank-slide AI action must use the same explicit teacherChat route. Accept short valid formula text while rejecting empty items, and avoid stacking duplicate fallback errors.
+
 - Add notes chat resolves generated Formula reference, Page N and Teacher slide N titles back to their exact catalogue topic or matching chapter overview. Keep the displayed slide/storage identity intact, and reject mismatched class/subject/chapter and unknown topics. This chat-only resolver must not broaden official extraction permissions or alter normal generation.
 
 - New presentation chat insertions store a stable clicked-page anchor with each added batch. Exclude those lines before measuring original pages; paginate them separately and insert new note-only pages after the anchor. Keep original page content/order, later topics, nested insertions, per-point deletion and autosave restoration. Persist placement metadata in device/private workspace schemas, including explicit blank slides. Chat generation remains unchanged.

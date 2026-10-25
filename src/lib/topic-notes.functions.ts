@@ -1,3 +1,4 @@
+import {canonicalTeacherChatScope} from "./teacher-chat-scope";
 import { trustedChapterSource } from "./trusted-chapter-source.server";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -100,10 +101,16 @@ export const readMissingTopicNotes = createServerFn({ method: "POST" })
 export const getSimpleTopicNotes=createServerFn({method:'POST'})
  .inputValidator((input:unknown)=>topicNotesScope.parse(input))
  .handler(async({data})=>{
-  const scope=canonical(data);
+  const strictScope=canonicalOfficialRecoveryTopic(data);
+  const scope=strictScope||canonicalTeacherChatScope(data);
+  if(!scope)throw new Error('This slide could not be matched to the selected class and chapter.');
   const reviewed=reviewedSolutionsNotes(scope);if(reviewed)return reviewed;
   const {readTopicNotesSources}=await import('./topic-notes-sources.server');
   const sources=await readTopicNotesSources(scope);
+  if(!strictScope){
+   const mirror=await trustedChapterSource(scope.klass,scope.subject,scope.chapter);
+   if(mirror)sources.push({...mirror,title:scope.chapter,sourceClass:scope.klass,provider:'IIT Kanpur SATHEE NCERT mirror'});
+  }
   const choices=sources.map(source=>({source,recovered:recoverTopicFromSources(scope.topic,[source.text])})).filter(item=>item.recovered.lines.length).sort((a,b)=>Number(b.recovered.complete)-Number(a.recovered.complete)||b.recovered.lines.length-a.recovered.lines.length);
   const best=choices[0];
   if(!best)throw new Error('Online notes are unavailable right now. Paste your notes below, then click Extract notes.');
