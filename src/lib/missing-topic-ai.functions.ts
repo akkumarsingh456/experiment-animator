@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { topicNotesScope } from "./topic-notes-store.server";
+import {canonicalTeacherChatScope} from "./teacher-chat-scope";
 import { canonicalOfficialRecoveryTopic } from "./official-recovery-scope";
 import { trustedChapterSource } from "./trusted-chapter-source.server";
 import {hasTopicChatProvider,topicChatDrafts} from "./topic-chat-providers.server";
@@ -22,7 +23,7 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data }) => {
-    const scope = canonicalOfficialRecoveryTopic(data);
+    const scope = data.teacherChat?canonicalTeacherChatScope(data):canonicalOfficialRecoveryTopic(data);
     if (!scope) throw new Error("Choose an exact catalogue class, subject, chapter and topic.");
     if (!hasTopicChatProvider('gemini'))
       throw new Error(

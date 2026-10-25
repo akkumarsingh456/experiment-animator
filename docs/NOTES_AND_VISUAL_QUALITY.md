@@ -2,6 +2,8 @@
 
 ## Teacher explanation companion
 
+- Add notes chat resolves generated Formula reference, Page N and Teacher slide N titles back to their exact catalogue topic or matching chapter overview. Keep the displayed slide/storage identity intact, and reject mismatched class/subject/chapter and unknown topics. This chat-only resolver must not broaden official extraction permissions or alter normal generation.
+
 - New presentation chat insertions store a stable clicked-page anchor with each added batch. Exclude those lines before measuring original pages; paginate them separately and insert new note-only pages after the anchor. Keep original page content/order, later topics, nested insertions, per-point deletion and autosave restoration. Persist placement metadata in device/private workspace schemas, including explicit blank slides. Chat generation remains unchanged.
 
 - Add notes Gemini drafts receive a separate Gemini review before display: check facts, notation, conditions, class level and organisation; remove uncertain or duplicate claims. Never return the unchecked first draft on review failure. This is AI self-review, not independent source verification or an accuracy guarantee; retain the AI-draft label and teacher review step. Other generation paths remain unchanged.

@@ -1,3 +1,4 @@
+import {canonicalTeacherChatScope} from "@/lib/teacher-chat-scope";
 import {TopicNotesChat} from "./TopicNotesChat";
 import {AddedTopicNotes} from './AddedTopicNotes';
 import {FilePlus2} from 'lucide-react';
@@ -192,7 +193,7 @@ export function MissingTopicNotes({
                 onExtracted?.();
               }}/>
               </div>
-              <div hidden={action!=='add'}><TopicNotesChat sourceText={slide.chapter_text} previewKey={draftKey} scope={scope} preset={slideNotesRequest(slide,{klass,subject,chapter},pageHeadings)} onExtract={(lines,sources)=>{
+              <div hidden={action!=='add'}><TopicNotesChat sourceText={slide.chapter_text} previewKey={draftKey} scope={canonicalTeacherChatScope(scope)||scope} preset={slideNotesRequest(slide,{klass,subject,chapter},pageHeadings)} onExtract={(lines,sources)=>{
                 lines=[...new Set([...addedTopicLines(slide),...lines])];
                 if(lines.length>500){setNotice('This slide already has many added points. Use Add blank slide for the next set; existing notes are preserved.');return false;}
                 importedRef.current=true;
