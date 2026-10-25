@@ -36,3 +36,13 @@ it('keeps Gemini-only requests scoped to the selected class and shows a readable
  expect(host.textContent).toContain('not a new AI response');expect(button('Insert notes').disabled).toBe(false);
  await act(async()=>button('Insert notes').click());expect(extract).toHaveBeenCalledWith(lines,[{url:source.url,title:source.title}]);
 });
+
+it('retries an interrupted review without displaying the draft or duplicating the user message',async()=>{
+ mocks.ai.mockResolvedValueOnce({pendingDraft:{notes:[{heading:'Draft',text:'Unchecked content'}]},lines:[],sources:[]})
+ .mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValueOnce({...result,label:'Gemini AI draft - review before teaching'});
+ await render();await act(async()=>{button('Send').click();await new Promise(resolve=>setTimeout(resolve,650));});
+ expect(mocks.ai.mock.calls.map(call=>call[0].data.chatStep)).toEqual(['draft','review','review']);
+ expect(host.textContent).not.toContain('Unchecked content');expect(preview().value).toBe(points.join('\n'));
+ expect(host.querySelectorAll('[role="log"] article')).toHaveLength(2);expect(mocks.read).not.toHaveBeenCalled();
+ expect(extract).not.toHaveBeenCalled();
+});

@@ -1,3 +1,4 @@
+import {retryNotesTransport} from '@/lib/notes-chat-transport';
 import type {SlideNoteFormat} from "@/lib/slide-notes-request";
 import {useEffect,useRef,useState} from 'react';
 import {useServerFn} from '@tanstack/react-start';
@@ -27,7 +28,7 @@ export function TopicNotesChat({scope,onExtract,preset,sourceText='',previewKey=
  const identity=JSON.stringify(scope);
  const cacheKey='eduplan-topic-preview-v1:'+JSON.stringify([identity,previewKey]);
  function remember(value:string,refs:Source[],name:string){try{localStorage.setItem(cacheKey,JSON.stringify({text:value,sources:refs,label:name}));}catch{/* Lesson saving still reports its own device/cloud status. */}}
- function friendly(reason:unknown){const message=reason instanceof Error?reason.message:'';return /Connect Gemini|not configured/i.test(message)?'The Gemini connection needs setup by the site owner. Your existing notes are safe.':message||'The notes service did not respond.';}
+ function friendly(reason:unknown){const message=reason instanceof Error?reason.message:'';return /failed to fetch|fetch failed|networkerror|load failed/i.test(message)?'The connection was interrupted after retrying. Please check your connection and send again.':/Connect Gemini|not configured/i.test(message)?'The Gemini connection needs setup by the site owner. Your existing notes are safe.':message||'The notes service did not respond.';}
  // Full textbook volumes need server chapter scoping before they can become notes.
  const localPreview=()=>sourceText&&sourceText.length<=12000?recoverTopicFromSources(scope.topic,[sourceText]).lines.filter(line=>line.length<=1800).slice(0,500):[];
  useEffect(()=>{epoch.current++;pending.current=false;setText('');setSources([]);setLabel('Teacher notes');setBusy(false);setNotice('');setRequest(autofill);setManual(false);setMessages([]);
@@ -47,9 +48,17 @@ export function TopicNotesChat({scope,onExtract,preset,sourceText='',previewKey=
   try{
    let result;
    if(ai){
-    try{result=await askAI({data:{...scope,recoveryOnly:true,teacherChat:true,provider:'gemini',format:manual?undefined:preset?.format,request:sent,history}});
+    try{
+     const data={...scope,recoveryOnly:true as const,teacherChat:true,provider:'gemini' as const,format:manual?undefined:preset?.format,request:sent,history};
+     const active=()=>turn===epoch.current;
+     result=await retryNotesTransport(()=>askAI({data:{...data,chatStep:'draft'}}),active);
+     if(!active())return;
+     if('pendingDraft' in result&&result.pendingDraft){
+      const reviewDraft=result.pendingDraft;
+      result=await retryNotesTransport(()=>askAI({data:{...data,chatStep:'review',reviewDraft}}),active);
+     }
      if(!result.lines?.length)throw new Error('The AI returned no usable points.');
-    }catch(reason){aiIssue=friendly(reason);result=await read({data:scope});}
+    }catch(reason){if(turn!==epoch.current)return;aiIssue=friendly(reason);result=await read({data:scope});}
    }else result=await read({data:scope});
    if(turn!==epoch.current)return;
    if(!result.lines?.length||result.lines.length>500||result.lines.some(line=>!line.trim()||line.length>1800))throw new Error('The service did not return usable points.');

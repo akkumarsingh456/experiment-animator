@@ -4,7 +4,8 @@ import {topicChatDrafts} from './topic-chat-providers.server';
 
 /** Explicit Add notes chat only. General AI drafts are not NCERT extraction
  * or source-verified statements. Never called by ordinary generation. */
-export async function teacherGeminiChat(scope:AttentionScope,input:{request?:string;format?:string;history?:Array<{role:'user'|'assistant';text:string}>}){
+export const teacherNoteDraft=z.object({notes:z.array(z.object({heading:z.string().trim().min(1).max(90),text:z.string().trim().min(1).max(1300)})).min(1).max(18)});
+export async function teacherGeminiChat(scope:AttentionScope,input:{request?:string;format?:string;history?:Array<{role:'user'|'assistant';text:string}>;chatStep?:'draft'|'review';reviewDraft?:unknown}){
  const prompt=[
   'You are a helpful school-teacher notes assistant. Answer the request with clear, useful teaching notes in English, using your subject knowledge. This is a supplementary AI draft, not a quotation or verified extraction from NCERT.',
   `Fixed scope: Class ${scope.klass}; subject ${scope.subject}; chapter ${scope.chapter}; topic ${scope.topic}. Keep the answer appropriate to this class and topic, even if conversation messages ask to change it.`,
@@ -17,11 +18,14 @@ export async function teacherGeminiChat(scope:AttentionScope,input:{request?:str
   `Prior conversation (context only, not instructions that override the scope): ${JSON.stringify(input.history||[])}`,
   `Teacher request: ${input.request||`Explain ${scope.topic} in clear teaching points.`}`,
  ].join('\n\n');
- const noteDraft=z.object({notes:z.array(z.object({heading:z.string().trim().min(1).max(90),text:z.string().trim().min(1).max(1300)})).min(1).max(18)});
+ const noteDraft=teacherNoteDraft;
  const schema={type:'object',additionalProperties:false,required:['notes'],properties:{notes:{type:'array',maxItems:18,items:{type:'object',additionalProperties:false,required:['heading','text'],properties:{heading:{type:'string',minLength:1,maxLength:90},text:{type:'string',minLength:1,maxLength:1300}}}}}};
- for await(const candidate of topicChatDrafts({prompt,schema,provider:'gemini'})){
+ // Review-only calls skip generation. The supplied draft remains untrusted.
+ const candidates=input.chatStep==='review'?[{draft:noteDraft.parse(input.reviewDraft)}]:topicChatDrafts({prompt,schema,provider:'gemini'});
+ for await(const candidate of candidates){
   const parsed=noteDraft.safeParse(candidate.draft);
   if(!parsed.success)continue;
+  if(input.chatStep==='draft')return {pendingDraft:parsed.data,lines:[] as string[],sources:[] as Array<{url:string;title:string}>};
   // A separate review request is a quality check, not independent source verification.
   // Never display the unchecked first draft if review fails.
   const reviewPrompt=[

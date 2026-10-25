@@ -15,3 +15,18 @@ it('does not expose an unreviewed draft if the review fails',async()=>{
  let call=0;mocks.draft.mockImplementation(async function*(){if(++call===1)yield {provider:'Gemini',draft:{notes:[{heading:'Definition',text:'Unchecked initial draft'}]}};});
  await expect(teacherGeminiChat(scope,{})).rejects.toThrow('finish reviewing');
 });
+
+it('splits draft and review into one Gemini call per website request',async()=>{
+ mocks.draft.mockImplementation(async function*(){yield {draft:{notes:[{heading:'Wave speed',text:'$v=f\\lambda$'}]}};});
+ const waves={klass:'11',subject:'Physics',chapter:'Chapter 14: Waves',topic:'Speed of waves'};
+ const draft=await teacherGeminiChat(waves,{chatStep:'draft'});
+ expect(draft.lines).toEqual([]);expect(mocks.draft).toHaveBeenCalledTimes(1);
+ expect('pendingDraft' in draft).toBe(true);
+ const reply=await teacherGeminiChat(waves,{chatStep:'review',reviewDraft:'pendingDraft' in draft?draft.pendingDraft:undefined});
+ expect(reply.lines).toHaveLength(1);expect(mocks.draft).toHaveBeenCalledTimes(2);
+ expect(mocks.draft.mock.calls[1][0].prompt).toContain('Review this AI-generated');
+});
+it('rejects malformed supplied review drafts before calling Gemini',async()=>{
+ await expect(teacherGeminiChat(scope,{chatStep:'review',reviewDraft:{notes:[]}})).rejects.toThrow();
+ expect(mocks.draft).not.toHaveBeenCalled();
+});

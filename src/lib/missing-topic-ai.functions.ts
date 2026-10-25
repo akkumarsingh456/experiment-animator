@@ -16,6 +16,8 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
     topicNotesScope.extend({
       recoveryOnly: z.literal(true),
       teacherChat:z.boolean().default(false),
+      chatStep:z.enum(['draft','review']).optional(),
+      reviewDraft:z.object({notes:z.array(z.object({heading:z.string().trim().min(1).max(90),text:z.string().trim().min(1).max(1300)})).min(1).max(18)}).optional(),
       provider:z.enum(['auto','gemini','groq']).default('gemini'),
       request: z.string().trim().min(3).max(2000).optional(),
       format:z.enum(['activity','important','formula','derivation','example','revision','explanation']).optional(),
