@@ -18,11 +18,11 @@ vi.mock("@tanstack/react-start", () => ({
     return builder;
   },
 }));
-vi.mock("@/lib/structured-response-client", () => ({
-  hasGatewayKey: mocks.key,
-  gatewayJSON: mocks.gateway,
+vi.mock("@/lib/topic-chat-providers.server", () => ({
+  hasTopicChatProvider:mocks.key,
+  topicChatDrafts:async function*(input:unknown){const draft=await mocks.gateway(input);if(draft)yield {draft,provider:'Gemini'};},
 }));
-vi.mock("@/lib/attention-source-read.server", () => ({ readAttentionSources: mocks.sources }));
+vi.mock("@/lib/topic-notes-sources.server", () => ({readTopicNotesSources:mocks.sources}));
 vi.mock("@/lib/trusted-chapter-source.server", () => ({ trustedChapterSource: mocks.mirror }));
 import { draftMissingTopicPoints } from "@/lib/missing-topic-ai.functions";
 const scope = {
@@ -85,7 +85,7 @@ it("rejects fabricated supporting quotes instead of accepting the draft", async 
 });
 it("keeps extraction available when the server has no AI configuration", async () => {
   mocks.key.mockReturnValue(false);
-  await expect(draftMissingTopicPoints({ data: scope })).rejects.toThrow("Connect Gemini or Groq");
+  await expect(draftMissingTopicPoints({ data: scope })).rejects.toThrow("Connect Gemini");
   expect(mocks.sources).not.toHaveBeenCalled();
   expect(mocks.gateway).not.toHaveBeenCalled();
 });

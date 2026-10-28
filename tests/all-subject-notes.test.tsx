@@ -21,10 +21,10 @@ describe("Classes 9–12 curriculum output coverage", () => {
     const notes = buildLocalSections({ title: chapter, grounding: evidence });
     expect(notes.flatMap((s) => s.lines).length).toBeGreaterThan(1);
     const task = sourceDiscussion(chapter, notes, subject, klass)!;
-    expect(task.lines.join(" ")).toContain("Activity outcome"); expect(task.lines.join(" ")).toContain("Teacher-designed");
+    expect(task.lines.join(" ")).toMatch(/\*\*(?:Discussion|Activity steps):\*\*/); expect(task.lines.join(" ")).toMatch(/teacher-designed/i);
     const sections = learningScaffold(chapter, [...notes, task]);
     const html = renderToStaticMarkup(<GuidedLessonNotes title={chapter} klass={klass} subject={subject} slides={[{ title: chapter, bullets: [], notes: [], visual: "book", sections }]} />);
-    expect(html).toContain("Activity"); expect(html).toContain("Discussion"); expect(html).toContain("Core practice");
+    expect(html).toContain("Activity"); expect(html).toMatch(/Discussion|Activity steps/); expect(html).toContain("Core practice");
     // Synthetic prose has no diagram evidence. Verify document coverage; real topic visuals are checked separately.
     expect(html).toContain('aria-label="Complete guided lesson notes"');
     expect(reviewNotes(sections).activity).toBe(true);

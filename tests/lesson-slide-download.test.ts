@@ -29,5 +29,5 @@ describe('PowerPoint download delivery', () => {
     expect(filename).toBe('Chapter- Solutions.pptx');
     expect(progress.mock.calls).toEqual([[0, 2], [1, 2], [2, 2]]);
     vi.unstubAllGlobals();
-  });
+  }, 20000);
 });

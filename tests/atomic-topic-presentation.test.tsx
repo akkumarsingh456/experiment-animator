@@ -29,6 +29,7 @@ describe('topic-specific atomic presentation',()=>{
  });
  it('shows the selected chapter and labelled atomic symbols during preparation',()=>{
   const html=renderToStaticMarkup(<LessonPreparation subject="Physics" chapter="Chapter 12: Atoms" startedAt={0}/>);
-  expect(html).toContain('Chapter 12: Atoms');expect(html).toContain('Positive nucleus');expect(html).toContain('e⁻');expect(html).not.toContain('Physics chapter notebook');
+  const drawing=decodeURIComponent(html.match(/src="data:image\/svg\+xml;charset=utf-8,([^"]+)"/)?.[1]||'');
+  expect(html).toContain('Chapter 12: Atoms');expect(drawing).toContain('Positive nucleus');expect(drawing).toContain('e⁻');expect(html).not.toContain('Physics chapter notebook');
  });
 });

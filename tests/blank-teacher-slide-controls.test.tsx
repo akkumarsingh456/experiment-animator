@@ -76,6 +76,8 @@ it("drafts for the original topic and applies only on request while leaving the 
       chapter: "Coordination Compounds",
       topic: "Werner's Theory",
       recoveryOnly: true,
+      teacherChat: true,
+      provider: "gemini",
     },
   });
   expect(apply).not.toHaveBeenCalled();
