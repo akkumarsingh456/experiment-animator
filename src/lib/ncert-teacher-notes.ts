@@ -31,6 +31,7 @@ import {joinSourceExplanations,isDependentSourceDefinition} from './source-expla
 import { sourceFormulaExplanations } from "@/lib/med-easy-supplements";
 import {isSourceTask} from './source-note-quality';
 import {splitSourceExamples} from './source-calculus-quality';
+import {splitSourceSentences} from './source-sentences';
 
 
 export type NoteSectionKind = "text" | "bullets" | "formula" | "terms" | "tip" | "diagram";
@@ -97,9 +98,7 @@ export function cleanNcertLine(raw: string): string {
 
 
 function sentences(text: string): string[] {
-  return joinSourceExplanations(String(text || "")
-    .replace(/\s+/g, " ")
-    .split(/(?<=[.?!।])\s+/).flatMap(splitSourceExamples)
+  return joinSourceExplanations(splitSourceSentences(text).flatMap(splitSourceExamples)
     .map((s) => cleanNcertLine(s))
     .filter((s) => s.length > 20 && /\p{L}/u.test(s)));
 }

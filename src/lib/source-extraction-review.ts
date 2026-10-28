@@ -7,6 +7,19 @@ export function sourceExtractionIssue(raw:string):string|null {
  // A delimited table, code block or authored mathematical expression keeps
  // its structure; these checks target flattened prose, not valid notation.
  const structured=/```|\$|\\(?:frac|begin|mathrm)\b/.test(text)||/\|[^|\n]+\|/.test(text);
+ // These are incomplete extracted prose, not facts which can be repaired by
+ // reformatting. Keep authored maths, code and quoted examples opaque.
+ const quoted=/["“”`]/.test(text);
+ if(!structured&&!quoted){
+  if(/\b(?:Eq|Fig)\.\s*$/i.test(text)||/\[\s*[.!]?\s*$/.test(text)
+    ||/\b(?:since|because|is|are|was|were|has|have|the|an)\s*[.!]\s*$/i.test(text)
+    ||/^(?:which (?:is|are) called|to be in the form of|superposed over)\b/i.test(text)
+    ||/\bdiscovered by\s+(?:[A-Z]\.\s*){1,3}$/.test(text))
+   return 'This extraction is an incomplete sentence or reference. Compare the complete textbook passage before using it as an explanatory note.';
+  if(/(?:\b\d{1,2}\s+){3}\d{1,2}\s+(?:[A-Za-z]\s+){3}[A-Za-z]\s*=/.test(text)
+    ||/\b([A-Za-z])(?:\s+\1){3,}\s*=/.test(text))
+   return 'The PDF detached equation indices or repeated symbols and lost their mathematical arrangement. Compare the original equation; do not infer its fractions or operators.';
+ }
  const labels=(text.match(/\b(?:atomic (?:weight|mass|number)|density|melting point|boiling point|formula of (?:oxide|chloride)|electronic configuration|ionic radius|ionisation energy|ionization energy|population|literacy rate|life expectancy|per capita income|resistivity|conductivity|temperature|pressure)\b/gi)||[]).length;
  const values=(text.match(/\b\d+(?:\.\d+)?\b/g)||[]).length;
  const prose=/\b(?:is|are|was|were|increases?|decreases?|because|therefore|whereas|compared|respectively)\b/i.test(text);

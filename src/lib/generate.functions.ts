@@ -18,6 +18,7 @@ import { buildFlowGraph, type FlowGraph } from "@/lib/flow-layouts";
 import { renderLessonIllustrationDataUrl } from "@/lib/napkin-infographic";
 import { attachTeacherNotes, type NoteSection } from "@/lib/ncert-teacher-notes";
 import { topicEvidence } from "@/lib/topic-evidence";
+import {splitSourceSentences} from './source-sentences';
 import { cleanSourceNoteLine, isSourceTask, validStudyTerm, readableSourceRelation } from "@/lib/source-note-quality";
 import {sourceExtractionIssue,quarantineExtractionSections} from './source-extraction-review';
 import { isDefinitionStatement } from "@/lib/note-labels";
@@ -1110,11 +1111,7 @@ function buildTerms(data: z.infer<typeof Input>) {
 }
 
 function splitSentences(context: string) {
-  return context
-    .replace(/\s+/g, " ")
-    .replace(/([.!?।])\s+(?=[\p{L}0-9])/gu, "$1|SPLIT|")
-    .split("|SPLIT|")
-    .map((s) => s.replace(/\s+/g, " ").trim())
+  return splitSourceSentences(context)
     .filter((s) => s.length > 28)
     .filter((s) => !/^\d+$/.test(s));
 }
@@ -1574,7 +1571,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // Quiz items are rebuilt from source statements after cache lookup.
     const lessonKey = hashKey([
-      "lesson-v67-all-subject-source-recovery",
+      "lesson-v68-source-sentence-boundaries",
       data.klass,
       data.subject,
       data.chapter,

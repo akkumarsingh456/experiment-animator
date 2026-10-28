@@ -2,6 +2,9 @@
 
 ## Teacher explanation companion
 
+- Shared extraction checks quarantine incomplete English prose/references and detached circuit-equation indices rather than formatting them into facts. Preserve originals in Source review, including cached lessons; do not guess missing words or fraction bars. Keep authored mathematics, quoted fragments and code examples opaque. Teacher-plan anchors must exclude damaged excerpts and revision/task instructions; show the existing unavailable-anchor message when no factual explanation remains.
+- Split generation and teacher-note evidence through `splitSourceSentences` so scientist initials and numbered Eq./Fig. references stay within their original sentence. Do not join an incomplete reference to an unrelated next sentence. Version the lesson cache when sentence construction changes, while keeping shared source records and existing personal additions intact.
+
 - Teacher chat scope comes from every configured subject and chapter in NCERT_SYLLABUS/subtopicsFor, including language subjects. Do not reuse the restricted official-recovery subject allowlist for AI drafts. Preserve Unicode letters/marks and mathematical operators when matching titles. The shared blank-slide AI action must use the same explicit teacherChat route. Accept short valid formula text while rejecting empty items, and avoid stacking duplicate fallback errors.
 
 - Add notes chat resolves generated Formula reference, Page N and Teacher slide N titles back to their exact catalogue topic or matching chapter overview. Keep the displayed slide/storage identity intact, and reject mismatched class/subject/chapter and unknown topics. This chat-only resolver must not broaden official extraction permissions or alter normal generation.

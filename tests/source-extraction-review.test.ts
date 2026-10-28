@@ -38,3 +38,26 @@ it('returns already readable sections unchanged',()=>{
  const sections=[{heading:'Teacher Notes',kind:'bullets',lines:['Atomic radii generally decrease across a period.']}];
  expect(quarantineExtractionSections(sections)).toBe(sections);
 });
+it.each([
+ 'A basic law regarding flow of currents was discovered by G.S.',
+ 'Consider a conductor satisfying Eq.',
+ 'to be in the form of a slab of length l and cross sectional area A [.',
+ 'Imagine placing two such identical slabs side by side [.',
+ 'If V is the potential difference across the ends, the second slab is.',
+ 'which is called the Wheatstone bridge.',
+ 'superposed over the large random velocities of electrons.',
+ 'we obtain, 1 4 2 3 I R I R = Hence, we obtain the condition 2 4 1 3 R R R R = [3.83(a)',
+])('flags incomplete prose and flattened circuit equations without inventing a repair',line=>{
+ expect(sourceExtractionIssue(line)).toBeTruthy();
+ const result=quarantineExtractionSections([{heading:'Teacher Notes',kind:'bullets',lines:[line,'Resistance is measured in ohms.']}])!;
+ expect(result[0].lines).toEqual(['Resistance is measured in ohms.']);
+ expect(result.find(section=>section.heading==='Source review — original extraction')?.lines).toContain(line);
+ expect(quarantineExtractionSections(result)).toBe(result);
+});
+it.each([
+ 'The conductor obeys Ohm’s law when temperature is fixed.',
+ 'The relation is $I=neAv_d$, where $v_d$ is the drift-speed magnitude.',
+ 'Formula | $P/Q=R/S$ | Balanced bridge',
+ 'The quoted fragment is “which is called the Wheatstone bridge.”',
+ 'The output is `R R R R =`.',
+])('keeps intact explanations, authored notation and quotation/code examples',line=>expect(sourceExtractionIssue(line)).toBeNull());

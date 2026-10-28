@@ -1,4 +1,5 @@
 import type {GuidedGroup} from './guided-notes';
+import {guideExtractionIssue} from './guide-note-quality';
 export type TeacherTopicInput={title:string;groups:GuidedGroup[]};
 /** Teaching prompts are authored guidance. Factual anchors come only from the
  * current lesson's readable notes, never a guessed model answer. */
@@ -9,8 +10,12 @@ export function teacherTopicPlans(topics:TeacherTopicInput[],subject='',klass=''
   const usable=groups.filter(group=>!/^Source (?:review|table)|activity|practice|exit ticket|learning objective|revision|^Before you begin|^Check your understanding|^Answers|^Problem-solving formula reference/i.test(group.heading));
   const rank=(heading:string)=>/definition/i.test(heading)?0:/understanding|how it works/i.test(heading)?1:/important/i.test(heading)?2:3;
   usable.sort((a,b)=>rank(a.heading)-rank(b.heading));
-  const anchor=usable.flatMap(group=>group.lines).find(line=>line.length>30&&line.length<700&&!/source text.*missing|re.ingest|needs.*review/i.test(line));
-  const example=groups.find(group=>/worked examples|answers and explanations/i.test(group.heading))?.lines.find(line=>line.length<700);
+  // A source anchor must explain the subject, not ask the teacher to explain
+  // it. Cached fragments and revision prompts are not factual evidence.
+  const readable=(line:string)=>!guideExtractionIssue(line)&&!/^\s*(?:\*\*[^*]+:\*\*\s*)?(?:explain\b.*\bwithout looking|check your\b|write\b|ask\b|use the\b|select the\b|identify\b)/i.test(line)
+    &&!/^\s*\*\*(?:revision check|learning target|exit ticket|practice|activity|discussion):/i.test(line);
+  const anchor=usable.flatMap(group=>group.lines).find(line=>line.length>30&&line.length<700&&readable(line)&&!/source text.*missing|re.ingest|needs.*review/i.test(line));
+  const example=groups.find(group=>/worked examples|answers and explanations/i.test(group.heading))?.lines.find(line=>line.trim().length>0&&line.length<700&&readable(line));
   const formula=usable.some(group=>group.kind==='formula'||group.kind==='derivation');
   const literary=/English|Hindi|Sanskrit/i.test(subject),computing=/Computer|Informatics/i.test(subject),math=/Math/i.test(subject);
   const mode=literary?'text':computing?'code':math?'mathematics':/preparation|manufactur|extraction|process|mechanism/i.test(title)?'process':/compar|difference|versus/i.test(title)?'comparison':/trend|contraction|variation/i.test(title)?'trend':formula?'relation':'concept';
