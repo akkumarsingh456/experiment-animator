@@ -1103,3 +1103,9 @@ body:has(.presentation-overlay) .creator-credit { display:none; }
 .experiment-resource-button:focus-visible{outline:3px solid #7dc9e8;outline-offset:3px}
 .experiment-resource-button svg{flex-shrink:0}
 @media(max-width:640px){.experiment-procedure-empty,.experiment-video-empty{padding:20px;gap:12px;flex-direction:column}.experiment-video-heading,.experiment-source-bar{padding:20px}.experiment-video-heading h3{font-size:19px}.experiment-sort{width:100%}.experiment-sort select{margin-left:0}.experiment-resource-button{font-size:12px}}
+
+/* Chapter artwork is an external SVG image: animate its frame, not its facts. */
+.lesson-preparation .prep-illustration figure { position:relative; }
+.lesson-preparation .prep-illustration figure::after { content:""; display:block; height:3px; width:28%; margin-top:10px; border-radius:3px; background:var(--prep-ink,#247f91); animation:prep-chapter-reading 3s ease-in-out infinite alternate; }
+@keyframes prep-chapter-reading { from { transform:translateX(0); opacity:.45; } to { transform:translateX(250%); opacity:1; } }
+@media(prefers-reduced-motion:reduce) { .lesson-preparation .prep-illustration figure::after { animation:none; width:100%; opacity:.45; } }
