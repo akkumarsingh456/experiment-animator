@@ -48,6 +48,31 @@ for current coverage.
 | Teacher workspace | Stores confirmed private lesson backups and next-class plans for later use when the teacher is signed in. |
 | PDF and PowerPoint export | Lets teachers present online or keep copies for classroom use and preparation. |
 
+### Education context: NCERT's CT and AI module for Grades 9–12
+
+NCERT's [official website](https://ncert.nic.in/?ln=en) lists its press release
+and introductory Computational Thinking (CT) and Artificial Intelligence (AI)
+module for the secondary stage, Grades 9–12. The release dated 23 October 2026
+describes the module as aligned with the vision of NEP 2020. It highlights:
+
+- Building critical thinking, creativity, problem-solving, and responsible use
+  of emerging technologies, including for learners with no previous AI
+  knowledge.
+- Introducing CT as a systematic approach to problem-solving and helping learners
+  understand how AI works, its applications, possibilities, and limitations.
+- Experiential, activity-based learning through discussion, practical exercises,
+  experimentation, and reflection; activities may be conducted with or without
+  digital devices.
+- Ethical and safe AI use, including data privacy, misinformation, fairness,
+  digital safety, and critical verification of AI-generated information, while
+  keeping human judgment, creativity, and ethical responsibility central.
+
+EduPlan is a teacher-led preparation tool for Classes 9–12. Its source review,
+editable notes, activity resources, experiment materials, and optional reviewed
+AI assistance can support teachers preparing classroom explanations and
+activities. This is a connection in purpose; **EduPlan is not the NCERT CT/AI
+module and is not presented as NCERT-endorsed**.
+
 ### How the source and generation workflow works
 
 ```text
