@@ -8,7 +8,7 @@ import {ManualBookPdfViewer} from '@/components/ManualBookPdfViewer';
 import {cachedManualPdf} from '@/lib/manual-pdf-cache';
 import {toast} from 'sonner';
 import {loadManualVisuals,manualVisualCache,saveManualVisual,type ManualVisual} from '@/lib/manual-visuals';
-import {canImportMedEasy,topicDiagramQuery,transferredImageUrls,imageWithCredit,type ImageCredit} from '@/lib/manual-image-import';
+import {canImportMedEasy,topicDiagramQuery,topicDiagramScope,transferredImageUrls,imageWithCredit,type ImageCredit} from '@/lib/manual-image-import';
 import {importDiagramUrl,type DiagramResult} from '@/lib/diagram-search.functions';
 import {DiagramImagePicker} from './DiagramImagePicker';
 import {ManualImageCropper} from './ManualImageCropper';
@@ -150,7 +150,7 @@ export function ManualVisualEditor({storageKey:legacyStorageKey,autoUrl,autoCont
      </div>}
    </div>}
    {viewer&&medEasyAllowed&&<ManualBookPdfViewer id={viewer.id} name={viewer.name} klass={klass} subject={subject} chapter={chapter} suggestedPages={viewer.pages} printedRange={viewer.printedRange} initialPage={viewer.page} onClose={()=>{setViewer(null);panel.current?.focus();}} onImport={file=>void upload(file)}/>}
-   {googleOpen&&<DiagramImagePicker query={topicDiagramQuery(klass,subject,chapter,topic)} onClose={()=>{setGoogleOpen(false);panel.current?.focus();}} onUse={useDiagram} onPaste={paste} onDrop={drop}/>}
+   {googleOpen&&<DiagramImagePicker query={topicDiagramQuery(klass,subject,chapter,topic)} scope={topicDiagramScope(klass,subject,chapter,topic)} onClose={()=>{setGoogleOpen(false);panel.current?.focus();}} onUse={useDiagram} onPaste={paste} onDrop={drop}/>}
    {cropOpen&&visual&&<ManualImageCropper url={visual.url} credit={visual.credit} onClose={()=>setCropOpen(false)} onApply={url=>{change({url});setCropOpen(false);setOpen(true);}}/>}
  </div>;
 }

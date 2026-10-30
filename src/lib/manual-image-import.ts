@@ -6,6 +6,10 @@ export function topicDiagramQuery(klass:string,subject:string,chapter:string,top
   const clean=(text:string)=>text.replace(/^chapter\s*\d+\s*[:.\-]?\s*/i,'').replace(/\b(?:teacher notes|key points|classroom discussion|learning and practice)\b/gi,'').trim();
   return (clean(topic)||clean(chapter)||`${subject} Class ${klass}`).slice(0,220);
 }
+export function topicDiagramScope(klass:string,subject:string,chapter:string,topic:string){
+  const clean=(text:string)=>text.replace(/^chapter\s*\d+\s*[:.\-]?\s*/i,'').replace(/\b(?:teacher notes|key points|classroom discussion|learning and practice)\b/gi,'').trim();
+  return [`Class ${klass}`,clean(subject),clean(chapter),clean(topic)].filter(Boolean).join(' · ').slice(0,800);
+}
 export function googleDiagramUrl(query:string){
   const params=new URLSearchParams({q:`${query} labelled diagram -advertisement -wallpaper -shopping`,udm:'2',safe:'active',tbs:'itp:lineart'});
   return `https://www.google.com/search?${params}`;

@@ -7,15 +7,44 @@ export type DiagramSearchResult={images:DiagramResult[];filteredCount:number};
 const cache=new Map<string,{expires:number;result:DiagramSearchResult}>();
 const plain=(value:string)=>value.replace(/<[^>]*>/g,' ').replace(/&(?:nbsp|amp|quot|lt|gt);/g,' ').replace(/\s+/g,' ').trim().slice(0,220);
 function isWikimediaImage(value:string){try{const url=new URL(value);return url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&['upload.wikimedia.org','thumb.wikimedia.org'].includes(url.hostname);}catch{return false;}}
+export async function fetchCommons(params:URLSearchParams){
+  let lastError:unknown;
+  for(let attempt=0;attempt<2;attempt++){
+    let response:Response;
+    try{
+      response=await fetch(`https://commons.wikimedia.org/w/api.php?${params}`,{headers:{'User-Agent':'EduPlanAI/1.0 (educational diagram picker; https://notes-ncert.lovable.app/)'},signal:AbortSignal.timeout(12000)});
+    }catch(error){
+      lastError=error;
+      if(attempt===1)break;
+      await new Promise(resolve=>setTimeout(resolve,600));
+      continue;
+    }
+    if(response.ok)return response;
+    const retryable=response.status===429||response.status>=500;
+    const info=`Wikimedia Commons returned ${response.status}${response.statusText?` ${response.statusText}`:''}.`;
+    await response.body?.cancel();
+    if(!retryable||attempt===1)throw new Error(info);
+    const retryAfter=Number(response.headers.get('retry-after'));
+    await new Promise(resolve=>setTimeout(resolve,Number.isFinite(retryAfter)&&retryAfter>0?Math.min(retryAfter*1000,2500):600));
+  }
+  throw new Error(lastError instanceof Error?lastError.message:'Wikimedia Commons is temporarily unreachable. Please retry the preview.');
+}
+export function commonsSearchParams(query:string){
+  return new URLSearchParams({action:'query',format:'json',generator:'search',gsrsearch:`${query.trim()} filetype:drawing -photograph -logo -advertisement`,gsrnamespace:'6',gsrlimit:'20',prop:'imageinfo',iiprop:'url|mime|size|extmetadata',iiurlwidth:'960'});
+}
 
 /** Free public diagram search. Google results are opened separately and never scraped. */
 export const searchFreeDiagrams=createServerFn({method:'POST'}).inputValidator((raw:unknown)=>z.object({query:z.string().min(2).max(240)}).parse(raw)).handler(async({data})=>{
-  const key=data.query.trim().toLowerCase(),saved=cache.get(key);if(saved&&saved.expires>Date.now())return saved.result;
-  const params=new URLSearchParams({action:'query',format:'json',generator:'search',gsrsearch:`${data.query} filetype:drawing -photograph -logo -advertisement`,gsrnamespace:'6',gsrlimit:'40',prop:'imageinfo',iiprop:'url|mime|size|extmetadata',iiurlwidth:'1280'});
-  const response=await fetch(`https://commons.wikimedia.org/w/api.php?${params}`,{headers:{'User-Agent':'EduPlanAI/1.0 (educational diagram picker)'},signal:AbortSignal.timeout(15000)});
-  if(!response.ok)throw new Error('Diagram search is temporarily unavailable. Use Google Images or paste a screenshot.');
+  const query=data.query.trim(),key=query.toLowerCase(),saved=cache.get(key);if(saved&&saved.expires>Date.now())return saved.result;
+  // Keep the request compact: Wikimedia's full metadata includes large HTML
+  // descriptions. Twenty candidates are enough to return twelve licensed matches.
+  // Commons search ANDs plain-language terms. Adding class/chapter labels here
+  // makes ordinary topics such as "Nutrition" return no results, so keep the
+  // provider query topic-focused and use the lesson scope for the visible context.
+  const params=commonsSearchParams(query);
+  const response=await fetchCommons(params);
   const json=await response.json() as {error?:{info?:string};query?:{pages?:Record<string,{title:string;index?:number;imageinfo?:Array<{thumburl?:string;url:string;descriptionurl:string;mime:string;width:number;height:number;extmetadata?:Record<string,{value:string}>}>}>}};
-  if(json.error)throw new Error('The diagram provider could not complete this search. Please retry.');
+  if(json.error)throw new Error(json.error.info||'Wikimedia Commons could not complete this search. Please retry.');
   let filteredCount=0;
   const candidates=Object.values(json.query?.pages||{}).flatMap(page=>{
     const topicMatch=checkDiagramTopicMatch(data.query,page.title.replace(/^File:/,''));
