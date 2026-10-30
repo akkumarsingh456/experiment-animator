@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import {checkDiagramTopicMatch} from '@/lib/diagram-relevance';
-import {topicDiagramQuery,topicDiagramScope} from '@/lib/manual-image-import';
+import {googleDiagramUrl,topicDiagramQuery,topicDiagramScope} from '@/lib/manual-image-import';
 import {NCERT_SYLLABUS} from '@/lib/ncert-syllabus';
 import {commonsSearchParams,fetchCommons} from '@/lib/diagram-search.functions';
 import {vi} from 'vitest';
@@ -70,6 +70,17 @@ describe('Google/import diagram topic relevance verification',()=>{
     }
     expect(checked).toBeGreaterThan(500);
     expect(commonsSearchParams('Nutrition').get('gsrsearch')).toBe('Nutrition filetype:drawing -photograph -logo -advertisement');
+  });
+
+  it('keeps the selected class, subject and chapter in the Google Images search link',()=>{
+    const scope=topicDiagramScope('10','Biology','Chapter 6: Life Processes','Nutrition');
+    const url=new URL(googleDiagramUrl(`Nutrition ${scope}`));
+    expect(url.searchParams.get('q')).toContain('Class 10');
+    expect(url.searchParams.get('q')).toContain('Biology');
+    expect(url.searchParams.get('q')).toContain('Life Processes');
+    expect(url.searchParams.get('q')).toContain('Nutrition');
+    expect(url.searchParams.get('safe')).toBe('active');
+    expect(url.searchParams.get('tbs')).toBe('itp:lineart');
   });
 
   it('retries temporary Commons failures and returns the successful response',async()=>{
