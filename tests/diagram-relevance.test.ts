@@ -83,6 +83,14 @@ describe('Google/import diagram topic relevance verification',()=>{
     expect(url.searchParams.get('tbs')).toBe('itp:lineart');
   });
 
+  it('searches the scientific concept inside a broad parenthetical topic label',()=>{
+    const query=topicDiagramQuery('10','Science','Chapter 6: Life Processes (Biology)','Transportation (Human Circulatory System)');
+    expect(query).toBe('Human Circulatory System');
+    expect(commonsSearchParams(query).get('gsrsearch')).toContain('Human Circulatory System');
+    expect(checkDiagramTopicMatch(query,'Circulatory System diagram')).toMatchObject({relevant:true,matched:2,total:3});
+    expect(checkDiagramTopicMatch(query,'Traffic transportation diagram').relevant).toBe(false);
+  });
+
   it('retries temporary Commons failures and returns the successful response',async()=>{
     const fetch=vi.fn()
       .mockResolvedValueOnce(new Response('temporarily unavailable',{status:503,statusText:'Service Unavailable'}))

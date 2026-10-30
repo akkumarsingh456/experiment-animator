@@ -4,7 +4,12 @@ export function canImportMedEasy(klass:string,subject:string){
 }
 export function topicDiagramQuery(klass:string,subject:string,chapter:string,topic:string){
   const clean=(text:string)=>text.replace(/^chapter\s*\d+\s*[:.\-]?\s*/i,'').replace(/\b(?:teacher notes|key points|classroom discussion|learning and practice)\b/gi,'').trim();
-  return (clean(topic)||clean(chapter)||`${subject} Class ${klass}`).slice(0,220);
+  const topicText=clean(topic),specificAlias=topicText.match(/\(([^()]+)\)/)?.[1]?.trim();
+  // Topics sometimes start with a broad teaching label and put the actual
+  // scientific concept in parentheses (e.g. "Transportation (Human Circulatory System)").
+  // Search the specific concept so Commons can return its matching diagrams.
+  const focusedTopic=specificAlias&&specificAlias.split(/\s+/).length>=2?clean(specificAlias):topicText;
+  return (focusedTopic||clean(chapter)||`${subject} Class ${klass}`).slice(0,220);
 }
 export function topicDiagramScope(klass:string,subject:string,chapter:string,topic:string){
   const clean=(text:string)=>text.replace(/^chapter\s*\d+\s*[:.\-]?\s*/i,'').replace(/\b(?:teacher notes|key points|classroom discussion|learning and practice)\b/gi,'').trim();
