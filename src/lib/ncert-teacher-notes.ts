@@ -723,8 +723,12 @@ export async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: s
     ]);
     const source = excerpts.join(" ");
     const quantitative = hasQuantitativeFormulaEvidence(source);
-    // Review completeness even if one formula, unit and derivation already exist.
     if (!quantitative) return;
+    // Slides whose notes already contain a formula with its own derivation
+    // group are complete: skip them so the pass only fills genuine gaps.
+    const hasFormula = has(lines, /formula:/i);
+    const hasDerivation = has(lines, /^derivation of/i);
+    if (hasFormula && hasDerivation) return;
     targets.push({
       index: i,
       title: s.title,
@@ -733,7 +737,7 @@ export async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: s
   });
   if (targets.length === 0) return slides;
 
-  const CHUNK = 2;
+  const CHUNK = 6;
   const chunks: Array<typeof targets> = [];
   for (let i = 0; i < targets.length; i += CHUNK) chunks.push(targets.slice(i, i + CHUNK));
   // Long lessons can have dozens of formula batches. Bound concurrency so the
