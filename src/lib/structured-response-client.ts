@@ -21,9 +21,10 @@ export async function gatewayJSON<T>(opts: {
   const key = process.env.LOVABLE_API_KEY;
   if (!key) return null;
   try {
+    // No artificial timeout: streamed gateway calls run until the model
+    // finishes. A hard cap discards billed, otherwise-complete lessons.
     const res = await fetch(GATEWAY, {
       method: "POST",
-      signal: AbortSignal.timeout(90_000),
       headers: {
         "Content-Type": "application/json",
         "Lovable-API-Key": key,
