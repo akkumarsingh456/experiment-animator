@@ -508,7 +508,7 @@ export async function groqTeacherNotes(opts: {
   ].join("\n");
 
   try {
-    const gateway = hasGatewayKey() ? await gatewayJSON<{ slides?: TeacherSlideOut[] }>({ prompt, schemaName: "complete_lesson_notes", reasoningEffort: "high", schema: {
+    const gateway = hasGatewayKey() ? await gatewayJSON<{ slides?: TeacherSlideOut[] }>({ prompt, schemaName: "complete_lesson_notes", reasoningEffort: "medium", schema: {
       type: "object", additionalProperties: false, required: ["slides"], properties: { slides: { type: "array", items: {
         type: "object", additionalProperties: false, required: ["index", "sections", "teaching_support"], properties: { teaching_support: teachingSupportSchema, index: { type: "integer" }, sections: { type: "array", items: {
           type: "object", additionalProperties: false, required: ["heading", "kind", "lines"], properties: { heading: { type: "string" }, kind: { type: "string", enum: ["text", "bullets", "formula", "terms", "tip"] }, lines: { type: "array", items: { type: "string" } } }
