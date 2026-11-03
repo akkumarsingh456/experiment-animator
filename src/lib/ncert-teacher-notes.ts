@@ -747,7 +747,9 @@ export async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: s
     // can share a chapter (e.g. Drift Velocity and Ohm's Law).
     const formulaOpts = { ...opts, refContext: "", slides: chunk };
     let result = await aiFormulaSheet(formulaOpts);
-    for (let retry = 0; result.size === 0 && retry < 2; retry++) {
+    // One retry only: with no artificial call timeout an empty result is a
+    // real failure, and repeated 90-second rounds used to stall generation.
+    for (let retry = 0; result.size === 0 && retry < 1; retry++) {
       await new Promise(resolve => setTimeout(resolve, 300 * (retry + 1)));
       result = await aiFormulaSheet(formulaOpts);
     }
