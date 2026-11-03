@@ -8,8 +8,8 @@ import { LESSON_REQUEST_TIMEOUT_MS } from "@/lib/generation-timing";
  * lessons and forcing slow fallbacks. These tests lock the fix in place.
  */
 describe("lesson generation timing", () => {
-  it("gives interactive lesson requests a 5-minute window", () => {
-    expect(LESSON_REQUEST_TIMEOUT_MS).toBe(300_000);
+  it("gives interactive lesson requests a 6-minute window", () => {
+    expect(LESSON_REQUEST_TIMEOUT_MS).toBe(360_000);
   });
 
   it("makes AI gateway calls without an artificial timeout", () => {

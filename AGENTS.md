@@ -18,3 +18,4 @@
 - Follow `docs/NOTES_AND_VISUAL_QUALITY.md` for all subject/chapter changes. Keep shared extraction guards, chapter-specific evidence constraints and explicit unavailable-diagram states; never route ambiguous words such as series, cell or unit without subject context.
 
 - Authentication restricts adding source books and notes only. Existing library reading, generation, saved lessons and PPT/PDF access stay public; never impose retrospective source approval on historical uploads.
+- AI gateway lesson calls run to completion with no artificial timeout (`AbortSignal.timeout` is forbidden in `structured-response-client.ts`); the masterclass notes call uses medium reasoning effort, formula batches carry 6 slides at concurrency 6 with one retry, and the interactive lesson request window is 360s (`generation-timing.ts`). A 90-second call cap used to abort every notes request mid-generation, so tests/generation-timing.test.ts locks these values.

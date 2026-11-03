@@ -723,12 +723,10 @@ export async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: s
     ]);
     const source = excerpts.join(" ");
     const quantitative = hasQuantitativeFormulaEvidence(source);
+    // Review completeness even if one formula, unit and derivation already
+    // exist: the pass may still add source-supported relations the notes
+    // writer missed.
     if (!quantitative) return;
-    // Slides whose notes already contain a formula with its own derivation
-    // group are complete: skip them so the pass only fills genuine gaps.
-    const hasFormula = has(lines, /formula:/i);
-    const hasDerivation = has(lines, /^derivation of/i);
-    if (hasFormula && hasDerivation) return;
     targets.push({
       index: i,
       title: s.title,
@@ -740,14 +738,16 @@ export async function ensureFormulaBlocks<T extends NoteSourceSlide & { kind?: s
   const CHUNK = 6;
   const chunks: Array<typeof targets> = [];
   for (let i = 0; i < targets.length; i += CHUNK) chunks.push(targets.slice(i, i + CHUNK));
-  // Long lessons can have dozens of formula batches. Bound concurrency so the
-  // AI service can return formula sheets across the entire chapter consistently.
-  const maps = await mapWithConcurrency(chunks, 3, async (chunk) => {
+  // Batches of six slides keep the number of AI rounds low; higher
+  // concurrency lets every batch run in a single round.
+  const maps = await mapWithConcurrency(chunks, 6, async (chunk) => {
     // Do not send the chapter-wide reference pool again: unrelated subtopics
     // can share a chapter (e.g. Drift Velocity and Ohm's Law).
     const formulaOpts = { ...opts, refContext: "", slides: chunk };
     let result = await aiFormulaSheet(formulaOpts);
-    for (let retry = 0; result.size === 0 && retry < 2; retry++) {
+    // One retry only: with no artificial call timeout an empty result is a
+    // real failure, and repeated 90-second rounds used to stall generation.
+    for (let retry = 0; result.size === 0 && retry < 1; retry++) {
       await new Promise(resolve => setTimeout(resolve, 300 * (retry + 1)));
       result = await aiFormulaSheet(formulaOpts);
     }
