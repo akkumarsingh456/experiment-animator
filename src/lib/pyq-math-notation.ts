@@ -21,7 +21,7 @@ function exponentLatex(raw: string): string | null {
     .join("")
     .replace(/[−–]/g, "-")
     .replace(/\s+/g, "");
-  return /^\+?\d{1,3}$/.test(value) ? value.replace(/^\+/, "") : null;
+  return /^[-+]?\d{1,3}$/.test(value) ? value.replace(/^\+/, "") : null;
 }
 
 /** Coefficient × 10^exponent, e.g. "1.67 × 10^-27" or "6.022 × 10²³". */
@@ -43,8 +43,8 @@ const unitPair = new RegExp(
 
 function unitPowerLatex(u1: string, sep: string | undefined, u2: string | undefined, exp: string): string {
   const power = `^{${exp}}`;
-  if (sep === "/") return String.raw`\mathrm{${u1}/${u2}${power}}`;
-  return u2 ? String.raw`\mathrm{${u1}\,${u2}${power}}` : String.raw`\mathrm{${u1}${power}}`;
+  if (sep === "/") return String.raw`\mathrm{${u1}/${u2}}${power}`;
+  return u2 ? String.raw`\mathrm{${u1}\,${u2}}${power}` : String.raw`\mathrm{${u1}}${power}`;
 }
 
 function numericNotation(text: string): string {

@@ -1,4 +1,15 @@
 /** A reversible view of the source transcription. Never replace stored source text. */
+
+// Unreadable extraction debris: replacement characters, private-use glyphs
+// (rendered as empty boxes) and white squares.
+const unreadable=/[\uFFFD\u25A1\u25AF\u25A0\uE000-\uF8FF]/gu;
+/** A line that is mostly unreadable box glyphs is extraction loss, not prose. */
+function garbledLine(line:string){
+ const broken=(line.match(unreadable)||[]).length;
+ if(!broken)return false;
+ const letters=(line.match(/[\p{L}\p{N}]/gu)||[]).length;
+ return broken*2>letters;
+}
 export function presentPyq(raw:string,subject='',layoutText?:string){
  const code=/computer|informatics|programming/i.test(subject);
  const warnings:string[]=[],sourceLines=raw.replace(/\r\n?/g,'\n').split('\n');
@@ -29,6 +40,17 @@ export function presentPyq(raw:string,subject='',layoutText?:string){
    }
    // A standalone number immediately after a recognised footer is its page number.
    if(/^\s*\d{1,3}\s*$/.test(lines[i+1]||''))i++;
+   continue;
+  }
+  if(!code&&garbledLine(line)){
+   removed=true;
+   warnings.push('Some unreadable characters were hidden. Check that part in the original CBSE PDF.');
+   continue;
+  }
+  // A line made only of braces/brackets is font debris, never a question
+  // (code is excluded above, where brackets can be meaningful).
+  if(!code&&/[{[]/.test(line)&&/^\s*[{[()\]}\s]*$/.test(line)){
+   removed=true;
    continue;
   }
   kept.push(line.trimEnd());
