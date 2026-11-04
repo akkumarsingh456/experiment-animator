@@ -1,4 +1,25 @@
+import katex from "katex";
+import {pyqNotation} from '@/lib/pyq-math-notation';
 import {presentPyq} from '@/lib/pyq-presentation';
+import {splitMath, normalizeLatex, latexToUnicode} from '@/lib/latex-notation';
+
+/** Render one question line: LaTeX/KaTeX/mhchem segments via KaTeX, plain
+ * text otherwise. Falls back to the raw text when a fragment fails to parse,
+ * so a question never disappears because of one bad symbol. */
+function NotatedLine({line}:{line:string}){
+ const segments=splitMath(pyqNotation(line));
+ return <>{segments.map((seg,index)=>{
+  if(seg.type==='text')return <span key={index}>{seg.value}</span>;
+  const body=normalizeLatex(seg.value);
+  let html='';
+  try{
+   html=katex.renderToString(body,{displayMode:seg.type==='block',throwOnError:false,strict:false,output:'htmlAndMathml'});
+  }catch{
+   return <span key={index}>{latexToUnicode(seg.value)}</span>;
+  }
+  return <span key={index} className={seg.type==='block'?'block my-1 overflow-x-auto':'inline-block align-middle'} dangerouslySetInnerHTML={{__html:html}}/>;
+ })}</>;
+}
 
 export function PyqQuestionText({text,subject,layoutText}:{text:string;subject:string;layoutText?:string}){
  const view=presentPyq(text,subject,layoutText);
@@ -8,7 +29,7 @@ export function PyqQuestionText({text,subject,layoutText}:{text:string;subject:s
     if(!line.trim())return <div key={index} className="h-2"/>;
     if(/^\s*OR\s*$/i.test(line))return <div key={index} className="my-3 flex items-center gap-3 text-sm font-semibold text-slate-600"><span className="h-px flex-1 bg-slate-200"/>OR<span className="h-px flex-1 bg-slate-200"/></div>;
     const subpart=line.match(/^\s*\((?:[a-z]|[ivx]+)\)/i);
-    return <p key={index} className={`max-w-[85ch] whitespace-pre-wrap break-words ${subpart?'mt-3 pl-3':''}`}>{subpart?<><strong className="font-bold text-sky-950">{subpart[0]}</strong>{line.slice(subpart[0].length)}</>:line}</p>;
+    return <p key={index} className={`max-w-[85ch] whitespace-pre-wrap break-words ${subpart?'mt-3 pl-3':''}`}>{subpart?<><strong className="font-bold text-sky-950">{subpart[0]}</strong><NotatedLine line={line.slice(subpart[0].length)}/></>:<NotatedLine line={line}/>}</p>;
    })}
   </div>
   {view.warnings.length>0&&<div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"><p className="font-semibold">Source review needed</p><ul className="mt-1 list-disc space-y-1 pl-5">{view.warnings.map(warning=><li key={warning}>{warning}</li>)}</ul></div>}
