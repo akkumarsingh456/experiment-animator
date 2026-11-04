@@ -21,7 +21,7 @@ function exponentLatex(raw: string): string | null {
     .join("")
     .replace(/[−–]/g, "-")
     .replace(/\s+/g, "");
-  return /^\+?\d{1,3}$/.test(value) ? value.replace(/^\+/, "") : null;
+  return /^[-+]?\d{1,3}$/.test(value) ? value.replace(/^\+/, "") : null;
 }
 
 /** Coefficient × 10^exponent, e.g. "1.67 × 10^-27" or "6.022 × 10²³". */
