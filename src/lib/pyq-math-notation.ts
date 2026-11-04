@@ -43,8 +43,8 @@ const unitPair = new RegExp(
 
 function unitPowerLatex(u1: string, sep: string | undefined, u2: string | undefined, exp: string): string {
   const power = `^{${exp}}`;
-  if (sep === "/") return String.raw`\mathrm{${u1}/${u2}${power}}`;
-  return u2 ? String.raw`\mathrm{${u1}\,${u2}${power}}` : String.raw`\mathrm{${u1}${power}}`;
+  if (sep === "/") return String.raw`\mathrm{${u1}/${u2}}${power}`;
+  return u2 ? String.raw`\mathrm{${u1}\,${u2}}${power}` : String.raw`\mathrm{${u1}}${power}`;
 }
 
 function numericNotation(text: string): string {
