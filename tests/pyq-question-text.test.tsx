@@ -11,11 +11,11 @@ it('renders question notation with KaTeX and hides garbled debris',async()=>{
   await act(async()=>root.render(<PyqQuestionText text={text} subject="Science"/>));
   const katexHosts=host.querySelectorAll('.katex');
   expect(katexHosts.length).toBeGreaterThanOrEqual(3);
-  const question=host.textContent!;
-  expect(question).toContain('10−27');
-  expect(question).toContain('(B) State one use of the gas formed at the cathode.');
-  expect(question).not.toMatch(/[\uE000\u25A1{]/u);
-  expect(question).not.toContain('× 10^-27');
+  const panel=host.querySelector('div.rounded-xl')!.textContent!;
+  expect(panel).toContain('10−27');
+  expect(panel).toContain('(B) State one use of the gas formed at the cathode.');
+  expect(panel).not.toMatch(/[\uE000\u25A1{]/u);
+  expect(panel).not.toContain('× 10^-27');
  }finally{await act(async()=>root.unmount());host.remove();}
 });
 
