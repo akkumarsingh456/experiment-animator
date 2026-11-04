@@ -12,7 +12,7 @@ describe('pyqNotation', () => {
   it('typesets bare powers of ten and unit powers', () => {
     expect(pyqNotation('Energy gap is of the order 10^-19 J.')).toContain('$10^{-19}$');
     expect(pyqNotation('A body accelerates at 9.8 m s-2.')).toContain('$\\mathrm{s}^{-2}$');
-    expect(pyqNotation('Enthalpy change is 40 kJ mol^-1.')).toContain('$\\mathrm{mol}^{-1}$');
+    expect(pyqNotation('Enthalpy change is 40 kJ mol^-1.')).toContain('$\\mathrm{kJ}\\,\\mathrm{mol}^{-1}$');
   });
 
   it('typesets chemical species with mhchem', () => {
