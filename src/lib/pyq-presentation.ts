@@ -16,7 +16,8 @@ function garbledLine(line:string){
 function scrambledOcrLine(line:string){
  const words=line.match(/[A-Za-z]+/g)||[];
  const uppercase=words.filter(word=>word.length>=2&&word===word.toUpperCase()).length;
- return words.length>=5&&line.replace(/[^A-Za-z]/g,'').length>=18&&uppercase>=3&&uppercase/words.length>=0.55;
+ const irregularMixedCase=words.some(word=>word.length>=4&&word!==word.toUpperCase()&&/[A-Z].*[A-Z]/.test(word));
+ return words.length>=5&&line.replace(/[^A-Za-z]/g,'').length>=18&&uppercase>=3&&uppercase/words.length>=0.45&&irregularMixedCase;
 }
 /** Short all-caps scraps (e.g. HAYA) are hidden only beside a confirmed OCR line. */
 function attachedOcrScrap(lines:string[],index:number){
