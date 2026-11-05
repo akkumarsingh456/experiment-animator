@@ -39,6 +39,25 @@ describe('presentPyq extraction debris', () => {
     expect(view.text).toBe('180 L\n(B) Which of the plant hormones are responsible?');
   });
 
+  it('hides scrambled OCR fragments without dropping readable question text', () => {
+    const view = presentPyq(
+      'Find the expression for self-inductance of the coil.\nSE EBIER HT Th THifhd RW 15\nHAYA\n33. An expression for the self-inductance is required.\n(i) State the relation.\n(ii) Give its SI unit.\nP.T.O.\n16',
+      'Physics',
+    );
+    expect(view.text).toContain('Find the expression for self-inductance of the coil.');
+    expect(view.text).toContain('33. An expression for the self-inductance is required.');
+    expect(view.text).toContain('(i) State the relation.');
+    expect(view.text).toContain('(ii) Give its SI unit.');
+    expect(view.text).not.toContain('SE EBIER');
+    expect(view.text).not.toContain('HAYA');
+    expect(view.warnings.join(' ')).toContain('OCR fragments were hidden');
+  });
+
+  it('keeps meaningful abbreviations and short readable science lines', () => {
+    const view = presentPyq('EMF\nDNA carries genetic information.\nHCl reacts with zinc.', 'Science');
+    expect(view.text).toBe('EMF\nDNA carries genetic information.\nHCl reacts with zinc.');
+  });
+
   it('keeps brackets verbatim in Computer Science questions', () => {
     const code = 'Write the output:\nif x:\n    print("{ }")';
     expect(presentPyq(code, 'Computer Science').text).toBe(code);
