@@ -10,6 +10,20 @@ function garbledLine(line:string){
  const letters=(line.match(/[\p{L}\p{N}]/gu)||[]).length;
  return broken*2>letters;
 }
+/** Detect OCR that turned page furniture into a long string of shouty fragments.
+ * Keep short acronyms and ordinary English sentences; this only targets lines
+ * with several unrelated all-caps tokens and enough text to be noise. */
+function scrambledOcrLine(line:string){
+ const words=line.match(/[A-Za-z]+/g)||[];
+ const uppercase=words.filter(word=>word.length>=2&&word===word.toUpperCase()).length;
+ return words.length>=5&&line.replace(/[^A-Za-z]/g,'').length>=18&&uppercase>=3&&uppercase/words.length>=0.55;
+}
+/** Short all-caps scraps (e.g. HAYA) are hidden only beside a confirmed OCR line. */
+function attachedOcrScrap(lines:string[],index:number){
+ const line=lines[index]?.trim()||'';
+ if(!/^[A-Z]{4,6}$/.test(line))return false;
+ return [index-1,index+1].some(neighbor=>neighbor>=0&&neighbor<lines.length&&scrambledOcrLine(lines[neighbor]||''));
+}
 export function presentPyq(raw:string,subject='',layoutText?:string){
  const code=/computer|informatics|programming/i.test(subject);
  const warnings:string[]=[],sourceLines=raw.replace(/\r\n?/g,'\n').split('\n');
@@ -45,6 +59,11 @@ export function presentPyq(raw:string,subject='',layoutText?:string){
   if(!code&&garbledLine(line)){
    removed=true;
    warnings.push('Some unreadable characters were hidden. Check that part in the original CBSE PDF.');
+   continue;
+  }
+  if(!code&&(scrambledOcrLine(line)||attachedOcrScrap(lines,i))){
+   removed=true;
+   warnings.push('Scrambled OCR fragments were hidden. Check that part in the original CBSE PDF.');
    continue;
   }
   // A line made only of braces/brackets is font debris, never a question
