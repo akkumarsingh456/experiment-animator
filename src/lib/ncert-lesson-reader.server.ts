@@ -1,4 +1,5 @@
 import { bookMatchesLesson } from "@/lib/generate.functions";
+import { isEnglishNcertBookCandidate } from "@/lib/ncert-book-language";
 
 const clean = (value: string) => value.toLowerCase().replace(/\.pdf$/i, "").replace(/^chapter\s*\d+\s*[:.\-]?\s*/i, "").replace(/\([^)]*\)/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
@@ -18,7 +19,7 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
   const requestedSubject = data.subject.trim().toLowerCase();
   const isJuniorScience = Number(data.klass.replace(/\D/g, "")) <= 10 && requestedSubject === "science";
   const candidates = rows.filter(book => {
-    if (!book.storage_path) return false;
+    if (!book.storage_path || !isEnglishNcertBookCandidate(book)) return false;
     const metadata = { class: String(book.class || ""), subject: String(book.subject || ""), file_name: book.file_name, chapter: book.chapter };
     if (!bookMatchesLesson(metadata, data.klass, data.subject)) return false;
     // Some older uploads have an incorrect subject dropdown value. Never let
