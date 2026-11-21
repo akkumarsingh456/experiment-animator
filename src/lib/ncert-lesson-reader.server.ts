@@ -1,8 +1,6 @@
-import { subjectMatches } from "@/lib/generate.functions";
-import { combinedReferenceMatches } from "@/lib/reference-books";
+import { bookMatchesLesson } from "@/lib/generate.functions";
 
 const clean = (value: string) => value.toLowerCase().replace(/\.pdf$/i, "").replace(/^chapter\s*\d+\s*[:.\-]?\s*/i, "").replace(/\([^)]*\)/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-const classNumber = (value: string) => value.replace(/\D/g, "");
 
 export async function resolveNcertLessonBook(data: { klass: string; subject: string; chapter: string }) {
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
@@ -18,9 +16,7 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
     if (!batch || batch.length < 500) break;
   }
   const candidates = rows.filter(book =>
-    (classNumber(String(book.class || "")) === classNumber(data.klass) ||
-      combinedReferenceMatches(book, data.klass, data.subject)) &&
-    subjectMatches(String(book.subject || ""), data.subject, data.klass) &&
+    bookMatchesLesson({ class: String(book.class || ""), subject: String(book.subject || ""), file_name: book.file_name, chapter: book.chapter }, data.klass, data.subject) &&
     !!book.storage_path
   );
   if (!candidates.length) return null;
