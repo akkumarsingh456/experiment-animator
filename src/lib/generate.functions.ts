@@ -1057,7 +1057,11 @@ function subjectAliases(subject: string, klass?: string) {
 
 export function subjectMatches(actual: string, requested: string, klass?: string) {
   const a = normalizeText(actual);
-  if (!a || !requested.trim()) return false;
+  const r = normalizeText(requested);
+  if (!a || !r) return false;
+  // Class 9–10 Science is a distinct integrated textbook, not Social Science.
+  // Do not let the substring "science" match Political Science / Social Science.
+  if (r === "science") return a === "science" || a === "vigyan" || a === "general science";
   // The shared word “science” must not make a Science textbook a source
   // for Computer Science or Social Science when those books are absent.
   if(a==='science'&&!['science','physics','chemistry','biology','vigyan','bhautiki','rasayan','jeev'].includes(normalizeText(requested)))return false;
