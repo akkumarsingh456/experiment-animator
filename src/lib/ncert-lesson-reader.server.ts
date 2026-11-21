@@ -1,5 +1,3 @@
-import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
 import { readLessonTextbooks } from "@/lib/lesson-textbooks";
 import { subjectMatches } from "@/lib/generate.functions";
 
@@ -27,12 +25,3 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
   return { id: stored.id as string, name: stored.file_name as string, storagePath: stored.storage_path as string };
 }
 
-export const findNcertLessonBook = createServerFn({ method: "POST" })
-  .inputValidator((raw: unknown) => z.object({
-    klass: z.string().min(1).max(30), subject: z.string().min(1).max(100),
-    chapter: z.string().min(1).max(300),
-  }).parse(raw))
-  .handler(async ({ data }) => {
-    const book = await resolveNcertLessonBook(data);
-    return book ? { id: book.id, name: book.name } : null;
-  });
