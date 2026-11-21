@@ -42,7 +42,19 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
     .select("id,class,subject,chapter,file_name,storage_path")
     .eq("id", selected.id).maybeSingle();
   if (storedError || !stored?.storage_path) return null;
+  // Use the stored extraction index to locate the actual PDF page containing
+  // this chapter heading. If the index has no exact heading, the browser reader
+  // falls back to verified PDF bookmarks/native headings instead of guessing.
+  let chapterPage: number | null = null;
+  if (data.chapter.trim().length >= 5) {
+    const escaped = data.chapter.trim().replace(/[\\%_]/g, value => "\\" + value);
+    const pageResult = await db.from("ncert_pages").select("page_number,text")
+      .eq("book_id", stored.id).ilike("text", "%" + escaped + "%")
+      .order("page_number", { ascending: true }).limit(1).maybeSingle();
+    if (!pageResult.error && Number.isInteger(pageResult.data?.page_number) && pageResult.data.page_number > 0)
+      chapterPage = pageResult.data.page_number as number;
+  }
   const signed = await db.storage.from("ncert-pdfs").createSignedUrl(stored.storage_path, 300);
   if (!signed.data?.signedUrl) throw new Error("The uploaded textbook PDF could not be opened.");
-  return { id: stored.id as string, name: stored.file_name as string, signedUrl: signed.data.signedUrl };
+  return { id: stored.id as string, name: stored.file_name as string, signedUrl: signed.data.signedUrl, chapterPage };
 }
