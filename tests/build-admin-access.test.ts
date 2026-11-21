@@ -39,15 +39,20 @@ describe("lesson build authorization boundaries", () => {
     expect(migration).toContain("slide_image_audit_service_only");
   });
 
-  it("uses build-time public Supabase settings as a safe SSR fallback", () => {
+  it("reads Lovable Cloud Supabase secrets from worker bindings before SSR initializes clients", () => {
+    const runtime = read("src/integrations/supabase/runtime-env.server.ts");
     const env = read("src/integrations/supabase/env.server.ts");
+    const server = read("src/server.ts");
     const admin = read("src/integrations/supabase/client.server.ts");
     const auth = read("src/integrations/supabase/auth-middleware.ts");
-    expect(env).toContain("process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL");
-    expect(env).toContain("process.env.SUPABASE_PUBLISHABLE_KEY");
-    expect(env).toContain("import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY");
-    expect(admin).toContain("getSupabaseServerUrl()");
-    expect(admin).toContain("process.env.SUPABASE_SERVICE_ROLE_KEY");
+    expect(runtime).toContain("setSupabaseRuntimeEnv");
+    expect(runtime).toContain("workerBindings[name]");
+    expect(env).toContain('getSupabaseRuntimeValue("SUPABASE_URL")');
+    expect(env).toContain("import.meta.env.VITE_SUPABASE_URL");
+    expect(env).toContain('getSupabaseRuntimeValue("SUPABASE_SERVICE_ROLE_KEY")');
+    expect(server).toContain("setSupabaseRuntimeEnv(env)");
+    expect(server.indexOf("setSupabaseRuntimeEnv(env)")).toBeLessThan(server.indexOf("handler.fetch(request, env, ctx)"));
+    expect(admin).toContain("getSupabaseServerServiceRoleKey()");
     expect(admin).not.toContain("VITE_SUPABASE_SERVICE_ROLE_KEY");
     expect(auth).toContain("getSupabaseServerPublishableKey()");
   });
