@@ -19,7 +19,6 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { NCERT_SYLLABUS, SYLLABUS_CLASSES } from "@/lib/ncert-syllabus";
 import { generateLesson } from "@/lib/generate.functions";
-import { requireLibraryAdmin } from "@/lib/library-auth";
 
 async function db() {
  const {supabaseAdmin}=await import("@/integrations/supabase/client.server");return supabaseAdmin as any;
@@ -39,7 +38,7 @@ export type BuildState = "idle" | "running" | "paused" | "blocked";
 /* ------------------------------------------------------------------ */
 
 /** Add every syllabus chapter (optionally narrowed to one class/subject). */
-export const enqueueLibrary = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
+export const enqueueLibrary = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -100,7 +99,7 @@ export type BuildStatus = {
   }>;
 };
 
-export const buildStatus = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
+export const buildStatus = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({ klass: z.string().optional().default("") }).parse(d ?? {}),
   )
@@ -139,7 +138,7 @@ export const buildStatus = createServerFn({ method: "POST" }).middleware([requir
   });
 
 /** Saved chapters the teacher can open instantly. */
-export const listBuiltChapters = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
+export const listBuiltChapters = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({ klass: z.string().optional().default(""), subject: z.string().optional().default("") })
@@ -162,7 +161,7 @@ export const listBuiltChapters = createServerFn({ method: "POST" }).middleware([
   });
 
 /** Start / pause the build, or reset failed chapters so they can be retried. */
-export const controlBuild = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
+export const controlBuild = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({ action: z.enum(["start", "pause", "retry_failed"]) }).parse(d),
   )
@@ -197,7 +196,7 @@ function blockedByCredits(msg: string): boolean {
  * Process at most `MAX_BATCH` queued chapters. Exits immediately when the
  * build is paused/blocked or another runner holds the lease.
  */
-export const runBuildBatch = createServerFn({ method: "POST" }).middleware([requireLibraryAdmin])
+export const runBuildBatch = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({ limit: z.coerce.number().min(1).max(MAX_BATCH).optional().default(1) }).parse(d ?? {}),
   )
