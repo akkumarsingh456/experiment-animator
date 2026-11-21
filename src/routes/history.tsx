@@ -132,6 +132,7 @@ function HistoryPage() {
               EduPlan AI
             </span>
           </Link>
+          <Link to="/upload" className="text-sm font-medium text-primary hover:underline">Upload section</Link>
         </div>
       </header>
 
