@@ -15,7 +15,7 @@ function readableGeneratedLine(raw: string): boolean {
   // sentence is a strong extraction-damage signal, not a safe formula.
   const plain=line.replace(/\$\$?[\s\S]*?\$\$?/g," ");
   const isolated=(plain.match(/\b[A-Za-z]\b/g)||[]).length;
-  if(/[=→Δδ∂]|\blim\b|\bdt\b|\bdx\b/i.test(plain)&&isolated>=7)return false;
+  if(/[=→Δδ∂]|\blim\b|\bdt\b|\bdx\b/i.test(plain)&&isolated>=5)return false;
   return true;
 }
 
