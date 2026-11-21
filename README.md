@@ -155,6 +155,32 @@ server-side configuration and availability.
 - The original NCERT PDF is not modified by highlighting; highlights are stored
   separately from the source book.
 
+### Generated text and formula cross-check
+
+- Every newly generated lesson passes through a final server-side content check
+  after the core lesson and optional teaching-support stages. Cached lessons
+  also pass through this boundary before they are returned.
+- The check inspects learner-facing bullets, notes, structured note sections,
+  additive AI teaching-support sections and key terms for known PDF/OCR
+  extraction damage, flattened calculus/equations, malformed mathematical
+  notation and invalid LaTeX.
+- Unclear lines are excluded from learner-facing output rather than having
+  missing mathematical structure guessed. Original extraction-review sections
+  are retained separately for comparison with the uploaded textbook.
+- The generation result includes a `generation_review` report with the number
+  of checked items, excluded items, pass status and review messages. The
+  Generated lesson page displays this in **Generated text & formula
+  cross-check**.
+- The same line-level check is applied to the Gemini teacher-notes chat and
+  source-supported missing-topic AI notes before they are returned.
+- This is a conservative automated quality gate, not a guarantee that every
+  scientific or mathematical statement is factually correct. Teachers should
+  still compare important claims and worked solutions with the matching
+  textbook. New tests cover the reported flattened instantaneous-velocity
+  example, valid prose/LaTeX and additive teaching-support content.
+- The repository changes have been committed, but the complete test suite and
+  production build must still be run in the deployment environment.
+
 ### Technical overview
 
 - **Frontend:** React and TypeScript, with TanStack Start/Router and Tailwind CSS.
