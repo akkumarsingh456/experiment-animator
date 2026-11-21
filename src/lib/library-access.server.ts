@@ -20,3 +20,25 @@ export async function readLibraryIdentity() {
 export async function assertLibraryAdmin(): Promise<NonNullable<Awaited<ReturnType<typeof readLibraryIdentity>>>> {
   throw new Error("The source library is read-only. Uploads, deletion and source changes are disabled for everyone.");
 }
+
+/** Verify build-queue administration using the database's existing owner allowlist.
+ * This is separate from source-library writes, which remain permanently disabled.
+ */
+export async function assertLibraryBuildAdmin(): Promise<NonNullable<Awaited<ReturnType<typeof readLibraryIdentity>>>> {
+  const user = await readLibraryIdentity();
+  if (!user) throw new Error("Sign in with an authorised site-owner account to manage lesson builds.");
+  const request = getRequest();
+  const authorization = request.headers.get("authorization") || "";
+  const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  if (!token) throw new Error("A verified sign-in session is required.");
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) throw new Error("Build administration is unavailable until Supabase is configured.");
+  const db = createClient(url, key, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await db.rpc("is_source_library_admin");
+  if (error || data !== true) throw new Error("You do not have permission to manage lesson builds.");
+  return user;
+}
