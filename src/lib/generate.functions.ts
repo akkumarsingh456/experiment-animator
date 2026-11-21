@@ -2008,13 +2008,13 @@ export const generateLesson = createServerFn({ method: "POST" })
         chapter: String(data.chapter || ""),
         topic: String(data.topic || ""),
         subtopics: String(data.subtopics || ""),
-        result: out,
+        result: baseOutput,
       });
     } catch (e) {
       console.warn("lesson cache write failed", e);
     }
 
-    return out;
+    return baseOutput;
     }catch(error){
       const message=error instanceof Error?error.message:'';
       if(/No matching Class .*NCERT textbook|Upload the Class .*NCERT textbook|Readable text for .*was not located|uploaded sources for .*do not contain readable chapter/i.test(message)){
