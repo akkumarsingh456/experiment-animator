@@ -34,10 +34,11 @@ export function crossCheckGeneratedSlides(slides: any[]): CrossCheckResult {
     });
   };
   const output=slides.map(slide=>{
+    const beforeSlideRemoved=removed;
     const next={...slide};
     if(Array.isArray(slide.bullets))next.bullets=filterLines(slide.bullets);
     if(Array.isArray(slide.notes))next.notes=filterLines(slide.notes);
-    if(Array.isArray(slide.sections))next.sections=slide.sections.map((section:any)=>({...section,lines:filterLines(section.lines)})).filter((section:any)=>section.lines.length>0);
+    if(Array.isArray(slide.sections))next.sections=slide.sections.map((section:any)=>/^Source (?:review|table)/i.test(section.heading)?section:{...section,lines:filterLines(section.lines)}).filter((section:any)=>section.lines.length>0);
     if(Array.isArray(slide.teaching_support))next.teaching_support=slide.teaching_support.map((section:any)=>({...section,lines:filterLines(section.lines)})).filter((section:any)=>section.lines.length>0);
     if(Array.isArray(slide.key_terms))next.key_terms=slide.key_terms.filter((term:any)=>{
       checked++;
@@ -45,7 +46,7 @@ export function crossCheckGeneratedSlides(slides: any[]): CrossCheckResult {
       if(!valid){removed++;if(issues.length<12)issues.push("An unclear generated key term or definition was excluded.");}
       return valid;
     });
-    if(removed>0&&slide.verification){
+    if(removed>beforeSlideRemoved&&slide.verification){
       next.verification={...slide.verification,overall_pass:false};
     }
     return next;
