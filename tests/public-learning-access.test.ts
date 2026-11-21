@@ -10,6 +10,11 @@ describe("public learning with restricted source uploads", () => {
     expect(isLessonTextbook({...textbook,source_kind:"unreviewed"})).toBe(true);
     expect(isLessonTextbook({...textbook,source_kind:"ncert"})).toBe(true);
   });
+  it("excludes non-NCERT uploads from the primary textbook source inventory", () => {
+    expect(isLessonTextbook({...textbook,file_name:"Oswaal CBSE Mind Maps Science Class 10.pdf"})).toBe(false);
+    expect(isLessonTextbook({...textbook,file_name:"PW Class 10 Science Notes.pdf"})).toBe(false);
+    expect(isLessonTextbook({...textbook,file_name:"NCERT_CLASS_10_SCIENCE.pdf"})).toBe(true);
+  });
   it("keeps reference books out of primary note text", () => {
     expect(isLessonTextbook({...textbook,source_kind:"reference"})).toBe(false);
     expect(isLessonTextbook({...textbook,file_name:"Physics_MED_EASY.pdf"})).toBe(false);
