@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Download, LayoutList, Maximize2, X } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Download, LayoutList, Maximize2, X } from "lucide-react";
+import { NcertSideBySideReader } from "@/components/NcertSideBySideReader";
 import {
   paginateGuidedArticles,
   PRESENTATION_WIDTH,
@@ -18,6 +19,7 @@ type Props = {
   title: string;
   klass: string;
   subject?: string;
+  chapter?: string;
   onClose: () => void;
   onPdf: () => void;
   downloading?: boolean;
@@ -37,6 +39,7 @@ export function GuidedNotesPresentation({
   title,
   klass,
   subject,
+  chapter,
   onClose,
   onPdf,
   downloading = false,
@@ -57,6 +60,7 @@ export function GuidedNotesPresentation({
   const [pages, setPages] = useState<HTMLElement[]>([]);
   const [localIndex, setLocalIndex] = useState(0);
   const [showOutline, setShowOutline] = useState(false);
+  const [showTextbook, setShowTextbook] = useState(false);
   const [scale, setScale] = useState(0.5);
   const wheelNavigation = useRef({ total: 0, lastEvent: 0, lastTurn: -Infinity });
   const pageCount = presentationSlides?.length ?? pages.length;
@@ -258,6 +262,7 @@ export function GuidedNotesPresentation({
           >
             <LayoutList size={18} />
           </button>
+          <button className="presentation-icon-button" onClick={() => setShowTextbook(value => !value)} aria-label="Toggle NCERT textbook panel" aria-expanded={showTextbook} title={showTextbook ? "Hide NCERT textbook" : "Show NCERT textbook"}><BookOpen size={18}/></button>
           <button
             className="presentation-icon-button"
             onClick={onPdf}
@@ -338,6 +343,7 @@ export function GuidedNotesPresentation({
             )}
           </div>
         </div>
+        {showTextbook && <aside className="min-h-0 w-[42%] min-w-[300px] max-w-[760px] overflow-hidden border-l border-slate-300 bg-white max-md:absolute max-md:inset-0 max-md:z-20 max-md:w-full max-md:max-w-none"><NcertSideBySideReader klass={klass} subject={subject || ""} chapter={chapter || title} className="h-full rounded-none border-0 shadow-none"/></aside>}
       </div>
       {renderTopicRecovery?.(pageTitle(index))}
       {renderBookmarkControls?.(Array.from({length:pageCount},(_,at)=>({title:pageTitle(at),section:pageSection(at)||''})),index,goTo)}
