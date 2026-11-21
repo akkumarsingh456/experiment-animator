@@ -5,5 +5,5 @@ export const findNcertLessonBook = createServerFn({ method: "POST" })
  .handler(async ({data}) => {
   const {resolveNcertLessonBook}=await import("@/lib/ncert-lesson-reader.server");
   const book=await resolveNcertLessonBook(data);
-  return book ? {id:book.id,name:book.name,signedUrl:book.signedUrl,chapterPage:book.chapterPage} : null;
+  return book ? {id:book.id,name:book.name,signedUrl:book.signedUrl,chapterPage:book.chapterPage,contentsPage:book.contentsPage,printedPage:book.printedPage} : null;
  });
