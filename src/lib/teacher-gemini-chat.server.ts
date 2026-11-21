@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import type {AttentionScope} from './attention-topic-scope';
 import {topicChatDrafts} from './topic-chat-providers.server';
+import {crossCheckGeneratedLines} from './generated-content-cross-check';
 
 /** Explicit Add notes chat only. General AI drafts are not NCERT extraction
  * or source-verified statements. Never called by ordinary generation. */
@@ -50,7 +51,8 @@ export async function teacherGeminiChat(scope:AttentionScope,input:{request?:str
    const heading=note.heading.replace(/[*#<>\n]/g,'').trim();
    return [`**${heading}:** ${text}`];
   });
-  if(lines.length)return {provider:'Gemini',label:'Gemini AI draft - review before teaching',lines,sources:[] as Array<{url:string;title:string}>};
+  const checked=crossCheckGeneratedLines(lines);
+  if(checked.lines.length)return {provider:'Gemini',label:'Gemini AI draft - review before teaching',lines:checked.lines,sources:[] as Array<{url:string;title:string}>,generation_review:{checked:checked.checked,removed:checked.removed,pass:checked.pass,issues:checked.issues}};
  }
  throw new Error('Gemini did not return a usable reply. Please retry. Your existing notes are safe.');
 }
