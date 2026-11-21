@@ -15,7 +15,7 @@ export function NcertSideBySideReader({klass,subject,chapter,className=""}:Props
  useEffect(()=>{let cancelled=false;let doc:PDFDocumentProxy|null=null;setLoading(true);setError("");setPdf(null);setBook(null);
   void (async()=>{const found=await findNcertLessonBook({data:{klass,subject,chapter}});if(cancelled)return;if(!found)throw new Error("No uploaded PDF matches this class and subject yet. Open the Uploaded books section to confirm the available files.");setBook(found);
    const response=await fetch(found.signedUrl);if(!response.ok)throw new Error("The uploaded textbook PDF could not be downloaded.");
-   const library=await loadPdfjs();doc=await library.getDocument({data:new Uint8Array(await response.arrayBuffer())}).promise;if(cancelled){await doc.destroy();return;}setPdf(doc);setPages(doc.numPages);const target=await findManualChapterPage(doc,subject,chapter);if(!cancelled)setPage(target||1);
+   const library=await loadPdfjs();doc=await library.getDocument({data:new Uint8Array(await response.arrayBuffer())}).promise;if(cancelled){await doc.destroy();return;}setPdf(doc);setPages(doc.numPages);const target=found.chapterPage || await findManualChapterPage(doc,subject,chapter);if(!cancelled)setPage(target||1);
   })().catch(e=>{if(!cancelled)setError(e instanceof Error?e.message:"The textbook could not be opened.");}).finally(()=>{if(!cancelled)setLoading(false);});
   return()=>{cancelled=true;void doc?.destroy();};
  },[klass,subject,chapter]);
