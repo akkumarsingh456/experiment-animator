@@ -181,6 +181,22 @@ server-side configuration and availability.
 - The repository changes have been committed, but the complete test suite and
   production build must still be run in the deployment environment.
 
+### Supabase configuration for new-tab and SSR views
+
+- Server-side Supabase URL and publishable-key lookup first uses the server
+  environment (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`) and falls back to
+  the matching build-time public settings (`VITE_SUPABASE_URL`,
+  `VITE_SUPABASE_PUBLISHABLE_KEY`). This handles Lovable preview, SSR and
+  separately opened lesson tabs where the unprefixed public settings may not
+  be present in the request runtime.
+- This fallback applies only to the public project URL and publishable key.
+  The privileged `SUPABASE_SERVICE_ROLE_KEY` remains server-only and must be
+  configured as a hosting secret. It is never read from a `VITE_*` variable.
+- If the build-time public values are absent too, connect the correct Supabase
+  project in Lovable Cloud and configure the public URL and publishable key in
+  the website build settings, then republish. Do not paste secret keys into
+  source files or commit them to Git.
+
 ### Technical overview
 
 - **Frontend:** React and TypeScript, with TanStack Start/Router and Tailwind CSS.
