@@ -733,9 +733,12 @@ function UploadPage() {
               EduPlan AI
             </span>
           </Link>
-          <Badge variant="secondary" className="rounded-full">
-            {stageLabel}
-          </Badge>
+          <nav className="flex items-center gap-3">
+            <Link to="/history" className="text-sm font-medium text-primary hover:underline">Uploaded books</Link>
+            <Badge variant="secondary" className="rounded-full">
+              {stageLabel}
+            </Badge>
+          </nav>
         </div>
       </header>
 
