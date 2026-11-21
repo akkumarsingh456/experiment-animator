@@ -24,6 +24,7 @@ export function resolveSupabasePublicConfig(
   const url = first(
     viteEnv.VITE_SUPABASE_URL,
     viteEnv.SUPABASE_URL,
+    runtimeEnv.url,
     runtimeEnv.SUPABASE_URL,
     runtimeEnv.VITE_SUPABASE_URL,
   ) || (projectId ? `https://${projectId}.supabase.co` : "");
@@ -33,6 +34,7 @@ export function resolveSupabasePublicConfig(
     viteEnv.VITE_SUPABASE_ANON_KEY,
     viteEnv.SUPABASE_PUBLISHABLE_KEY,
     viteEnv.SUPABASE_ANON_KEY,
+    runtimeEnv.publishableKey,
     runtimeEnv.SUPABASE_PUBLISHABLE_KEY,
     runtimeEnv.SUPABASE_ANON_KEY,
     runtimeEnv.VITE_SUPABASE_PUBLISHABLE_KEY,
