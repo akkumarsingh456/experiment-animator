@@ -61,7 +61,6 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
     if (!batch || batch.length < 500) break;
   }
 
-  const wanted = clean(data.chapter);
   let contentsPage: number | null = null;
   let printedPage: number | null = null;
   const isContents = (text: string) => /\b(?:contents|table of contents)\b/i.test(text.slice(0, 900));
