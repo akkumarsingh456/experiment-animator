@@ -48,23 +48,63 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
     .select("id,class,subject,chapter,file_name,storage_path")
     .eq("id", selected.id).maybeSingle();
   if (storedError || !stored?.storage_path) return null;
-  // Search the uploaded page index for the chapter heading. Ignore contents
-  // and index pages so a table-of-contents mention is not used as the start.
-  let chapterPage: number | null = null;
-  if (data.chapter.trim().length >= 5) {
-    const escaped = data.chapter.trim().replace(/[\\%_]/g, value => "\\" + value);
-    const pageResult = await db.from("ncert_pages").select("page_number,text")
-      .eq("book_id", stored.id).ilike("text", "%" + escaped + "%")
-      .order("page_number", { ascending: true }).limit(40);
-    if (!pageResult.error) {
-      const match = (pageResult.data || []).find((row: {page_number:number;text:string}) => {
-        const opening = String(row.text || "").slice(0, 300);
-        return !/\b(?:table of )?contents\b|\bindex\b/i.test(opening) && clean(String(row.text || "")).includes(clean(data.chapter));
-      });
-      if (match && Number.isInteger(match.page_number) && match.page_number > 0) chapterPage = match.page_number;
+  // Read the extracted pages for this exact uploaded book and use its
+  // contents/table-of-contents entry as the primary chapter-page map.
+  const pageRows: { page_number: number; text: string }[] = [];
+  for (let from = 0; ; from += 500) {
+    const { data: batch, error } = await db.from("ncert_pages")
+      .select("page_number,text").eq("book_id", stored.id)
+      .order("page_number", { ascending: true }).range(from, from + 499);
+    if (error) break; // Older uploads may not have an extracted page index.
+    pageRows.push(...(batch || []));
+    if (!batch || batch.length < 500) break;
+  }
+
+  const wanted = clean(data.chapter);
+  const chapterNumber = data.chapter.match(/\\b(?:chapter|ch\\.)\\s*(\\d+)\\b/i)?.[1];
+  let contentsPage: number | null = null;
+  let printedPage: number | null = null;
+  const isContents = (text: string) => /\\b(?:contents|table of contents)\\b/i.test(text.slice(0, 900));
+  const pageEntry = (text: string) => {
+    const lines = text.split(/\\r?\\n/).map(line => line.replace(/[.·…]{2,}/g, " ").trim()).filter(Boolean);
+    // Include a flattened variant because some PDF extractors do not preserve
+    // line breaks in multi-column contents tables.
+    lines.push(text.replace(/[.·…]{2,}/g, " ").replace(/\\s+/g, " ").trim());
+    for (const line of lines) {
+      const normalized = clean(line);
+      const titleMatch = wanted.length > 4 && (normalized.includes(wanted) || wanted.includes(normalized));
+      const numberMatch = !!chapterNumber && new RegExp("(?:^|\\\\s)(?:chapter|ch\\\\.)?\\\\s*" + chapterNumber + "(?:\\\\s|[:.])", "i").test(line);
+      if (!titleMatch && !numberMatch) continue;
+      const trailing = line.match(/(?:^|\\s)(\\d{1,3})\\s*$/);
+      if (trailing) {
+        const value = Number(trailing[1]);
+        if (value > 0) return value;
+      }
     }
+    return null;
+  };
+  for (const row of pageRows) {
+    const text = String(row.text || "");
+    if (!isContents(text)) continue;
+    const foundPage = pageEntry(text);
+    if (foundPage) {
+      contentsPage = row.page_number;
+      printedPage = foundPage;
+      break;
+    }
+  }
+
+  // If the contents page is unavailable, use the actual extracted chapter
+  // heading as a fallback. Never use the contents entry itself as the reader page.
+  let chapterPage: number | null = null;
+  if (!printedPage && wanted.length >= 5) {
+    const match = pageRows.find(row => {
+      const text = String(row.text || "");
+      return !isContents(text) && !/\\bindex\\b/i.test(text.slice(0, 300)) && clean(text).includes(wanted);
+    });
+    if (match && Number.isInteger(match.page_number) && match.page_number > 0) chapterPage = match.page_number;
   }
   const signed = await db.storage.from("ncert-pdfs").createSignedUrl(stored.storage_path, 300);
   if (!signed.data?.signedUrl) throw new Error("The uploaded textbook PDF could not be opened.");
-  return { id: stored.id as string, name: stored.file_name as string, signedUrl: signed.data.signedUrl, chapterPage };
+  return { id: stored.id as string, name: stored.file_name as string, signedUrl: signed.data.signedUrl, chapterPage, contentsPage, printedPage };
 }
