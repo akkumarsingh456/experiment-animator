@@ -34,8 +34,8 @@ describe("lesson build authorization boundaries", () => {
     const migration = read("drizzle/migrations/0006_private_slide_image_audit.sql");
     expect(migration).toContain("REVOKE ALL ON TABLE public.slide_image_audit FROM PUBLIC, anon, authenticated");
     expect(migration).toContain("GRANT ALL ON TABLE public.slide_image_audit TO service_role");
-    expect(migration).toContain("DROP POLICY IF EXISTS \\"audit readable by anyone\\"");
-    expect(migration).toContain("DROP POLICY IF EXISTS \\"audit insertable by anyone\\"");
+    expect(migration).toContain('DROP POLICY IF EXISTS "audit readable by anyone"');
+    expect(migration).toContain('DROP POLICY IF EXISTS "audit insertable by anyone"');
     expect(migration).toContain("slide_image_audit_service_only");
   });
 
