@@ -1,6 +1,7 @@
 import { socialLibraryMetadata, socialRevisionChapter, SOCIAL_REFERENCE_PATTERN } from "@/lib/social-science-chapters";
 import { REF_BOOK_PATTERN } from "@/lib/reference-books";
 import { isSourceLibrarySetupError, sourceLibraryError } from "@/lib/source-library-errors";
+import { isEnglishNcertBookCandidate } from "@/lib/ncert-book-language";
 
 export type LessonTextbook = {
   id: string; class: string; subject: string; chapter: string; file_name: string;
@@ -9,9 +10,10 @@ export type LessonTextbook = {
 
 /** Classification selects note sources; it is not a login or retrospective approval gate. */
 export function isLessonTextbook(book: Pick<LessonTextbook, "file_name" | "chapter" | "source_kind">): boolean {
-  if (book.source_kind === "reference" || SOCIAL_REFERENCE_PATTERN.test(`${book.file_name} ${book.chapter}`.replace(/_/g," "))) return false;
-  // Historical NCERT uploads remain usable. Known reference volumes stay in the
-  // separate figure/reader channel, including older underscore-separated names.
+  if (book.source_kind === "reference") return false;
+  if (!isEnglishNcertBookCandidate(book)) return false;
+  if (SOCIAL_REFERENCE_PATTERN.test(`${book.file_name} ${book.chapter}`.replace(/_/g," "))) return false;
+  // Only explicitly NCERT-named English/neutral textbook PDFs supply primary text.
   return !REF_BOOK_PATTERN.test(`${book.file_name} ${book.chapter}`.replace(/_/g, " "));
 }
 
