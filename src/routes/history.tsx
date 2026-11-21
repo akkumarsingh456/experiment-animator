@@ -20,6 +20,7 @@ import {
   RefreshCw,
   FileText,
   ExternalLink,
+  BookOpen,
 } from "lucide-react";
 
 import { signDownload } from "@/lib/ingest.functions";
