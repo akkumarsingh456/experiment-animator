@@ -49,7 +49,7 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
   const requestedSubject = data.subject.trim().toLowerCase();
   const isJuniorScience = Number(data.klass.replace(/\D/g, "")) <= 10 && requestedSubject === "science";
   const candidates = rows.filter(book => {
-    if (!book.storage_path || !isEnglishNcertBookCandidate(book)) return false;
+    if (!book.storage_path || book.source_kind === "reference" || !isEnglishNcertBookCandidate(book)) return false;
     const metadata = { class: String(book.class || ""), subject: String(book.subject || ""), file_name: book.file_name, chapter: book.chapter };
     if (!bookMatchesLesson(metadata, data.klass, data.subject)) return false;
     const identity = String(book.file_name || "") + " " + String(book.chapter || "");
