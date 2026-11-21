@@ -913,6 +913,21 @@ function ResultView({ result, title, preparedOwnerEmail }: { result: GenerationR
               )}
             </div>
 
+            {result?.generation_review && (
+              <details className="mb-3 rounded-lg border border-border/60 bg-card/50 print:hidden" open={result.generation_review.removed > 0}>
+                <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold flex items-center gap-2">
+                  <span>Generated text &amp; formula cross-check</span>
+                  <span className={result.generation_review.pass ? "text-emerald-700 font-normal" : "text-amber-700 font-normal"}>
+                    {result.generation_review.pass ? "Passed" : "Needs review"} · {result.generation_review.checked} checked · {result.generation_review.removed} excluded
+                  </span>
+                </summary>
+                <div className="px-3 pb-3 text-xs text-muted-foreground">
+                  Each generated lesson is checked for damaged PDF/OCR text, malformed equations, invalid LaTeX and unclear extracted statements before display. Unclear lines are excluded rather than guessed. Original source-review material is retained separately.
+                  {result.generation_review.issues.length > 0 && <ul className="mt-2 list-disc pl-4">{result.generation_review.issues.map((issue,index)=><li key={index}>{issue}</li>)}</ul>}
+                </div>
+              </details>
+            )}
+
             {/* Real-time per-slide verification panel — shows for each slide
                 whether rendering succeeded, failed, and whether it came from the
                 slide_image_cache. */}
