@@ -36,11 +36,18 @@ async function injectPublicSupabaseConfig(response: Response): Promise<Response>
   const config = JSON.stringify({ url, publishableKey }).replace(/</g, "\\u003c");
   const script = '<script>window.__EDUPLAN_SUPABASE_CONFIG__=' + config + ';</script>';
   const html = await response.text();
-  const injected = /<\\/head>/i.test(html)
-    ? html.replace(/<\\/head>/i, script + '</head>')
-    : html.replace(/<body[^>]*>/i, (body) => body + script);
+  const lowerHtml = html.toLowerCase();
+  const headIndex = lowerHtml.indexOf("</head>");
+  const bodyIndex = lowerHtml.indexOf(">", lowerHtml.indexOf("<body"));
+  let injected = html;
+  if (headIndex >= 0) {
+    injected = html.slice(0, headIndex) + script + html.slice(headIndex);
+  } else if (bodyIndex >= 0) {
+    injected = html.slice(0, bodyIndex + 1) + script + html.slice(bodyIndex + 1);
+  } else {
+    return new Response(html, response);
+  }
 
-  if (injected === html) return new Response(html, response);
   const headers = new Headers(response.headers);
   headers.delete("content-length");
   headers.delete("content-encoding");
