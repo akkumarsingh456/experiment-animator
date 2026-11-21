@@ -1577,7 +1577,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     // Lesson cache — same (class, subject, chapter, topic, subtopics, mode) returns instantly.
     // Quiz items are rebuilt from source statements after cache lookup.
     const lessonKey = hashKey([
-      "lesson-v68-source-sentence-boundaries",
+      "lesson-v69-strict-ncert-only-sources",
       data.klass,
       data.subject,
       data.chapter,
