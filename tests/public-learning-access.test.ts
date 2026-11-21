@@ -61,6 +61,31 @@ describe("public learning with restricted source uploads", () => {
     const queue=readFileSync("src/lib/library-build.functions.ts","utf8");
     expect(queue).not.toContain("requireLibraryAdmin");
   });
+  it("guards every lesson-generation result path against undefined result variables", () => {
+    const generation=readFileSync("src/lib/generate.functions.ts","utf8");
+    const mainStart=generation.indexOf("const baseOutput: GenerationResult");
+    const mainEnd=generation.indexOf("const original = await run();",mainStart);
+    expect(mainStart).toBeGreaterThanOrEqual(0);
+    expect(mainEnd).toBeGreaterThan(mainStart);
+    const mainResultBlock=generation.slice(mainStart,mainEnd);
+    // The primary generator must cache and return the same in-scope object.
+    expect(mainResultBlock).toContain("result: baseOutput,");
+    expect(mainResultBlock).toContain("return baseOutput;");
+    expect(mainResultBlock).not.toMatch(/\bout\b/);
+
+    // The offline/attention fallback has its own explicitly declared result.
+    const fallbackStart=generation.indexOf("async function completeAttentionFallback");
+    const fallbackEnd=generation.indexOf("\n}",fallbackStart);
+    const fallbackBlock=generation.slice(fallbackStart,fallbackEnd);
+    expect(fallbackBlock).toContain("const out=await appendSocialRevisionNotes");
+    expect(fallbackBlock).toContain("result:out");
+    expect(fallbackBlock).toContain("return out;");
+
+    // The final shared response must be built from the enhanced and checked
+    // output, not a stale intermediate variable.
+    expect(generation).toContain("const finalResult: GenerationResult =");
+    expect(generation).toContain("return finalResult;");
+  });
   it("requires admin identity for upload writes but permits recorded book downloads", () => {
     const source=readFileSync("src/lib/ingest.functions.ts","utf8");
     for (const name of ["createUploadTicket","insertBook","insertPages","insertChunks"])
