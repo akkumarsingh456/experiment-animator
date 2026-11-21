@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, ChevronLeft, ChevronRight, Highlighter, ZoomIn, ZoomOut } from "lucide-react";
-import { findNcertLessonBook } from "@/lib/ncert-lesson-reader.server";
+import { findNcertLessonBook } from "@/lib/ncert-lesson-reader.functions";
+import { findManualChapterPage } from "@/lib/manual-chapter-navigation";
 import { loadPdfjs } from "@/lib/pdf-extract";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 type Props={klass:string;subject:string;chapter:string;className?:string};
-type Mark={text:string;color:string};
+type Mark={text:string;color:string;page:number};
 const colors=[["Yellow","#ffe66d"],["Green","#a7f3b0"],["Pink","#f9a8d4"],["Blue","#93c5fd"]];
 export function NcertSideBySideReader({klass,subject,chapter,className=""}:Props){
  const [book,setBook]=useState<{id:string;name:string}|null>(null),[pdf,setPdf]=useState<PDFDocumentProxy|null>(null),[page,setPage]=useState(1),[pages,setPages]=useState(0),[zoom,setZoom]=useState(1),[loading,setLoading]=useState(true),[error,setError]=useState(""),[selection,setSelection]=useState(""),[color,setColor]=useState("#ffe66d"),[marks,setMarks]=useState<Mark[]>([]);
@@ -14,7 +15,7 @@ export function NcertSideBySideReader({klass,subject,chapter,className=""}:Props
  useEffect(()=>{let cancelled=false;let doc:PDFDocumentProxy|null=null;setLoading(true);setError("");setPdf(null);setBook(null);
   void (async()=>{const found=await findNcertLessonBook({data:{klass,subject,chapter}});if(cancelled)return;if(!found)throw new Error("No exact class, subject and chapter PDF is available in the saved textbook library.");setBook(found);
    const response=await fetch("/api/ncert-lesson-pdf?"+new URLSearchParams({id:found.id,klass,subject,chapter}));if(!response.ok)throw new Error(response.status===404?"The matching textbook PDF is unavailable.":"The textbook could not be opened.");
-   const library=await loadPdfjs();doc=await library.getDocument({data:new Uint8Array(await response.arrayBuffer())}).promise;if(cancelled){await doc.destroy();return;}setPdf(doc);setPages(doc.numPages);setPage(1);
+   const library=await loadPdfjs();doc=await library.getDocument({data:new Uint8Array(await response.arrayBuffer())}).promise;if(cancelled){await doc.destroy();return;}setPdf(doc);setPages(doc.numPages);const target=await findManualChapterPage(doc,subject,chapter);if(!cancelled)setPage(target||1);
   })().catch(e=>{if(!cancelled)setError(e instanceof Error?e.message:"The textbook could not be opened.");}).finally(()=>{if(!cancelled)setLoading(false);});
   return()=>{cancelled=true;void doc?.destroy();};
  },[klass,subject,chapter]);
@@ -22,10 +23,10 @@ export function NcertSideBySideReader({klass,subject,chapter,className=""}:Props
   void (async()=>{const p=await pdf.getPage(page);if(cancelled)return;const viewport=p.getViewport({scale:1.15*zoom});const target=canvas.current!;target.width=Math.ceil(viewport.width);target.height=Math.ceil(viewport.height);target.style.width=viewport.width+"px";target.style.height=viewport.height+"px";const render=p.render({canvas:target,canvasContext:target.getContext("2d")!,viewport});task=render;await render.promise;if(cancelled)return;
    const root=layer.current!;root.replaceChildren();root.style.width=viewport.width+"px";root.style.height=viewport.height+"px";const text=await p.getTextContent();const util=(await loadPdfjs()).Util;
    for(const item of text.items){if(!("str" in item)||!item.str)continue;const tx=util.transform(viewport.transform,item.transform);const h=Math.hypot(tx[2],tx[3]);const span=document.createElement("span");span.textContent=item.str;span.style.position="absolute";span.style.left=tx[4]+"px";span.style.top=(tx[5]-h)+"px";span.style.fontSize=h+"px";span.style.lineHeight="1";span.style.whiteSpace="pre";span.style.color="transparent";span.style.userSelect="text";span.style.transformOrigin="left bottom";span.style.transform="rotate("+Math.atan2(tx[1],tx[0])+"rad)";root.append(span);}
-   for(const mark of marks){let remaining=mark.text.trim();for(const span of Array.from(root.querySelectorAll("span"))){if(!remaining)break;const value=span.textContent||"";if(remaining.startsWith(value)){span.style.backgroundColor=mark.color;remaining=remaining.slice(value.length).trimStart();}}}
+   for(const mark of marks.filter(value=>value.page===page)){let remaining=mark.text.trim();for(const span of Array.from(root.querySelectorAll("span"))){if(!remaining)break;const value=span.textContent||"";if(remaining.startsWith(value)){span.style.backgroundColor=mark.color;remaining=remaining.slice(value.length).trimStart();}}}
   })().catch(e=>{if(!cancelled&&e?.name!=="RenderingCancelledException")setError("This textbook page could not be rendered.");});return()=>{cancelled=true;task?.cancel();};
  },[pdf,page,zoom,marks]);
- const addHighlight=useCallback(()=>{const text=window.getSelection()?.toString().trim();if(!text)return;const next=[...marks,{text,color}].slice(-300);setMarks(next);localStorage.setItem(key,JSON.stringify(next));setSelection("");window.getSelection()?.removeAllRanges();},[marks,color,key]);
+ const addHighlight=useCallback(()=>{const text=window.getSelection()?.toString().trim();if(!text)return;const next=[...marks,{text,color,page}].slice(-300);setMarks(next);localStorage.setItem(key,JSON.stringify(next));setSelection("");window.getSelection()?.removeAllRanges();},[marks,color,key,page]);
  const updateSelection=()=>setSelection(window.getSelection()?.toString().trim()||"");
  return <section className={"flex min-h-[540px] min-w-0 flex-col overflow-hidden rounded-xl border border-sky-200 bg-white shadow-sm "+className} aria-label="NCERT textbook reader">
   <header className="flex flex-wrap items-center gap-2 border-b bg-sky-50 px-3 py-2"><BookOpen className="h-4 w-4 text-sky-800"/><div className="min-w-0 flex-1"><strong className="block truncate text-sm">NCERT textbook · {book?.name||chapter}</strong><span className="text-xs text-muted-foreground">Class {klass} · {subject}</span></div><button type="button" onClick={()=>setZoom(v=>Math.max(.65,+(v-.15).toFixed(2)))} aria-label="Zoom out" className="rounded border p-1.5"><ZoomOut size={16}/></button><span className="text-xs">{Math.round(zoom*100)}%</span><button type="button" onClick={()=>setZoom(v=>Math.min(2.2,+(v+.15).toFixed(2)))} aria-label="Zoom in" className="rounded border p-1.5"><ZoomIn size={16}/></button></header>
