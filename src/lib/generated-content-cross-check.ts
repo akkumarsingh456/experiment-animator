@@ -30,7 +30,7 @@ export function crossCheckGeneratedLines(lines: string[]) {
   });
   return {lines:clean,checked:lines.length,removed,pass:removed===0,issues:[...new Set(issues)]};
 }
-\n/** Final display-boundary check: run after every AI/additive generation stage. */
+/** Final display-boundary check: run after every AI/additive generation stage. */
 export function crossCheckGeneratedSlides(slides: any[]): CrossCheckResult {
   let checked=0,removed=0;
   const issues:string[]=[];
