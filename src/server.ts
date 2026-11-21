@@ -1,3 +1,4 @@
+import { setSupabaseRuntimeEnv } from "./integrations/supabase/runtime-env.server";
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
@@ -39,6 +40,9 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    // Lovable Cloud injects managed secrets as worker bindings. Capture them
+    // before any SSR route or server function initializes Supabase.
+    setSupabaseRuntimeEnv(env);
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
