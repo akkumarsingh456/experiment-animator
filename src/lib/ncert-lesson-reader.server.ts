@@ -16,7 +16,7 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
     if (!batch || batch.length < 500) break;
   }
   const requestedSubject = data.subject.trim().toLowerCase();
-  const isJuniorScience = Number(data.klass.replace(/\\D/g, "")) <= 10 && requestedSubject === "science";
+  const isJuniorScience = Number(data.klass.replace(/\D/g, "")) <= 10 && requestedSubject === "science";
   const candidates = rows.filter(book => {
     if (!book.storage_path) return false;
     const metadata = { class: String(book.class || ""), subject: String(book.subject || ""), file_name: book.file_name, chapter: book.chapter };
@@ -25,8 +25,8 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
     // a filename/chapter that explicitly identifies another subject override
     // the class + subject chosen in Prepare your NCERT lesson.
     const identity = String(book.file_name || "") + " " + String(book.chapter || "");
-    if (isJuniorScience && /political[_\\s-]*science|democratic[_\\s-]*politics|social[_\\s-]*science|civics|history|geography|economics/i.test(identity)) return false;
-    if (requestedSubject === "political science" && /\\bscience\\b/i.test(String(book.file_name || "").replace(/political[_\\s-]*science/ig, ""))) return false;
+    if (isJuniorScience && /political[_\s-]*science|democratic[_\s-]*politics|social[_\s-]*science|civics|history|geography|economics/i.test(identity)) return false;
+    if (requestedSubject === "political science" && /\bscience\b/i.test(String(book.file_name || "").replace(/political[_\s-]*science/ig, ""))) return false;
     return true;
   });
   if (!candidates.length) return null;
@@ -59,7 +59,7 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
     if (!pageResult.error) {
       const match = (pageResult.data || []).find((row: {page_number:number;text:string}) => {
         const opening = String(row.text || "").slice(0, 300);
-        return !/\\b(?:table of )?contents\\b|\\bindex\\b/i.test(opening) && clean(String(row.text || "")).includes(clean(data.chapter));
+        return !/\b(?:table of )?contents\b|\bindex\b/i.test(opening) && clean(String(row.text || "")).includes(clean(data.chapter));
       });
       if (match && Number.isInteger(match.page_number) && match.page_number > 0) chapterPage = match.page_number;
     }
