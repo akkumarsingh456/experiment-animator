@@ -1,4 +1,5 @@
 import { setSupabaseRuntimeEnv } from "./integrations/supabase/runtime-env.server";
+import { getSupabaseServerUrl, getSupabaseServerPublishableKey } from "./integrations/supabase/env.server";
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
@@ -17,6 +18,38 @@ async function getServerEntry(): Promise<ServerEntry> {
     );
   }
   return serverEntryPromise;
+}
+
+/**
+ * Expose only the public Supabase URL and publishable key to the browser.
+ * Some Lovable deployments supply these values only as worker bindings.
+ * Never serialize the service-role key or any other server secret.
+ */
+async function injectPublicSupabaseConfig(response: Response): Promise<Response> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("text/html") || response.status >= 400) return response;
+
+  const url = getSupabaseServerUrl();
+  const publishableKey = getSupabaseServerPublishableKey();
+  if (!url || !publishableKey) return response;
+
+  const config = JSON.stringify({ url, publishableKey }).replace(/</g, "\\u003c");
+  const script = '<script>window.__EDUPLAN_SUPABASE_CONFIG__=' + config + ';</script>';
+  const html = await response.text();
+  const injected = /<\\/head>/i.test(html)
+    ? html.replace(/<\\/head>/i, script + '</head>')
+    : html.replace(/<body[^>]*>/i, (body) => body + script);
+
+  if (injected === html) return new Response(html, response);
+  const headers = new Headers(response.headers);
+  headers.delete("content-length");
+  headers.delete("content-encoding");
+  headers.delete("etag");
+  return new Response(injected, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 // h3 swallows in-handler throws into a normal 500 Response with body
@@ -46,7 +79,8 @@ export default {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const normalized = await normalizeCatastrophicSsrResponse(response);
+      return await injectPublicSupabaseConfig(normalized);
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {
