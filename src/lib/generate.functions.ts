@@ -1624,7 +1624,7 @@ export const generateLesson = createServerFn({ method: "POST" })
           const freshMcqs = buildMcqsFromContext(data.topic, seedSentences, data.subject, 10);
           const mcqSlides: Slide[] = freshMcqs.map((m, i) => makeMcqSlide(m, i, freshMcqs.length, data.topic));
           const db=await supa();
-          return appendSocialRevisionNotes(await appendUploadedReferenceNotes({ ...cached, slides: [...contentOnly, ...mcqSlides] }, db, data.klass, data.subject, data.chapter || data.topic),db,data.klass,data.subject,data.chapter||data.topic);
+          return { ...cached, slides: [...contentOnly, ...mcqSlides] };
         }
       } catch {
         /* miss */
@@ -1985,7 +1985,7 @@ export const generateLesson = createServerFn({ method: "POST" })
       };
     });
 
-    const baseOutput: GenerationResult = await appendUploadedReferenceNotes({
+    const baseOutput: GenerationResult = {
       source_books: selectedBooks.map((b) => ({ id: b.id, chapter: b.chapter, class: b.class, subject: b.subject })),
       context_chars: context.length,
       slides,
@@ -1994,9 +1994,10 @@ export const generateLesson = createServerFn({ method: "POST" })
       video,
       figures_report: figCheck.report,
       notes_report,
-    }, s, data.klass, data.subject, data.chapter || data.topic);
+    };
 
-    const out=await appendSocialRevisionNotes(baseOutput,s,data.klass,data.subject,data.chapter||data.topic);
+    // Primary lesson output is built only from the filtered NCERT textbook inventory.
+    // Do not append Oswaal, PW, Med Easy or other uploaded revision-PDF content.
 
     // Save lesson cache (best-effort)
     try {
