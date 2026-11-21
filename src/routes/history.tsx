@@ -25,6 +25,7 @@ import {
 
 import { signDownload } from "@/lib/ingest.functions";
 import { medEasyLibraryMetadata, combinedReferenceMatches } from "@/lib/reference-books";
+import { UploadedBookPdfViewer } from "@/components/UploadedBookPdfViewer";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -68,6 +69,8 @@ function HistoryPage() {
   const [subject, setSubject] = useState<string>("all");
   const [signing, setSigning] = useState<string | null>(null);
   const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{name:string;url:string}|null>(null);
+  const [openError, setOpenError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,9 +113,13 @@ function HistoryPage() {
   const openFile = useCallback(
     async (row: Row) => {
       setSigning(row.id);
+      setOpenError(null);
       try {
         const { signedUrl } = await signDownload({ data: { path: row.storage_path } });
-        if (signedUrl) window.open(signedUrl, "_blank", "noopener,noreferrer");
+        if (!signedUrl) throw new Error("A secure PDF preview link could not be created.");
+        setPreview({ name: row.file_name, url: signedUrl });
+      } catch (error) {
+        setOpenError(error instanceof Error ? error.message : "This uploaded PDF could not be opened. Please retry.");
       } finally {
         setSigning(null);
       }
@@ -157,6 +164,7 @@ function HistoryPage() {
         </div>
 
         {libraryError && <p role="alert" className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-5 text-amber-950">{libraryError}</p>}
+        {openError && <p role="alert" className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">{openError}</p>}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -283,6 +291,7 @@ function HistoryPage() {
           </CardContent>
         </Card>
       </main>
+      {preview && <UploadedBookPdfViewer url={preview.url} name={preview.name} onClose={() => setPreview(null)} />}
     </div>
   );
 }
