@@ -61,7 +61,6 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
   }
 
   const wanted = clean(data.chapter);
-  const chapterNumber = data.chapter.match(/\b(?:chapter|ch\.)\s*(\d+)\b/i)?.[1];
   let contentsPage: number | null = null;
   let printedPage: number | null = null;
   const isContents = (text: string) => /\b(?:contents|table of contents)\b/i.test(text.slice(0, 900));
