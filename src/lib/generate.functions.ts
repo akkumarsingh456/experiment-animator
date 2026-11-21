@@ -991,6 +991,8 @@ export type GenerationResult = {
   figures_report?: FiguresReport;
   /** Slides whose PW/NCERT notes failed LaTeX validity or grounding checks. */
   notes_report?: { flagged_slide_indices: number[]; pass: boolean };
+  /** Final display-boundary OCR, notation and structure check, including additive AI sections. */
+  generation_review?: { checked: number; removed: number; pass: boolean; issues: string[] };
 
 };
 
@@ -2023,11 +2025,23 @@ export const generateLesson = createServerFn({ method: "POST" })
     const original = await run();
     const { addLessonTeachingSupport } = await import('./lesson-teaching-support.server');
     const enhanced = await addLessonTeachingSupport(original, { klass: String(data.klass), subject: data.subject, chapter: data.chapter || data.topic });
-    if (enhanced !== original) {
+    const { crossCheckGeneratedSlides } = await import('./generated-content-cross-check');
+    const checked = crossCheckGeneratedSlides(enhanced.slides || []);
+    const finalResult: GenerationResult = {
+      ...enhanced,
+      slides: checked.slides,
+      generation_review: {
+        checked: checked.checked,
+        removed: checked.removed,
+        pass: checked.removed === 0,
+        issues: checked.issues,
+      },
+    };
+    if (finalResult !== original || checked.removed > 0) {
       try {
         const cache = await cacheSupa();
-        await (cache as any).from('lesson_cache').upsert({ cache_key: lessonKey, klass: String(data.klass), subject: data.subject, chapter: data.chapter || '', topic: data.topic, subtopics: data.subtopics, result: enhanced });
+        await (cache as any).from('lesson_cache').upsert({ cache_key: lessonKey, klass: String(data.klass), subject: data.subject, chapter: data.chapter || '', topic: data.topic, subtopics: data.subtopics, result: finalResult });
       } catch { /* Keep the completed lesson usable if caching is unavailable. */ }
     }
-    return enhanced;
+    return finalResult;
   });
