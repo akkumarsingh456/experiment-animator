@@ -1,7 +1,7 @@
-import { getSupabaseServerUrl } from "@/integrations/supabase/env.server";
+import { getSupabaseServerUrl, getSupabaseServerServiceRoleKey } from "@/integrations/supabase/env.server";
 /** Cloud project secrets belong to the backend runtime, not necessarily SSR. */
 export function hasGeminiCloudBridge(){
- return Boolean(getSupabaseServerUrl()&&process.env.SUPABASE_SERVICE_ROLE_KEY);
+ return Boolean(getSupabaseServerUrl()&&getSupabaseServerServiceRoleKey());
 }
 
 /** Internal server-to-server call. Never return either credential to the browser. */
