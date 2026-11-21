@@ -9,6 +9,7 @@ import {recoverTopicFromSources} from "./topic-source-recovery";
 import {seniorTopicHeadings} from "./senior-study-notes";
 import { attentionEvidenceWindows, supportedAttentionDraft } from "./attention-topic-notes.server";
 import { notesQualityPolicy } from "./notes-quality-policy";
+import {crossCheckGeneratedLines} from "./generated-content-cross-check";
 
 /** Explicit recovery-popup action only. Never called by normal NCERT generation. */
 export const draftMissingTopicPoints = createServerFn({ method: "POST" })
@@ -127,10 +128,14 @@ export const draftMissingTopicPoints = createServerFn({ method: "POST" })
       ? supportedAttentionDraft(parsed.data, focused, scope.topic)
       : null;
     if (!supported) continue;
+    const draftLines=supported.sections.flatMap((section) => section.lines);
+    const checked=crossCheckGeneratedLines(draftLines);
+    if(!checked.lines.length)continue;
     return {
       provider: candidate.provider,
-      lines: supported.sections.flatMap((section) => section.lines),
+      lines: checked.lines,
       sources: supported.sources.filter(source=>!!source.url),
+      generation_review:{checked:checked.checked,removed:checked.removed,pass:checked.pass,issues:checked.issues},
     };
     }
     throw new Error("Gemini could not return source-checked notes. Its connection, quota or the available source evidence may need attention; retry later. Your existing notes are unchanged.");
