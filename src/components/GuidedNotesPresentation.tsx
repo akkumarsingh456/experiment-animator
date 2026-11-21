@@ -63,6 +63,10 @@ export function GuidedNotesPresentation({
   const [showTextbook, setShowTextbook] = useState(false);
   const [scale, setScale] = useState(0.5);
   const wheelNavigation = useRef({ total: 0, lastEvent: 0, lastTurn: -Infinity });
+  const textbookHistoryEntry = useRef(false);
+  const closeTextbook = () => { setShowTextbook(false); if (textbookHistoryEntry.current) { textbookHistoryEntry.current = false; window.history.back(); } };
+  const openTextbook = () => { if (showTextbook) { closeTextbook(); return; } try { window.history.pushState({ ...(window.history.state || {}), eduplanNcertPanel: true }, "", window.location.href); textbookHistoryEntry.current = true; } catch {} setShowTextbook(true); };
+  useEffect(() => { const handleBack = () => { if (textbookHistoryEntry.current) { textbookHistoryEntry.current = false; setShowTextbook(false); } }; window.addEventListener("popstate", handleBack); return () => window.removeEventListener("popstate", handleBack); }, []);
   const pageCount = presentationSlides?.length ?? pages.length;
   const index = Math.min(pageIndex ?? localIndex, Math.max(0, pageCount - 1));
   const goTo = useCallback(
@@ -262,7 +266,7 @@ export function GuidedNotesPresentation({
           >
             <LayoutList size={18} />
           </button>
-          <button className="presentation-icon-button" onClick={() => setShowTextbook(value => !value)} aria-label="Toggle NCERT textbook panel" aria-expanded={showTextbook} title={showTextbook ? "Hide NCERT textbook" : "Show NCERT textbook"}><BookOpen size={18}/></button>
+          <button className="presentation-icon-button" onClick={openTextbook} aria-label="Toggle NCERT textbook panel" aria-expanded={showTextbook} title={showTextbook ? "Hide NCERT textbook" : "Show NCERT textbook"}><BookOpen size={18}/></button>
           <button
             className="presentation-icon-button"
             onClick={onPdf}
@@ -343,7 +347,7 @@ export function GuidedNotesPresentation({
             )}
           </div>
         </div>
-        {showTextbook && <aside className="min-h-0 w-[42%] min-w-[300px] max-w-[760px] overflow-hidden border-l border-slate-300 bg-white max-md:absolute max-md:inset-0 max-md:z-20 max-md:w-full max-md:max-w-none"><NcertSideBySideReader klass={klass} subject={subject || ""} chapter={chapter || title} className="h-full rounded-none border-0 shadow-none"/></aside>}
+        {showTextbook && <aside className="min-h-0 w-[42%] min-w-[300px] max-w-[760px] overflow-hidden border-l border-slate-300 bg-white max-md:absolute max-md:inset-0 max-md:z-20 max-md:w-full max-md:max-w-none"><NcertSideBySideReader klass={klass} subject={subject || ""} chapter={chapter || title} onBack={closeTextbook} className="h-full rounded-none border-0 shadow-none"/></aside>}
       </div>
       {renderTopicRecovery?.(pageTitle(index))}
       {renderBookmarkControls?.(Array.from({length:pageCount},(_,at)=>({title:pageTitle(at),section:pageSection(at)||''})),index,goTo)}
