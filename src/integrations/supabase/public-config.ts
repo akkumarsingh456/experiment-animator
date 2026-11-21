@@ -30,9 +30,11 @@ export function resolveSupabasePublicConfig(
 
   const publishableKey = first(
     viteEnv.VITE_SUPABASE_PUBLISHABLE_KEY,
-    viteEnv.SUPABASE_PUBLISHABLE_KEY,
     viteEnv.VITE_SUPABASE_ANON_KEY,
+    viteEnv.SUPABASE_PUBLISHABLE_KEY,
+    viteEnv.SUPABASE_ANON_KEY,
     runtimeEnv.SUPABASE_PUBLISHABLE_KEY,
+    runtimeEnv.SUPABASE_ANON_KEY,
     runtimeEnv.VITE_SUPABASE_PUBLISHABLE_KEY,
     runtimeEnv.VITE_SUPABASE_ANON_KEY,
   );
@@ -42,8 +44,11 @@ export function resolveSupabasePublicConfig(
 
 export function getSupabasePublicConfig(): { url: string; publishableKey: string } {
   const viteEnv = import.meta.env as unknown as SupabaseEnvironment;
-  const runtimeEnv = typeof process !== "undefined"
+  const processEnv = typeof process !== "undefined"
     ? process.env as SupabaseEnvironment
     : {};
-  return resolveSupabasePublicConfig(viteEnv, runtimeEnv);
+  const browserConfig = typeof window !== "undefined"
+    ? (window as Window & { __EDUPLAN_SUPABASE_CONFIG__?: SupabaseEnvironment }).__EDUPLAN_SUPABASE_CONFIG__ ?? {}
+    : {};
+  return resolveSupabasePublicConfig(viteEnv, { ...processEnv, ...browserConfig });
 }
