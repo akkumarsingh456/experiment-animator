@@ -10,13 +10,22 @@
 import { getSupabaseRuntimeValue } from "./runtime-env.server";
 
 export function getSupabaseServerUrl(): string {
-  return getSupabaseRuntimeValue("SUPABASE_URL") ||
+  const configured = getSupabaseRuntimeValue("SUPABASE_URL") ||
+    getSupabaseRuntimeValue("VITE_SUPABASE_URL") ||
     import.meta.env.VITE_SUPABASE_URL || "";
+  const projectId = getSupabaseRuntimeValue("SUPABASE_PROJECT_ID") ||
+    getSupabaseRuntimeValue("VITE_SUPABASE_PROJECT_ID") ||
+    import.meta.env.VITE_SUPABASE_PROJECT_ID || "";
+  return configured || (projectId ? "https://" + projectId + ".supabase.co" : "");
 }
 
 export function getSupabaseServerPublishableKey(): string {
   return getSupabaseRuntimeValue("SUPABASE_PUBLISHABLE_KEY") ||
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+    getSupabaseRuntimeValue("SUPABASE_ANON_KEY") ||
+    getSupabaseRuntimeValue("VITE_SUPABASE_PUBLISHABLE_KEY") ||
+    getSupabaseRuntimeValue("VITE_SUPABASE_ANON_KEY") ||
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 }
 
 export function getSupabaseServerServiceRoleKey(): string {
