@@ -38,10 +38,22 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
     .select("id,class,subject,chapter,file_name,storage_path")
     .eq("id", selected.id).maybeSingle();
   if (storedError || !stored?.storage_path) return null;
-  // A chapter-specific upload starts at its first PDF page. For a complete
-  // textbook, let the PDF bookmark/native-heading resolver find the chapter;
-  // a table-of-contents mention must never be mistaken for the chapter start.
-  const chapterPage: number | null = exact.length ? 1 : null;
+  // Search the uploaded page index for the chapter heading. Ignore contents
+  // and index pages so a table-of-contents mention is not used as the start.
+  let chapterPage: number | null = null;
+  if (data.chapter.trim().length >= 5) {
+    const escaped = data.chapter.trim().replace(/[\\%_]/g, value => "\\" + value);
+    const pageResult = await db.from("ncert_pages").select("page_number,text")
+      .eq("book_id", stored.id).ilike("text", "%" + escaped + "%")
+      .order("page_number", { ascending: true }).limit(40);
+    if (!pageResult.error) {
+      const match = (pageResult.data || []).find((row: {page_number:number;text:string}) => {
+        const opening = String(row.text || "").slice(0, 300);
+        return !/\\b(?:table of )?contents\\b|\\bindex\\b/i.test(opening) && clean(String(row.text || "")).includes(clean(data.chapter));
+      });
+      if (match && Number.isInteger(match.page_number) && match.page_number > 0) chapterPage = match.page_number;
+    }
+  }
   const signed = await db.storage.from("ncert-pdfs").createSignedUrl(stored.storage_path, 300);
   if (!signed.data?.signedUrl) throw new Error("The uploaded textbook PDF could not be opened.");
   return { id: stored.id as string, name: stored.file_name as string, signedUrl: signed.data.signedUrl, chapterPage };
