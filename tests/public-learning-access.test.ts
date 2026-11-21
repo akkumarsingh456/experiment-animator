@@ -48,6 +48,8 @@ describe("public learning with restricted source uploads", () => {
     expect(generation).not.toContain('.eq("source_kind", "ncert")');
     expect(generation).not.toContain("No approved Class");
     expect(generation).toContain("readLessonTextbooks(s)");
+    expect(generation).not.toContain("appendUploadedReferenceNotes({");
+    expect(generation).toContain("lesson-v69-strict-ncert-only-sources");
     const history=readFileSync("src/routes/history.tsx","utf8");
     expect(history).not.toContain("LibraryAccessGate");
     expect(history).not.toContain("Verify as NCERT");
