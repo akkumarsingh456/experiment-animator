@@ -35,6 +35,13 @@ for current coverage.
 6. **Teach, share, or revise.** Present the lesson and download the available
    guided notes or presentation as PDF or PPTX.
 
+### Uploaded-book PDF preview and controls
+
+- Uploaded books open inside the application in a dedicated PDF preview instead of navigating directly to a temporary signed-URL browser tab.
+- The preview renders the signed PDF through the app's PDF.js reader, provides page navigation and zoom buttons, and supports Ctrl/Command + mouse-wheel zoom.
+- Ordinary wheel scrolling is reduced to a gentler 55% of the wheel delta and applied through animation frames. PDF preview errors are shown in the app with a retry path instead of a blank browser error page.
+- Signed download URLs are still generated server-side for recorded library files only; this preview does not make the private storage bucket public.
+
 ### NCERT-only textbook extraction and reader selection
 
 - Primary textbook extraction and the side-by-side NCERT reader accept only PDFs whose filename explicitly contains `NCERT`, and whose class and subject metadata match the selected lesson. The word `English` is not required in the filename: neutral English-script NCERT names are accepted.
