@@ -5,6 +5,9 @@ const clean = (value: string) => value.toLowerCase().replace(/\.pdf$/i, "").repl
 const classNumber = (value: string) => value.replace(/\D/g, "");
 
 export async function resolveNcertLessonBook(data: { klass: string; subject: string; chapter: string }) {
+  // NCERT terms prohibit embedding/hosting official textbooks in software without written permission.
+  // Set this deployment flag only after NCERT has granted written permission for this use.
+  if (process.env.NCERT_TEXTBOOK_EMBEDDING_PERMISSION !== "true") return null;
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
   const inventory = await readLessonTextbooks(db);
   const wanted = clean(data.chapter);
