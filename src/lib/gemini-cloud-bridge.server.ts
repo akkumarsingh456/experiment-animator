@@ -1,11 +1,12 @@
+import { getSupabaseServerUrl } from "@/integrations/supabase/env.server";
 /** Cloud project secrets belong to the backend runtime, not necessarily SSR. */
 export function hasGeminiCloudBridge(){
- return Boolean(process.env.SUPABASE_URL&&process.env.SUPABASE_SERVICE_ROLE_KEY);
+ return Boolean(getSupabaseServerUrl()&&process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 /** Internal server-to-server call. Never return either credential to the browser. */
 export async function cloudGeminiDraft(options:{prompt:string;schema:Record<string,unknown>}):Promise<unknown>{
- const base=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
+ const base=getSupabaseServerUrl(),key=process.env.SUPABASE_SERVICE_ROLE_KEY;
  if(!base||!key)throw new Error('The website Gemini backend connection is unavailable. Ask the site owner to finish setup.');
  const url=new URL('/functions/v1/gemini-topic-chat',base);
  if(url.protocol!=='https:')throw new Error('The Gemini backend requires a secure server connection.');
