@@ -213,6 +213,28 @@ server-side configuration and availability.
   project. If the worker binding itself is absent, reconnect the intended
   Supabase project in Lovable Cloud and republish.
 
+### Supabase configuration in browser, SSR, and new tabs
+
+- The browser client accepts Lovable's public `VITE_SUPABASE_URL` and
+  `VITE_SUPABASE_PUBLISHABLE_KEY`, plus the supported public
+  `VITE_SUPABASE_ANON_KEY` alias. Server-side URL and key aliases are also
+  resolved without exposing privileged credentials.
+- If the URL is not directly supplied but the connected project ref is
+  available as `VITE_SUPABASE_PROJECT_ID` or `SUPABASE_PROJECT_ID`, the
+  standard `https://<project-ref>.supabase.co` URL is derived.
+- For SSR deployments where Lovable supplies configuration only as worker
+  bindings, `src/server.ts` adds the public URL and publishable key to the
+  rendered HTML so the browser and separately opened lesson tabs initialize
+  with the same project. The service-role key is never injected into HTML.
+- The browser resolver checks this SSR-provided public config after build-time
+  values. This avoids relying on Node's `process.env` in a browser tab.
+- Tests cover Vite variables, server-style aliases, project-ref URL derivation,
+  and SSR-provided config. Run `pnpm test -- tests/supabase-public-config.test.ts
+  tests/build-admin-access.test.ts` and a production build after syncing.
+- If the connected deployment supplies neither a public URL nor a project ref
+  and public key to the server, source code cannot invent the missing project
+  credentials; reconnect the intended Supabase project and republish.
+
 ### Technical overview
 
 - **Frontend:** React and TypeScript, with TanStack Start/Router and Tailwind CSS.
