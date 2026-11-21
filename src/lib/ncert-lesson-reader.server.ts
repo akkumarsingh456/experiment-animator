@@ -15,10 +15,20 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
     rows.push(...(batch || []));
     if (!batch || batch.length < 500) break;
   }
-  const candidates = rows.filter(book =>
-    bookMatchesLesson({ class: String(book.class || ""), subject: String(book.subject || ""), file_name: book.file_name, chapter: book.chapter }, data.klass, data.subject) &&
-    !!book.storage_path
-  );
+  const requestedSubject = data.subject.trim().toLowerCase();
+  const isJuniorScience = Number(data.klass.replace(/\\D/g, "")) <= 10 && requestedSubject === "science";
+  const candidates = rows.filter(book => {
+    if (!book.storage_path) return false;
+    const metadata = { class: String(book.class || ""), subject: String(book.subject || ""), file_name: book.file_name, chapter: book.chapter };
+    if (!bookMatchesLesson(metadata, data.klass, data.subject)) return false;
+    // Some older uploads have an incorrect subject dropdown value. Never let
+    // a filename/chapter that explicitly identifies another subject override
+    // the class + subject chosen in Prepare your NCERT lesson.
+    const identity = String(book.file_name || "") + " " + String(book.chapter || "");
+    if (isJuniorScience && /political[_\\s-]*science|democratic[_\\s-]*politics|social[_\\s-]*science|civics|history|geography|economics/i.test(identity)) return false;
+    if (requestedSubject === "political science" && /\\bscience\\b/i.test(String(book.file_name || "").replace(/political[_\\s-]*science/ig, ""))) return false;
+    return true;
+  });
   if (!candidates.length) return null;
   const wanted = clean(data.chapter);
   const exact = candidates.filter(book => clean(String(book.chapter || "")) === wanted || clean(String(book.file_name || "")) === wanted);
@@ -26,8 +36,8 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
     const score = (book: typeof a) => {
       const name = clean(String(book.file_name || ""));
       const chapterName = clean(String(book.chapter || ""));
-      return (name === wanted || chapterName === wanted ? 1000 : name.includes(wanted) || chapterName.includes(wanted) ? 100 : 0) +
-        (/ncert|textbook/.test(name) ? 10 : 0) + (book.source_kind === "ncert" ? 2 : 0);
+      const chapterMatch = chapterName === wanted ? 5000 : chapterName.includes(wanted) ? 2500 : name.includes(wanted) ? 1800 : 0;
+      return chapterMatch + (/ncert|textbook/.test(name) ? 10 : 0) + (book.source_kind === "ncert" ? 2 : 0);
     };
     return score(b)-score(a);
   });
