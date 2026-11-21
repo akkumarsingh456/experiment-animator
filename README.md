@@ -113,6 +113,48 @@ server-side configuration and availability.
   teacher sign-in. Sign-in is for private workspace saving; source-book
   administration is restricted.
 
+### NCERT textbook reader, navigation, and highlights
+
+- **English-edition selection:** The NCERT reader filters out books identified as
+  Hindi editions and checks other uploaded PDFs for the same class and subject.
+  English filenames do not have to contain the word `English`; neutral filenames
+  can be considered when the language is not explicitly identified. Chapter
+  matching is used to choose the relevant uploaded volume. If no eligible match
+  is found, the reader directs the user to the uploaded-books list rather than
+  silently opening a clearly identified Hindi edition.
+- **Uploaded-book navigation:** The reader includes an Uploaded books link, and
+  its no-match state provides a route to browse the available uploaded books.
+- **Reader navigation:** When the reader is opened from the lesson presentation,
+  it adds a browser-history entry. The browser Back action closes the reader
+  panel and returns to the lesson; the reader also provides a **Back to lesson**
+  control. Page navigation remains within the PDF reader.
+- **Precise highlights:** Text selections are stored with their page number,
+  colour, and selection rectangles so the highlight can be drawn over the
+  selected text. Older saved highlights without rectangles use a best-effort
+  text-based display fallback.
+- **Local recovery:** Highlights are written to browser local storage as soon as
+  they are added. They can be restored in the same browser profile after a
+  refresh or reopening the same class, subject, and chapter. Local browser data
+  is device/profile-specific and can be cleared by browser settings.
+- **Private workspace backup:** Signed-in teachers can use **Save to private
+  space** to back up the current chapter's highlights to the private
+  `teacher-private-workspace` Supabase Storage bucket. The server derives the
+  storage path from the authenticated user's ID and the lesson scope, validates
+  the submitted highlight data, and checks that the bucket is private before
+  writing. On reopening the reader while signed in, it attempts to restore the
+  private copy and merge it with local highlights. Cloud backup is an explicit
+  action; adding a highlight alone saves locally and does not automatically
+  upload it.
+- **Storage and verification note:** Private backup requires the server-side
+  Supabase admin storage client and a configured Supabase environment. If the
+  private bucket cannot be confirmed as non-public, the server refuses to save.
+  Cloud restoration and cross-device recovery should be tested in the deployed
+  environment with a signed-in teacher account. The repository changes have
+  been committed, but this README does not claim that a production deployment,
+  live bucket configuration, or end-to-end backup test has been verified.
+- The original NCERT PDF is not modified by highlighting; highlights are stored
+  separately from the source book.
+
 ### Technical overview
 
 - **Frontend:** React and TypeScript, with TanStack Start/Router and Tailwind CSS.
