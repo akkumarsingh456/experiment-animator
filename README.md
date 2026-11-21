@@ -197,6 +197,22 @@ server-side configuration and availability.
   the website build settings, then republish. Do not paste secret keys into
   source files or commit them to Git.
 
+### Lovable Cloud Supabase runtime bindings
+
+- The custom server entry receives Cloudflare/Nitro worker bindings as the
+  second argument to `fetch(request, env, ctx)`. It now forwards those
+  bindings to a server-only runtime configuration module before invoking SSR.
+- Supabase server modules resolve `SUPABASE_URL`,
+  `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` from those
+  runtime bindings first. Public URL/publishable-key build-time fallbacks
+  remain available for the browser and static build configuration.
+- The service-role key is resolved only on the server and is never read from
+  a `VITE_*` variable. Do not add secrets to source control.
+- After syncing and publishing this change, verify the new-tab lesson route
+  and a database-backed generation action in the connected Lovable Cloud
+  project. If the worker binding itself is absent, reconnect the intended
+  Supabase project in Lovable Cloud and republish.
+
 ### Technical overview
 
 - **Frontend:** React and TypeScript, with TanStack Start/Router and Tailwind CSS.
