@@ -4,3 +4,10 @@ export const requireLibraryAdmin = createMiddleware({type:"function"}).server(as
   const libraryUser = await assertLibraryAdmin();
   return next({context:{libraryUser}});
 });
+
+/** Protects billable queue mutations while leaving public progress/read views available. */
+export const requireLibraryBuildAdmin = createMiddleware({type:"function"}).server(async ({next}) => {
+  const {assertLibraryBuildAdmin} = await import("@/lib/library-access.server");
+  const libraryUser = await assertLibraryBuildAdmin();
+  return next({context:{libraryUser}});
+});
