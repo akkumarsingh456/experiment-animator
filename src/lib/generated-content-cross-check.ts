@@ -19,7 +19,18 @@ function readableGeneratedLine(raw: string): boolean {
   return true;
 }
 
-/** Final display-boundary check: run after every AI/additive generation stage. */
+
+export function crossCheckGeneratedLines(lines: string[]) {
+  let removed=0;
+  const issues:string[]=[];
+  const clean=lines.filter(line=>{
+    const valid=readableGeneratedLine(line);
+    if(!valid){removed++;issues.push("Malformed OCR or mathematical notation was excluded before display.");}
+    return valid;
+  });
+  return {lines:clean,checked:lines.length,removed,pass:removed===0,issues:[...new Set(issues)]};
+}
+\n/** Final display-boundary check: run after every AI/additive generation stage. */
 export function crossCheckGeneratedSlides(slides: any[]): CrossCheckResult {
   let checked=0,removed=0;
   const issues:string[]=[];
