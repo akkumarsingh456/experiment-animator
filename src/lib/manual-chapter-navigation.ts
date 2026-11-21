@@ -39,7 +39,7 @@ export async function findManualChapterPage(pdf: PDFDocumentProxy, subject: stri
   // range. Every candidate must contain the actual chapter heading before use.
   const candidates = [...new Set([
     ...(printedRange ? Array.from({ length: 17 }, (_, i) => printedRange.start + i) : []),
-    ...Array.from({ length: Math.min(16, pdf.numPages) }, (_, i) => i + 1),
+    ...Array.from({ length: printedRange ? pdf.numPages : Math.min(16, pdf.numPages) }, (_, i) => i + 1),
   ])].filter(page => page >= 1 && page <= pdf.numPages);
   for (let index = 0; index < candidates.length; index += 3) {
     active();
