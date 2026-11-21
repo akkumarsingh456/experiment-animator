@@ -61,21 +61,21 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
   }
 
   const wanted = clean(data.chapter);
-  const chapterNumber = data.chapter.match(/\\b(?:chapter|ch\\.)\\s*(\\d+)\\b/i)?.[1];
+  const chapterNumber = data.chapter.match(/\b(?:chapter|ch\.)\s*(\d+)\b/i)?.[1];
   let contentsPage: number | null = null;
   let printedPage: number | null = null;
-  const isContents = (text: string) => /\\b(?:contents|table of contents)\\b/i.test(text.slice(0, 900));
+  const isContents = (text: string) => /\b(?:contents|table of contents)\b/i.test(text.slice(0, 900));
   const pageEntry = (text: string) => {
-    const lines = text.split(/\\r?\\n/).map(line => line.replace(/[.·…]{2,}/g, " ").trim()).filter(Boolean);
+    const lines = text.split(/\r?\n/).map(line => line.replace(/[.·…]{2,}/g, " ").trim()).filter(Boolean);
     // Include a flattened variant because some PDF extractors do not preserve
     // line breaks in multi-column contents tables.
-    lines.push(text.replace(/[.·…]{2,}/g, " ").replace(/\\s+/g, " ").trim());
+    lines.push(text.replace(/[.·…]{2,}/g, " ").replace(/\s+/g, " ").trim());
     for (const line of lines) {
       const normalized = clean(line);
       const titleMatch = wanted.length > 4 && (normalized.includes(wanted) || wanted.includes(normalized));
-      const numberMatch = !!chapterNumber && new RegExp("(?:^|\\\\s)(?:chapter|ch\\\\.)?\\\\s*" + chapterNumber + "(?:\\\\s|[:.])", "i").test(line);
+      const numberMatch = !!chapterNumber && new RegExp("(?:^|\\s)(?:chapter|ch\\.)?\\s*" + chapterNumber + "(?:\\s|[:.])", "i").test(line);
       if (!titleMatch && !numberMatch) continue;
-      const trailing = line.match(/(?:^|\\s)(\\d{1,3})\\s*$/);
+      const trailing = line.match(/(?:^|\s)(\d{1,3})\s*$/);
       if (trailing) {
         const value = Number(trailing[1]);
         if (value > 0) return value;
@@ -100,7 +100,7 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
   if (!printedPage && wanted.length >= 5) {
     const match = pageRows.find(row => {
       const text = String(row.text || "");
-      return !isContents(text) && !/\\bindex\\b/i.test(text.slice(0, 300)) && clean(text).includes(wanted);
+      return !isContents(text) && !/\bindex\b/i.test(text.slice(0, 300)) && clean(text).includes(wanted);
     });
     if (match && Number.isInteger(match.page_number) && match.page_number > 0) chapterPage = match.page_number;
   }
