@@ -35,3 +35,8 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
