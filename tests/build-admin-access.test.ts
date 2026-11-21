@@ -30,6 +30,25 @@ describe("lesson build authorization boundaries", () => {
     expect(access).not.toContain("user_metadata.*admin");
   });
 
+  it("keeps image-generation audit prompts and diagnostics private", () => {
+    const migration = read("drizzle/migrations/0006_private_slide_image_audit.sql");
+    expect(migration).toContain("REVOKE ALL ON TABLE public.slide_image_audit FROM PUBLIC, anon, authenticated");
+    expect(migration).toContain("GRANT ALL ON TABLE public.slide_image_audit TO service_role");
+    expect(migration).toContain("DROP POLICY IF EXISTS \\"audit readable by anyone\\"");
+    expect(migration).toContain("DROP POLICY IF EXISTS \\"audit insertable by anyone\\"");
+    expect(migration).toContain("slide_image_audit_service_only");
+  });
+
+  it("keeps environment files out of Git and provides only placeholders", () => {
+    const ignore = read(".gitignore");
+    const example = read(".env.example");
+    expect(ignore).toContain(".env");
+    expect(ignore).toContain("!.env.example");
+    expect(example).toContain("your-supabase-publishable-key");
+    expect(example).not.toContain("SUPABASE_SERVICE_ROLE_KEY=ey");
+    expect(example).not.toContain("GEMINI_API_KEY=AIza");
+  });
+
   it("does not re-enable source-library writes", () => {
     const access = read("src/lib/library-access.server.ts");
     expect(access).toContain("Uploads, deletion and source changes are disabled for everyone.");
