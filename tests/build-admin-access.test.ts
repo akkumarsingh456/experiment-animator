@@ -39,6 +39,19 @@ describe("lesson build authorization boundaries", () => {
     expect(migration).toContain("slide_image_audit_service_only");
   });
 
+  it("uses build-time public Supabase settings as a safe SSR fallback", () => {
+    const env = read("src/integrations/supabase/env.server.ts");
+    const admin = read("src/integrations/supabase/client.server.ts");
+    const auth = read("src/integrations/supabase/auth-middleware.ts");
+    expect(env).toContain("process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL");
+    expect(env).toContain("process.env.SUPABASE_PUBLISHABLE_KEY");
+    expect(env).toContain("import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY");
+    expect(admin).toContain("getSupabaseServerUrl()");
+    expect(admin).toContain("process.env.SUPABASE_SERVICE_ROLE_KEY");
+    expect(admin).not.toContain("VITE_SUPABASE_SERVICE_ROLE_KEY");
+    expect(auth).toContain("getSupabaseServerPublishableKey()");
+  });
+
   it("keeps environment files out of Git and provides only placeholders", () => {
     const ignore = read(".gitignore");
     const example = read(".env.example");
