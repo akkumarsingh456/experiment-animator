@@ -35,6 +35,14 @@ for current coverage.
 6. **Teach, share, or revise.** Present the lesson and download the available
    guided notes or presentation as PDF or PPTX.
 
+### NCERT-only textbook extraction and reader selection
+
+- Primary textbook extraction and the side-by-side NCERT reader accept only PDFs whose filename explicitly contains `NCERT`, and whose class and subject metadata match the selected lesson. The word `English` is not required in the filename: neutral English-script NCERT names are accepted.
+- Explicit Hindi-medium markers and non-NCERT PDFs (including Oswaal, PW, coaching notes and other revision books) are excluded from the primary NCERT source inventory and cannot be selected as the NCERT reader PDF.
+- The NCERT reader checks eligible matching books and their extracted contents to find the requested chapter. If no matching NCERT PDF exists, it reports that no eligible textbook was found instead of silently opening a different publisher's book.
+- Standard lesson generation no longer appends uploaded revision-book content to the NCERT-grounded lesson output. Existing lesson cache keys were versioned so older mixed-source cached lessons are not reused.
+- This filter does not delete uploaded PDFs; they remain in the uploaded-books catalogue for separate reference. Tests cover explicit NCERT filenames, language markers, wrong publishers and neutral NCERT filenames.
+
 ### Main features and why teachers use them
 
 | Feature | How it helps |
