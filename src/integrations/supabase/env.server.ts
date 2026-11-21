@@ -1,17 +1,24 @@
 /**
- * Shared Supabase endpoint configuration for server-side modules.
+ * Supabase configuration shared by server-only modules.
  *
- * Lovable/Vite injects VITE_* values at build time for the browser bundle.
- * Some SSR/preview/new-tab runtimes do not expose the equivalent unprefixed
- * variables in process.env, even though the public project endpoint is present
- * in the build environment. The URL and publishable key are public project
- * configuration; privileged keys are deliberately NOT read from VITE_*.
+ * Lovable's Cloudflare/Nitro worker passes managed secrets as the fetch
+ * handler's second argument (env), not necessarily through process.env.
+ * src/server.ts forwards those bindings here for server-side consumers.
+ * Public VITE_* values remain a build-time fallback for URL/publishable key
+ * only. Privileged keys are never read from VITE_*.
  */
+import { getSupabaseRuntimeValue } from "./runtime-env.server";
+
 export function getSupabaseServerUrl(): string {
-  return process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL || "";
+  return getSupabaseRuntimeValue("SUPABASE_URL") ||
+    import.meta.env.VITE_SUPABASE_URL || "";
 }
 
 export function getSupabaseServerPublishableKey(): string {
-  return process.env.SUPABASE_PUBLISHABLE_KEY ||
+  return getSupabaseRuntimeValue("SUPABASE_PUBLISHABLE_KEY") ||
     import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+}
+
+export function getSupabaseServerServiceRoleKey(): string {
+  return getSupabaseRuntimeValue("SUPABASE_SERVICE_ROLE_KEY");
 }
