@@ -57,6 +57,20 @@ describe("lesson build authorization boundaries", () => {
     expect(auth).toContain("getSupabaseServerPublishableKey()");
   });
 
+  it("injects only public Supabase settings into SSR HTML for browser and new-tab clients", () => {
+    const server = read("src/server.ts");
+    const client = read("src/integrations/supabase/client.ts");
+    const config = read("src/integrations/supabase/public-config.ts");
+    expect(server).toContain("injectPublicSupabaseConfig");
+    expect(server).toContain("window.__EDUPLAN_SUPABASE_CONFIG__");
+    expect(server).toContain("getSupabaseServerPublishableKey()");
+    expect(server).not.toContain("getSupabaseServerServiceRoleKey()");
+    expect(client).toContain("getSupabasePublicConfig()");
+    expect(config).toContain("__EDUPLAN_SUPABASE_CONFIG__");
+    expect(config).toContain("VITE_SUPABASE_PROJECT_ID");
+    expect(config).toContain("VITE_SUPABASE_ANON_KEY");
+  });
+
   it("keeps environment files out of Git and provides only placeholders", () => {
     const ignore = read(".gitignore");
     const example = read(".env.example");
