@@ -66,19 +66,19 @@ export async function resolveNcertLessonBook(data: { klass: string; subject: str
   let printedPage: number | null = null;
   const isContents = (text: string) => /\b(?:contents|table of contents)\b/i.test(text.slice(0, 900));
   const pageEntry = (text: string) => {
-    const lines = text.split(/\r?\n/).map(line => line.replace(/[.·…]{2,}/g, " ").trim()).filter(Boolean);
-    // Include a flattened variant because some PDF extractors do not preserve
-    // line breaks in multi-column contents tables.
-    lines.push(text.replace(/[.·…]{2,}/g, " ").replace(/\s+/g, " ").trim());
-    for (const line of lines) {
-      const normalized = clean(line);
-      const titleMatch = wanted.length > 4 && (normalized.includes(wanted) || wanted.includes(normalized));
-      const numberMatch = !!chapterNumber && new RegExp("(?:^|\\s)(?:chapter|ch\\.)?\\s*" + chapterNumber + "(?:\\s|[:.])", "i").test(line);
-      if (!titleMatch && !numberMatch) continue;
-      const trailing = line.match(/(?:^|\s)(\d{1,3})\s*$/);
-      if (trailing) {
-        const value = Number(trailing[1]);
-        if (value > 0) return value;
+    const lines = text.split(/\\r?\\n/).map(line => line.replace(/[.·…]{2,}/g, " ").trim()).filter(Boolean);
+    for (let index = 0; index < lines.length; index++) {
+      const normalized = clean(lines[index]);
+      const titleMatch = wanted.length > 4 && normalized.includes(wanted);
+      if (!titleMatch) continue;
+      // Page numbers may be on the same line or on the immediately following
+      // line after PDF text extraction has split a contents entry.
+      for (const candidate of lines.slice(index, Math.min(lines.length, index + 3))) {
+        const trailing = candidate.match(/(?:^|\\s)(\\d{1,3})\\s*$/);
+        if (trailing) {
+          const value = Number(trailing[1]);
+          if (value > 0) return value;
+        }
       }
     }
     return null;
