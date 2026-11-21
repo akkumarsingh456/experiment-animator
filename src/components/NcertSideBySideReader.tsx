@@ -8,14 +8,14 @@ type Props={klass:string;subject:string;chapter:string;className?:string};
 type Mark={text:string;color:string;page:number};
 const colors=[["Yellow","#ffe66d"],["Green","#a7f3b0"],["Pink","#f9a8d4"],["Blue","#93c5fd"]];
 export function NcertSideBySideReader({klass,subject,chapter,className=""}:Props){
- const [book,setBook]=useState<{id:string;name:string}|null>(null),[pdf,setPdf]=useState<PDFDocumentProxy|null>(null),[page,setPage]=useState(1),[pages,setPages]=useState(0),[zoom,setZoom]=useState(1),[loading,setLoading]=useState(true),[error,setError]=useState(""),[selection,setSelection]=useState(""),[color,setColor]=useState("#ffe66d"),[marks,setMarks]=useState<Mark[]>([]);
+ const [book,setBook]=useState<{id:string;name:string;chapterPage:number|null;contentsPage:number|null;printedPage:number|null}|null>(null),[pdf,setPdf]=useState<PDFDocumentProxy|null>(null),[page,setPage]=useState(1),[pages,setPages]=useState(0),[zoom,setZoom]=useState(1),[loading,setLoading]=useState(true),[error,setError]=useState(""),[selection,setSelection]=useState(""),[color,setColor]=useState("#ffe66d"),[marks,setMarks]=useState<Mark[]>([]);
  const canvas=useRef<HTMLCanvasElement>(null),layer=useRef<HTMLDivElement>(null);
  const key=useMemo(()=> "edp-ncert-highlights:"+klass+":"+subject+":"+chapter,[klass,subject,chapter]);
  useEffect(()=>{try{setMarks(JSON.parse(localStorage.getItem(key)||"[]"));}catch{setMarks([]);}},[key]);
  useEffect(()=>{let cancelled=false;let doc:PDFDocumentProxy|null=null;setLoading(true);setError("");setPdf(null);setBook(null);
   void (async()=>{const found=await findNcertLessonBook({data:{klass,subject,chapter}});if(cancelled)return;if(!found)throw new Error("No uploaded PDF matches this class and subject yet. Open the Uploaded books section to confirm the available files.");setBook(found);
    const response=await fetch(found.signedUrl);if(!response.ok)throw new Error("The uploaded textbook PDF could not be downloaded.");
-   const library=await loadPdfjs();doc=await library.getDocument({data:new Uint8Array(await response.arrayBuffer())}).promise;if(cancelled){await doc.destroy();return;}setPdf(doc);setPages(doc.numPages);const target=found.chapterPage || await findManualChapterPage(doc,subject,chapter);if(!cancelled)setPage(target||1);
+   const library=await loadPdfjs();doc=await library.getDocument({data:new Uint8Array(await response.arrayBuffer())}).promise;if(cancelled){await doc.destroy();return;}setPdf(doc);setPages(doc.numPages);const target=found.chapterPage || await findManualChapterPage(doc,subject,chapter,found.printedPage?{start:found.printedPage,end:found.printedPage}:undefined);if(!cancelled)setPage(target||1);
   })().catch(e=>{if(!cancelled)setError(e instanceof Error?e.message:"The textbook could not be opened.");}).finally(()=>{if(!cancelled)setLoading(false);});
   return()=>{cancelled=true;void doc?.destroy();};
  },[klass,subject,chapter]);
