@@ -15,6 +15,14 @@ describe("public learning with restricted source uploads", () => {
     expect(isLessonTextbook({...textbook,file_name:"PW Class 10 Science Notes.pdf"})).toBe(false);
     expect(isLessonTextbook({...textbook,file_name:"NCERT_CLASS_10_SCIENCE.pdf"})).toBe(true);
   });
+  it.each(["Hindi", "Sanskrit"])("accepts NCERT %s editions for their matching language subject", (subject) => {
+    const languageBook = { ...textbook, subject, file_name: `NCERT_CLASS_10_${subject.toUpperCase()}.pdf`, chapter: `${subject} textbook` };
+    expect(isLessonTextbook(languageBook)).toBe(true);
+    expect(isLessonTextbook({ ...languageBook, file_name: `NCERT_CLASS_10_${subject.toUpperCase()}_BHAG_1.pdf` })).toBe(true);
+  });
+  it("does not let Hindi/Sanskrit filenames enter unrelated primary subjects", () => {
+    expect(isLessonTextbook({ ...textbook, subject: "Science", file_name: "NCERT_CLASS_10_HINDI.pdf" })).toBe(false);
+  });
   it("keeps reference books out of primary note text", () => {
     expect(isLessonTextbook({...textbook,source_kind:"reference"})).toBe(false);
     expect(isLessonTextbook({...textbook,file_name:"Physics_MED_EASY.pdf"})).toBe(false);
