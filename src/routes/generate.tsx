@@ -223,10 +223,7 @@ function GeneratePage() {
     if (!search.topic || (!search.workspaceId&&search.go !== "1" && retryAttempt === 0)) return;
     // Include the complete lesson scope so a new chapter or topic cannot
     // be mistaken for an already-started request with the same class/subject.
-    const requestKey=JSON.stringify([
-      search.workspaceId, search.topic, search.klass, search.subject,
-      search.chapter, search.subtopics, search.mode, search.go, retryAttempt,
-    ]);
+    const requestKey=lessonGenerationRequestKey(search, retryAttempt);
     if(startedRequest.current===requestKey)return;
     startedRequest.current=requestKey;
     const requestId = requestIdRef.current + 1;
