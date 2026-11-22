@@ -234,8 +234,10 @@ function GeneratePage() {
     setRequestStartedAt(Date.now());
     setLoading(true);
     setError(null);
+    setResult(null); // Never leave a previous user's/lesson's slides visible during a new request.
+    setWorkspaceNotice('');
     setPreparedOwnerEmail('');
-    if(search.workspaceId){setResult(null);privateOwner.current=null;}
+    if(search.workspaceId)privateOwner.current=null;
     let timeout: ReturnType<typeof setTimeout>;
     const deadline = new Promise<never>((_, reject) => {
       timeout = setTimeout(() => reject(new Error("This request took too long. Please retry; any completed lesson is saved and will be reused.")), LESSON_REQUEST_TIMEOUT_MS);
