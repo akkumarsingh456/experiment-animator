@@ -9,9 +9,17 @@ export type LessonTextbook = {
 };
 
 /** Classification selects note sources; it is not a login or retrospective approval gate. */
-export function isLessonTextbook(book: Pick<LessonTextbook, "file_name" | "chapter" | "source_kind">): boolean {
+export function isLessonTextbook(book: Pick<LessonTextbook, "file_name" | "chapter" | "subject" | "source_kind">): boolean {
   if (book.source_kind === "reference") return false;
-  if (!isEnglishNcertBookCandidate(book)) return false;
+  const subject = String(book.subject || "").trim().toLowerCase();
+  const nativeLanguageBook = /^(hindi|sanskrit|हिंदी|संस्कृत)$/.test(subject);
+  // Hindi/Sanskrit NCERT editions are valid primary sources for their own
+  // language subjects. The English-only detector intentionally rejects them,
+  // so apply it only to non-language subjects.
+  if (nativeLanguageBook) {
+    const fileName = String(book.file_name || "").replace(/[_-]+/g, " ").trim();
+    if (!/\\bncert\\b/i.test(fileName)) return false;
+  } else if (!isEnglishNcertBookCandidate(book)) return false;
   if (SOCIAL_REFERENCE_PATTERN.test(`${book.file_name} ${book.chapter}`.replace(/_/g," "))) return false;
   // Only explicitly NCERT-named English/neutral textbook PDFs supply primary text.
   return !REF_BOOK_PATTERN.test(`${book.file_name} ${book.chapter}`.replace(/_/g, " "));
