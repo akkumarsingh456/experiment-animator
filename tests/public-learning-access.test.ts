@@ -23,7 +23,7 @@ describe("public learning with restricted source uploads", () => {
   it("does not let Hindi/Sanskrit filenames enter unrelated primary subjects", () => {
     expect(isLessonTextbook({ ...textbook, subject: "Science", file_name: "NCERT_CLASS_10_HINDI.pdf" })).toBe(false);
   });
-  it("keeps reference books out of primary note text", () => {
+  it.each(["Hindi", "Sanskrit"])("accepts NCERT %s editions for their matching language subject", (subject) => {\n    const languageBook = { ...textbook, subject, file_name: `NCERT_CLASS_10_${subject.toUpperCase()}.pdf`, chapter: `${subject} textbook` };\n    expect(isLessonTextbook(languageBook)).toBe(true);\n    expect(isLessonTextbook({ ...languageBook, file_name: `NCERT_CLASS_10_${subject.toUpperCase()}_BHAG_1.pdf` })).toBe(true);\n  });\n  it("does not let Hindi/Sanskrit filenames enter unrelated primary subjects", () => {\n    expect(isLessonTextbook({ ...textbook, subject: "Science", file_name: "NCERT_CLASS_10_HINDI.pdf" })).toBe(false);\n  });\n  it("keeps reference books out of primary note text", () => {
     expect(isLessonTextbook({...textbook,source_kind:"reference"})).toBe(false);
     expect(isLessonTextbook({...textbook,file_name:"Physics_MED_EASY.pdf"})).toBe(false);
     expect(isLessonTextbook({...textbook,file_name:"PW Class 12 mind map.pdf"})).toBe(false);
@@ -60,7 +60,7 @@ describe("public learning with restricted source uploads", () => {
     expect(generation).toContain("return baseOutput;");
     expect(generation).not.toMatch(/result:\s*out,\s*\}\);[\s\S]{0,180}return out;/);
     expect(generation).not.toContain("appendUploadedReferenceNotes({");
-    expect(generation).toContain("lesson-v69-strict-ncert-only-sources");
+    expect(generation).toContain("lesson-v69-strict-ncert-only-sources");\n    expect(generation).toContain("scopeTextbookPages(pages || [], data.chapter || data.topic, titles)");\n    expect(generation).not.toContain("if(pages?.length)return pages.map(page=>splitReferenceContent(page.text).text)");
     const history=readFileSync("src/routes/history.tsx","utf8");
     expect(history).not.toContain("LibraryAccessGate");
     expect(history).not.toContain("Verify as NCERT");
