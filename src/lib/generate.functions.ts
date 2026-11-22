@@ -1798,10 +1798,17 @@ export const generateLesson = createServerFn({ method: "POST" })
         const { data: pages } = await s.from("ncert_pages").select("page_number,text").eq("book_id", bookId).order("page_number").limit(1000);
         const titles = chaptersFor(classNumber(data.klass), data.subject).map(chapter => chapter.chapter);
         if (/^(Hindi|Sanskrit)$/.test(data.subject)) {
-          if(pages?.length)return pages.map(page=>splitReferenceContent(page.text).text);
-          const {data:ordered,error}=await s.from("ncert_chunks").select("chunk_index,content").eq("book_id",bookId).order("chunk_index").limit(3000);
-          if(error)throw new Error("The selected language volume could not be read. Please retry.");
-          return (ordered||[]).map(row=>splitReferenceContent(row.content).text);
+          // Language books are often complete multi-chapter volumes. Restrict
+          // retrieval to the exact chapter chosen in the preparation form.
+          const scoped = scopeTextbookPages(pages || [], data.chapter || data.topic, titles);
+          if (scoped.length) return scoped;
+          // Older language uploads may have chunks but no page records. Apply
+          // the same chapter boundary logic; never return the entire volume.
+          const { data: ordered, error } = await s.from("ncert_chunks")
+            .select("chunk_index,content").eq("book_id", bookId)
+            .order("chunk_index").limit(3000);
+          if (error) throw new Error("The selected language chapter could not be read. Please retry.");
+          return scopeTextbookPages((ordered || []).map(row => ({ page_number: row.chunk_index, text: row.content })), data.chapter || data.topic, titles);
         }
         if (data.subject === "Social Science") {
           const target = socialTitle(data.chapter);
