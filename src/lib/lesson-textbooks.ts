@@ -21,7 +21,7 @@ export function isLessonTextbook(book: Pick<LessonTextbook, "file_name" | "chapt
     if (!/\bncert\b/i.test(fileName)) return false;
   } else if (!isEnglishNcertBookCandidate(book)) return false;
   if (SOCIAL_REFERENCE_PATTERN.test(`${book.file_name} ${book.chapter}`.replace(/_/g," "))) return false;
-  // Only explicitly NCERT-named English/neutral textbook PDFs supply primary text.
+  // Only explicitly NCERT-named primary textbook PDFs supply lesson text.
   return !REF_BOOK_PATTERN.test(`${book.file_name} ${book.chapter}`.replace(/_/g, " "));
 }
 
