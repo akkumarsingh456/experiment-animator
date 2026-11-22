@@ -57,7 +57,7 @@ describe('Power-sharing export regressions shared across subjects',()=>{
   const line='4 D EMOCRATIC P OLITICS In 1956 Sinhala became the official language.';
   expect(cleanSocialNoteText(line)).toBe('In 1956 Sinhala became the official language.');
  });
- it('recognises junior Science headings without their subject suffix',()=>{
+ it('keeps Hindi and Sanskrit generation inside the selected chapter of a multi-chapter volume',()=>{\n  const pages=[\n   {page_number:1,text:'Contents\\nहम पंछी उन्मुक्त गगन के 1\\nलाख की चूड़ियाँ 8'},\n   {page_number:2,text:'हम पंछी उन्मुक्त गगन के\\nकविता का पहला मूल पाठ और उसका अर्थ।'},\n   {page_number:3,text:'इस अध्याय की अगली पंक्ति और मूल पाठ।'},\n   {page_number:4,text:'लाख की चूड़ियाँ\\nयह अगले अध्याय का पाठ है।'},\n  ];\n  const selected=scopeTextbookPages(pages,'हम पंछी उन्मुक्त गगन के',['हम पंछी उन्मुक्त गगन के','लाख की चूड़ियाँ']);\n  expect(selected).toHaveLength(2);\n  expect(selected.join(' ')).toContain('कविता का पहला मूल पाठ');\n  expect(selected.join(' ')).not.toContain('यह अगले अध्याय का पाठ');\n });\n it('recognises junior Science headings without their subject suffix',()=>{
   const scoped=scopeTextbookPages([{page_number:1,text:'METALS AND NON-METALS This chapter discusses their properties.'},{page_number:2,text:'CARBON AND ITS COMPOUNDS Another chapter begins.'}],'Chapter 3: Metals and Non-metals (Chemistry)',['Chapter 3: Metals and Non-metals (Chemistry)','Chapter 4: Carbon and its Compounds (Chemistry)']);
   expect(scoped).toHaveLength(1);
  });
