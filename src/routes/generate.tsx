@@ -31,6 +31,7 @@ import {layoutKey,materializeLayout} from '@/lib/slide-layout-check';
 import { socialNotesPresentationSlide } from "@/lib/social-note-presentation";
 import { prepareTeacherPdfPages } from "@/lib/teacher-pdf-pages";
 import { LESSON_REQUEST_TIMEOUT_MS } from "@/lib/generation-timing";
+import { lessonGenerationRequestKey } from "@/lib/lesson-generation-request";
 import { LessonPreparation } from "@/components/LessonPreparation";
 import { withPhysicsFormulaReference } from "@/lib/physics-formula-reference";
 import { sequenceChemistryNotes } from "@/lib/chemistry-note-sequence";
