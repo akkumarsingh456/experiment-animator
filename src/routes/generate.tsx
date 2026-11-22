@@ -221,7 +221,12 @@ function GeneratePage() {
 
   useEffect(() => {
     if (!search.topic || (!search.workspaceId&&search.go !== "1" && retryAttempt === 0)) return;
-    const requestKey=`${search.workspaceId}|${search.topic}|${search.klass}|${search.subject}|${search.go}|${retryAttempt}`;
+    // Include the complete lesson scope so a new chapter or topic cannot
+    // be mistaken for an already-started request with the same class/subject.
+    const requestKey=JSON.stringify([
+      search.workspaceId, search.topic, search.klass, search.subject,
+      search.chapter, search.subtopics, search.mode, search.go, retryAttempt,
+    ]);
     if(startedRequest.current===requestKey)return;
     startedRequest.current=requestKey;
     const requestId = requestIdRef.current + 1;
@@ -248,8 +253,10 @@ function GeneratePage() {
       window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
     }
     // Clearing go must not invalidate this request: its result still belongs to this page.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.go, search.workspaceId, retryAttempt]);
+  }, [
+    search.go, search.workspaceId, search.topic, search.klass, search.subject,
+    search.chapter, search.subtopics, search.mode, retryAttempt,
+  ]);
 
   return (
     <div className="min-h-screen">
